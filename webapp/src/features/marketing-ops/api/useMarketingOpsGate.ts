@@ -50,6 +50,7 @@ const RESTRICTED_IDS = new Set(
 const ITEM_CAPABILITY: Record<string, MarketingOpsCapability> = {
   // Phase 2
   "mops-ad-analytics": "adcampaigns",
+  "mops-campaign-tracker": "adcampaigns",
   // Phase 3
   "mops-email-create": "emailworkbench",
   "mops-email-history": "emailworkbench",
