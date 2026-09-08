@@ -19,6 +19,7 @@ import { Alert, Box, CircularProgress, Stack, Typography } from "@wso2/oxygen-ui
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { isUmtBackendConfigured } from "@config/apiConfig";
 import { useUmtGate } from "../api/useUmtGate";
+import { useUmtMeta } from "../api/useUmtMeta";
 import UmtLocked from "./UmtLocked";
 
 // Shared frame for every UMT screen and the one owner of its access-state
@@ -64,6 +65,10 @@ function UmtBody({
   gate: ReturnType<typeof useUmtGate>;
   children: ReactNode;
 }) {
+  // Metadata is shared by UMT workflows. Keeping its failure at this boundary
+  // avoids every metadata consumer rendering the same retry banner.
+  const meta = useUmtMeta(gate.isAuthorized);
+
   // No backend means there is nothing useful to ask; stop before rendering a
   // spinner for a query that is deliberately disabled.
   if (!configured) {
@@ -102,5 +107,18 @@ function UmtBody({
     return <UmtLocked />;
   }
 
-  return <>{children}</>;
+  return (
+    <Stack spacing={3}>
+      {meta.isError && (
+        <ErrorNotice
+          error={meta.error}
+          onRetry={() => void meta.refetch()}
+          retrying={meta.isFetching}
+        >
+          Couldn&apos;t load UMT reference data.
+        </ErrorNotice>
+      )}
+      {children}
+    </Stack>
+  );
 }

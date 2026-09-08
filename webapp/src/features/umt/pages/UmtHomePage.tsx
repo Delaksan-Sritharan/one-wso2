@@ -28,7 +28,6 @@ import {
 import { Pause, RefreshCw, Rocket, CheckCircle, Plus } from "@wso2/oxygen-ui-icons-react";
 import { teal } from "@mui/material/colors";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
-import { useUmtMeta } from "../api/useUmtMeta";
 import { lifecycleChartData, releaseChunkChartData, type UmtDashboardDatum } from "../api/umtDashboardStats";
 import { useUmtDashboardStats } from "../api/useUmtDashboardStats";
 import { useUmtGate } from "../api/useUmtGate";
@@ -73,10 +72,6 @@ export default function UmtHomePage() {
 // the UMT role gate succeeds, so /meta and /update/stats are never requested for
 // a denied user.
 function UmtDashboardBody() {
-    // Match the source dashboard's eager metadata load. The dialog calls the
-    // same subject-scoped query and receives this cached result without a second
-    // request.
-    useUmtMeta();
     const dashboardStats = useUmtDashboardStats();
     // UmtShell has already resolved this query. Calling the gate here reads the
     // cached role decision needed for the admin-only release-chunk button.
