@@ -136,6 +136,15 @@ export const MARKETING_OPS_APPS: readonly MenuApp[] = [
         requires: ["admin"],
         path: "/marketing-ops/ad-campaigns/analytics",
       },
+      // Same capability gate as Analytics (`adcampaigns`) — same backend,
+      // same operation, a different screen.
+      {
+        id: "mops-campaign-tracker",
+        label: "Campaign Tracker",
+        desc: "Weekly operating rhythm for live campaigns — register, weekly change log, and budget pacing for Google Ads and LinkedIn.",
+        requires: ["admin"],
+        path: "/marketing-ops/ad-campaigns/campaign-tracker",
+      },
     ],
   },
   {

@@ -399,6 +399,48 @@ export const marketingOpsServiceUrls = {
   adAnalyticsLinkedInRoiRun: `${marketingOpsBackendUrl}/api/ad-campaigns/analytics/linkedin-roi/run`,
   adAnalyticsDashboardRun: `${marketingOpsBackendUrl}/api/ad-campaigns/analytics/dashboard/run`,
 
+  // ---- ad campaigns → campaign tracker ---------------------------------------
+  //
+  // The weekly operating rhythm for every live campaign: Register/Budget Pacing
+  // are live reads of Google Ads/LinkedIn (via the Marketing Entity Service)
+  // plus a thin persisted overlay (the four Register override fields; manual
+  // Budget Pacing rows); Weekly Log rows are fully persisted server-side. See
+  // useCampaignTracker.ts for how each endpoint is used.
+  campaignTrackerRegister: (platform: "google_ads" | "linkedin", includeInactive: boolean) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/register?platform=${platform}${
+      includeInactive ? "&include_inactive=true" : ""
+    }`,
+  campaignTrackerRegisterOverride: (campaignId: string, platform: "google_ads" | "linkedin") =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/register/${encodeURIComponent(campaignId)}?platform=${platform}`,
+  campaignTrackerBudgetPacing: (platform: "google_ads" | "linkedin") =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/budget-pacing?platform=${platform}`,
+  campaignTrackerBudgetPacingManual: `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/budget-pacing/manual`,
+  campaignTrackerBudgetPacingManualRow: (id: string) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/budget-pacing/manual/${encodeURIComponent(id)}`,
+  campaignTrackerWeeklyLog: (days: number, includeUnlogged: boolean) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/weekly-log?days=${days}${
+      includeUnlogged ? "&include_unlogged=true" : ""
+    }`,
+  // Bare collection URL (no query string) — POST to create a manual entry.
+  campaignTrackerWeeklyLogCreate: `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/weekly-log`,
+  campaignTrackerWeeklyLogGroup: (groupId: string) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/weekly-log/${encodeURIComponent(groupId)}`,
+  campaignTrackerWeeklyLogEntries: (groupId: string) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/weekly-log/${encodeURIComponent(groupId)}/entries`,
+  campaignTrackerWeeklyLogEntry: (groupId: string, entryId: string) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/weekly-log/${encodeURIComponent(groupId)}/entries/${encodeURIComponent(entryId)}`,
+  campaignTrackerLinkedinRefresh: `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/linkedin-refresh`,
+  // ---- ad campaigns → BU ownership registry ----------------------------------
+  //
+  // Owner name/email + which BU they currently own, with full append-only
+  // history. Reads are open to anyone with Ad Campaigns access; writes require
+  // admin (enforced server-side — see the backend's `require_admin`).
+  ownershipOwners: `${marketingOpsBackendUrl}/api/ad-campaigns/ownership/owners`,
+  ownershipBuCurrent: `${marketingOpsBackendUrl}/api/ad-campaigns/ownership/bu-ownership/current`,
+  ownershipBuHistory: (bu?: string) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/ownership/bu-ownership/history${bu ? `?bu=${encodeURIComponent(bu)}` : ""}`,
+  ownershipBuAssign: `${marketingOpsBackendUrl}/api/ad-campaigns/ownership/bu-ownership`,
+
   // ---- email workbench -------------------------------------------------------
   //
   // The template library (approved HTML + thumbnail), per-user drafts, the
