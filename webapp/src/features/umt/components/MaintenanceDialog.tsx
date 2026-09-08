@@ -18,7 +18,14 @@
 // Temporary destination for dashboard actions whose UMT workflows are not yet
 // ported. Remove it as those actions receive real routes or mutations.
 
-import { Dialog, DialogContent, DialogTitle, Typography } from "@wso2/oxygen-ui";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Typography,
+} from "@wso2/oxygen-ui";
 
 interface MaintenanceDialogProps {
   open: boolean;
@@ -34,6 +41,11 @@ export default function MaintenanceDialog({ open, onClose }: MaintenanceDialogPr
           This feature is still under development. It will be available soon.
         </Typography>
       </DialogContent>
+      <DialogActions>
+        <Button variant="outlined" onClick={onClose}>
+          Close
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }
