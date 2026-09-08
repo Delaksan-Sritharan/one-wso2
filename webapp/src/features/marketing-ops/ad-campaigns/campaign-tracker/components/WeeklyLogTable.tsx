@@ -43,7 +43,7 @@ import {
   Switch,
   Autocomplete,
 } from "@wso2/oxygen-ui";
-import { Plus, ChevronDown, ChevronRight, Eye, Pencil, Link2Off, RotateCcw } from "@wso2/oxygen-ui-icons-react";
+import { Plus, ChevronDown, ChevronUp, ChevronRight, Eye, Pencil, Link2Off, RotateCcw } from "@wso2/oxygen-ui-icons-react";
 import {
   WeeklyLogRow,
   WeeklyLogEntryRow,
@@ -122,6 +122,36 @@ const LOG_STATUS_COLOR: Record<LogStatus, string> = {
 };
 
 const fmtDate = (d: string | null) => (d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—");
+const fmtGroupDate = (d: string) => new Date(d).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+
+type GroupByOption = "date" | "campaign" | "bu" | "status" | "followup";
+const GROUP_BY_OPTIONS: { value: GroupByOption; label: string }[] = [
+  { value: "date", label: "Date" },
+  { value: "campaign", label: "Campaign" },
+  { value: "bu", label: "BU" },
+  { value: "status", label: "Status" },
+  { value: "followup", label: "Follow-up" },
+];
+type SortColumn = "date" | "campaign" | "bu" | "owner" | "status" | "why" | "followup";
+function compareRows(a: WeeklyLogRow, b: WeeklyLogRow, col: SortColumn): number {
+  switch (col) {
+    case "date":
+      return a.completedDate.localeCompare(b.completedDate);
+    case "campaign":
+      return a.campaignName.localeCompare(b.campaignName);
+    case "bu":
+      return a.bu.localeCompare(b.bu);
+    case "owner":
+      return a.owner.localeCompare(b.owner);
+    case "status":
+      return a.status.localeCompare(b.status);
+    case "why":
+      return a.why.localeCompare(b.why);
+    case "followup":
+      return (a.followUpDate ?? "").localeCompare(b.followUpDate ?? "");
+  }
+}
+
 const fmtTime = (d: string) => {
   const t = new Date(d);
   return isNaN(t.getTime()) ? "—" : t.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -200,25 +230,123 @@ export function WeeklyLogTable({
   // persistedLogIds (the backend needs a real group id to attach to).
   onAddEntryToGroup?: (groupId: string, entry: Pick<WeeklyLogEntryRow, "entryType" | "whatChanged">) => Promise<WeeklyLogRow>;
 }) {
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  // Child rows start collapsed; a row's id lands in this set once a user
+  // expands it (or "expand all" is used), so absence means collapsed.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editingGroup, setEditingGroup] = useState<WeeklyLogRow | null>(null);
   const [viewingGroup, setViewingGroup] = useState<WeeklyLogRow | null>(null);
   const [editingEntry, setEditingEntry] = useState<{ group: WeeklyLogRow; entry: WeeklyLogEntryRow } | null>(null);
   const [adding, setAdding] = useState(false);
   const [addingToGroup, setAddingToGroup] = useState<WeeklyLogRow | null>(null);
+  const [groupBy, setGroupBy] = useState<GroupByOption>("date");
+  // Regroup sections (the Date/BU/Status buckets) start collapsed; a key
+  // lands here once a user expands that section.
+  const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
+  // Clicking a column header sorts by it (toggling direction on repeat
+  // clicks); defaults match the prior fixed "newest first" behavior.
+  const [sortBy, setSortBy] = useState<SortColumn>("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const filtered = useMemo(
-    () => rows.filter((r) => matchesLogFilters(r, filters)).sort((a, b) => b.completedDate.localeCompare(a.completedDate)),
-    [rows, filters],
-  );
+  function toggleSort(col: SortColumn) {
+    if (sortBy === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortBy(col);
+      setSortDir("asc");
+    }
+  }
 
-  function toggleCollapsed(id: string) {
-    setCollapsedIds((prev) => {
+  const filtered = useMemo(() => {
+    const list = rows.filter((r) => matchesLogFilters(r, filters));
+    list.sort((a, b) => (sortDir === "asc" ? compareRows(a, b, sortBy) : -compareRows(a, b, sortBy)));
+    return list;
+  }, [rows, filters, sortBy, sortDir]);
+
+  // Rows within each bucket below keep whatever order `filtered` arrives in
+  // (i.e. the active column sort). Date groups are always ordered newest
+  // first regardless of column sort — grouping by date is its own explicit
+  // ordering; BU/status use their canonical order; campaign is alphabetical;
+  // follow-up sorts by date (soonest first, no follow-up date last).
+  const NO_FOLLOW_UP_KEY = "__no-follow-up__";
+  const groupedRows = useMemo(() => {
+    if (groupBy === "date") {
+      const byKey = new Map<string, WeeklyLogRow[]>();
+      for (const row of filtered) {
+        const bucket = byKey.get(row.completedDate);
+        if (bucket) bucket.push(row);
+        else byKey.set(row.completedDate, [row]);
+      }
+      return Array.from(byKey.keys())
+        .sort((a, b) => b.localeCompare(a))
+        .map((key) => ({ key, label: fmtGroupDate(key), rows: byKey.get(key)! }));
+    }
+
+    if (groupBy === "bu" || groupBy === "status") {
+      const keyOrder: readonly string[] = groupBy === "bu" ? BUSINESS_UNITS : LOG_STATUSES;
+      const byKey = new Map<string, WeeklyLogRow[]>();
+      for (const row of filtered) {
+        const key = groupBy === "bu" ? row.bu : row.status;
+        const bucket = byKey.get(key);
+        if (bucket) bucket.push(row);
+        else byKey.set(key, [row]);
+      }
+      return keyOrder.filter((key) => byKey.has(key)).map((key) => ({ key, label: key, rows: byKey.get(key)! }));
+    }
+
+    if (groupBy === "campaign") {
+      const byKey = new Map<string, WeeklyLogRow[]>();
+      for (const row of filtered) {
+        const bucket = byKey.get(row.campaignName);
+        if (bucket) bucket.push(row);
+        else byKey.set(row.campaignName, [row]);
+      }
+      return Array.from(byKey.keys())
+        .sort((a, b) => a.localeCompare(b))
+        .map((key) => ({ key, label: key, rows: byKey.get(key)! }));
+    }
+
+    // followup
+    const byKey = new Map<string, WeeklyLogRow[]>();
+    for (const row of filtered) {
+      const key = row.followUpDate ?? NO_FOLLOW_UP_KEY;
+      const bucket = byKey.get(key);
+      if (bucket) bucket.push(row);
+      else byKey.set(key, [row]);
+    }
+    return Array.from(byKey.keys())
+      .sort((a, b) => {
+        if (a === NO_FOLLOW_UP_KEY) return 1;
+        if (b === NO_FOLLOW_UP_KEY) return -1;
+        return a.localeCompare(b);
+      })
+      .map((key) => ({ key, label: key === NO_FOLLOW_UP_KEY ? "No follow-up date" : fmtGroupDate(key), rows: byKey.get(key)! }));
+  }, [filtered, groupBy]);
+
+  function toggleGroupCollapsed(key: string) {
+    setExpandedGroupKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  const allGroupsExpanded = groupedRows.length > 0 && groupedRows.every((g) => expandedGroupKeys.has(g.key));
+  function toggleAllGroupsCollapsed() {
+    setExpandedGroupKeys(allGroupsExpanded ? new Set() : new Set(groupedRows.map((g) => g.key)));
+  }
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  }
+
+  const allExpanded = filtered.length > 0 && filtered.every((r) => expandedIds.has(r.id));
+  function toggleAllExpanded() {
+    setExpandedIds(allExpanded ? new Set() : new Set(filtered.map((r) => r.id)));
   }
 
   async function saveGroupEdit(edited: WeeklyLogRow) {
@@ -296,7 +424,28 @@ export function WeeklyLogTable({
   return (
     <Box>
       <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
-        <RowCount shown={filtered.length} total={rows.length} singular="log entry" plural="log entries" />
+        <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
+          <RowCount shown={filtered.length} total={rows.length} singular="log entry" plural="log entries" />
+          <TextField
+            select
+            size="small"
+            label="Group by"
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as GroupByOption)}
+            sx={{ width: 130 }}
+          >
+            {GROUP_BY_OPTIONS.map((o) => (
+              <MenuItem key={o.value} value={o.value}>
+                {o.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Tooltip title={allGroupsExpanded ? "Collapse all groups" : "Expand all groups"} arrow placement="top">
+            <IconButton size="small" onClick={toggleAllGroupsCollapsed} sx={{ color: "text.secondary", p: 0.5, "&:hover": { color: "primary.main" } }}>
+              {allGroupsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </IconButton>
+          </Tooltip>
+        </Box>
         <Button size="small" variant="contained" startIcon={<Plus size={16} />} onClick={() => setAdding(true)} sx={{ textTransform: "none", fontSize: "0.76rem", fontWeight: 700 }}>
           Add log entry
         </Button>
@@ -310,112 +459,138 @@ export function WeeklyLogTable({
             <Table size="small" stickyHeader sx={{ minWidth: 1080 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: 36 }} />
-                  <TableCell>Date</TableCell>
-                  <TableCell>Campaign</TableCell>
-                  <TableCell>BU</TableCell>
-                  <TableCell>Owner</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Why</TableCell>
-                  <TableCell>Follow-up</TableCell>
+                  <TableCell sx={{ width: 36 }}>
+                    <Tooltip title={allExpanded ? "Collapse all" : "Expand all"} arrow placement="top">
+                      <IconButton size="small" onClick={toggleAllExpanded} sx={{ p: 0.25 }}>
+                        {allExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                  <SortableHeaderCell label="Date" col="date" sortBy={sortBy} sortDir={sortDir} onClick={toggleSort} />
+                  <SortableHeaderCell label="Campaign" col="campaign" sortBy={sortBy} sortDir={sortDir} onClick={toggleSort} />
+                  <SortableHeaderCell label="BU" col="bu" sortBy={sortBy} sortDir={sortDir} onClick={toggleSort} />
+                  <SortableHeaderCell label="Owner" col="owner" sortBy={sortBy} sortDir={sortDir} onClick={toggleSort} />
+                  <SortableHeaderCell label="Status" col="status" sortBy={sortBy} sortDir={sortDir} onClick={toggleSort} />
+                  <SortableHeaderCell label="Why" col="why" sortBy={sortBy} sortDir={sortDir} onClick={toggleSort} />
+                  <SortableHeaderCell label="Follow-up" col="followup" sortBy={sortBy} sortDir={sortDir} onClick={toggleSort} />
                   <TableCell align="right" sx={{ width: 112 }} />
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filtered.map((row) => {
-                  const collapsed = collapsedIds.has(row.id);
+                {groupedRows.map((group) => {
+                  const groupCollapsed = !expandedGroupKeys.has(group.key);
                   return (
-                    <Fragment key={row.id}>
-                      <TableRow onClick={() => toggleCollapsed(row.id)} sx={{ cursor: "pointer" }}>
-                        <TableCell sx={{ width: 36 }}>
+                    <Fragment key={group.key}>
+                      <TableRow onClick={() => toggleGroupCollapsed(group.key)} sx={{ bgcolor: "action.hover", cursor: "pointer" }}>
+                        <TableCell sx={{ width: 36, py: 0.6 }}>
                           <IconButton size="small" sx={{ p: 0.25 }}>
-                            {collapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                            {groupCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                           </IconButton>
                         </TableCell>
-                        <TableCell>
-                          <Typography sx={{ fontSize: "0.72rem", ...NUMERIC }}>{fmtDate(row.completedDate)}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography sx={{ fontSize: "0.76rem", fontWeight: 600, letterSpacing: "-0.005em" }}>{row.campaignName}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography sx={{ fontSize: "0.74rem" }}>{row.bu}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography sx={{ fontSize: "0.74rem" }}>{row.owner}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <ToneChip label={row.status} color={LOG_STATUS_COLOR[row.status]} />
-                        </TableCell>
-                        <TableCell sx={{ maxWidth: 220 }}>
-                          <Typography sx={{ fontSize: "0.74rem", color: "text.secondary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {row.why}
+                        <TableCell colSpan={8} sx={{ py: 0.6 }}>
+                          <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                            {group.label} · {group.rows.length} {group.rows.length === 1 ? "entry" : "entries"}
                           </Typography>
                         </TableCell>
-                        <TableCell>
-                          <Typography sx={{ fontSize: "0.72rem", ...NUMERIC }}>{fmtDate(row.followUpDate)}</Typography>
-                        </TableCell>
-                        <TableCell align="right" sx={{ width: 112 }} onClick={(e) => e.stopPropagation()}>
-                          {onAddEntryToGroup && persistedLogIds?.has(row.id) && (
-                            <Tooltip title="Add entry to this session" arrow placement="top">
-                              <IconButton size="small" onClick={() => setAddingToGroup(row)} sx={{ color: "text.secondary", p: 0.5, "&:hover": { color: "primary.main" } }}>
-                                <Plus size={16} />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          <Tooltip title="Full view" arrow placement="top">
-                            <IconButton size="small" onClick={() => setViewingGroup(row)} sx={{ color: "text.secondary", p: 0.5, "&:hover": { color: "primary.main" } }}>
-                              <Eye size={16} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Edit" arrow placement="top">
-                            <IconButton size="small" onClick={() => setEditingGroup(row)} sx={{ color: "text.secondary", p: 0.5, "&:hover": { color: "primary.main" } }}>
-                              <Pencil size={16} />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
                       </TableRow>
-                      {!collapsed &&
-                        row.entries.map((entry) => (
-                          <TableRow
-                            key={entry.id}
-                            onClick={() => setEditingEntry({ group: row, entry })}
-                            sx={{
-                              cursor: "pointer",
-                              bgcolor: "action.hover",
-                              "&:hover": { bgcolor: "action.selected" },
-                              opacity: entry.isUnlogged ? 0.5 : 1,
-                            }}
-                          >
-                            <TableCell />
-                            <TableCell colSpan={7}>
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, pl: 1 }}>
-                                <ToneChip label={entry.entryType} color={ENTRY_COLOR[entry.entryType]} />
-                                {entry.isUnlogged && <ToneChip label="Unlogged" color="text.secondary" />}
-                                <Typography
-                                  sx={{
-                                    fontSize: "0.74rem",
-                                    flex: 1,
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    textDecoration: entry.isUnlogged ? "line-through" : "none",
-                                  }}
-                                >
-                                  {entry.whatChanged}
-                                </Typography>
-                              </Box>
+                      {!groupCollapsed &&
+                        group.rows.map((row) => {
+                      const collapsed = !expandedIds.has(row.id);
+                      return (
+                        <Fragment key={row.id}>
+                          <TableRow onClick={() => toggleExpanded(row.id)} sx={{ cursor: "pointer" }}>
+                            <TableCell sx={{ width: 36 }}>
+                              <IconButton size="small" sx={{ p: 0.25 }}>
+                                {collapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                              </IconButton>
                             </TableCell>
-                            <TableCell align="right" sx={{ width: 44 }} onClick={(e) => e.stopPropagation()}>
-                              <Tooltip title={entry.isUnlogged ? "Restore to log" : "Mark as unlogged"} arrow placement="top">
-                                <IconButton size="small" onClick={() => toggleEntryUnlog(row, entry)} sx={{ color: "text.secondary", p: 0.5, "&:hover": { color: "primary.main" } }}>
-                                  {entry.isUnlogged ? <RotateCcw size={16} /> : <Link2Off size={16} />}
+                            <TableCell>
+                              <Typography sx={{ fontSize: "0.72rem", ...NUMERIC }}>{fmtDate(row.completedDate)}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography sx={{ fontSize: "0.76rem", fontWeight: 600, letterSpacing: "-0.005em" }}>{row.campaignName}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography sx={{ fontSize: "0.74rem" }}>{row.bu}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography sx={{ fontSize: "0.74rem" }}>{row.owner}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <ToneChip label={row.status} color={LOG_STATUS_COLOR[row.status]} />
+                            </TableCell>
+                            <TableCell sx={{ maxWidth: 220 }}>
+                              <Typography sx={{ fontSize: "0.74rem", color: "text.secondary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {row.why}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography sx={{ fontSize: "0.72rem", ...NUMERIC }}>{fmtDate(row.followUpDate)}</Typography>
+                            </TableCell>
+                            <TableCell align="right" sx={{ width: 112 }} onClick={(e) => e.stopPropagation()}>
+                              {onAddEntryToGroup && persistedLogIds?.has(row.id) && (
+                                <Tooltip title="Add entry to this session" arrow placement="top">
+                                  <IconButton size="small" onClick={() => setAddingToGroup(row)} sx={{ color: "text.secondary", p: 0.5, "&:hover": { color: "primary.main" } }}>
+                                    <Plus size={16} />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              <Tooltip title="Full view" arrow placement="top">
+                                <IconButton size="small" onClick={() => setViewingGroup(row)} sx={{ color: "text.secondary", p: 0.5, "&:hover": { color: "primary.main" } }}>
+                                  <Eye size={16} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Edit" arrow placement="top">
+                                <IconButton size="small" onClick={() => setEditingGroup(row)} sx={{ color: "text.secondary", p: 0.5, "&:hover": { color: "primary.main" } }}>
+                                  <Pencil size={16} />
                                 </IconButton>
                               </Tooltip>
                             </TableCell>
                           </TableRow>
-                        ))}
-                    </Fragment>
+                          {!collapsed &&
+                            row.entries.map((entry) => (
+                              <TableRow
+                                key={entry.id}
+                                onClick={() => setEditingEntry({ group: row, entry })}
+                                sx={{
+                                  cursor: "pointer",
+                                  bgcolor: "action.hover",
+                                  "&:hover": { bgcolor: "action.selected" },
+                                  opacity: entry.isUnlogged ? 0.5 : 1,
+                                }}
+                              >
+                                <TableCell />
+                                <TableCell colSpan={7}>
+                                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, pl: 1 }}>
+                                    <ToneChip label={entry.entryType} color={ENTRY_COLOR[entry.entryType]} />
+                                    {entry.isUnlogged && <ToneChip label="Unlogged" color="text.secondary" />}
+                                    <Typography
+                                      sx={{
+                                        fontSize: "0.74rem",
+                                        flex: 1,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                        textDecoration: entry.isUnlogged ? "line-through" : "none",
+                                      }}
+                                    >
+                                      {entry.whatChanged}
+                                    </Typography>
+                                  </Box>
+                                </TableCell>
+                                <TableCell align="right" sx={{ width: 44 }} onClick={(e) => e.stopPropagation()}>
+                                  <Tooltip title={entry.isUnlogged ? "Restore to log" : "Mark as unlogged"} arrow placement="top">
+                                    <IconButton size="small" onClick={() => toggleEntryUnlog(row, entry)} sx={{ color: "text.secondary", p: 0.5, "&:hover": { color: "primary.main" } }}>
+                                      {entry.isUnlogged ? <RotateCcw size={16} /> : <Link2Off size={16} />}
+                                    </IconButton>
+                                  </Tooltip>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </Fragment>
+                      );
+                    })}
+                  </Fragment>
                   );
                 })}
               </TableBody>
@@ -805,6 +980,32 @@ function AddEntryToGroupDialog({
         </Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+function SortableHeaderCell({
+  label,
+  col,
+  sortBy,
+  sortDir,
+  onClick,
+}: {
+  label: string;
+  col: SortColumn;
+  sortBy: SortColumn;
+  sortDir: "asc" | "desc";
+  onClick: (col: SortColumn) => void;
+}) {
+  const active = sortBy === col;
+  return (
+    <TableCell onClick={() => onClick(col)} sx={{ cursor: "pointer", userSelect: "none", "&:hover": { color: "text.primary" } }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+        {label}
+        <Box sx={{ display: "flex", width: 14, opacity: active ? 1 : 0.25 }}>
+          {active && sortDir === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </Box>
+      </Box>
+    </TableCell>
   );
 }
 
