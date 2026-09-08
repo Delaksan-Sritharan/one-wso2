@@ -288,6 +288,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     key: "umt",
     label: "UMT",
     icon: LayoutDashboard,
+    externallyGated: true,
     access: true,
     path: "/umt",
     sections: [],
