@@ -69,6 +69,10 @@ declare global {
       ONE_WSO2_OPD_BACKEND_URL?: string; // opd-claims
       ONE_WSO2_CC_EXPENSES_BACKEND_URL?: string; // cc-expenses
       ONE_WSO2_EXPENSE_CLAIMS_BACKEND_URL?: string; // expense-claims
+      // Base URL for the standalone Updates Manager service. Optional — when
+      // absent, UmtShell shows a not-connected state and makes no UMT requests.
+      // Its /update/user-info roles are local to UMT, not People capabilities.
+      ONE_WSO2_UMT_BACKEND_URL?: string;
       // Base URL of the leave-app frontend itself (not its backend) —
       // used to deep-link into flows this webapp doesn't replicate, like
       // sabbatical requests. Optional — when absent, that link is hidden.
