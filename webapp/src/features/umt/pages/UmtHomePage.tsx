@@ -22,7 +22,6 @@ import {
   Stack,
 } from "@wso2/oxygen-ui";
 import { Pause, RefreshCw, Rocket, CheckCircle, Plus } from "@wso2/oxygen-ui-icons-react";
-import { teal } from "@mui/material/colors";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { lifecycleChartData, releaseChunkChartData, type UmtDashboardDatum } from "../api/umtDashboardStats";
 import { useUmtDashboardStats } from "../api/useUmtDashboardStats";
@@ -54,9 +53,6 @@ const BUILD_COLORS: Record<string, UmtDashboardColor> = {
 
 const sumValues = (data: UmtDashboardDatum[]) =>
   data.reduce((total, item) => total + item.value, 0);
-
-const formatPercentage = (value: number, total: number) =>
-  total === 0 ? "0.00%" : `${((value / total) * 100).toFixed(2)}%`;
 
 export default function UmtHomePage() {
   return (
@@ -168,20 +164,19 @@ function UmtDashboardBody() {
                 label="Total"
                 value={dashboardStats.isPending ? <CircularProgress color="inherit" size={22} /> : (dashboardStats.data?.updateCount ?? 0)}
                 icon={<RefreshCw size={32} />}
-                color="warning"
+                color="info"
               />
               <StatCard
                 label="Active"
                 value={dashboardStats.isPending ? <CircularProgress color="inherit" size={22} /> : activeUpdates}
                 icon={<Rocket size={32} />}
-                color="info"
+                color="warning"
               />
               <StatCard
                 label="On Hold"
                 value={dashboardStats.isPending ? <CircularProgress color="inherit" size={22} /> : (lifecycleCounts.OnHold ?? 0)}
                 icon={<Pause size={32} />}
-                color="secondary"
-                customColor={teal[500]}
+                color="error"
               />
               <StatCard
                 label="Released"

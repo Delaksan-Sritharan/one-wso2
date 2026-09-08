@@ -216,16 +216,14 @@ export function StatCard({
   value,
   icon,
   color,
-  customColor,
 }: {
   label: string;
   value: number | ReactNode;
   icon: ReactNode;
   color: UmtDashboardColor;
-  customColor?: string;
 }) {
   const theme = useTheme();
-  const cardColor = customColor ?? theme.palette[color].main;
+  const cardColor = theme.palette[color].main;
 
   return (
     <Box

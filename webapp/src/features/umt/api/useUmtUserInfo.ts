@@ -26,8 +26,6 @@ import {
 } from "@config/apiConfig";
 import type { UmtUserInfo } from "./umtTypes";
 
-export { isUmtBackendConfigured };
-
 // GET /update/user-info — the single identity and authorization source for UMT.
 // Every UMT gate derives from this query, so callers share one cached request.
 //
