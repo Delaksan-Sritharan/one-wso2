@@ -15,15 +15,11 @@
 // under the License.
 
 import { useState } from "react";
-import type { ReactNode } from "react";
 import {
   Box,
   Button,
-  Card,
   CircularProgress,
   Stack,
-  Typography,
-  useTheme,
 } from "@wso2/oxygen-ui";
 import { Pause, RefreshCw, Rocket, CheckCircle, Plus } from "@wso2/oxygen-ui-icons-react";
 import { teal } from "@mui/material/colors";
@@ -31,23 +27,25 @@ import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { lifecycleChartData, releaseChunkChartData, type UmtDashboardDatum } from "../api/umtDashboardStats";
 import { useUmtDashboardStats } from "../api/useUmtDashboardStats";
 import { useUmtGate } from "../api/useUmtGate";
+import {
+  DashboardDonut,
+  DashboardWidgetHolder,
+  StatCard,
+  type UmtDashboardColor,
+} from "../components/UmtWidgets";
 import UmtCreateUpdateDialog from "../components/UmtCreateUpdateDialog";
 import MaintenanceDialog from "../components/MaintenanceDialog";
 import UmtShell from "../components/UmtShell";
-import { PieChart } from "@wso2/oxygen-ui-charts-react";
-
-type ThemeColor = "primary" | "secondary" | "info" | "success" | "warning" | "error";
-
 // Key colors by status rather than array position so reordering chart data does
 // not silently change the meaning of a slice.
-const LIFECYCLE_COLORS: Record<string, ThemeColor> = {
+const LIFECYCLE_COLORS: Record<string, UmtDashboardColor> = {
   Development: "info",
   Testing: "success",
   Verifying: "warning",
   Pending: "error",
 };
 
-const BUILD_COLORS: Record<string, ThemeColor> = {
+const BUILD_COLORS: Record<string, UmtDashboardColor> = {
   Pending: "info",
   Building: "warning",
   Successful: "success",
@@ -254,299 +252,5 @@ function UmtDashboardBody() {
         onClose={() => setMaintenanceModalOpen(false)}
       />
     </Stack>
-  );
-}
-
-// Shared card frame for the two source-dashboard widgets. The body remains a
-// slot because Updates is split into chart/stat columns while Release Chunks
-// contains one centered chart.
-function DashboardWidgetHolder({
-  title,
-  actions,
-  children,
-}: {
-  title: string;
-  actions: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <Card
-      variant="outlined"
-      sx={{ backgroundColor: "transparent", overflowX: "auto", p: { xs: 2, sm: 3 } }}
-    >
-      <Box
-        sx={{
-          alignItems: { sm: "center" },
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 1.5,
-          justifyContent: "space-between",
-          mb: 3,
-        }}
-      >
-        <Typography component="h2" variant="h3">
-          {title}
-        </Typography>
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{ flexWrap: "wrap", justifyContent: "flex-end" }}
-        >
-          {actions}
-        </Stack>
-      </Box>
-
-      <Box>{children}</Box>
-    </Card>
-  );
-}
-
-// A fixed drawing area keeps both donuts optically equal even though their
-// surrounding widget layouts differ.
-const CHART_SIZE = 280;
-
-function DashboardDonut({
-  title,
-  legendTitle,
-  data,
-  colorMap,
-  loading,
-  total,
-}: {
-  title: string;
-  legendTitle: string;
-  data: UmtDashboardDatum[];
-  colorMap: Record<string, ThemeColor>;
-  loading?: boolean;
-  total?: number;
-}) {
-  const theme = useTheme();
-  // Release Chunks supplies the service's authoritative total; Active Updates
-  // is the sum of the four lifecycle slices shown in its chart.
-  const chartTotal = total ?? sumValues(data);
-
-  if (loading) {
-    return (
-      <Box sx={{ alignItems: "center", display: "flex", justifyContent: "center", minHeight: CHART_SIZE }}>
-        <CircularProgress size={24} />
-      </Box>
-    );
-  }
-
-  if (chartTotal === 0) {
-    return (
-      <Box
-        sx={{
-          alignItems: "center",
-          display: "flex",
-          justifyContent: "center",
-          minHeight: CHART_SIZE,
-        }}
-      >
-        <Typography variant="body2" color="text.secondary">
-          No data yet
-        </Typography>
-      </Box>
-    );
-  }
-
-  const colors = data.map((item) => {
-    const color = colorMap[item.name] ?? "primary";
-
-    // Prefer CSS-variable values so slice colors update immediately when the
-    // active color scheme changes; palette is the fallback for older themes.
-    return theme.vars?.palette[color].main ?? theme.palette[color].main;
-  });
-
-  // The visual chart and legend are hidden from assistive technology as one
-  // accessible image label communicates the same names, values and total once.
-  const chartDescription = `${title}: ${data
-    .map((item) => `${item.name} ${item.value}`)
-    .join(", ")}, total ${chartTotal}`;
-
-  return (
-    <Box
-      sx={{
-        alignItems: "center",
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 10,
-        justifyContent: "center",
-      }}
-    >
-      <Box
-        role="img"
-        aria-label={chartDescription}
-        sx={{
-          display: "grid",
-          flexShrink: 0,
-          height: CHART_SIZE,
-          width: CHART_SIZE,
-        }}
-      >
-        <Box
-          sx={{
-            "& .recharts-sector": { stroke: "none" },
-            gridArea: "1 / 1",
-            height: "100%",
-            position: "relative",
-            width: "100%",
-            zIndex: 1,
-          }}
-          aria-hidden="true"
-        >
-          <PieChart
-            data={data}
-            innerRadius={95}
-            outerRadius={132}
-            pies={[{ dataKey: "value", nameKey: "name" }]}
-            colors={colors}
-            legend={{ show: false }}
-            tooltip={{
-              formatter: (value) => formatPercentage(Number(value), chartTotal),
-            }}
-          />
-        </Box>
-
-        <Box
-          aria-hidden="true"
-          sx={{
-            alignItems: "center",
-            display: "flex",
-            flexDirection: "column",
-            gridArea: "1 / 1",
-            justifyContent: "center",
-            position: "relative",
-            textAlign: "center",
-            transform: "translateY(-10px)",
-            zIndex: 0,
-          }}
-        >
-          <Typography
-            variant="h1"
-            sx={{
-              fontWeight: 700,
-              lineHeight: 1.1,
-            }}
-          >
-            {chartTotal.toLocaleString()}
-          </Typography>
-
-          <Typography variant="body1" color="text.secondary">
-            {title}
-          </Typography>
-        </Box>
-      </Box>
-
-      <Stack
-        spacing={1.5}
-        sx={{ minWidth: 190 }}
-        aria-hidden="true"
-      >
-        <Typography
-          variant="subtitle1"
-          sx={{
-            fontWeight: 700,
-            mb: 0.5,
-          }}
-        >
-          {legendTitle}
-        </Typography>
-
-        {data.map((item, index) => (
-          <Box
-            key={item.name}
-            sx={{
-              alignItems: "center",
-              display: "flex",
-              gap: 1.5,
-            }}
-          >
-            <Box
-              sx={{
-                bgcolor: colors[index],
-                borderRadius: 0.75,
-                height: 16,
-                width: 16,
-              }}
-            />
-
-            <Typography
-              variant="body1"
-              sx={{
-                flex: 1,
-              }}
-            >
-              {item.name}
-            </Typography>
-
-            <Typography
-              variant="body1"
-              sx={{
-                fontVariantNumeric: "tabular-nums",
-                fontWeight: 700,
-              }}
-            >
-              {item.value}
-            </Typography>
-          </Box>
-        ))}
-      </Stack>
-    </Box>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon,
-  color,
-  customColor,
-}: {
-  label: string;
-  value: number | ReactNode;
-  icon: ReactNode;
-  color: ThemeColor;
-  customColor?: string;
-}) {
-  const theme = useTheme();
-  const cardColor = customColor ?? theme.palette[color].main;
-
-  return (
-    <Box
-      sx={{
-        alignItems: "center",
-        border: "2px solid",
-        borderColor: cardColor,
-        borderRadius: 2,
-        color: "text.primary",
-        display: "flex",
-        justifyContent: "space-between",
-        p: 2.5,
-      }}
-    >
-      <Box>
-        <Typography
-          variant="body2"
-          sx={{
-            opacity: 0.9,
-          }}
-        >
-          {label}
-        </Typography>
-
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 700,
-            lineHeight: 1.2,
-          }}
-        >
-          {typeof value === "number" ? value.toLocaleString() : value}
-        </Typography>
-      </Box>
-
-      <Box sx={{ opacity: 0.85 }}>{icon}</Box>
-    </Box>
   );
 }
