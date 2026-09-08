@@ -105,13 +105,30 @@ export default function UmtCreateUpdateDialog({
   const isSecurityUpdate = updateType === "security";
   const isCloudSupportUpdate = updateType === "cloud-support";
 
+  // Dialog visibility does not unmount this component, so reset explicitly to
+  // avoid carrying abandoned form values into the next creation attempt.
+  const handleClose = () => {
+    const nextEstimate = nextThursday();
+    setIsProactive(false);
+    setIsHotfix(false);
+    setUpdateType("regular");
+    setIssueType("bug");
+    setProduct(null);
+    setShowAllVersions(false);
+    setVersion(null);
+    setBestCaseEstimate(nextEstimate);
+    setMostLikelyEstimate(laterDate(nextEstimate, 7));
+    setWorstCaseEstimate(laterDate(nextEstimate, 14));
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
       <DialogTitle sx={{ fontSize: 18, fontWeight: 600, pr: 7 }}>
         Create an Update
         <IconButton
           aria-label="Close create update dialog"
-          onClick={onClose}
+          onClick={handleClose}
           sx={{ position: "absolute", right: 12, top: 12 }}
         >
           <XIcon size={18} />
@@ -257,7 +274,7 @@ export default function UmtCreateUpdateDialog({
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button variant="outlined" onClick={onClose}>
+        <Button variant="outlined" onClick={handleClose}>
           Cancel
         </Button>
         <Button variant="contained" onClick={() => setMaintenanceModalOpen(true)}>
