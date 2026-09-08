@@ -23,8 +23,8 @@ import { useAccessToken } from "@hooks/useAccessToken";
 import { foldIdentityError, useAsgardeoSub } from "@hooks/useAsgardeoSub";
 import type { UmtMeta } from "./umtTypes";
 
-// GET /meta — reference data shared by UMT workflows. The dashboard prefetches
-// it and the Create dialog calls this hook again; React Query deduplicates both
+// GET /meta — reference data shared by UMT workflows. UmtShell prefetches it
+// and the Create dialog calls this hook again; React Query deduplicates both
 // callers through the key below rather than maintaining two metadata copies.
 //
 // It is still scoped per user because the payload contains user emails and may
