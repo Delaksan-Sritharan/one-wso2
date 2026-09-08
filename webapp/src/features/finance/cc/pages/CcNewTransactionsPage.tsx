@@ -19,23 +19,24 @@ import {
   Alert,
   Box,
   Button,
-  Checkbox,
+  DataGrid,
   Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Typography,
 } from "@wso2/oxygen-ui";
+import { FINANCE_GRID_SX } from "../../util/financeGridSx";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { isCcBackendConfigured } from "@config/apiConfig";
 import FinanceShell from "../../components/FinanceShell";
 import { describeError } from "../../util/financeError";
-import { money, formatNice } from "../../util/financeFormat";
+import { bareAmount, formatNice } from "../../util/financeFormat";
 import { CardMenu } from "../components/CardMenu";
 import { CcEditDialog } from "../CcEditDialog";
-import { useCcCardLabel, useCcEmployeeSubmit } from "../useCcMutations";
+import { ToolbarNoExport as NewTxnToolbar } from "../ccGridToolbar";
+import { selectedIds } from "../ccSelection";
+import { CC_SNACK } from "../ccCopy";
+import { useCcCardLabel, useCcEmployeeSubmit, useCcSaveDraft } from "../useCcMutations";
+import { useDraftAutosave } from "../../util/useDraftAutosave";
+import { DraftStatusChip } from "../../components/DraftStatusChip";
 import { useCcTransactions, useCcUserInfo, useCreditCards } from "../useCc";
 import { ccTxnComplete, type CcTransaction } from "../ccTypes";
 import { FINANCE_EYEBROW } from "@constants/financeApps";
@@ -44,7 +45,7 @@ export default function CcNewTransactionsPage() {
   return (
     <FinanceShell
       eyebrow={FINANCE_EYEBROW.cc}
-      title="New card transactions"
+      title="Pending Submissions"
       subtitle="Categorise your unsubmitted card transactions — expense type, comment and the unit or job number — then submit the completed ones for lead approval."
       configured={isCcBackendConfigured()}
       configKey="ONE_WSO2_CC_EXPENSES_BACKEND_URL"
@@ -85,6 +86,76 @@ function NewTxnBody() {
 
   const completeChecked = rows.filter((t) => checked.has(t.id) && ccTxnComplete(t));
 
+  // NewTransactionsDataGrid.tsx:105-139. Its last column is a bare green tick
+  // when the required fields are filled; this one names the categorisation
+  // instead, which says the same thing and also what was chosen.
+  const columns = useMemo<DataGrid.GridColDef<CcTransaction>[]>(
+    () => [
+      { field: "id", headerName: "ID", width: 80 },
+      { field: "txnDescription", headerName: "Description", flex: 1, minWidth: 200 },
+      {
+        field: "txnDate",
+        headerName: "Date",
+        width: 130,
+        renderCell: (p) => formatNice(p.value as string),
+      },
+      {
+        field: "txnAmount",
+        headerName: "Amount($)",
+        type: "number",
+        width: 120,
+        renderCell: (p) => bareAmount(p.value as number),
+      },
+      {
+        field: "category",
+        headerName: "Category",
+        flex: 1,
+        minWidth: 200,
+        sortable: false,
+        valueGetter: (_v, row) =>
+          ccTxnComplete(row) ? `${row.expenseCategoryLabel} · ${row.expenseTypeLabel}` : "Needs details",
+        renderCell: (p) => (
+          <Box component="span" sx={{ color: ccTxnComplete(p.row) ? "success.main" : "text.disabled" }}>
+            {p.value as string}
+          </Box>
+        ),
+      },
+      {
+        field: "actions",
+        headerName: "",
+        width: 130,
+        sortable: false,
+        filterable: false,
+        align: "right",
+        headerAlign: "right",
+        renderCell: (p) => (
+          <Button size="small" variant="outlined" onClick={() => setEditing(p.row)} sx={{ textTransform: "none", fontWeight: 600 }}>
+            {ccTxnComplete(p.row) ? "Edit" : "Categorise"}
+          </Button>
+        ),
+      },
+    ],
+    [],
+  );
+
+  // Keep a part-finished categorisation on the server, as EditPane.tsx:444-467
+  // does. Without it, closing the tab after categorising a batch threw the lot
+  // away: `edits` above is component state and nothing posted until Submit.
+  //
+  // Five seconds, the source's own autoSaveDelay (EditPane.tsx:150), rather
+  // than the util's 1s default — this posts whole transaction rows, not
+  // keystrokes.
+  const draft = useCcSaveDraft();
+  const edited = useMemo(() => Object.values(edits), [edits]);
+  const draftState = useDraftAutosave(
+    JSON.stringify(edited),
+    txns.isSuccess,
+    async () => {
+      if (edited.length > 0) await draft.mutateAsync(edited);
+    },
+    5000,
+  );
+
   const toggle = (id: number) =>
     setChecked((prev) => {
       const next = new Set(prev);
@@ -98,7 +169,7 @@ function NewTxnBody() {
     const submittedIds = new Set(completeChecked.map((t) => t.id));
     submit.mutate(completeChecked, {
       onSuccess: () => {
-        showSuccess(`${completeChecked.length} transaction(s) submitted for lead approval`);
+        showSuccess(CC_SNACK.success.submitTransaction);
         // Prune only the submitted rows — clearing all of `edits`/`checked`
         // would discard categorisation the user did on rows they didn't tick.
         setChecked((prev) => new Set([...prev].filter((id) => !submittedIds.has(id))));
@@ -137,7 +208,7 @@ function NewTxnBody() {
           renameCard.mutate(
             { id: card.id, label },
             {
-              onSuccess: () => showSuccess("Successfully updated the label"),
+              onSuccess: () => showSuccess(CC_SNACK.success.updateCardLabel),
               onError: (err) => showError(describeError(err)),
             },
           )
@@ -153,55 +224,41 @@ function NewTxnBody() {
           No new transactions on this card.
         </Typography>
       ) : (
-        <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden", mt: 2 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ "& th": { fontSize: 11, fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.04em" } }}>
-                <TableCell padding="checkbox" />
-                <TableCell>Description</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell align="right">Amount</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell align="right">&nbsp;</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((t) => {
-                const complete = ccTxnComplete(t);
-                return (
-                  <TableRow key={t.id} hover selected={checked.has(t.id)}>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        size="small"
-                        checked={checked.has(t.id)}
-                        disabled={!complete}
-                        onChange={() => toggle(t.id)}
-                      />
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12.5 }}>{t.txnDescription}</TableCell>
-                    <TableCell sx={{ fontSize: 12.5 }}>{formatNice(t.txnDate)}</TableCell>
-                    <TableCell align="right" sx={{ fontSize: 12.5, fontVariantNumeric: "tabular-nums" }}>
-                      {money(t.txnAmount, "USD")}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12.5, color: complete ? "success.main" : "text.disabled" }}>
-                      {complete ? `${t.expenseCategoryLabel} · ${t.expenseTypeLabel}` : "Needs details"}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button size="small" variant="outlined" onClick={() => setEditing(t)} sx={{ textTransform: "none", fontWeight: 600 }}>
-                        {complete ? "Edit" : "Categorise"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+        <Box sx={{ height: 520, width: "100%" }}>
+          {/* NewTransactionsDataGrid.tsx — on the grid, so this screen has the
+              search, sorting and paging the source's has. No export: nothing
+              here is submitted yet, and the source offers it only on history. */}
+          <DataGrid.DataGrid
+            rows={rows}
+            columns={columns}
+            showToolbar
+            slots={{ toolbar: NewTxnToolbar }}
+            density="compact"
+            disableRowSelectionOnClick
+            checkboxSelection
+            rowSelectionModel={{ type: "include", ids: new Set(checked) }}
+            onRowSelectionModelChange={(model) => {
+              // include/exclude — see selectedIds. Every row here is
+              // selectable, which is exactly when the grid reports select-all
+              // as an empty exclude-set.
+              const next = selectedIds(model, rows);
+              for (const t of rows) {
+                if (next.has(t.id) !== checked.has(t.id)) toggle(t.id);
+              }
+            }}
+            initialState={{ pagination: { paginationModel: { pageSize: 20, page: 0 } } }}
+            pageSizeOptions={[5, 10, 20, 25, 50]}
+            sx={FINANCE_GRID_SX}
+          />
         </Box>
       )}
 
       {submit.isError && <Alert severity="error" sx={{ mt: 2 }}>{describeError(submit.error)}</Alert>}
 
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+      {/* EditPane.tsx:1523-1532 shows the autosave state in the action row, so
+          the reader can see their part-finished work is being kept. */}
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1.5, mt: 2 }}>
+        {edited.length > 0 && <DraftStatusChip state={draftState} />}
         <Button
           variant="contained"
           onClick={handleSubmit}

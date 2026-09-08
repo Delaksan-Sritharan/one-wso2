@@ -23,6 +23,7 @@ import { CcTxnTable } from "../CcTxnTable";
 import { useCcTransactions, useCcUserInfo } from "../useCc";
 import { useCcSaveEdit } from "../useCcMutations";
 import { CcEditDialog } from "../CcEditDialog";
+import { CC_SNACK } from "../ccCopy";
 import type { CcTransaction } from "../ccTypes";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { FINANCE_EYEBROW } from "@constants/financeApps";
@@ -31,7 +32,7 @@ export default function CcPendingPage() {
   return (
     <FinanceShell
       eyebrow={FINANCE_EYEBROW.cc}
-      title="Pending submissions"
+      title="Pending Approvals"
       subtitle="Your card transactions awaiting lead or finance approval."
       configured={isCcBackendConfigured()}
       configKey="ONE_WSO2_CC_EXPENSES_BACKEND_URL"
@@ -94,7 +95,7 @@ function PendingBody() {
         onSave={(patched) => {
           setEditing(null);
           saveEdit.mutate([patched], {
-            onSuccess: () => showSuccess("Transaction updated"),
+            onSuccess: () => showSuccess(CC_SNACK.success.saveEdit),
             onError: (err) => showError(describeError(err)),
           });
         }}
