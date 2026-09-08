@@ -14,20 +14,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import { useState } from "react";
 import type { ReactNode } from "react";
 import {
     Box,
+    Button,
     Card,
     CircularProgress,
     Stack,
     Typography,
     useTheme,
 } from "@wso2/oxygen-ui";
-import { Pause, RefreshCw, Rocket, CheckCircle } from "@wso2/oxygen-ui-icons-react";
+import { Pause, RefreshCw, Rocket, CheckCircle, Plus } from "@wso2/oxygen-ui-icons-react";
 import { teal } from "@mui/material/colors";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
+import { useUmtMeta } from "../api/useUmtMeta";
 import { lifecycleChartData, releaseChunkChartData, type UmtDashboardDatum } from "../api/umtDashboardStats";
 import { useUmtDashboardStats } from "../api/useUmtDashboardStats";
+import { useUmtGate } from "../api/useUmtGate";
+import UmtCreateUpdateDialog from "../components/UmtCreateUpdateDialog";
+import MaintenanceDialog from "../components/MaintenanceDialog";
 import UmtShell from "../components/UmtShell";
 import { PieChart } from "@wso2/oxygen-ui-charts-react";
 
@@ -67,7 +73,16 @@ export default function UmtHomePage() {
 // the UMT role gate succeeds, so /meta and /update/stats are never requested for
 // a denied user.
 function UmtDashboardBody() {
+    // Match the source dashboard's eager metadata load. The dialog calls the
+    // same subject-scoped query and receives this cached result without a second
+    // request.
+    useUmtMeta();
     const dashboardStats = useUmtDashboardStats();
+    // UmtShell has already resolved this query. Calling the gate here reads the
+    // cached role decision needed for the admin-only release-chunk button.
+    const gate = useUmtGate();
+    const [createUpdateOpen, setCreateUpdateOpen] = useState(false);
+    const [maintenanceModalOpen, setMaintenanceModalOpen] = useState(false);
 
     const lifecycleData = dashboardStats.data ? lifecycleChartData(dashboardStats.data) : [];
     const releaseChunkData = dashboardStats.data ? releaseChunkChartData(dashboardStats.data) : [];
@@ -86,7 +101,23 @@ function UmtDashboardBody() {
             )}
             <DashboardWidgetHolder
                 title="Updates"
-                actions={null}
+                actions={
+                    <>
+                        <Button
+                            variant="outlined"
+                            onClick={() => setMaintenanceModalOpen(true)}
+                        >
+                            View updates
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<Plus size={16} />}
+                            onClick={() => setCreateUpdateOpen(true)}
+                        >
+                            Create
+                        </Button>
+                    </>
+                }
             >
                 <Box
                     sx={{
@@ -172,7 +203,33 @@ function UmtDashboardBody() {
 
             <DashboardWidgetHolder
                 title="Release chunks"
-                actions={null}
+                actions={
+                    <>
+                        <Button
+                            variant="outlined"
+                            onClick={() => setMaintenanceModalOpen(true)}
+                        >
+                            View pending
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            onClick={() => setMaintenanceModalOpen(true)}
+                        >
+                            View released
+                        </Button>
+                        {/* The source route admitted every UMT role by mistake;
+                            both this entry and the future route are admin-only. */}
+                        {gate.isAdmin && (
+                            <Button
+                                variant="contained"
+                                startIcon={<Plus size={16} />}
+                                onClick={() => setMaintenanceModalOpen(true)}
+                            >
+                                Create
+                            </Button>
+                        )}
+                    </>
+                }
             >
                 <Box
                     sx={{
@@ -192,6 +249,15 @@ function UmtDashboardBody() {
                     />
                 </Box>
             </DashboardWidgetHolder>
+
+            <UmtCreateUpdateDialog
+                open={createUpdateOpen}
+                onClose={() => setCreateUpdateOpen(false)}
+            />
+            <MaintenanceDialog
+                open={maintenanceModalOpen}
+                onClose={() => setMaintenanceModalOpen(false)}
+            />
         </Stack>
     );
 }
