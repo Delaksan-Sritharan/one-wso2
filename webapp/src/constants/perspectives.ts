@@ -23,6 +23,7 @@ import {
   DatabaseIcon,
   HouseIcon,
   LifeBuoyIcon,
+  LayoutDashboard,
   MegaphoneIcon,
   SatelliteDishIcon,
   UserRoundIcon,
@@ -279,6 +280,17 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     access: true,
     path: "/me",
     sections: ME_SECTIONS,
+  },
+  // UMT currently exposes only its dashboard. An empty section list keeps the
+  // rail at Overview until the update, product, chunk and statistics routes are
+  // actually ported; UmtShell performs the service-owned role check at /umt.
+  {
+    key: "umt",
+    label: "UMT",
+    icon: LayoutDashboard,
+    access: true,
+    path: "/umt",
+    sections: [],
   },
 ];
 

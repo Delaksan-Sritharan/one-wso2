@@ -107,6 +107,15 @@ export const PERSPECTIVE_HUES: Record<string, PerspectiveHue> = {
     light: { bg: "#F1E8FB", fg: "#7C4AB3" },
     dark: { bg: "#241D2C", fg: "#9B5DE0" },
   },
+
+  // Burnished amber separates UMT from Me's brand orange without introducing
+  // another blue/green neighbour. The wash/foreground pairs retain the same
+  // contrast headroom asserted for every launcher tile below.
+  umt: {
+    hue: "#B87300",
+    light: { bg: "#FFF3D6", fg: "#8A5600" },
+    dark: { bg: "#30281A", fg: "#F5B800" },
+  },
 };
 
 export function perspectiveHue(key: string): PerspectiveHue | undefined {

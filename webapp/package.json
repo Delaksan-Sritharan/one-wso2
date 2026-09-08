@@ -18,6 +18,7 @@
     "@mui/material": "7.3.4",
     "@tanstack/react-query": "5.90.20",
     "@wso2/oxygen-ui": "0.6.0",
+    "@wso2/oxygen-ui-charts-react": "^0.13.1",
     "@wso2/oxygen-ui-icons-react": "0.6.0",
     "exceljs": "4.4.0",
     "html-to-text": "10.0.0",
