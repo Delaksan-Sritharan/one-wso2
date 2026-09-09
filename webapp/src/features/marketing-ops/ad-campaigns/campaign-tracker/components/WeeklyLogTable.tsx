@@ -44,6 +44,7 @@ import {
   Autocomplete,
 } from "@wso2/oxygen-ui";
 import { Plus, ChevronDown, ChevronUp, ChevronRight, Eye, Pencil, Link2Off, RotateCcw } from "@wso2/oxygen-ui-icons-react";
+import { describeError } from "@api/errors";
 import {
   WeeklyLogRow,
   WeeklyLogEntryRow,
@@ -54,6 +55,7 @@ import {
   BUSINESS_UNITS,
   ENTRY_TYPES,
   LOG_STATUSES,
+  parseLocalDate,
 } from "../campaignTrackerTypes";
 import { CHART_COLORS } from "../../analytics/chartTheme";
 import { NUMERIC, ToneChip } from "./campaignTrackerPrimitives";
@@ -121,8 +123,14 @@ const LOG_STATUS_COLOR: Record<LogStatus, string> = {
   Completed: "success.main",
 };
 
-const fmtDate = (d: string | null) => (d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—");
-const fmtGroupDate = (d: string) => new Date(d).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+const fmtDate = (d: string | null) => {
+  const parsed = d ? parseLocalDate(d) : null;
+  return parsed ? parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
+};
+const fmtGroupDate = (d: string) => {
+  const parsed = parseLocalDate(d);
+  return parsed ? parsed.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric", year: "numeric" }) : "—";
+};
 
 type GroupByOption = "date" | "campaign" | "bu" | "status" | "followup";
 const GROUP_BY_OPTIONS: { value: GroupByOption; label: string }[] = [
@@ -246,6 +254,11 @@ export function WeeklyLogTable({
   // clicks); defaults match the prior fixed "newest first" behavior.
   const [sortBy, setSortBy] = useState<SortColumn>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  // Unlike Register/Budget Pacing, Weekly Log edits actually persist
+  // server-side (see CampaignTrackerPage's footnote) — so a failed save here
+  // must NOT be applied locally or silently dropped; it's surfaced here and
+  // the editor/action stays open so the user can retry.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function toggleSort(col: SortColumn) {
     if (sortBy === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -351,64 +364,82 @@ export function WeeklyLogTable({
 
   async function saveGroupEdit(edited: WeeklyLogRow) {
     const original = rows.find((r) => r.id === edited.id);
-    let finalRow = edited;
     if (original && persistedLogIds?.has(edited.id) && onGroupUpdate) {
       const patch = diffGroupFields(original, edited);
       if (Object.keys(patch).length > 0) {
         try {
-          finalRow = await onGroupUpdate(edited.id, patch);
-        } catch {
-          /* keep the local edit even if persistence failed */
+          const finalRow = await onGroupUpdate(edited.id, patch);
+          onChange(rows.map((r) => (r.id === edited.id ? finalRow : r)));
+        } catch (e) {
+          setSaveError(describeError(e));
+          return;
         }
+        setEditingGroup(null);
+        setSaveError(null);
+        return;
       }
     }
-    onChange(rows.map((r) => (r.id === edited.id ? finalRow : r)));
+    onChange(rows.map((r) => (r.id === edited.id ? edited : r)));
     setEditingGroup(null);
+    setSaveError(null);
   }
 
   async function saveEntryEdit(group: WeeklyLogRow, edited: WeeklyLogEntryRow) {
     const originalEntry = group.entries.find((e) => e.id === edited.id);
-    const locallyPatched = { ...group, entries: group.entries.map((e) => (e.id === edited.id ? edited : e)) };
-    let finalGroup = locallyPatched;
     if (originalEntry && persistedLogIds?.has(group.id) && onEntryUpdate) {
       const patch = diffEntryFields(originalEntry, edited);
       if (Object.keys(patch).length > 0) {
         try {
-          finalGroup = await onEntryUpdate(group.id, edited.id, patch);
-        } catch {
-          /* keep the local edit even if persistence failed */
+          const finalGroup = await onEntryUpdate(group.id, edited.id, patch);
+          onChange(rows.map((r) => (r.id === group.id ? finalGroup : r)));
+        } catch (e) {
+          setSaveError(describeError(e));
+          return;
         }
+        setEditingEntry(null);
+        setSaveError(null);
+        return;
       }
     }
-    onChange(rows.map((r) => (r.id === group.id ? finalGroup : r)));
+    const locallyPatched = { ...group, entries: group.entries.map((e) => (e.id === edited.id ? edited : e)) };
+    onChange(rows.map((r) => (r.id === group.id ? locallyPatched : r)));
     setEditingEntry(null);
+    setSaveError(null);
   }
 
   async function toggleEntryUnlog(group: WeeklyLogRow, entry: WeeklyLogEntryRow) {
     const next = !entry.isUnlogged;
-    const locallyToggled = { ...group, entries: group.entries.map((e) => (e.id === entry.id ? { ...e, isUnlogged: next } : e)) };
-    let finalGroup = locallyToggled;
     if (persistedLogIds?.has(group.id) && onEntryUnlog) {
       try {
-        finalGroup = await onEntryUnlog(group.id, entry.id, next);
-      } catch {
-        /* keep the local toggle even if persistence failed */
+        const finalGroup = await onEntryUnlog(group.id, entry.id, next);
+        onChange(rows.map((r) => (r.id === group.id ? finalGroup : r)));
+        setSaveError(null);
+      } catch (e) {
+        setSaveError(describeError(e));
       }
+      return;
     }
-    onChange(rows.map((r) => (r.id === group.id ? finalGroup : r)));
+    const locallyToggled = { ...group, entries: group.entries.map((e) => (e.id === entry.id ? { ...e, isUnlogged: next } : e)) };
+    onChange(rows.map((r) => (r.id === group.id ? locallyToggled : r)));
+    setSaveError(null);
   }
 
   async function saveNewEntry(row: WeeklyLogRow) {
-    let finalRow = row;
     if (onAddEntry) {
       try {
-        finalRow = await onAddEntry(row);
-      } catch {
-        /* keep the locally-drafted row even if persistence failed */
+        const finalRow = await onAddEntry(row);
+        onChange([finalRow, ...rows]);
+      } catch (e) {
+        setSaveError(describeError(e));
+        return;
       }
+      setAdding(false);
+      setSaveError(null);
+      return;
     }
-    onChange([finalRow, ...rows]);
+    onChange([row, ...rows]);
     setAdding(false);
+    setSaveError(null);
   }
 
   async function saveEntryToGroup(group: WeeklyLogRow, entry: Pick<WeeklyLogEntryRow, "entryType" | "whatChanged">) {
@@ -416,13 +447,21 @@ export function WeeklyLogTable({
       setAddingToGroup(null);
       return;
     }
-    const finalGroup = await onAddEntryToGroup(group.id, entry);
-    onChange(rows.map((r) => (r.id === group.id ? finalGroup : r)));
-    setAddingToGroup(null);
+    try {
+      const finalGroup = await onAddEntryToGroup(group.id, entry);
+      onChange(rows.map((r) => (r.id === group.id ? finalGroup : r)));
+      setAddingToGroup(null);
+      setSaveError(null);
+    } catch (e) {
+      setSaveError(describeError(e));
+    }
   }
 
   return (
     <Box>
+      {saveError && (
+        <Typography sx={{ fontSize: "0.76rem", color: "error.main", mb: 1.5 }}>Couldn't save: {saveError}</Typography>
+      )}
       <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
         <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
           <RowCount shown={filtered.length} total={rows.length} singular="log entry" plural="log entries" />

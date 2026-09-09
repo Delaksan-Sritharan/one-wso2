@@ -148,14 +148,35 @@ export interface BudgetPacingRow {
 const DAY_MS = 86_400_000;
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
-function parseISODateUTC(iso: string): Date {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
+// Accepts a bare date ("2026-01-05") or a full ISO timestamp
+// ("2026-01-05T00:00:00Z") and reads only the date prefix — the time
+// component (if any) is irrelevant to the day-level arithmetic below. Returns
+// null rather than an Invalid Date so callers can fall back instead of
+// propagating NaN through pacing math.
+function parseISODateUTC(iso: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!match) return null;
+  const [, y, m, d] = match;
+  const date = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+// A date-only string ("2026-01-05") rendered with toLocaleDateString needs to
+// be built from local Y/M/D parts, not parsed as UTC-midnight — otherwise a
+// viewer west of UTC sees the previous day. Use this (not `new Date(iso)`)
+// wherever a date-only field is formatted for display.
+export function parseLocalDate(iso: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!match) return null;
+  const [, y, m, d] = match;
+  const date = new Date(Number(y), Number(m) - 1, Number(d));
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export function daysSinceReview(lastReviewed: string | null): number | null {
   if (!lastReviewed) return null;
-  return Math.floor((Date.now() - parseISODateUTC(lastReviewed).getTime()) / DAY_MS);
+  const parsed = parseISODateUTC(lastReviewed);
+  return parsed ? Math.floor((Date.now() - parsed.getTime()) / DAY_MS) : null;
 }
 
 // Mirrors: =IF(C="","",IF(OR(status="Ended",status="Paused"),"—",
@@ -171,14 +192,16 @@ export function registerFlag(row: CampaignRegisterRow): RegisterFlag {
   return since > 14 ? "REVIEW OVERDUE" : "OK";
 }
 
-function daysInMonth(iso: string): number {
-  const d = parseISODateUTC(iso);
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+function paceForDate(d: Date): number {
+  const daysInThisMonth = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  return d.getUTCDate() / daysInThisMonth;
 }
 
+// Falls back to today's pace when asOfDate can't be parsed, rather than
+// letting an invalid date produce NaN variance/flags for the whole row.
 export function expectedPace(asOfDate: string): number {
-  const d = parseISODateUTC(asOfDate);
-  return d.getUTCDate() / daysInMonth(asOfDate);
+  const parsed = parseISODateUTC(asOfDate) ?? parseISODateUTC(todayISO())!;
+  return paceForDate(parsed);
 }
 
 export function actualPace(mtdSpend: number, monthlyBudget: number): number {

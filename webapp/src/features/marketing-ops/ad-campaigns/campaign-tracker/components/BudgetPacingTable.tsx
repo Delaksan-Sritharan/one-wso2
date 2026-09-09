@@ -19,9 +19,10 @@
 // monthlyBudget/mtdSpend/asOfDate exactly as the sheet's formulas did (see
 // campaignTrackerTypes.ts).
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Box, Typography, Table, TableHead, TableBody, TableRow, TableCell, IconButton, Tooltip, MenuItem, Button, Dialog, DialogActions, TextField } from "@wso2/oxygen-ui";
 import { Plus, Trash2, Calculator } from "@wso2/oxygen-ui-icons-react";
+import { describeError } from "@api/errors";
 import {
   BudgetPacingRow,
   BusinessUnit,
@@ -36,6 +37,7 @@ import {
   pacingFlag,
   fmtPct,
   fmtMoney,
+  parseLocalDate,
 } from "../campaignTrackerTypes";
 import type { ManualPacingEditableFields } from "../../../api/useCampaignTracker";
 import { NUMERIC, ToneChip } from "./campaignTrackerPrimitives";
@@ -68,7 +70,10 @@ function BudgetValue({ value, isDerived, tooltip }: { value: string; isDerived: 
   );
 }
 
-const fmtDate = (d: string) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const fmtDate = (d: string) => {
+  const parsed = parseLocalDate(d);
+  return parsed ? parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
+};
 
 // Advanced filter: BU/Flag are multi-select (OR within the field); the As-of
 // date range and Variance % range narrow further. Every field ANDs together.
@@ -128,51 +133,63 @@ export function BudgetPacingTable({
 }) {
   const [editing, setEditing] = useState<BudgetPacingRow | null>(null);
   const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // saveRow/deleteRow await a persistence call before touching state; reading
+  // the `rows` prop straight from the closure at that point would apply the
+  // change on top of whatever `rows` looked like when the async call started,
+  // silently discarding any edit that landed in between. A ref always reads
+  // the latest rows the parent has handed down.
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
 
   const filtered = useMemo(() => rows.filter((r) => matchesPacingFilters(r, filters)), [rows, filters]);
 
   async function saveRow(row: BudgetPacingRow) {
-    const existing = rows.find((r) => r.id === row.id);
-    let finalRow = row;
-    if (!existing) {
-      if (onAdd) {
-        try {
-          finalRow = await onAdd(row);
-        } catch {
-          /* keep the locally-drafted row (with its draft id) even if persistence failed */
-        }
-      }
-      onChange([...rows, finalRow]);
-    } else {
-      if (row.isManual && onUpdate) {
+    const existing = rowsRef.current.find((r) => r.id === row.id);
+    setSaving(true);
+    try {
+      if (!existing) {
+        const finalRow = onAdd ? await onAdd(row) : row;
+        onChange([...rowsRef.current, finalRow]);
+      } else if (row.isManual && onUpdate) {
         const patch = diffManualFields(existing, row);
-        if (Object.keys(patch).length > 0) {
-          try {
-            finalRow = await onUpdate(row.id, patch);
-          } catch {
-            /* keep the local edit even if persistence failed */
-          }
-        }
+        const finalRow = Object.keys(patch).length > 0 ? await onUpdate(row.id, patch) : row;
+        onChange(rowsRef.current.map((r) => (r.id === row.id ? finalRow : r)));
+      } else {
+        onChange(rowsRef.current.map((r) => (r.id === row.id ? row : r)));
       }
-      onChange(rows.map((r) => (r.id === row.id ? finalRow : r)));
+      setEditing(null);
+      setAdding(false);
+      setSaveError(null);
+    } catch (e) {
+      // Persistence failed — leave the prior rows (and the open dialog) alone
+      // rather than committing a row the server never actually saved.
+      setSaveError(describeError(e));
+    } finally {
+      setSaving(false);
     }
-    setEditing(null);
-    setAdding(false);
   }
 
   async function deleteRow(row: BudgetPacingRow) {
-    onChange(rows.filter((r) => r.id !== row.id));
-    if (onDelete) {
-      try {
-        await onDelete(row.id);
-      } catch {
-        /* already removed locally; a reload restores it if the delete didn't actually persist */
-      }
+    if (!onDelete) {
+      onChange(rowsRef.current.filter((r) => r.id !== row.id));
+      return;
+    }
+    try {
+      await onDelete(row.id);
+      onChange(rowsRef.current.filter((r) => r.id !== row.id));
+      setSaveError(null);
+    } catch (e) {
+      setSaveError(describeError(e));
     }
   }
 
   return (
     <Box>
+      {saveError && !editing && !adding && (
+        <Typography sx={{ fontSize: "0.76rem", color: "error.main", mb: 1.5 }}>Couldn't save: {saveError}</Typography>
+      )}
       <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
         <RowCount shown={filtered.length} total={rows.length} singular="pacing row" />
         <Button size="small" variant="contained" startIcon={<Plus size={16} />} onClick={() => setAdding(true)} sx={{ textTransform: "none", fontSize: "0.76rem", fontWeight: 700 }}>
@@ -211,7 +228,20 @@ export function BudgetPacingTable({
                   const varianceDollars = pacingVarianceDollars(row);
                   const flag = pacingFlag(row);
                   return (
-                    <TableRow key={row.id} onClick={() => setEditing(row)} sx={{ cursor: "pointer" }}>
+                    <TableRow
+                      key={row.id}
+                      onClick={() => setEditing(row)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setEditing(row);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Edit pacing row for ${row.campaign}`}
+                      sx={{ cursor: "pointer" }}
+                    >
                       <TableCell>
                         <Typography sx={{ fontSize: "0.74rem" }}>{row.month}</Typography>
                       </TableCell>
@@ -284,9 +314,12 @@ export function BudgetPacingTable({
         <PacingFormDialog
           initial={editing}
           platform={platform}
+          saving={saving}
+          error={saveError}
           onCancel={() => {
             setEditing(null);
             setAdding(false);
+            setSaveError(null);
           }}
           onSave={saveRow}
         />
@@ -324,11 +357,15 @@ let draftSeq = 0;
 function PacingFormDialog({
   initial,
   platform,
+  saving,
+  error,
   onCancel,
   onSave,
 }: {
   initial: BudgetPacingRow | null;
   platform: AdPlatform;
+  saving: boolean;
+  error: string | null;
   onCancel: () => void;
   onSave: (row: BudgetPacingRow) => void;
 }) {
@@ -365,12 +402,15 @@ function PacingFormDialog({
         <TextField label="Monthly budget ($)" type="number" size="small" fullWidth value={row.monthlyBudget} onChange={(e) => set("monthlyBudget", Number(e.target.value))} />
         <TextField label="MTD spend ($)" type="number" size="small" fullWidth value={row.mtdSpend} onChange={(e) => set("mtdSpend", Number(e.target.value))} />
       </Box>
+      {error && (
+        <Typography sx={{ fontSize: "0.74rem", color: "error.main", px: 3, pb: 1 }}>Couldn't save: {error}</Typography>
+      )}
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-        <Button onClick={onCancel} sx={{ textTransform: "none", fontSize: "0.78rem", color: "text.secondary" }}>
+        <Button onClick={onCancel} disabled={saving} sx={{ textTransform: "none", fontSize: "0.78rem", color: "text.secondary" }}>
           Cancel
         </Button>
-        <Button onClick={() => onSave(row)} disabled={!canSave} variant="contained" sx={{ textTransform: "none", fontWeight: 700, fontSize: "0.78rem" }}>
-          {initial ? "Save changes" : "Add row"}
+        <Button onClick={() => onSave(row)} disabled={!canSave || saving} variant="contained" sx={{ textTransform: "none", fontWeight: 700, fontSize: "0.78rem" }}>
+          {saving ? "Saving…" : initial ? "Save changes" : "Add row"}
         </Button>
       </DialogActions>
     </Dialog>

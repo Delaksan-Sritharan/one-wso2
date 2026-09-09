@@ -99,6 +99,18 @@ export function setWeeklyLogCache(qc: QueryClient, days: number, includeUnlogged
   qc.setQueryData(KEY.weeklyLog(days, includeUnlogged), rows);
 }
 
+// authedPost/authedPatch resolve to `T | null` because SOME endpoints reply
+// 204 on success. The mutations below are documented to always answer with
+// the created/updated resource, and CampaignTrackerPage relies on that to
+// merge the result straight into its row state — a null here means the
+// backend broke that contract, not a value the caller should silently wave
+// through. Throwing surfaces it as a normal mutation failure instead of
+// smuggling `null` into a row shape that expects real fields (e.g. `id`).
+function requireResult<T>(value: T | null, action: string): T {
+  if (value === null) throw new Error(`${action} succeeded but the server returned no data`);
+  return value;
+}
+
 function useBase() {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
@@ -166,10 +178,13 @@ export function useUpdateRegisterOverride() {
       platform: AdPlatform;
       patch: Partial<RegisterOverrideFields>;
     }) =>
-      authedPatch<RegisterOverrideFields>(
-        urls.campaignTrackerRegisterOverride(campaignId, platformParam(platform)),
-        await getAccessToken(),
-        toRegisterOverrideBody(patch),
+      requireResult(
+        await authedPatch<RegisterOverrideFields>(
+          urls.campaignTrackerRegisterOverride(campaignId, platformParam(platform)),
+          await getAccessToken(),
+          toRegisterOverrideBody(patch),
+        ),
+        "Update register override",
       ),
     onSuccess: (_data, { platform }) =>
       qc.invalidateQueries({ queryKey: KEY.registerPlatform(platform) }),
@@ -222,15 +237,18 @@ export function useAddManualPacingRow() {
     mutationFn: async (
       row: Omit<BudgetPacingRow, "id" | "isManual" | "monthlyBudgetIsDerived" | "dailyBudget" | "dailyBudgetIsDerived">,
     ) =>
-      authedPost<BudgetPacingRow>(urls.campaignTrackerBudgetPacingManual, await getAccessToken(), {
-        month: row.month,
-        bu: row.bu,
-        platform: row.platform,
-        campaign: row.campaign,
-        monthly_budget: row.monthlyBudget,
-        mtd_spend: row.mtdSpend,
-        as_of_date: row.asOfDate,
-      }),
+      requireResult(
+        await authedPost<BudgetPacingRow>(urls.campaignTrackerBudgetPacingManual, await getAccessToken(), {
+          month: row.month,
+          bu: row.bu,
+          platform: row.platform,
+          campaign: row.campaign,
+          monthly_budget: row.monthlyBudget,
+          mtd_spend: row.mtdSpend,
+          as_of_date: row.asOfDate,
+        }),
+        "Add manual pacing row",
+      ),
     onSuccess: (_data, row) => qc.invalidateQueries({ queryKey: KEY.pacing(row.platform) }),
   });
 }
@@ -240,10 +258,13 @@ export function useUpdateManualPacingRow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<ManualPacingEditableFields> }) =>
-      authedPatch<BudgetPacingRow>(
-        urls.campaignTrackerBudgetPacingManualRow(id),
-        await getAccessToken(),
-        toManualPacingBody(patch),
+      requireResult(
+        await authedPatch<BudgetPacingRow>(
+          urls.campaignTrackerBudgetPacingManualRow(id),
+          await getAccessToken(),
+          toManualPacingBody(patch),
+        ),
+        "Update manual pacing row",
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY.pacingAll }),
   });
@@ -344,7 +365,10 @@ export function useAddWeeklyLogEntry() {
   const invalidate = useInvalidateWeeklyLog();
   return useMutation({
     mutationFn: async (row: Omit<WeeklyLogRow, "id">) =>
-      authedPost<WeeklyLogRow>(urls.campaignTrackerWeeklyLogCreate, await getAccessToken(), toEntryCreateBody(row)),
+      requireResult(
+        await authedPost<WeeklyLogRow>(urls.campaignTrackerWeeklyLogCreate, await getAccessToken(), toEntryCreateBody(row)),
+        "Add weekly log entry",
+      ),
     onSuccess: invalidate,
   });
 }
@@ -364,10 +388,13 @@ export function useAddWeeklyLogEntryToGroup() {
       groupId: string;
       entry: Pick<WeeklyLogEntryRow, "entryType" | "whatChanged">;
     }) =>
-      authedPost<WeeklyLogRow>(urls.campaignTrackerWeeklyLogEntries(groupId), await getAccessToken(), {
-        entry_type: entry.entryType,
-        what_changed: entry.whatChanged,
-      }),
+      requireResult(
+        await authedPost<WeeklyLogRow>(urls.campaignTrackerWeeklyLogEntries(groupId), await getAccessToken(), {
+          entry_type: entry.entryType,
+          what_changed: entry.whatChanged,
+        }),
+        "Add weekly log entry to group",
+      ),
     onSuccess: invalidate,
   });
 }
@@ -386,10 +413,13 @@ export function useUpdateWeeklyLogGroup() {
       groupId: string;
       patch: Partial<WeeklyLogGroupEditableFields>;
     }) =>
-      authedPatch<WeeklyLogRow>(
-        urls.campaignTrackerWeeklyLogGroup(groupId),
-        await getAccessToken(),
-        toGroupPatchBody(patch),
+      requireResult(
+        await authedPatch<WeeklyLogRow>(
+          urls.campaignTrackerWeeklyLogGroup(groupId),
+          await getAccessToken(),
+          toGroupPatchBody(patch),
+        ),
+        "Update weekly log group",
       ),
     onSuccess: invalidate,
   });
@@ -411,10 +441,13 @@ export function useUpdateWeeklyLogEntry() {
       entryId: string;
       patch: Partial<WeeklyLogEntryEditableFields>;
     }) =>
-      authedPatch<WeeklyLogRow>(
-        urls.campaignTrackerWeeklyLogEntry(groupId, entryId),
-        await getAccessToken(),
-        toEntryPatchBody(patch),
+      requireResult(
+        await authedPatch<WeeklyLogRow>(
+          urls.campaignTrackerWeeklyLogEntry(groupId, entryId),
+          await getAccessToken(),
+          toEntryPatchBody(patch),
+        ),
+        "Update weekly log entry",
       ),
     onSuccess: invalidate,
   });
@@ -437,9 +470,12 @@ export function useSetEntryUnlogged() {
       entryId: string;
       isUnlogged: boolean;
     }) =>
-      authedPatch<WeeklyLogRow>(urls.campaignTrackerWeeklyLogEntry(groupId, entryId), await getAccessToken(), {
-        is_unlogged: isUnlogged,
-      }),
+      requireResult(
+        await authedPatch<WeeklyLogRow>(urls.campaignTrackerWeeklyLogEntry(groupId, entryId), await getAccessToken(), {
+          is_unlogged: isUnlogged,
+        }),
+        "Set weekly log entry unlogged state",
+      ),
     onSuccess: invalidate,
   });
 }

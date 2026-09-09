@@ -30,7 +30,7 @@ import { useState } from "react";
 import { Box, Typography, Table, TableHead, TableBody, TableRow, TableCell, Button, Dialog, DialogActions, TextField, MenuItem, IconButton, Tooltip } from "@wso2/oxygen-ui";
 import { Plus, History } from "@wso2/oxygen-ui-icons-react";
 import { describeError } from "@api/errors";
-import { BUSINESS_UNITS, BusinessUnit } from "../campaignTrackerTypes";
+import { BUSINESS_UNITS, BusinessUnit, parseLocalDate } from "../campaignTrackerTypes";
 import {
   useOwners,
   useCurrentBuOwners,
@@ -42,7 +42,15 @@ import {
 import { NUMERIC, ToneChip } from "./campaignTrackerPrimitives";
 import { RowCount } from "./FilterControls";
 
-const fmtDate = (d: string) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+// effective_from is a date-only string ("2026-01-05"); created_at is a full
+// timestamp — each needs its own parse so a date-only value isn't run through
+// `new Date()` (which reads it as UTC midnight, then shifts a day in
+// negative-offset timezones once toLocaleDateString renders it locally).
+const fmtDate = (d: string) => {
+  const parsed = parseLocalDate(d);
+  return parsed ? parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+};
+const fmtTimestamp = (d: string) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export function BuOwnersPanel() {
@@ -159,7 +167,7 @@ export function BuOwnersPanel() {
                       <Typography sx={{ fontSize: "0.78rem", color: "text.secondary" }}>{o.email}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography sx={{ fontSize: "0.72rem", ...NUMERIC }}>{fmtDate(o.created_at)}</Typography>
+                      <Typography sx={{ fontSize: "0.72rem", ...NUMERIC }}>{fmtTimestamp(o.created_at)}</Typography>
                     </TableCell>
                   </TableRow>
                 ))

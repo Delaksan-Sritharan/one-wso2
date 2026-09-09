@@ -115,6 +115,7 @@ export function InlineDateRangeFilter({
           type="date"
           size="small"
           InputLabelProps={{ shrink: true }}
+          inputProps={{ "aria-label": `${label} from` }}
           value={from}
           onChange={(e) => onFromChange(e.target.value)}
           sx={{ width, "& .MuiInputBase-input": { fontSize: "0.76rem" } }}
@@ -124,6 +125,7 @@ export function InlineDateRangeFilter({
           type="date"
           size="small"
           InputLabelProps={{ shrink: true }}
+          inputProps={{ "aria-label": `${label} to` }}
           value={to}
           onChange={(e) => onToChange(e.target.value)}
           sx={{ width, "& .MuiInputBase-input": { fontSize: "0.76rem" } }}
@@ -160,6 +162,7 @@ export function InlineNumberRangeFilter({
           type="number"
           size="small"
           placeholder={minPlaceholder}
+          inputProps={{ "aria-label": `${label} ${minPlaceholder}` }}
           value={min}
           onChange={(e) => onMinChange(e.target.value)}
           sx={{ width, "& .MuiInputBase-input": { fontSize: "0.76rem" } }}
@@ -169,6 +172,7 @@ export function InlineNumberRangeFilter({
           type="number"
           size="small"
           placeholder={maxPlaceholder}
+          inputProps={{ "aria-label": `${label} ${maxPlaceholder}` }}
           value={max}
           onChange={(e) => onMaxChange(e.target.value)}
           sx={{ width, "& .MuiInputBase-input": { fontSize: "0.76rem" } }}

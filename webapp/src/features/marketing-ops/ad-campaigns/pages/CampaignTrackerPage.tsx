@@ -295,7 +295,7 @@ export default function CampaignTrackerPage() {
   }
 
   async function handleAddEntry(row: Omit<WeeklyLogRow, "id">): Promise<WeeklyLogRow> {
-    return (await addWeeklyLogEntry.mutateAsync(row))!;
+    return addWeeklyLogEntry.mutateAsync(row);
   }
 
   async function handleRegisterUpdate(campaignId: string, platform: AdPlatform, patch: Parameters<typeof updateRegisterOverride.mutateAsync>[0]["patch"]) {
@@ -359,15 +359,18 @@ export default function CampaignTrackerPage() {
         </StatStrip>
       )}
 
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 3, borderBottom: 1, borderColor: "divider" }}>
+      <Box role="tablist" sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 3, borderBottom: 1, borderColor: "divider" }}>
         {TABS.map(({ label, icon }) => {
           const activeState = activeTab === label;
+          const slug = label.toLowerCase().replace(/\s+/g, "-");
           return (
             <Box
               key={label}
               component="button"
               type="button"
               role="tab"
+              id={`campaign-tracker-tab-${slug}`}
+              aria-controls={`campaign-tracker-tabpanel-${slug}`}
               aria-selected={activeState}
               onClick={() => setActiveTab(label)}
               sx={{
@@ -399,7 +402,12 @@ export default function CampaignTrackerPage() {
       </Box>
 
       {activeTab === "Register" && (
-        <Box sx={{ p: 2, borderRadius: "10px", border: 1, borderColor: "divider", bgcolor: "background.paper" }}>
+        <Box
+          role="tabpanel"
+          id="campaign-tracker-tabpanel-register"
+          aria-labelledby="campaign-tracker-tab-register"
+          sx={{ p: 2, borderRadius: "10px", border: 1, borderColor: "divider", bgcolor: "background.paper" }}
+        >
           <Typography sx={{ fontSize: "0.82rem", fontWeight: 700, mb: 1.5 }}>Campaign Register</Typography>
           <CampaignRegisterTable
             rows={scopedRegisterRows}
@@ -412,7 +420,12 @@ export default function CampaignTrackerPage() {
       )}
 
       {activeTab === "Weekly Log" && (
-        <Box sx={{ p: 2, borderRadius: "10px", border: 1, borderColor: "divider", bgcolor: "background.paper" }}>
+        <Box
+          role="tabpanel"
+          id="campaign-tracker-tabpanel-weekly-log"
+          aria-labelledby="campaign-tracker-tab-weekly-log"
+          sx={{ p: 2, borderRadius: "10px", border: 1, borderColor: "divider", bgcolor: "background.paper" }}
+        >
           <Typography sx={{ fontSize: "0.82rem", fontWeight: 700, mb: 1.5 }}>Weekly Log</Typography>
           <WeeklyLogTable
             rows={scopedLogRows}
@@ -422,25 +435,30 @@ export default function CampaignTrackerPage() {
             owners={registerOwners}
             onChange={(next) => setWeeklyLogCache(qc, weeksToShow * 7, includeUnlogged, mergePlatformSlice(logRows, platform, next))}
             persistedLogIds={persistedLogIds}
-            onGroupUpdate={async (groupId, patch) => (await updateWeeklyLogGroup.mutateAsync({ groupId, patch }))!}
-            onEntryUpdate={async (groupId, entryId, patch) => (await updateWeeklyLogEntry.mutateAsync({ groupId, entryId, patch }))!}
-            onEntryUnlog={async (groupId, entryId, isUnlogged) => (await setEntryUnlogged.mutateAsync({ groupId, entryId, isUnlogged }))!}
+            onGroupUpdate={(groupId, patch) => updateWeeklyLogGroup.mutateAsync({ groupId, patch })}
+            onEntryUpdate={(groupId, entryId, patch) => updateWeeklyLogEntry.mutateAsync({ groupId, entryId, patch })}
+            onEntryUnlog={(groupId, entryId, isUnlogged) => setEntryUnlogged.mutateAsync({ groupId, entryId, isUnlogged })}
             onAddEntry={handleAddEntry}
-            onAddEntryToGroup={async (groupId, entry) => (await addWeeklyLogEntryToGroup.mutateAsync({ groupId, entry }))!}
+            onAddEntryToGroup={(groupId, entry) => addWeeklyLogEntryToGroup.mutateAsync({ groupId, entry })}
           />
         </Box>
       )}
 
       {activeTab === "Budget Pacing" && (
-        <Box sx={{ p: 2, borderRadius: "10px", border: 1, borderColor: "divider", bgcolor: "background.paper" }}>
+        <Box
+          role="tabpanel"
+          id="campaign-tracker-tabpanel-budget-pacing"
+          aria-labelledby="campaign-tracker-tab-budget-pacing"
+          sx={{ p: 2, borderRadius: "10px", border: 1, borderColor: "divider", bgcolor: "background.paper" }}
+        >
           <Typography sx={{ fontSize: "0.82rem", fontWeight: 700, mb: 1.5 }}>Budget Pacing</Typography>
           <BudgetPacingTable
             rows={scopedPacingRows}
             platform={platform}
             filters={pacingFilters}
             onChange={(next) => setBudgetPacingCache(qc, platform, next)}
-            onAdd={async (row) => (await addManualPacingRow.mutateAsync(row))!}
-            onUpdate={async (id, patch) => (await updateManualPacingRow.mutateAsync({ id, patch }))!}
+            onAdd={(row) => addManualPacingRow.mutateAsync(row)}
+            onUpdate={(id, patch) => updateManualPacingRow.mutateAsync({ id, patch })}
             onDelete={async (id) => {
               await deleteManualPacingRow.mutateAsync(id);
             }}
@@ -449,7 +467,12 @@ export default function CampaignTrackerPage() {
       )}
 
       {activeTab === "BU Owners" && (
-        <Box sx={{ p: 2, borderRadius: "10px", border: 1, borderColor: "divider", bgcolor: "background.paper" }}>
+        <Box
+          role="tabpanel"
+          id="campaign-tracker-tabpanel-bu-owners"
+          aria-labelledby="campaign-tracker-tab-bu-owners"
+          sx={{ p: 2, borderRadius: "10px", border: 1, borderColor: "divider", bgcolor: "background.paper" }}
+        >
           <BuOwnersPanel />
         </Box>
       )}

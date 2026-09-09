@@ -46,6 +46,7 @@ import {
   MenuItem,
 } from "@wso2/oxygen-ui";
 import { CalendarCheck, Calculator } from "@wso2/oxygen-ui-icons-react";
+import { describeError } from "@api/errors";
 import {
   CampaignRegisterRow,
   BusinessUnit,
@@ -57,6 +58,7 @@ import {
   daysSinceReview,
   registerFlag,
   fmtMoney,
+  parseLocalDate,
 } from "../campaignTrackerTypes";
 import type { RegisterOverrideFields } from "../../../api/useCampaignTracker";
 import { NUMERIC, ToneChip } from "./campaignTrackerPrimitives";
@@ -107,8 +109,10 @@ function BudgetValue({ value, isDerived, tooltip }: { value: string; isDerived: 
 }
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
-const fmtDate = (d: string | null) =>
-  d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+const fmtDate = (d: string | null) => {
+  const parsed = d ? parseLocalDate(d) : null;
+  return parsed ? parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+};
 
 // Actual CPL's hover explanation: the exact spend/conversions/window behind a
 // live-calculated value — not just "calculated", but literally how.
@@ -202,13 +206,19 @@ export function CampaignRegisterTable({
   onSave?: (campaignId: string, platform: AdPlatform, patch: Partial<RegisterOverrideFields>) => Promise<void>;
 }) {
   const [editing, setEditing] = useState<CampaignRegisterRow | null>(null);
+  // The edit always applies locally regardless of whether onSave resolves
+  // (see the onSave prop note above) — this only surfaces a failure to
+  // persist so it isn't silently lost, not a rollback of the local view.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const filtered = useMemo(() => rows.filter((r) => matchesFilters(r, filters)), [rows, filters]);
 
   function markReviewed(row: CampaignRegisterRow) {
     const updated = { ...row, lastReviewed: todayISO() };
     onChange(rows.map((r) => (r.id === row.id ? updated : r)));
-    onSave?.(row.id, row.platform, { lastReviewed: updated.lastReviewed }).catch(() => {});
+    onSave?.(row.id, row.platform, { lastReviewed: updated.lastReviewed })
+      .then(() => setSaveError(null))
+      .catch((e) => setSaveError(describeError(e)));
   }
 
   function saveRow(row: CampaignRegisterRow) {
@@ -217,12 +227,21 @@ export function CampaignRegisterTable({
     setEditing(null);
     if (original) {
       const patch = diffOverrideFields(original, row);
-      if (Object.keys(patch).length > 0) onSave?.(row.id, row.platform, patch).catch(() => {});
+      if (Object.keys(patch).length > 0) {
+        onSave?.(row.id, row.platform, patch)
+          .then(() => setSaveError(null))
+          .catch((e) => setSaveError(describeError(e)));
+      }
     }
   }
 
   return (
     <Box>
+      {saveError && (
+        <Typography sx={{ fontSize: "0.76rem", color: "error.main", mb: 1.5 }}>
+          Couldn't save the last edit (it's still shown here, but won't survive a refresh): {saveError}
+        </Typography>
+      )}
       <Box sx={{ mb: 1.5 }}>
         <RowCount shown={filtered.length} total={rows.length} singular="campaign" />
       </Box>
@@ -254,7 +273,20 @@ export function CampaignRegisterTable({
                   const flag = registerFlag(row);
                   const since = daysSinceReview(row.lastReviewed);
                   return (
-                    <TableRow key={row.id} onClick={() => setEditing(row)} sx={{ cursor: "pointer" }}>
+                    <TableRow
+                      key={row.id}
+                      onClick={() => setEditing(row)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setEditing(row);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Edit ${row.campaignName}`}
+                      sx={{ cursor: "pointer" }}
+                    >
                       <TableCell>
                         <Typography sx={{ fontSize: "0.78rem", fontWeight: 600, letterSpacing: "-0.005em" }}>
                           {row.campaignName}
