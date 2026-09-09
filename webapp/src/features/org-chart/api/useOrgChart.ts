@@ -17,9 +17,9 @@
 // Reads the people-app backend's employee directory (GET
 // /employees/basic-info, people-ops-suite PR #345) — every Active and Marked
 // leaver employee, each row carrying its own managerEmail. This is now Org
-// Chart's only data source: the standalone digiops-hr org-chart backend this
-// feature originally targeted isn't available, and this endpoint's flat,
-// complete shape is a better fit anyway — the whole tree builds client-side
+// Chart's only data source: the standalone org-chart backend this feature
+// originally targeted isn't available, and this endpoint's flat, complete
+// shape is a better fit anyway — the whole tree builds client-side
 // from one response (see util/buildOrgTree.ts) instead of a fetch per
 // manager.
 //

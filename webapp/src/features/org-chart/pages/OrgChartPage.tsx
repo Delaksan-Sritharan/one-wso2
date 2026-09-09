@@ -16,8 +16,8 @@
 
 // The company's reporting hierarchy, as a collapsible outline.
 //
-// Ported from the standalone org-chart app (digiops-hr/apps/org-chart), whose
-// canvas-and-pan-zoom UI is deliberately NOT carried over. Its original
+// Ported from the standalone org-chart app, whose canvas-and-pan-zoom UI is
+// deliberately NOT carried over. Its original
 // four-endpoint, lazy-per-manager backend contract isn't available either —
 // this now reads the people-app backend's employee directory
 // (useEmployeeDirectory) in one request and builds the whole tree client-side
