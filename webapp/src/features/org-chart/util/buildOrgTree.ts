@@ -32,8 +32,19 @@ export interface OrgChartTree {
   strayRoots: OrgChartNode[];
 }
 
-function buildNode(record: EmployeeDirectoryRecord, childrenByManager: Map<string, EmployeeDirectoryRecord[]>): OrgChartNode {
-  const children = (childrenByManager.get(record.workEmail) ?? []).map((child) => buildNode(child, childrenByManager));
+// `visited` guards against buildNode recursing forever: childrenByManager is
+// keyed on managerEmail, so a self-managed row (managerEmail === workEmail —
+// the Chairman fixture is exactly this shape, see expandPathToEmployee.test.ts)
+// lands in its own children bucket. Mirrors ancestorChain's guard below.
+function buildNode(
+  record: EmployeeDirectoryRecord,
+  childrenByManager: Map<string, EmployeeDirectoryRecord[]>,
+  visited: Set<string> = new Set(),
+): OrgChartNode {
+  visited.add(record.workEmail);
+  const children = (childrenByManager.get(record.workEmail) ?? [])
+    .filter((child) => child.workEmail !== record.workEmail && !visited.has(child.workEmail))
+    .map((child) => buildNode(child, childrenByManager, visited));
   return { ...record, children };
 }
 

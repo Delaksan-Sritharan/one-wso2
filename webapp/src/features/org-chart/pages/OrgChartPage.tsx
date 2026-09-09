@@ -102,9 +102,22 @@ export default function OrgChartPage() {
   // The root counts as open unless the user closed it — folded into the same
   // Set shape OrgChartRow already expects, computed at render time rather
   // than stored, so there's nothing to keep in sync via an effect.
+  //
+  // rootEmail can end up IN openEmails on its own (handleExpandAll and
+  // handleSelectSearchResult's ancestorChain both add it) — rootClosed has
+  // to override that membership explicitly rather than short-circuit on it,
+  // or collapsing the root after either of those becomes permanently a
+  // no-op for the rest of the session.
   const effectiveOpenEmails = useMemo(() => {
     const rootEmail = tree?.root.workEmail;
-    if (!rootEmail || rootClosed || openEmails.has(rootEmail)) return openEmails;
+    if (!rootEmail) return openEmails;
+    if (rootClosed) {
+      if (!openEmails.has(rootEmail)) return openEmails;
+      const next = new Set(openEmails);
+      next.delete(rootEmail);
+      return next;
+    }
+    if (openEmails.has(rootEmail)) return openEmails;
     return new Set(openEmails).add(rootEmail);
   }, [openEmails, tree?.root.workEmail, rootClosed]);
 
@@ -166,9 +179,10 @@ export default function OrgChartPage() {
   const handleSelectSearchResult = (workEmail: string) => {
     const chain = ancestorChain(workEmail, byEmail);
     if (chain.length === 0) return;
-    // A department filter would otherwise hide the very result being jumped
-    // to, if they're not in the isolated department.
+    // A department filter — or the interns filter, if they're one — would
+    // otherwise hide the very result being jumped to.
     setSelectedDepartment(null);
+    setHideInterns(false);
     setOpenEmails((prev) => new Set([...prev, ...chain]));
     setRootClosed(false);
     setHighlightEmail(workEmail);
@@ -208,7 +222,14 @@ export default function OrgChartPage() {
         <Alert severity="warning">
           You don&apos;t have access to the org chart. Ask the internal apps team to add you.
         </Alert>
-      ) : directory.isLoading ? (
+      ) : directory.isPending ? (
+        // isPending, not isLoading: isLoading is isPending && isFetching, and
+        // the query is disabled (enabled: ... && Boolean(userSub)) until
+        // identity resolves — during that window isFetching is false, so
+        // isLoading is false too, and this would otherwise fall straight
+        // through to the "Couldn't find the Chairman" error below despite
+        // never having actually failed. Same isPending convention as
+        // PersonCell.tsx.
         <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 1.5 }} />
       ) : directory.isError ? (
         <Alert severity="error">Couldn&apos;t load the org chart. {describeError(directory.error)}</Alert>

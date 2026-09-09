@@ -99,10 +99,11 @@ function appsToSections(apps: readonly MenuApp[]): PerspectiveSection[] {
 // /reports/employees/generate, and PeopleOpsShell turns that into an
 // explanation. Someone who types the URL still gets a clear answer.
 //
-// Org Chart is the one section here WITHOUT `requires: ["admin"]` — it's a
-// different backend, its own base URL, with its own access model: any
-// employee in that service's configured group, not a people-app admin
-// privilege. See docs/ported-apps/org-chart.md.
+// Org Chart is the one section here WITHOUT `requires: ["admin"]` — same
+// people-app backend as everything else here, but a different endpoint
+// (/employees/basic-info) with its own access model: any employee in that
+// endpoint's configured group, not a people-app admin privilege. See
+// docs/ported-apps/org-chart.md.
 export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   {
     id: "people-org-chart",

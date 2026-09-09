@@ -169,7 +169,11 @@ function renderNode(
   if (node.children.length === 0) {
     return `<div class="leaf"${isTopLevelRoot ? " data-top-level-root" : ""}>${renderRow(node, avatarByEmail)}</div>`;
   }
-  return `<details open${isTopLevelRoot ? " data-top-level-root" : ""}${isMainRoot ? " data-main-root" : ""}>
+  // Only the main root starts open — matching what "Reset view" itself
+  // produces (it opens [data-main-root] and nothing else). Every <details>
+  // starting open meant a 900-row wall of text on first load, and made the
+  // file's own Reset button produce a state it never actually started in.
+  return `<details${isMainRoot ? " open" : ""}${isTopLevelRoot ? " data-top-level-root" : ""}${isMainRoot ? " data-main-root" : ""}>
     <summary>${renderRow(node, avatarByEmail)}</summary>
     <div class="children">
       ${node.children.map((child) => renderNode(child, false, false, avatarByEmail)).join("")}
@@ -416,7 +420,7 @@ const SCRIPT = `
       var isTopLevel = wrapper.hasAttribute("data-top-level-root");
       var emp = byEmail[email];
       var failsIsolate = !!visible && !visible[email];
-      var failsIntern = !isTopLevel && state.hideInterns && emp.designation === "Intern";
+      var failsIntern = !isTopLevel && state.hideInterns && !!emp && emp.designation === "Intern";
       wrapper.classList.toggle("hidden-by-filter", failsIsolate || failsIntern);
     });
     document.querySelectorAll(".children").forEach(function (box) {
@@ -477,11 +481,18 @@ const SCRIPT = `
   function escapeText(s) {
     var d = document.createElement("div");
     d.textContent = s;
-    return d.innerHTML;
+    // textContent->innerHTML escapes & < > but not " — fine for element
+    // text content, not safe on its own for the data-jump="..." attribute
+    // this also feeds below.
+    return d.innerHTML.replace(/"/g, "&quot;");
   }
 
   function jumpTo(email) {
+    // Department AND interns filters — either one would otherwise hide the
+    // very result being jumped to.
     state.department = null;
+    state.hideInterns = false;
+    if (hideInternsBox) hideInternsBox.checked = false;
     applyVisibility();
     var chain = ancestorChain(email);
     chain.slice(0, -1).forEach(function (ancestorEmail) {
@@ -634,5 +645,9 @@ export async function downloadOrgChartHtml(employees: readonly EmployeeDirectory
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Next macrotask, not synchronous — Safari has been observed to start
+  // reading the blob after the current task finishes, so revoking in the
+  // same tick produces a silently empty file. Same fix as
+  // features/marketing-ops/events/lib/download.ts.
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
