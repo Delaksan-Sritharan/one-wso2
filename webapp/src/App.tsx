@@ -33,6 +33,7 @@ import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import FinancePage from "@features/finance/pages/FinancePage";
 import MarketingOpsPage from "@features/marketing-ops/pages/MarketingOpsPage";
 import AdCampaignsAnalyticsPage from "@features/marketing-ops/ad-campaigns/pages/AdCampaignsAnalyticsPage";
+import CampaignTrackerPage from "@features/marketing-ops/ad-campaigns/pages/CampaignTrackerPage";
 import UtmGeneratorPage from "@features/marketing-ops/utilities/pages/UtmGeneratorPage";
 import AssetNameGeneratorPage from "@features/marketing-ops/utilities/pages/AssetNameGeneratorPage";
 import UtmSettingsPage from "@features/marketing-ops/admin/pages/UtmSettingsPage";
@@ -315,6 +316,12 @@ export default function App() {
           <Route
             path="marketing-ops/ad-campaigns/analytics"
             element={<AdCampaignsAnalyticsPage />}
+          />
+          {/* Ad Campaigns → Campaign Tracker. Register / Weekly Log / Budget
+              Pacing / BU Owners — the weekly operating rhythm for live campaigns. */}
+          <Route
+            path="marketing-ops/ad-campaigns/campaign-tracker"
+            element={<CampaignTrackerPage />}
           />
           {/* Utilities — open to any authorized Marketing Ops caller. */}
           <Route path="marketing-ops/utilities/utm" element={<UtmGeneratorPage />} />
