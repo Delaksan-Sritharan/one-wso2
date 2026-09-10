@@ -33,7 +33,7 @@ import { Download, NetworkIcon } from "@wso2/oxygen-ui-icons-react";
 import { HttpError } from "@api/http";
 import { describeError } from "@api/errors";
 import { isOrgChartConfigured, useEmployeeDirectory } from "../api/useOrgChart";
-import { buildOrgTree, indexByEmail } from "../util/buildOrgTree";
+import { buildOrgTree, companyNames, indexByEmail } from "../util/buildOrgTree";
 import { ancestorChain } from "../util/expandPathToEmployee";
 import { departmentStats } from "../util/departmentColors";
 import { downloadOrgChartHtml } from "../util/exportOrgChartHtml";
@@ -64,6 +64,12 @@ export default function OrgChartPage() {
   // member of it or a Chairman-path ancestor leading to one — a harder cut
   // than the old dim-only filter (see the visibleEmails comment below).
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  // The one company currently isolated, or null to show every company. A
+  // dropdown rather than a legend like department — the directory's
+  // `company` field (WSO2's legal entities: "WSO2- INDIA", etc.) has no
+  // natural color mapping and doesn't need one. Combines with the
+  // department filter (AND, not either/or) — see visibleEmails below.
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [hideInterns, setHideInterns] = useState(false);
   const [highlightEmail, setHighlightEmail] = useState<string>();
 
@@ -77,22 +83,31 @@ export default function OrgChartPage() {
     [directory.data],
   );
 
-  // Every workEmail that should render while a department is isolated: each
-  // member of that department, plus everyone on their path back to whichever
-  // root they hang off (the Chairman, or their own stray root) — reusing the
-  // same upward walk search-jump uses, since "keep the path to the root
-  // visible" is exactly the same problem. null means no filter: show
-  // everyone. A row not in this set is fully hidden, not dimmed — including
-  // an ancestor's OTHER children in unrelated departments (a deliberate
-  // change from the original dim-only design; see docs/ported-apps/org-chart.md §3).
+  // Distinct `company` values for the dropdown — shared with the offline
+  // export via util/buildOrgTree.ts so the two stay in sync.
+  const companies = useMemo(() => companyNames(directory.data ?? []), [directory.data]);
+
+  // Every workEmail that should render while a department and/or company is
+  // isolated: each employee matching every active filter, plus everyone on
+  // their path back to whichever root they hang off (the Chairman, or their
+  // own stray root) — reusing the same upward walk search-jump uses, since
+  // "keep the path to the root visible" is exactly the same problem. null
+  // means no filter active at all: show everyone. A row not in this set is
+  // fully hidden, not dimmed — including an ancestor's OTHER children that
+  // don't match (a deliberate change from the original dim-only design; see
+  // docs/ported-apps/org-chart.md §3).
   const visibleEmails = useMemo(() => {
-    if (!selectedDepartment || !directory.data) return null;
+    if ((!selectedDepartment && !selectedCompany) || !directory.data) return null;
     const visible = new Set<string>();
     directory.data
-      .filter((employee) => employee.team === selectedDepartment)
+      .filter(
+        (employee) =>
+          (!selectedDepartment || employee.team === selectedDepartment) &&
+          (!selectedCompany || employee.company === selectedCompany),
+      )
       .forEach((employee) => ancestorChain(employee.workEmail, byEmail).forEach((email) => visible.add(email)));
     return visible;
-  }, [selectedDepartment, directory.data, byEmail]);
+  }, [selectedDepartment, selectedCompany, directory.data, byEmail]);
 
   const visibleStrayRoots = useMemo(
     () => (tree ? tree.strayRoots.filter((stray) => !visibleEmails || visibleEmails.has(stray.workEmail)) : []),
@@ -142,6 +157,13 @@ export default function OrgChartPage() {
     setSelectedDepartment((prev) => (prev === department ? null : department));
   };
 
+  // A plain dropdown, not a toggle-on-click legend row, so this just takes
+  // the new value directly — the Select's own "Global" option is what
+  // sends null.
+  const handleSelectCompany = (company: string | null) => {
+    setSelectedCompany(company);
+  };
+
   const handleExpandAll = () => {
     if (!tree) return;
     setRootClosed(false);
@@ -170,6 +192,7 @@ export default function OrgChartPage() {
 
   const handleReset = () => {
     setSelectedDepartment(null);
+    setSelectedCompany(null);
     setHideInterns(false);
     setHighlightEmail(undefined);
     setRootClosed(false);
@@ -179,9 +202,10 @@ export default function OrgChartPage() {
   const handleSelectSearchResult = (workEmail: string) => {
     const chain = ancestorChain(workEmail, byEmail);
     if (chain.length === 0) return;
-    // A department filter — or the interns filter, if they're one — would
-    // otherwise hide the very result being jumped to.
+    // A department filter, a company filter, or the interns filter — any of
+    // them would otherwise hide the very result being jumped to.
     setSelectedDepartment(null);
+    setSelectedCompany(null);
     setHideInterns(false);
     setOpenEmails((prev) => new Set([...prev, ...chain]));
     setRootClosed(false);
@@ -242,6 +266,9 @@ export default function OrgChartPage() {
             departmentStats={stats}
             selectedDepartment={selectedDepartment}
             onSelectDepartment={handleSelectDepartment}
+            companies={companies}
+            selectedCompany={selectedCompany}
+            onSelectCompany={handleSelectCompany}
             directory={directory.data ?? []}
             strayCount={tree.strayRoots.length}
             onSelectSearchResult={handleSelectSearchResult}
@@ -263,7 +290,11 @@ export default function OrgChartPage() {
               />
             ) : (
               <Typography variant="body2" color="text.disabled">
-                Nobody in {selectedDepartment} is reachable from the Chairman.
+                Nobody{" "}
+                {[selectedDepartment && `in ${selectedDepartment}`, selectedCompany && `at ${selectedCompany}`]
+                  .filter(Boolean)
+                  .join(" and ")}{" "}
+                is reachable from the Chairman.
               </Typography>
             )}
             {visibleStrayRoots.length > 0 && (

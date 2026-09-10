@@ -14,14 +14,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Stats, search, department legend, and view controls for the org chart.
-// Pure presentational + callback props — all state lives in OrgChartPage.
+// Stats, search, department legend, company filter, and view controls for
+// the org chart. Pure presentational + callback props — all state lives in
+// OrgChartPage.
 //
 // The department legend is single-select "isolate": clicking a department
 // hides everyone who isn't a member of it or a Chairman-path ancestor
 // leading to one (see OrgChartPage's visibleEmails) — clicking the same one
 // again clears the filter. A hard cut, not a dim — see
 // docs/ported-apps/org-chart.md §3.
+//
+// The company filter is a plain dropdown over the same visibleEmails
+// mechanism, combined with the department filter by AND rather than
+// replacing it — picking both isolates people matching both at once.
 
 import { useMemo, useState } from "react";
 import {
@@ -32,6 +37,8 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  MenuItem,
+  Select,
   Stack,
   Switch,
   TextField,
@@ -49,6 +56,13 @@ export interface OrgChartSidebarProps {
   /** Always pass the clicked department's name — OrgChartPage handles
    *  toggling it back off when the same one is clicked again. */
   onSelectDepartment: (department: string) => void;
+  /** Distinct `company` values from the directory, alphabetical. */
+  companies: string[];
+  /** The one company currently isolated, or null when showing everyone. */
+  selectedCompany: string | null;
+  /** Always the new value directly — null for "Global", unlike
+   *  onSelectDepartment this isn't a toggle-on-click, it's a plain select. */
+  onSelectCompany: (company: string | null) => void;
   directory: EmployeeDirectoryRecord[];
   /** People whose manager isn't in the directory (almost always because that
    *  manager has left) — rendered as their own section below the main tree
@@ -66,6 +80,9 @@ export default function OrgChartSidebar({
   departmentStats,
   selectedDepartment,
   onSelectDepartment,
+  companies,
+  selectedCompany,
+  onSelectCompany,
   directory,
   strayCount,
   onSelectSearchResult,
@@ -170,6 +187,24 @@ export default function OrgChartSidebar({
           </Box>
         )}
       </Box>
+
+      {companies.length > 0 && (
+        <Select
+          fullWidth
+          size="small"
+          displayEmpty
+          value={selectedCompany ?? ""}
+          onChange={(event) => onSelectCompany(event.target.value || null)}
+          aria-label="Filter by company"
+        >
+          <MenuItem value="">Global</MenuItem>
+          {companies.map((company) => (
+            <MenuItem key={company} value={company}>
+              {company}
+            </MenuItem>
+          ))}
+        </Select>
+      )}
 
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
         <Button size="small" variant="outlined" startIcon={<UnfoldVerticalIcon size={16} />} onClick={onExpandAll}>

@@ -112,6 +112,11 @@ export default function OrgChartRow({
         <Avatar
           alt={node.firstName}
           src={node.employeeThumbnail || undefined}
+          // Google-hosted thumbnails 403 (which Chrome then reports as an
+          // opaque net::ERR_BLOCKED_BY_ORB, no status visible) unless the
+          // default Referer is suppressed — see EmployeeAvatar.tsx, which
+          // hit and fixed this same thing first.
+          imgProps={{ referrerPolicy: "no-referrer" }}
           sx={{
             width: 30,
             height: 30,

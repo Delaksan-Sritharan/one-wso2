@@ -89,3 +89,15 @@ export function buildOrgTree(employees: readonly EmployeeDirectoryRecord[], root
 export function indexByEmail(employees: readonly EmployeeDirectoryRecord[]): Map<string, EmployeeDirectoryRecord> {
   return new Map(employees.map((employee) => [employee.workEmail, employee]));
 }
+
+/** Distinct `company` values from the directory, alphabetical — the options
+ *  for the company filter dropdown. Shared between the live page and the
+ *  offline export so the two stay in sync. */
+export function companyNames(employees: readonly { company: string }[]): string[] {
+  const names = new Set<string>();
+  employees.forEach((employee) => {
+    const name = employee.company?.trim();
+    if (name) names.add(name);
+  });
+  return Array.from(names).sort((a, b) => a.localeCompare(b));
+}

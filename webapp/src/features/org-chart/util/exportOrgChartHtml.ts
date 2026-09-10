@@ -22,8 +22,9 @@
 // today's particular view.
 //
 // Ships the same interactivity as the live page — search-and-jump,
-// department isolate, hide interns, expand all / reset — via a small vanilla
-// <script> block at the bottom (~150 lines, no dependencies). The full flat
+// department isolate, company filter, hide interns, expand all / reset — via
+// a small vanilla <script> block at the bottom (~150 lines, no
+// dependencies). The full flat
 // EMPLOYEES array is embedded as JSON for that script to search/filter over;
 // the tree markup itself is still pre-rendered server-side (buildOrgTree,
 // same as the live page) so the file still shows a complete chart even for
@@ -44,7 +45,7 @@
 // is a bonus, never a broken image.
 
 import { departmentColor, departmentStats, type DepartmentStat } from "./departmentColors";
-import { buildOrgTree, type OrgChartTree } from "./buildOrgTree";
+import { buildOrgTree, companyNames, type OrgChartTree } from "./buildOrgTree";
 import type { EmployeeDirectoryRecord, OrgChartNode } from "../api/orgChartTypes";
 
 const AVATAR_PIXEL_SIZE = 64;
@@ -71,7 +72,12 @@ const LOGO_SVG = `<svg viewBox="0 0 1644.49 654.23" xmlns="http://www.w3.org/200
  *  caller falls back to the initials avatar in that case, never a broken img. */
 async function fetchAvatarDataUri(url: string): Promise<string | null> {
   try {
-    const response = await fetch(url);
+    // no-referrer: Google-hosted thumbnails reject the request (which shows
+    // up here as an opaque failure, no status) when the default Referer
+    // reveals this app's origin — same fix as OrgChartRow.tsx's
+    // <Avatar imgProps={{ referrerPolicy: "no-referrer" }}>, applied to
+    // fetch() instead of an <img>.
+    const response = await fetch(url, { referrerPolicy: "no-referrer" });
     if (!response.ok) return null;
     const blob = await response.blob();
     const bitmap = await createImageBitmap(blob);
@@ -202,6 +208,18 @@ function renderLegend(stats: readonly DepartmentStat[]): string {
   </div>`;
 }
 
+// A plain dropdown, not a legend like teams — companies have no natural
+// color mapping and don't need click-to-isolate rows. Combines with the
+// team filter by AND in the SCRIPT below, same as the live page.
+function renderCompanySelect(companies: readonly string[]): string {
+  if (companies.length === 0) return "";
+  const options = companies.map((company) => `<option value="${escapeHtml(company)}">${escapeHtml(company)}</option>`).join("");
+  return `<select class="company-select" id="company-select" aria-label="Filter by company">
+    <option value="">Global</option>
+    ${options}
+  </select>`;
+}
+
 const STYLE = `
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
@@ -263,6 +281,18 @@ const STYLE = `
     background: #ffffff;
   }
   .search-input:focus { outline: 2px solid #ff730055; border-color: #ff7300; }
+  .company-select {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #00000022;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: #40404B;
+    background: #ffffff;
+    margin-bottom: 12px;
+  }
+  .company-select:focus { outline: 2px solid #ff730055; border-color: #ff7300; }
   .search-results {
     position: absolute;
     top: calc(100% + 4px);
@@ -398,13 +428,15 @@ const SCRIPT = `
     return chain;
   }
 
-  var state = { department: null, hideInterns: false };
+  var state = { department: null, company: null, hideInterns: false };
 
   function computeVisibleSet() {
-    if (!state.department) return null;
+    if (!state.department && !state.company) return null;
     var visible = {};
     EMPLOYEES.forEach(function (e) {
-      if (e.team === state.department) {
+      var matchesDepartment = !state.department || e.team === state.department;
+      var matchesCompany = !state.company || e.company === state.company;
+      if (matchesDepartment && matchesCompany) {
         ancestorChain(e.workEmail).forEach(function (email) { visible[email] = true; });
       }
     });
@@ -463,6 +495,14 @@ const SCRIPT = `
     });
   }
 
+  var companySelect = document.getElementById("company-select");
+  if (companySelect) {
+    companySelect.addEventListener("change", function (e) {
+      state.company = e.target.value || null;
+      applyVisibility();
+    });
+  }
+
   var expandAllBtn = document.getElementById("expand-all");
   if (expandAllBtn) {
     expandAllBtn.addEventListener("click", function () {
@@ -488,9 +528,11 @@ const SCRIPT = `
   }
 
   function jumpTo(email) {
-    // Department AND interns filters — either one would otherwise hide the
-    // very result being jumped to.
+    // Department, company, AND interns filters — any of them would
+    // otherwise hide the very result being jumped to.
     state.department = null;
+    state.company = null;
+    if (companySelect) companySelect.value = "";
     state.hideInterns = false;
     if (hideInternsBox) hideInternsBox.checked = false;
     applyVisibility();
@@ -550,6 +592,8 @@ const SCRIPT = `
       var mainRoot = document.querySelector("[data-main-root]");
       if (mainRoot) mainRoot.open = true;
       state.department = null;
+      state.company = null;
+      if (companySelect) companySelect.value = "";
       state.hideInterns = false;
       if (hideInternsBox) hideInternsBox.checked = false;
       if (searchInput) searchInput.value = "";
@@ -565,6 +609,7 @@ export function buildOrgChartHtml(
   employees: readonly EmployeeDirectoryRecord[],
   stats: readonly DepartmentStat[],
   avatarByEmail: ReadonlyMap<string, string> = new Map(),
+  companies: readonly string[] = [],
 ): string {
   const generated = new Date().toLocaleString();
   const strays =
@@ -602,6 +647,7 @@ export function buildOrgChartHtml(
         <input class="search-input" id="search-input" type="text" placeholder="Find a person by name or email…" autocomplete="off">
         <div class="search-results" id="search-results"></div>
       </div>
+      ${renderCompanySelect(companies)}
       <div class="controls">
         <button type="button" class="btn" id="expand-all">Expand all</button>
         <button type="button" class="btn" id="reset-view">Reset view</button>
@@ -635,8 +681,9 @@ export async function downloadOrgChartHtml(employees: readonly EmployeeDirectory
   const tree = buildOrgTree(employees);
   if (!tree) return;
   const stats = departmentStats(employees.map((employee) => ({ department: employee.team })));
+  const companies = companyNames(employees);
   const avatarByEmail = await buildAvatarMap(employees);
-  const html = buildOrgChartHtml(tree, employees, stats, avatarByEmail);
+  const html = buildOrgChartHtml(tree, employees, stats, avatarByEmail, companies);
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
