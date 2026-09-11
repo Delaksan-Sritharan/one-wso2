@@ -16,6 +16,7 @@
 
 import { useState } from "react";
 import { Box, Button, Card, Skeleton, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
+import { Link as RouterLink } from "react-router";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import VehiclesCard from "./VehiclesCard";
@@ -79,6 +80,11 @@ export default function ConnectedServices() {
             </Tooltip>
           </Stack>
           <PerformanceStages workEmail={ownerEmail} />
+          <Box sx={{ mt: 1.25 }}>
+            <Button variant="outlined" size="small" component={RouterLink} to="/me/performance" fullWidth>
+              Open employee feedback
+            </Button>
+          </Box>
         </Card>
 
         <BankAccountsCard ownerEmail={ownerEmail} />
