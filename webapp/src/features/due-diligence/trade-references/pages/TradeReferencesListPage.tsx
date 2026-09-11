@@ -151,6 +151,14 @@ export default function TradeReferencesListPage() {
     }
   };
 
+  // NOTE: `TRADE_REFERENCE_STATUS.ACTIVE` holds the DISPLAY string ("pending"),
+  // not the stored one ("active" — see the constant's own comment), so this
+  // third comparison never actually matches a stored-active row. That is a
+  // faithful, deliberate port of the source's own TradeReferences.js
+  // `openRow` (same constant, same three-way comparison, same quirk) — not a
+  // bug introduced here. It's harmless in practice: a stored-active row falls
+  // through to the final `else` below, which is the Pending page anyway —
+  // the correct destination for a form that hasn't been submitted yet.
   const openRow = (row: TradeReferenceRow) => {
     if (
       row.status === TRADE_REFERENCE_STATUS.COMPLETED ||

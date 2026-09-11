@@ -26,9 +26,11 @@ import type { FileSubmission, FinanceComment, PartnerAnswer, QuestionInfo, SubQu
  * Ported from the source app's Resellers/ResellerDashboard/Finance/SubQuestionDetails.js
  * — renders one of three answer shapes (boolean radio, free-text, file
  * upload) per sub-question, faithfully keeping the source's disable rules:
- * a Q44 (finance approval) radio stays disabled until BOTH a creator (Q42)
- * and reviewer (Q43) comment exist AND the approval email has been sent —
- * see `shouldDisableRadioButtons`.
+ * a Q44 (finance approval) radio stays disabled until AT LEAST ONE comment
+ * exists on either Q42 (creator) or Q43 (reviewer) — the source counts them
+ * together, not per-question — AND the approval email has been sent. See
+ * `shouldDisableRadioButtons`, a direct port of the source's own
+ * `getTotalCommentsForQuestions`/`shouldDisableRadioButtons`.
  */
 export default function FinanceSubQuestionDetails({
   companyId,
@@ -57,7 +59,13 @@ export default function FinanceSubQuestionDetails({
   const deleteFile = useDeletePartnerFile();
   const saveMetadata = useSavePartnerFilesMetadata(companyId);
 
-  const [boolAnswer, setBoolAnswer] = useState(Boolean(answer?.booleanAnswer));
+  // Tri-state, not a plain boolean: "" (unanswered) and "no" must stay
+  // distinguishable, or picking "no" on a question with no saved answer yet
+  // renders as blank instead of Reject — see LegalSubQuestionDetails.tsx for
+  // the identical reasoning.
+  const [radioValue, setRadioValue] = useState<"yes" | "no" | "">(
+    answer === undefined ? "" : answer.booleanAnswer ? "yes" : "no",
+  );
   const [pendingFiles, setPendingFiles] = useState<{ fileName: string }[]>([]);
   const [snack, setSnack] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -69,7 +77,7 @@ export default function FinanceSubQuestionDetails({
 
   const handleRadioChange = (value: string) => {
     const boolValue = value === "yes";
-    setBoolAnswer(boolValue);
+    setRadioValue(boolValue ? "yes" : "no");
     onAnswered(subQuestion.subQuestionId, boolValue, "", true);
   };
 
@@ -146,7 +154,7 @@ export default function FinanceSubQuestionDetails({
       {subQuestion.answerType && (
         <>
           <FormControl disabled={fieldDisabled || shouldDisableRadioButtons}>
-            <RadioGroup row value={boolAnswer ? "yes" : answer ? "no" : ""} onChange={(e) => handleRadioChange(e.target.value)}>
+            <RadioGroup row value={radioValue} onChange={(e) => handleRadioChange(e.target.value)}>
               <FormControlLabel value="yes" control={<Radio size="small" />} label="Approve" />
               <FormControlLabel value="no" control={<Radio size="small" />} label="Reject" />
             </RadioGroup>
@@ -154,14 +162,14 @@ export default function FinanceSubQuestionDetails({
           {!fieldDisabled && shouldDisableRadioButtons && (
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: -0.5 }}>
               {totalQ42Q43Comments === 0
-                ? "Waiting for creator and reviewer comments before this can be approved."
+                ? "Waiting for a creator or reviewer comment before this can be approved."
                 : "Send for approval before this can be approved."}
             </Typography>
           )}
         </>
       )}
 
-      {subQuestion.answerTypeDescription && subQuestion.answerType && boolAnswer && (
+      {subQuestion.answerTypeDescription && subQuestion.answerType && radioValue === "yes" && (
         <TextField
           size="small"
           fullWidth

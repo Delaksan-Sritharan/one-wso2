@@ -73,6 +73,13 @@ export default function DueDiligenceShell({
     !gate.isError &&
     !gate.isAuthorized;
 
+  // Mirrors exactly the condition under which DueDiligenceBody renders
+  // `children` below — headerActions carry real write actions (Generate
+  // Report, Enable/Disable TR, Activate/Deactivate...), so they must not be
+  // reachable while the body itself is showing a locked/loading/error state.
+  const canRenderProtectedContent =
+    configured && (!requireAuthorized || (!gate.isResolving && !gate.isError && gate.isAuthorized));
+
   return (
     <Box>
       {eyebrow && (
@@ -101,7 +108,7 @@ export default function DueDiligenceShell({
         <Typography component="h1" variant="h5" sx={{ mt: 0 }}>
           {title}
         </Typography>
-        {headerActions}
+        {canRenderProtectedContent && headerActions}
       </Stack>
       {subtitle && !isLocked && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25, maxWidth: "70ch" }}>

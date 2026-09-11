@@ -467,7 +467,7 @@ function FinanceOpinion({
       <SubSubSectionHeader>2.4.3 Approver</SubSubSectionHeader>
       {financeResult ? (
         <View>
-          <Text style={{ fontSize: 9, fontWeight: 700, color: statusColor(financeResult) }}>{normalizeStatus(financeResult)}</Text>
+          <Text style={{ fontSize: 9, fontWeight: 700, color: statusColor(normalizeStatus(financeResult)) }}>{normalizeStatus(financeResult)}</Text>
         </View>
       ) : (
         <Text style={{ fontSize: 8, color: "#888" }}>Pending</Text>
@@ -535,7 +535,7 @@ function Section3Legal({
       <Text style={{ fontSize: 7, color: "#888", marginTop: 4, marginBottom: 6 }}>* File attachments are excluded from this report.</Text>
       <SubSubSectionHeader>3.2.2 Legal Approval</SubSubSectionHeader>
       {legalResult ? (
-        <Text style={{ fontSize: 9, fontWeight: 700, color: statusColor(legalResult) }}>{normalizeStatus(legalResult)}</Text>
+        <Text style={{ fontSize: 9, fontWeight: 700, color: statusColor(normalizeStatus(legalResult)) }}>{normalizeStatus(legalResult)}</Text>
       ) : (
         <Text style={{ fontSize: 8, color: "#888" }}>Pending</Text>
       )}
@@ -553,7 +553,7 @@ function Section4ApprovalSummary({ approvalData }: { approvalData: Partial<Appro
       <SectionHeader>4. Approval Summary</SectionHeader>
       <View style={styles.dataRow}>
         <Text style={styles.dataLabel}>Finance Approval</Text>
-        <Text style={[styles.dataValue, { color: statusColor(financeResult), fontWeight: 700 }]}>{normalizeStatus(financeResult) ?? "Pending"}</Text>
+        <Text style={[styles.dataValue, { color: statusColor(normalizeStatus(financeResult) ?? "Pending"), fontWeight: 700 }]}>{normalizeStatus(financeResult) ?? "Pending"}</Text>
       </View>
       {hasSpecialApproverRequest && (
         <View style={styles.dataRow}>
@@ -563,7 +563,7 @@ function Section4ApprovalSummary({ approvalData }: { approvalData: Partial<Appro
       )}
       <View style={styles.dataRow}>
         <Text style={styles.dataLabel}>Legal Approval</Text>
-        <Text style={[styles.dataValue, { color: statusColor(legalResult), fontWeight: 700 }]}>{normalizeStatus(legalResult) ?? "Pending"}</Text>
+        <Text style={[styles.dataValue, { color: statusColor(normalizeStatus(legalResult) ?? "Pending"), fontWeight: 700 }]}>{normalizeStatus(legalResult) ?? "Pending"}</Text>
       </View>
       <View style={styles.dataRow}>
         <Text style={styles.dataLabel}>Company Status</Text>

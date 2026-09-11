@@ -223,7 +223,7 @@ export default function FinanceQuestionDetails({
 
       {showSaveEdit && (
         <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-          <Button size="small" variant="contained" disabled={fieldDisabled || !isValid} onClick={save}>
+          <Button size="small" variant="contained" disabled={fieldDisabled || !isValid || saveFeedback.isPending} onClick={save}>
             Save
           </Button>
           <Button
@@ -242,7 +242,7 @@ export default function FinanceQuestionDetails({
           <Button
             size="small"
             variant="contained"
-            disabled={specialApprovalRequested}
+            disabled={specialApprovalRequested || sendSpecialApproval.isPending}
             onClick={requestSpecialApproval}
           >
             {specialApprovalRequested ? "Special Approval Requested" : "Request Special Approval"}

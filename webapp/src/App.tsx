@@ -392,7 +392,7 @@ export default function App() {
               two different rails can't itself live under either one's own
               prefix. See DUE_DILIGENCE_APPS and SideRail's fromPerspective
               navigation state for how each rail stays selected once inside. */}
-          <Route path="due-diligence" element={<Navigate to="due-diligence/partners" replace />} />
+          <Route path="due-diligence" element={<Navigate to="/due-diligence/partners" replace />} />
           <Route path="due-diligence/partners" element={<PartnersListPage />} />
           <Route path="due-diligence/partners/pending/:id" element={<PartnerPendingPage />} />
           <Route path="due-diligence/partners/:id/:tabName" element={<PartnerDashboardPage />} />

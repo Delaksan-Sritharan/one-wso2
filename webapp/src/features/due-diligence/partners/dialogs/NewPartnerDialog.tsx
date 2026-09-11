@@ -121,13 +121,21 @@ export default function NewPartnerDialog({ onClose, onCreated }: { onClose: () =
 
   const submit = () => {
     if (!validate()) return;
+    // Without this, clicking "Add Partner" before /app-config has resolved
+    // silently submits an empty clientUrl — the backend uses it to build the
+    // partner's own invitation link, so an empty value produces a broken
+    // link with no error shown to the admin.
+    if (!appConfig.data?.clientBaseUrl) {
+      setServerError("Configuration is still loading. Please try again in a moment.");
+      return;
+    }
     setServerError(null);
     createLink.mutate(
       {
         contactEmails: emails,
         companyName,
         contactName,
-        clientUrl: appConfig.data?.clientBaseUrl ?? "",
+        clientUrl: appConfig.data.clientBaseUrl,
         regionId: regionId as number,
         countryId: countryId as number,
       },

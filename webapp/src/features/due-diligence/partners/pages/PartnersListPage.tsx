@@ -224,10 +224,12 @@ export default function PartnersListPage() {
       region: setRegionFilters,
     };
     setters[chip.category]((prev) => ({ ...prev, [chip.key]: false }));
+    setPage(0);
   };
 
   const toggleFilter = (setter: typeof setFormStatusFilters, key: string) => {
     setter((prev) => ({ ...prev, [key]: !prev[key] }));
+    setPage(0);
   };
 
   const onSort = (column: SortColumn) => {
@@ -285,7 +287,7 @@ export default function PartnersListPage() {
   };
 
   const handleDownloadCsv = () => {
-    downloadPartnersCsv(rows);
+    downloadPartnersCsv(sortedRows);
   };
 
   return (

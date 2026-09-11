@@ -53,11 +53,16 @@ export default function LegalSubQuestionDetails({
   // Local, not derived from `answer`: the prop only ever reflects the last
   // SAVED value, so without this the radio would silently ignore every click
   // until Save round-tripped and refetched — the draft was still recorded
-  // correctly (onAnswered still fires), it just never painted. The lazy
-  // initializer is safe because the parent keys this component by a stable
-  // id (the sub-question id), so a genuinely different question remounts
-  // rather than reusing this state.
-  const [boolAnswer, setBoolAnswer] = useState(Boolean(answer?.booleanAnswer));
+  // correctly (onAnswered still fires), it just never painted. Tri-state
+  // (not a plain boolean) because "" (unanswered) and "no" both need to be
+  // distinguishable — a boolean can't represent "the user just picked No on
+  // a question with no saved answer yet" separately from "still unanswered".
+  // The lazy initializer is safe because the parent keys this component by a
+  // stable id (the sub-question id), so a genuinely different question
+  // remounts rather than reusing this state.
+  const [radioValue, setRadioValue] = useState<"yes" | "no" | "">(
+    answer === undefined ? "" : answer.booleanAnswer ? "yes" : "no",
+  );
 
   if (question.questionId !== subQuestion.questionId) return null;
 
@@ -65,7 +70,7 @@ export default function LegalSubQuestionDetails({
 
   const handleRadioChange = (value: string) => {
     const boolValue = value === "yes";
-    setBoolAnswer(boolValue);
+    setRadioValue(boolValue ? "yes" : "no");
     onAnswered(subQuestion.subQuestionId, boolValue, "", true);
   };
 
@@ -82,14 +87,14 @@ export default function LegalSubQuestionDetails({
     <Box sx={{ mb: 1.5 }}>
       {subQuestion.answerType && (
         <FormControl disabled={!editable}>
-          <RadioGroup row value={boolAnswer ? "yes" : answer ? "no" : ""} onChange={(e) => handleRadioChange(e.target.value)}>
+          <RadioGroup row value={radioValue} onChange={(e) => handleRadioChange(e.target.value)}>
             <FormControlLabel value="yes" control={<Radio size="small" />} label={categoryId === "3" ? "Approve" : "Yes"} />
             <FormControlLabel value="no" control={<Radio size="small" />} label={categoryId === "3" ? "Reject" : "No"} />
           </RadioGroup>
         </FormControl>
       )}
 
-      {subQuestion.answerDescription && subQuestion.answerType && boolAnswer && (
+      {subQuestion.answerDescription && subQuestion.answerType && radioValue === "yes" && (
         <TextField
           size="small"
           fullWidth

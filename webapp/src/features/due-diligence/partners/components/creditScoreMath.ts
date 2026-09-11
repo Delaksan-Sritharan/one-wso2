@@ -40,10 +40,17 @@ export type YearData = Partial<Record<keyof CreditScoreItem, number | string | n
 /** `year1[category] / year1.exchangeRate`, rounded to 2dp — every field except companyId/year/exchangeRate. */
 export function convertToDollars(obj: YearData): YearData {
   const out: YearData = { ...obj };
+  // Not part of the source's own math — a zero/missing exchange rate isn't
+  // rejected upstream (checkObjectComplete explicitly excludes it), so
+  // without this guard a blank or 0 rate turns every field into Infinity/NaN
+  // here, which then gets rendered straight into the credit-score table and
+  // the generated PDF report.
+  const rate = Number(obj.exchangeRate);
+  if (!Number.isFinite(rate) || rate <= 0) return out;
   for (const key of Object.keys(obj) as (keyof YearData)[]) {
     if (key === "companyId" || key === "year" || key === "exchangeRate") continue;
     const raw = obj[key];
-    out[key] = Math.round((Number(raw) / Number(obj.exchangeRate)) * 100) / 100;
+    out[key] = Math.round((Number(raw) / rate) * 100) / 100;
   }
   return out;
 }

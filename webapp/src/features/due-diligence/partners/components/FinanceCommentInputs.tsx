@@ -94,7 +94,7 @@ export default function FinanceCommentInputs({
       {
         commentId,
         sortIndex: existing?.sortIndex ?? 0,
-        userEmail: user.email ?? "",
+        userEmail: existing?.userEmail ?? user.email ?? "",
         comment: editedComment,
         questionId,
         companyId: Number(companyId),
@@ -136,7 +136,7 @@ export default function FinanceCommentInputs({
                     size="small"
                   />
                 </Tooltip>
-                {!isEditing && (
+                {!isEditing && canAddComment && item.userEmail === user.email && (
                   <IconButton size="small" onClick={() => { setEditingCommentId(item.commentId); setEditedComment(item.comment); }}>
                     <EditIcon size={15} />
                   </IconButton>
