@@ -98,6 +98,18 @@ import ClaimApprovalPage, {
 import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
+import LegalPage from "@features/legal/pages/LegalPage";
+import PartnersListPage from "@features/due-diligence/partners/pages/PartnersListPage";
+import PartnerPendingPage from "@features/due-diligence/partners/pages/PartnerPendingPage";
+import PartnerDashboardPage from "@features/due-diligence/partners/pages/PartnerDashboardPage";
+import TradeReferencesListPage from "@features/due-diligence/trade-references/pages/TradeReferencesListPage";
+import TradeReferenceDashboardPage from "@features/due-diligence/trade-references/pages/TradeReferenceDashboardPage";
+import TradeReferencePendingPage from "@features/due-diligence/trade-references/pages/TradeReferencePendingPage";
+import TradeReferenceRejectedPage from "@features/due-diligence/trade-references/pages/TradeReferenceRejectedPage";
+import TradeReferenceDeactivatedPage from "@features/due-diligence/trade-references/pages/TradeReferenceDeactivatedPage";
+import DueDiligencePreferencesPage from "@features/due-diligence/preferences/pages/PreferencesPage";
+import ViewPdfPage from "@features/due-diligence/shared/pages/ViewPdfPage";
+import ViewImagePage from "@features/due-diligence/shared/pages/ViewImagePage";
 
 export default function App() {
   return (
@@ -370,6 +382,40 @@ export default function App() {
               menu app. One page, as the original was. The functional spec and
               the deviation list live in docs/ported-apps/menu-app.md. */}
           <Route path="me/menu" element={<MenuHomePage />} />
+          {/* Legal perspective — currently just a second entry point into Due
+              Diligence, alongside Finance (see the finance/ routes below and
+              DUE_DILIGENCE_APPS). */}
+          <Route path="legal" element={<LegalPage />} />
+          {/* Due Diligence — ported from digiops-finance/apps/due_diligence's
+              admin-app. Routes live OUTSIDE both the Finance and Legal path
+              prefixes (same reason /settings does): a screen reachable from
+              two different rails can't itself live under either one's own
+              prefix. See DUE_DILIGENCE_APPS and SideRail's fromPerspective
+              navigation state for how each rail stays selected once inside. */}
+          <Route path="due-diligence" element={<Navigate to="due-diligence/partners" replace />} />
+          <Route path="due-diligence/partners" element={<PartnersListPage />} />
+          <Route path="due-diligence/partners/pending/:id" element={<PartnerPendingPage />} />
+          <Route path="due-diligence/partners/:id/:tabName" element={<PartnerDashboardPage />} />
+          <Route path="due-diligence/trade-references" element={<TradeReferencesListPage />} />
+          <Route
+            path="due-diligence/trade-references/pending/:linkId"
+            element={<TradeReferencePendingPage />}
+          />
+          <Route
+            path="due-diligence/trade-references/rejected/:companyId/:linkId"
+            element={<TradeReferenceRejectedPage />}
+          />
+          <Route
+            path="due-diligence/trade-references/deactivated/:linkId"
+            element={<TradeReferenceDeactivatedPage />}
+          />
+          <Route
+            path="due-diligence/trade-references/:companyId/:linkId"
+            element={<TradeReferenceDashboardPage />}
+          />
+          <Route path="due-diligence/preferences" element={<DueDiligencePreferencesPage />} />
+          <Route path="due-diligence/view-pdf" element={<ViewPdfPage />} />
+          <Route path="due-diligence/view-image" element={<ViewImagePage />} />
           {/* Catch-all → landing */}
           <Route path="*" element={<Navigate to={landingPath()} replace />} />
         </Route>

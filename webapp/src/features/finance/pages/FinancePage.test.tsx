@@ -32,6 +32,20 @@ vi.mock("../api/useFinanceGate", () => ({
   }),
 }));
 
+// Due Diligence gates on its own backend's roles, not Finance's — mocked
+// separately for the same reason useFinanceGate is: the page must not reach
+// the real hook (which needs an Asgardeo session and a QueryClient this test
+// doesn't provide). Hidden by default so the pre-existing assertions below
+// (which count/name links without expecting this card) keep working.
+const dueDiligenceGate = { allow: new Set<string>(), isResolving: false };
+
+vi.mock("@features/due-diligence/api/useDueDiligenceGate", () => ({
+  useDueDiligenceGate: () => ({
+    canSee: (id: string) => dueDiligenceGate.allow.has(id),
+    isResolving: dueDiligenceGate.isResolving,
+  }),
+}));
+
 const { default: FinancePage } = await import("./FinancePage");
 
 beforeEach(() => {
@@ -39,6 +53,8 @@ beforeEach(() => {
   // ordinary case.
   gate.allow = new Set(["cc-dashboard"]);
   gate.isResolving = false;
+  dueDiligenceGate.allow = new Set();
+  dueDiligenceGate.isResolving = false;
 });
 
 const show = () =>
@@ -78,6 +94,20 @@ describe("the Finance overview", () => {
     expect(link).toHaveAttribute("href", "/finance/cc/dashboard");
   });
 
+  // Due Diligence gates on its own backend's roles (dueDiligenceGate), not
+  // Finance's three claim-app backends — a separate mock from `gate` above.
+  it("offers Due Diligence to someone the due-diligence backend authorizes", () => {
+    dueDiligenceGate.allow.add("dd-partners");
+    show();
+    const link = screen.getByRole("link", { name: /Due Diligence/ });
+    expect(link).toHaveAttribute("href", "/due-diligence/partners");
+  });
+
+  it("offers no Due Diligence link to someone that backend doesn't authorize", () => {
+    show();
+    expect(screen.queryByRole("link", { name: /Due Diligence/ })).not.toBeInTheDocument();
+  });
+
   it("lists both to someone who has both", () => {
     gate.allow.add("claim-approval");
     show();
@@ -111,6 +141,13 @@ describe("the Finance overview", () => {
     gate.isResolving = true;
     show();
     expect(screen.queryByRole("link", { name: /Claim approval/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing here for you yet/)).not.toBeInTheDocument();
+  });
+
+  it("also waits on the due-diligence backend before showing anything", () => {
+    dueDiligenceGate.isResolving = true;
+    show();
+    expect(screen.queryByRole("link", { name: /Credit Card Expenses/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Nothing here for you yet/)).not.toBeInTheDocument();
   });
 });

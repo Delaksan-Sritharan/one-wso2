@@ -26,6 +26,7 @@ import {
   MegaphoneIcon,
   NetworkIcon,
   SatelliteDishIcon,
+  ScaleIcon,
   UserRoundIcon,
   UserRoundMinusIcon,
   UsersIcon,
@@ -37,6 +38,7 @@ import type { Capability, MenuApp } from "@constants/appMenu";
 import { FINANCE_PERSPECTIVE_APPS, ME_FINANCE_APPS } from "@constants/financeApps";
 import { CLAIM_APPROVAL_PATH } from "@features/finance/approvals/claimApprovalTabs";
 import { MARKETING_OPS_APPS } from "@constants/marketingOpsApps";
+import { DUE_DILIGENCE_APPS } from "@constants/dueDiligenceApps";
 import { ME_APPS } from "@constants/meApps";
 
 export interface PerspectiveSection {
@@ -249,7 +251,28 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
       // not something everyone has — unlike leave or claims, it is not part of
       // the set every employee needs.
       ...appsToSections(FINANCE_PERSPECTIVE_APPS),
+      // Due Diligence — also surfaced under Legal (see the `legal` perspective
+      // below). ONE registry (DUE_DILIGENCE_APPS), included in both places, so
+      // the two rails can't drift. Gated on the due-diligence backend's own
+      // roles, not the coarse capability model — see useDueDiligenceGate and
+      // its dispatch in SideRail.
+      ...appsToSections(DUE_DILIGENCE_APPS),
     ],
+  },
+  // Legal. Currently just a second entry point into Due Diligence (see the
+  // `finance` perspective above) — the same registry, included here too, so
+  // both rails show the identical set of screens and can't drift apart.
+  // `externallyGated: true` for the same reason Marketing Ops carries it:
+  // `access: true` only means the perspective is built, not that everyone who
+  // opens it can use what's inside — see useDueDiligenceGate.
+  {
+    key: "legal",
+    label: "Legal",
+    icon: ScaleIcon,
+    externallyGated: true,
+    access: true,
+    path: "/legal",
+    sections: [...appsToSections(DUE_DILIGENCE_APPS)],
   },
   // A separate application, opened in a new tab. `access` follows the URL being
   // configured: without one the tile stays in its unbuilt state rather than

@@ -69,6 +69,11 @@ declare global {
       ONE_WSO2_OPD_BACKEND_URL?: string; // opd-claims
       ONE_WSO2_CC_EXPENSES_BACKEND_URL?: string; // cc-expenses
       ONE_WSO2_EXPENSE_CLAIMS_BACKEND_URL?: string; // expense-claims
+      // Base URL for the digiops-finance due_diligence backend — the Due
+      // Diligence app, surfaced under both the Finance and Legal
+      // perspectives. Same optional/"not connected" contract as the three
+      // above.
+      ONE_WSO2_DUE_DILIGENCE_BACKEND_URL?: string;
       // Base URL of the leave-app frontend itself (not its backend) —
       // used to deep-link into flows this webapp doesn't replicate, like
       // sabbatical requests. Optional — when absent, that link is hidden.

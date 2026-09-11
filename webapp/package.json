@@ -17,6 +17,7 @@
     "@fontsource-variable/inter": "5.2.8",
     "@fontsource/plus-jakarta-sans": "^5.1.0",
     "@mui/material": "7.3.4",
+    "@react-pdf/renderer": "4.9.0",
     "@tanstack/react-query": "5.90.20",
     "@wso2/oxygen-ui": "0.6.0",
     "@wso2/oxygen-ui-icons-react": "0.6.0",
@@ -59,5 +60,6 @@
     "typescript-eslint": "8.46.4",
     "vite": "7.2.4",
     "vitest": "4.1.11"
-  }
+  },
+  "packageManager": "pnpm@10.30.2+sha512.36cdc707e7b7940a988c9c1ecf88d084f8514b5c3f085f53a2e244c2921d3b2545bc20dd4ebe1fc245feec463bb298aecea7a63ed1f7680b877dc6379d8d0cb4"
 }

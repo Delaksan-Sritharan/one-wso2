@@ -14,10 +14,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { PerspectiveProvider, useActivePerspective } from "./PerspectiveContext";
+
+// The provider remembers the last-resolved perspective in sessionStorage (so
+// a same-tab refresh on a page owning no perspective recovers Finance/Legal
+// instead of falling back to Me) — without this, one test's resolved
+// perspective would leak into the next one via that same storage.
+beforeEach(() => {
+  sessionStorage.clear();
+});
 
 function ActiveKey() {
   return <span data-testid="active">{useActivePerspective().key}</span>;

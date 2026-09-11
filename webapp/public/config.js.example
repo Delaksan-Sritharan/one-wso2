@@ -70,6 +70,12 @@ window.config = {
   // when absent, the Marketing Ops screens show a "not connected" state.
   // ONE_WSO2_MARKETINGOPS_BACKEND_URL: "<your-marketing-ops-backend-url>",
 
+  // digiops-finance due_diligence backend base URL — the Due Diligence app,
+  // surfaced under both the Finance and Legal perspectives. Same Choreo API
+  // gateway URL pattern as the other digiops-finance backends above. Optional
+  // — when absent, the Due Diligence screens show a "not connected" state.
+  // ONE_WSO2_DUE_DILIGENCE_BACKEND_URL: "<your-due-diligence-backend-url>",
+
   // ISAC base URL — a separate marketing application, linked to from the top of
   // the Marketing Ops rail and opened in a new tab. Nothing here calls it as an
   // API. Optional — when absent, the rail item is omitted entirely rather than
