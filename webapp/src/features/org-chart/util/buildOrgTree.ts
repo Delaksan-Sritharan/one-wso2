@@ -56,9 +56,11 @@ function buildNode(
  * several such candidates exist (confirmed ~27 in staging) — most are people
  * whose actual manager has left the company (excluded from this endpoint,
  * which only returns Active/Marked leaver), not the company root. The real
- * root is picked by an exact "Chairman" designation match (or `rootEmail`
- * when the caller already knows it); everyone else orphaned becomes a
- * strayRoot instead of being dropped.
+ * root is picked by an exact "Chairman" designation match anywhere in the
+ * directory (or `rootEmail` when the caller already knows it) — NOT scoped
+ * to `orphans`, because the Chairman is only an orphan today by accident of
+ * the self-referencing managerEmail; nothing requires that to stay true.
+ * Everyone else orphaned becomes a strayRoot instead of being dropped.
  */
 export function buildOrgTree(employees: readonly EmployeeDirectoryRecord[], rootEmail?: string): OrgChartTree | null {
   const byEmail = new Map(employees.map((employee) => [employee.workEmail, employee]));
@@ -75,14 +77,42 @@ export function buildOrgTree(employees: readonly EmployeeDirectoryRecord[], root
 
   const rootRecord =
     (rootEmail && byEmail.get(rootEmail)) ??
-    orphans.find((employee) => employee.designation?.trim().toLowerCase() === "chairman");
+    employees.find((employee) => employee.designation?.trim().toLowerCase() === "chairman");
   if (!rootRecord) return null;
 
-  const strayRoots = orphans
-    .filter((employee) => employee.workEmail !== rootRecord.workEmail)
-    .map((employee) => buildNode(employee, childrenByManager));
+  // One `visited` set shared across the root and every stray/cyclic
+  // traversal below (not a fresh one per call) — two things this guards
+  // against, both real: (1) the same workEmail appearing in two records
+  // (a known data-quality issue — duplicate work-email rows — would
+  // otherwise render the same person twice, once per subtree); (2) a
+  // reporting cycle among employees who all resolve to a present manager
+  // (so none of them qualifies as an "orphan") being reachable from
+  // nowhere at all — see the cyclic-cluster loop below for why that no
+  // longer means they vanish.
+  const visited = new Set<string>();
+  const root = buildNode(rootRecord, childrenByManager, visited);
 
-  return { root: buildNode(rootRecord, childrenByManager), strayRoots };
+  const strayRoots: OrgChartNode[] = [];
+  for (const employee of orphans) {
+    if (employee.workEmail === rootRecord.workEmail || visited.has(employee.workEmail)) continue;
+    strayRoots.push(buildNode(employee, childrenByManager, visited));
+  }
+
+  // Anyone still unvisited belongs to a reporting cycle that isn't reachable
+  // from the root or from any orphan: every member's managerEmail resolves
+  // to someone else present, so the cycle never shows up in `orphans` and
+  // buildNode never reaches it by walking down from a real root. Left alone,
+  // that whole cluster would disappear from the page with no stray section
+  // and no error — the headcount stat wouldn't even look wrong, since it
+  // counts the raw directory, not rendered nodes. Breaking in at an
+  // arbitrary member and rendering it as its own stray root guarantees every
+  // employee ends up visible somewhere.
+  for (const employee of employees) {
+    if (visited.has(employee.workEmail)) continue;
+    strayRoots.push(buildNode(employee, childrenByManager, visited));
+  }
+
+  return { root, strayRoots };
 }
 
 /** workEmail -> record, for ancestor-chain walks (search-jump) and lookups. */

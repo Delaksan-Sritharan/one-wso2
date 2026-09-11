@@ -214,7 +214,7 @@ function renderLegend(stats: readonly DepartmentStat[]): string {
 function renderCompanySelect(companies: readonly string[]): string {
   if (companies.length === 0) return "";
   const options = companies.map((company) => `<option value="${escapeHtml(company)}">${escapeHtml(company)}</option>`).join("");
-  return `<select class="company-select" id="company-select" aria-label="Filter by company">
+  return `<select class="company-select" id="company-select" aria-label="Filter by company" autocomplete="off">
     <option value="">Global</option>
     ${options}
   </select>`;
@@ -449,10 +449,15 @@ const SCRIPT = `
       var rowEl = rowByEmail[email];
       var wrapper = rowEl.closest("details, .leaf");
       if (!wrapper) return;
-      var isTopLevel = wrapper.hasAttribute("data-top-level-root");
+      // data-main-root, not data-top-level-root: the latter is also set on
+      // every stray root, which would exempt an intern stray root from
+      // hideInterns the same way the one true root is exempt — but a stray
+      // is one of potentially many independent entries, not the single root
+      // the whole page hangs off, so it should hide like any other intern.
+      var isMainRoot = wrapper.hasAttribute("data-main-root");
       var emp = byEmail[email];
       var failsIsolate = !!visible && !visible[email];
-      var failsIntern = !isTopLevel && state.hideInterns && !!emp && emp.designation === "Intern";
+      var failsIntern = !isMainRoot && state.hideInterns && !!emp && emp.designation === "Intern";
       wrapper.classList.toggle("hidden-by-filter", failsIsolate || failsIntern);
     });
     document.querySelectorAll(".children").forEach(function (box) {
@@ -468,7 +473,7 @@ const SCRIPT = `
       el.classList.toggle("selected", el.getAttribute("data-legend") === state.department);
     });
     var showAll = document.getElementById("show-all-link");
-    if (showAll) showAll.style.display = state.department ? "inline" : "none";
+    if (showAll) showAll.style.display = (state.department || state.company) ? "inline" : "none";
   }
 
   document.querySelectorAll("[data-legend]").forEach(function (el) {
@@ -482,7 +487,12 @@ const SCRIPT = `
   var showAllLink = document.getElementById("show-all-link");
   if (showAllLink) {
     showAllLink.addEventListener("click", function () {
+      // Both filters, not just department — either one on its own can hide
+      // what "Show all" promises to reveal, same fix as the live page's
+      // "Show all".
       state.department = null;
+      state.company = null;
+      if (companySelect) companySelect.value = "";
       applyVisibility();
     });
   }
@@ -521,10 +531,12 @@ const SCRIPT = `
   function escapeText(s) {
     var d = document.createElement("div");
     d.textContent = s;
-    // textContent->innerHTML escapes & < > but not " — fine for element
-    // text content, not safe on its own for the data-jump="..." attribute
-    // this also feeds below.
-    return d.innerHTML.replace(/"/g, "&quot;");
+    // textContent->innerHTML escapes & < > but not " or ' — this also feeds
+    // the data-jump="..." attribute below, not just element text, so both
+    // need escaping too. Matches escapeHtml's coverage (the pre-rendered
+    // markup's own escaper) so the two escaping paths in this file agree on
+    // what's safe, instead of quietly disagreeing.
+    return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function jumpTo(email) {
@@ -601,6 +613,16 @@ const SCRIPT = `
       applyVisibility();
     });
   }
+
+  // Seed state from whatever the controls actually show, then apply once —
+  // browsers restore <input type=checkbox>/<select> values across reload and
+  // back-forward navigation, but state above always starts out all-null.
+  // Without this, a reload with "Hide interns" checked (or a company
+  // already selected) showed everyone anyway, checkbox/dropdown and tree
+  // disagreeing until the control was toggled twice.
+  if (hideInternsBox) state.hideInterns = hideInternsBox.checked;
+  if (companySelect) state.company = companySelect.value || null;
+  applyVisibility();
 })();
 `;
 
@@ -640,7 +662,7 @@ export function buildOrgChartHtml(
   <div class="layout">
     <aside class="sidebar">
       <div class="stats">
-        <div class="stat"><div class="stat-value">${employees.length}</div><div class="stat-label">employees</div></div>
+        <div class="stat"><div class="stat-value">${employees.length}</div><div class="stat-label">in directory</div></div>
         <div class="stat"><div class="stat-value">${stats.length}</div><div class="stat-label">teams</div></div>
       </div>
       <div class="search-box">
@@ -652,7 +674,7 @@ export function buildOrgChartHtml(
         <button type="button" class="btn" id="expand-all">Expand all</button>
         <button type="button" class="btn" id="reset-view">Reset view</button>
       </div>
-      <label class="hide-interns-row"><input type="checkbox" id="hide-interns"> Hide interns</label>
+      <label class="hide-interns-row"><input type="checkbox" id="hide-interns" autocomplete="off"> Hide interns</label>
       ${renderLegend(stats)}
     </aside>
     <main class="tree-card">
@@ -679,7 +701,11 @@ ${SCRIPT}
  *  synchronous string-building. */
 export async function downloadOrgChartHtml(employees: readonly EmployeeDirectoryRecord[]): Promise<void> {
   const tree = buildOrgTree(employees);
-  if (!tree) return;
+  // Throw rather than return silently — the caller (OrgChartPage) needs to
+  // tell "no root in the directory" apart from a real failure (network, an
+  // OOM building the data-URI string, ...) instead of both looking like
+  // nothing happened.
+  if (!tree) throw new Error("Couldn't find the company's root (Chairman) in the directory.");
   const stats = departmentStats(employees.map((employee) => ({ department: employee.team })));
   const companies = companyNames(employees);
   const avatarByEmail = await buildAvatarMap(employees);

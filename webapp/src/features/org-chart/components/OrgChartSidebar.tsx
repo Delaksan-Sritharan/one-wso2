@@ -56,6 +56,10 @@ export interface OrgChartSidebarProps {
   /** Always pass the clicked department's name — OrgChartPage handles
    *  toggling it back off when the same one is clicked again. */
   onSelectDepartment: (department: string) => void;
+  /** Clears both the department and company filters — what "Show all"
+   *  calls, since either filter on its own can hide the very thing "Show
+   *  all" promises to reveal. */
+  onClearFilters: () => void;
   /** Distinct `company` values from the directory, alphabetical. */
   companies: string[];
   /** The one company currently isolated, or null when showing everyone. */
@@ -80,6 +84,7 @@ export default function OrgChartSidebar({
   departmentStats,
   selectedDepartment,
   onSelectDepartment,
+  onClearFilters,
   companies,
   selectedCompany,
   onSelectCompany,
@@ -116,8 +121,11 @@ export default function OrgChartSidebar({
           <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
             {totalCount}
           </Typography>
+          {/* "in directory", not "employees" — this counts every row from
+              /employees/basic-info, which includes Marked-leavers, not just
+              Active headcount. See peopleOpsTypes.ts's EmployeeBasicInfo doc. */}
           <Typography variant="caption" color="text.secondary">
-            employees
+            in directory
           </Typography>
         </Box>
         <Box sx={{ flex: 1, border: 1, borderColor: "divider", borderRadius: 1, px: 1.25, py: 1 }}>
@@ -227,15 +235,15 @@ export default function OrgChartSidebar({
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: "0.04em" }}>
               TEAMS · CLICK TO ISOLATE
             </Typography>
-            {selectedDepartment && (
-              <Typography
-                variant="caption"
-                color="primary"
-                onClick={() => onSelectDepartment(selectedDepartment)}
-                sx={{ cursor: "pointer", fontWeight: 600 }}
+            {(selectedDepartment || selectedCompany) && (
+              <Button
+                variant="text"
+                size="small"
+                onClick={onClearFilters}
+                sx={{ minWidth: 0, p: 0, fontSize: "inherit", fontWeight: 600, lineHeight: "inherit" }}
               >
                 Show all
-              </Typography>
+              </Button>
             )}
           </Stack>
           <Stack spacing={0.25}>

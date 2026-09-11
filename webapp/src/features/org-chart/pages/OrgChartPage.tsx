@@ -109,9 +109,21 @@ export default function OrgChartPage() {
     return visible;
   }, [selectedDepartment, selectedCompany, directory.data, byEmail]);
 
+  // Stray roots aren't reached through a parent's visibleChildren list the
+  // way every other filtered row is (see OrgChartRow), so hideInterns has to
+  // be applied to them here explicitly — an intern stray root would
+  // otherwise stay visible (and counted) with "Hide interns" on, unlike
+  // every other intern in the tree.
   const visibleStrayRoots = useMemo(
-    () => (tree ? tree.strayRoots.filter((stray) => !visibleEmails || visibleEmails.has(stray.workEmail)) : []),
-    [tree, visibleEmails],
+    () =>
+      tree
+        ? tree.strayRoots.filter(
+            (stray) =>
+              (!visibleEmails || visibleEmails.has(stray.workEmail)) &&
+              (!hideInterns || stray.designation !== "Intern"),
+          )
+        : [],
+    [tree, visibleEmails, hideInterns],
   );
 
   // The root counts as open unless the user closed it — folded into the same
@@ -164,6 +176,15 @@ export default function OrgChartPage() {
     setSelectedCompany(company);
   };
 
+  // Clears both isolate filters — unlike handleSelectDepartment (a toggle),
+  // "Show all" has to reach both, or picking a company and then clicking
+  // "Show all" silently left the company filter active with no more "Show
+  // all" link left to undo it (it only rendered when a department was set).
+  const handleClearFilters = () => {
+    setSelectedDepartment(null);
+    setSelectedCompany(null);
+  };
+
   const handleExpandAll = () => {
     if (!tree) return;
     setRootClosed(false);
@@ -180,11 +201,22 @@ export default function OrgChartPage() {
   // available employee photo (while we're still authenticated) so the file
   // is genuinely self-contained — see exportOrgChartHtml.ts.
   const [isPreparingDownload, setIsPreparingDownload] = useState(false);
+  // Surfaced, not swallowed: without a catch here, a failure inside
+  // downloadOrgChartHtml (network, an OOM building the multi-MB data-URI
+  // string, ...) rejected silently — isPreparingDownload still reset via
+  // finally, so the button just flipped back to "Download" with no file and
+  // no explanation.
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const handleDownload = async () => {
     if (!directory.data) return;
     setIsPreparingDownload(true);
+    setDownloadError(null);
     try {
       await downloadOrgChartHtml(directory.data);
+    } catch (error) {
+      setDownloadError(
+        error instanceof Error ? error.message : "Couldn't build the download. Please try again.",
+      );
     } finally {
       setIsPreparingDownload(false);
     }
@@ -242,6 +274,11 @@ export default function OrgChartPage() {
         )
       }
     >
+      {downloadError && (
+        <Alert severity="error" onClose={() => setDownloadError(null)} sx={{ mb: 2 }}>
+          {downloadError}
+        </Alert>
+      )}
       {forbidden ? (
         <Alert severity="warning">
           You don&apos;t have access to the org chart. Ask the internal apps team to add you.
@@ -266,6 +303,7 @@ export default function OrgChartPage() {
             departmentStats={stats}
             selectedDepartment={selectedDepartment}
             onSelectDepartment={handleSelectDepartment}
+            onClearFilters={handleClearFilters}
             companies={companies}
             selectedCompany={selectedCompany}
             onSelectCompany={handleSelectCompany}
