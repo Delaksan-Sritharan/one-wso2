@@ -59,7 +59,11 @@ export default function ProfileTab({ companyId }: { companyId: string }) {
     // `fromPerspective` on, so the URL has to say it instead.
     const fromPerspective = (location.state as { fromPerspective?: string } | null)?.fromPerspective;
     const from = fromPerspective ? `&from=${encodeURIComponent(fromPerspective)}` : "";
-    window.open(`${path}?fileName=${encodeURIComponent(data.fileName)}&extension=${extension}${from}`, "_blank");
+    window.open(
+      `${path}?fileName=${encodeURIComponent(data.fileName)}&extension=${encodeURIComponent(extension)}${from}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   return (

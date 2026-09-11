@@ -877,16 +877,7 @@ function downloadPartnersCsv(rows: PartnerRow[]) {
       ? `"${sanitized.replace(/"/g, '""')}"`
       : sanitized;
   };
-  const headers = [
-    "Company Name",
-    "Contact Email",
-    "Channel Manager Email",
-    "Country",
-    "Region",
-    "Form Status",
-    "Finance Approval",
-    "Legal Approval",
-  ];
+  const headers = Object.values(COLUMN_NAMES);
   const csvRows = rows.map((r) =>
     [
       escape(r.reseller.companyName),

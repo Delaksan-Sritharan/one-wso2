@@ -15,10 +15,11 @@
 // under the License.
 
 import { Box, Card, Skeleton, Typography } from "@wso2/oxygen-ui";
-import { ArrowRightIcon, ScaleIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArrowRightIcon } from "@wso2/oxygen-ui-icons-react";
 import { NavLink } from "react-router";
 import PerspectiveHeader from "@components/perspective-header/PerspectiveHeader";
 import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
+import { DUE_DILIGENCE_APPS, DUE_DILIGENCE_EYEBROW } from "@constants/dueDiligenceApps";
 
 // The Legal overview — currently just a way in to Due Diligence, the one app
 // that lives here so far. Same pattern as FinancePage: a card per app,
@@ -66,14 +67,11 @@ export default function LegalPage() {
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.75 }}>
-              <ScaleIcon size={16} />
-              <Typography sx={{ fontSize: 15, fontWeight: 700, flex: 1 }}>Due Diligence</Typography>
+              <DUE_DILIGENCE_EYEBROW.icon size={16} />
+              <Typography sx={{ fontSize: 15, fontWeight: 700, flex: 1 }}>{DUE_DILIGENCE_EYEBROW.label}</Typography>
               <ArrowRightIcon size={15} />
             </Box>
-            <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-              Reseller and trade-reference due-diligence review — partner vetting, credit
-              scoring, and finance/legal approval.
-            </Typography>
+            <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{DUE_DILIGENCE_APPS[0].purpose}</Typography>
           </Card>
         </Box>
       )}

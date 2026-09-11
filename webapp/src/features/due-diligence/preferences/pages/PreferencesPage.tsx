@@ -17,17 +17,21 @@
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, CircularProgress, Stack, Typography } from "@wso2/oxygen-ui";
 import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import DueDiligenceShell from "@features/due-diligence/components/DueDiligenceShell";
+import DueDiligenceLocked from "@features/due-diligence/components/DueDiligenceLocked";
 import { DUE_DILIGENCE_EYEBROW } from "@constants/dueDiligenceApps";
 import { humanizeHttpError } from "@api/http";
+import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
 import { usePreferences } from "../api/usePreferences";
 import RatioTable from "../components/RatioTable";
 import EmailPreferences from "../components/EmailPreferences";
 
 // Ported from the source app's Preferences/Preferences.js. Admin-only —
-// gated by DueDiligenceShell's requireAuthorized ladder plus, here, the
-// rail/registry already restricting the "dd-preferences" item to admins
-// (see useDueDiligenceGate.canSee), so a non-admin who reaches this URL
-// directly still sees the shell's locked state rather than the page body.
+// the rail/registry only restricts the "dd-preferences" MENU ITEM to admins
+// (see useDueDiligenceGate.canSee); that's a navigation hint, not an access
+// boundary. DueDiligenceShell's own requireAuthorized ladder only checks
+// "holds any due-diligence role at all", so someone with a non-admin role
+// who opens this URL directly would otherwise reach the full edit body.
+// The explicit gate.isAdmin check below is the actual boundary.
 const RATIO_CATEGORIES = [
   "Rating scale",
   "Current ratio",
@@ -39,6 +43,7 @@ const RATIO_CATEGORIES = [
 ];
 
 export default function PreferencesPage() {
+  const gate = useDueDiligenceGate();
   const preferences = usePreferences();
 
   return (
@@ -47,6 +52,10 @@ export default function PreferencesPage() {
       title="Preferences"
       subtitle="Ratio scoring scales and notification email recipients."
     >
+      {!gate.isAdmin ? (
+        <DueDiligenceLocked />
+      ) : (
+        <>
       <Accordion defaultExpanded>
         <AccordionSummary expandIcon={<ChevronDownIcon size={16} />}>
           <Typography sx={{ fontWeight: 600 }} variant="body2">
@@ -99,6 +108,8 @@ export default function PreferencesPage() {
           )}
         </AccordionDetails>
       </Accordion>
+        </>
+      )}
     </DueDiligenceShell>
   );
 }

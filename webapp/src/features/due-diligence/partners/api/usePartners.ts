@@ -212,20 +212,13 @@ export interface ApprovalSummaryData {
   resellerLinks: { linkId: number; status: string }[];
 }
 
-export function useApprovalSummary(companyId: string | number, enabled = true) {
-  const getAccessToken = useAccessToken();
-  const configured = isDueDiligenceBackendConfigured();
-
-  return useQuery<ApprovalSummaryData>({
-    queryKey: ["due-diligence", "approval-summary", companyId],
-    enabled: enabled && configured && Boolean(companyId),
-    queryFn: async () => {
-      const accessToken = await getAccessToken();
-      return authedGet<ApprovalSummaryData>(dueDiligenceServiceUrls.approvalSummary(companyId), accessToken);
-    },
-    retry: httpRetry,
-  });
-}
+// No `useApprovalSummary` hook here: ApprovalTab and PartnerDashboardPage
+// both call `authedGet(dueDiligenceServiceUrls.approvalSummary(...))`
+// directly instead — ApprovalTab deliberately bypasses TanStack Query for
+// this endpoint (see its own docstring: it always wants the backend's
+// current answer, not a value the shared cache may have from a moment
+// before), so a shared query hook here would go unused by the one place
+// that mirrors its shape most closely.
 
 /** POST /partners/links/{linkId}/resend-email — edit a link's details and resend the partner/channel-manager emails. */
 export function useResendPartnerLinkEmail() {

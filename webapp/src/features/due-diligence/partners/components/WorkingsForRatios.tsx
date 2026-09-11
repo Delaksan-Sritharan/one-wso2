@@ -50,14 +50,24 @@ function blankYear(companyId: string, year: number): DraftYear & { companyId: nu
   return {
     companyId: Number(companyId),
     year,
-    currentAssets: 0,
-    currentLiability: 0,
-    cash: 0,
-    investments: 0,
-    totalDebt: 0,
-    totalAssets: 0,
-    revenue: 0,
-    profit: 0,
+    // "" (not 0) for every field the admin actually types into — 0 is a
+    // real, distinct value here (a company can genuinely have 0 profit), so
+    // seeding these fields with 0 let an untouched table pass
+    // checkObjectComplete's "Table can not be Empty" guard silently.
+    // exchangeRate is left at 0: unlike the rest, it's not directly
+    // user-facing for a US Dollar company (its input row only renders for
+    // other currencies — see `currency !== "US Dollar"` below), so treating
+    // it as "unset" here would block every USD company's table from ever
+    // being submittable. That gap already exists in the source app, which
+    // exempts exchangeRate from this same completeness check outright.
+    currentAssets: "",
+    currentLiability: "",
+    cash: "",
+    investments: "",
+    totalDebt: "",
+    totalAssets: "",
+    revenue: "",
+    profit: "",
     exchangeRate: 0,
   };
 }

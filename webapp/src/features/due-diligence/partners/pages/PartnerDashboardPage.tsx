@@ -154,6 +154,7 @@ export default function PartnerDashboardPage() {
   const canSeeFinance = gate.hasRole("financeRole");
   const canSeeLegal =
     gate.hasRole("legalRole") ||
+    gate.hasRole("legalApprover") ||
     gate.hasRole("financialCreator") ||
     gate.hasRole("financialReviewer") ||
     gate.hasRole("financeApprover");

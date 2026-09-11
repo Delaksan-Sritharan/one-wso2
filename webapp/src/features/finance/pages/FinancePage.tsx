@@ -17,7 +17,7 @@
  */
 
 import { Box, Card, Skeleton, Typography } from "@wso2/oxygen-ui";
-import { ArrowRightIcon, CheckCheckIcon, CreditCardIcon, ReceiptTextIcon, ScaleIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArrowRightIcon, CheckCheckIcon, CreditCardIcon, ReceiptTextIcon } from "@wso2/oxygen-ui-icons-react";
 import { NavLink } from "react-router";
 import PerspectiveHeader from "@components/perspective-header/PerspectiveHeader";
 import { useFinanceGate } from "../api/useFinanceGate";
@@ -25,6 +25,7 @@ import { CLAIM_APPROVAL_PATH } from "../approvals/claimApprovalTabs";
 import { ccPaths } from "../cc/ccPaths";
 import { expenseFinancePaths } from "../expense/expenseFinancePaths";
 import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
+import { DUE_DILIGENCE_APPS, DUE_DILIGENCE_EYEBROW } from "@constants/dueDiligenceApps";
 
 // The Finance overview. It said "coming soon" while the perspective was empty;
 // Claim approval is here now, so it lists what is here instead.
@@ -75,9 +76,9 @@ export default function FinancePage() {
       id: "due-diligence",
       show: dueDiligenceGate.canSee("dd-partners"),
       to: "/due-diligence/partners",
-      icon: ScaleIcon,
-      title: "Due Diligence",
-      description: "Reseller and trade-reference due-diligence review, credit scoring, and approval.",
+      icon: DUE_DILIGENCE_EYEBROW.icon,
+      title: DUE_DILIGENCE_EYEBROW.label,
+      description: DUE_DILIGENCE_APPS[0].purpose,
     },
   ].filter((entry) => entry.show);
 

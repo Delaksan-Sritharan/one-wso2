@@ -19,12 +19,19 @@
 // plain functions (no React) so the arithmetic can be read and, if ever
 // needed, tested in isolation from rendering.
 //
-// This is a literal port, not a redesign — every rounding call, NaN guard,
-// and per-category quirk below is copied intentionally, including the ones
-// that look like they could be unified. In particular: the ratio-scale
-// matcher includes an "id === 0 && value === scale.minVal" boundary rule for
+// This is a literal port, not a redesign — every rounding call and
+// per-category quirk below is copied intentionally, including the ones that
+// look like they could be unified. In particular: the ratio-scale matcher
+// includes an "id === 0 && value === scale.minVal" boundary rule for
 // Current ratio / Cash ratio / Debt ratio / Rating scale, but NOT for WC /
 // Revenue / Revenue growth — that split is in the source, not a mistake here.
+//
+// One deliberate deviation: the source guards each ratio with `isNaN(value)`
+// only, which lets a non-zero-over-zero division through as Infinity (0/0
+// alone is what NaN catches) straight into the table and the PDF report.
+// That's a display bug with no business-rule content to preserve, so these
+// use `!Number.isFinite(value)` instead — catches both NaN and ±Infinity,
+// same as convertToDollars' own exchange-rate guard above.
 
 import type { CreditScoreItem } from "../api/creditScoreTypes";
 import type { CreditScoreRatio } from "@features/due-diligence/preferences/api/usePreferences";
@@ -68,7 +75,7 @@ export function calculateCurrentRatio(years: Record<1 | 2 | 3, YearData>, year: 
   const y = years[year];
   if (!checkObjectComplete(y)) return "";
   const value = formatNumber(Math.round((Number(y.currentAssets) / Number(y.currentLiability)) * 100) / 100);
-  return Number.isNaN(value) ? "-" : value;
+  return !Number.isFinite(value) ? "-" : value;
 }
 
 export function calculateCashRatio(years: Record<1 | 2 | 3, YearData>, year: 1 | 2 | 3): number | "-" {
@@ -76,7 +83,7 @@ export function calculateCashRatio(years: Record<1 | 2 | 3, YearData>, year: 1 |
   const value = formatNumber(
     Math.round(((Number(y.cash) + Number(y.investments)) / Number(y.currentLiability)) * 100) / 100,
   );
-  return Number.isNaN(value) ? "-" : value;
+  return !Number.isFinite(value) ? "-" : value;
 }
 
 export function calculateWorkingCapitalRatio(years: Record<1 | 2 | 3, YearData>, year: 1 | 2 | 3): number {
@@ -87,7 +94,7 @@ export function calculateWorkingCapitalRatio(years: Record<1 | 2 | 3, YearData>,
 export function calculateDebtRatio(years: Record<1 | 2 | 3, YearData>, year: 1 | 2 | 3): number | "-" {
   const y = years[year];
   const value = formatNumber(Math.round((Number(y.totalDebt) / Number(y.totalAssets)) * 100) / 100);
-  return Number.isNaN(value) ? "-" : value;
+  return !Number.isFinite(value) ? "-" : value;
 }
 
 export function getRevenue(years: Record<1 | 2 | 3, YearData>, year: 1 | 2 | 3): number {
@@ -103,7 +110,7 @@ export function calculateRevenueGrowth(years: Record<1 | 2 | 3, YearData>, year:
   const curr = years[year];
   const prev = years[(year - 1) as 1 | 2];
   const value = formatNumber(Math.round(((Number(curr.revenue) - Number(prev.revenue)) / Number(prev.revenue)) * 10000) / 100);
-  return Number.isNaN(value) ? "" : value;
+  return !Number.isFinite(value) ? "" : value;
 }
 
 export function calculateCurrentAssetYoY(years: Record<1 | 2 | 3, YearData>, year: 2 | 3): number | "" {
@@ -112,7 +119,7 @@ export function calculateCurrentAssetYoY(years: Record<1 | 2 | 3, YearData>, yea
   const value = formatNumber(
     Math.round(((Number(curr.currentAssets) - Number(prev.currentAssets)) / Number(prev.currentAssets)) * 10000) / 100,
   );
-  return Number.isNaN(value) ? "" : value;
+  return !Number.isFinite(value) ? "" : value;
 }
 
 export function calculateCurrentLiabilityYoY(years: Record<1 | 2 | 3, YearData>, year: 2 | 3): number | "" {
@@ -122,7 +129,7 @@ export function calculateCurrentLiabilityYoY(years: Record<1 | 2 | 3, YearData>,
     Math.round(((Number(curr.currentLiability) - Number(prev.currentLiability)) / Number(prev.currentLiability)) * 10000) /
       100,
   );
-  return Number.isNaN(value) ? "" : value;
+  return !Number.isFinite(value) ? "" : value;
 }
 
 export type RatioCategory = "Current ratio" | "Cash ratio" | "WC" | "Debt ratio" | "Revenue" | "Revenue growth";

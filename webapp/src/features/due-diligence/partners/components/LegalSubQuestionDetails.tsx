@@ -80,7 +80,12 @@ export default function LegalSubQuestionDetails({
     // `from=legal` — see the identical note in FinanceSubQuestionDetails.tsx;
     // a new tab has no history entry to carry `fromPerspective` on, so the
     // URL itself has to say which perspective opened it.
-    if (path) window.open(`${path}?fileName=${encodeURIComponent(fileName)}&extension=${extension}&from=legal`, "_blank");
+    if (path)
+      window.open(
+        `${path}?fileName=${encodeURIComponent(fileName)}&extension=${encodeURIComponent(extension)}&from=legal`,
+        "_blank",
+        "noopener,noreferrer",
+      );
   };
 
   return (

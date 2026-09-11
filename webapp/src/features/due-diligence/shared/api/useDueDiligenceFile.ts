@@ -19,6 +19,19 @@ import { fetchWithReauth, HttpError } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { dueDiligenceServiceUrls } from "@config/apiConfig";
 
+// Only these types are ever previewed inline. Anything else is coerced to
+// octet-stream before creating the object URL — ViewPdfPage puts this URL
+// straight into an <iframe src>, and a blob: document of type text/html
+// runs same-origin with the app, so a partner-uploaded HTML file (saved
+// under a misleading .pdf/.jpg name, or simply served with a wrong
+// Content-Type) could otherwise execute with access to the session. Same
+// guard as @features/finance/util/financeReceipts's `safeType`.
+const PREVIEWABLE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
+
+function safeType(type: string): string {
+  return PREVIEWABLE_TYPES.has(type) ? type : "application/octet-stream";
+}
+
 /**
  * Fetches a stored due-diligence document (GET /files/{fileName}, a raw
  * binary endpoint behind the same JwtInterceptor as everything else — not
@@ -46,7 +59,11 @@ export function useDueDiligenceFile(fileName: string | null, extension: string |
         }
         const blob = await res.blob();
         if (cancelled) return;
-        createdUrl = URL.createObjectURL(blob);
+        const type = safeType(blob.type);
+        // Re-wrap when coercing so the object URL carries the safe type,
+        // never the original (possibly text/html) one.
+        const safeBlob = type === blob.type ? blob : new Blob([blob], { type });
+        createdUrl = URL.createObjectURL(safeBlob);
         setState({ objectUrl: createdUrl, isLoading: false });
       } catch (err) {
         if (cancelled) return;

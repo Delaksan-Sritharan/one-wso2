@@ -138,7 +138,12 @@ export default function FinanceSubQuestionDetails({
     // usual `state: { fromPerspective }` to, so PerspectiveContext falls
     // back to reading it off the URL instead. Without it the rail in that
     // new tab shows Me, not Finance.
-    if (path) window.open(`${path}?fileName=${encodeURIComponent(fileName)}&extension=${extension}&from=finance`, "_blank");
+    if (path)
+      window.open(
+        `${path}?fileName=${encodeURIComponent(fileName)}&extension=${encodeURIComponent(extension)}&from=finance`,
+        "_blank",
+        "noopener,noreferrer",
+      );
   };
 
   if (question.questionId !== subQuestion.questionId) return null;

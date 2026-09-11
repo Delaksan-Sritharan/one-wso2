@@ -15,6 +15,7 @@
 // under the License.
 
 import { describeError } from "@api/errors";
+import { isDueDiligenceBackendConfigured } from "@config/apiConfig";
 import { useDueDiligenceMe } from "./useDueDiligenceMe";
 import { hasDueDiligenceRole, type DueDiligenceRole } from "./dueDiligenceTypes";
 
@@ -84,8 +85,14 @@ export function useDueDiligenceGate(enabled = true): DueDiligenceGate {
     hasRole,
     // `isPending` rather than `isLoading`, so the window in which the
     // Asgardeo sub hasn't resolved yet counts as resolving too — see the
-    // identical note on useMarketingOpsGate.
-    isResolving: enabled && me.isPending,
+    // identical note on useMarketingOpsGate. Gated on `configured` as well:
+    // useDueDiligenceMe's query stays permanently disabled (and therefore
+    // permanently `isPending`) when the backend URL isn't set, so without
+    // this an unconfigured deployment never stops "resolving" — and
+    // FinancePage ORs this straight into its own loading branch, which would
+    // otherwise hide Claim approval/CC Expenses/Expense Claims behind a
+    // skeleton forever.
+    isResolving: enabled && isDueDiligenceBackendConfigured() && me.isPending,
     isError: me.isError,
     errorMessage: me.isError ? describeError(me.error) : undefined,
     retry: () => void me.refetch(),
