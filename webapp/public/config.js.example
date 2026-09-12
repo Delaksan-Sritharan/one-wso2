@@ -21,6 +21,14 @@ window.config = {
   // makes no requests. See docs/ported-apps/menu-app.md for the contract.
   // ONE_WSO2_MENU_BACKEND_URL: "https://<gateway>/menu-app/v1",
 
+  // digiops-hr subscription-app backend base URL (PickMe Commute + LaaS
+  // opt-in/opt-out). Optional — when absent the People Ops → Subscriptions
+  // screens show a not-connected state and make no requests. See
+  // docs/ported-apps/subscription-app.md for the contract, including the
+  // two Asgardeo admin groups this backend's own /subscriptions/meta-info
+  // publishes (there is no separate config key for them).
+  // ONE_WSO2_SUBSCRIPTION_BACKEND_URL: "<your-subscription-app-backend-url>",
+
   // people-ops-suite people-app backend base URL. Same value as people-app's
   // REACT_APP_BACKEND_BASE_URL — usually a Choreo API gateway URL. Powers
   // the live My profile page (employee + personal info fetch).

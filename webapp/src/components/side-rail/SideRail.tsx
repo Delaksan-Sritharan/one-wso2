@@ -19,7 +19,7 @@ import { Box, Link, Sidebar, Typography } from "@wso2/oxygen-ui";
 import { ExternalLinkIcon, SettingsIcon } from "@wso2/oxygen-ui-icons-react";
 import { Link as RouterLink, matchPath, useLocation, useNavigate } from "react-router";
 import { useActivePerspective } from "@context/perspective/PerspectiveContext";
-import type { PerspectiveSection } from "@constants/perspectives";
+import { SUBSCRIPTION_ITEM_IDS, type PerspectiveSection } from "@constants/perspectives";
 import { capabilitiesFromPrivileges, type Capability } from "@constants/appMenu";
 import { FINANCE_ITEM_IDS } from "@constants/financeApps";
 import { LEAVE_ITEM_IDS } from "@constants/meApps";
@@ -31,6 +31,8 @@ import {
   activeItemId as activeItemIdFor,
 } from "./railActive";
 import { useMarketingOpsGate } from "@features/marketing-ops/api/useMarketingOpsGate";
+import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
+import { isSriLankaWorkLocation } from "@features/subscriptions/util/locationGate";
 
 // Context-sensitive left rail, built on Oxygen's compound `Sidebar`.
 //
@@ -129,9 +131,46 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   const isMarketingOps = active.key === "marketing";
   const marketingOpsGate = useMarketingOpsGate(isMarketingOps);
 
+  // Subscriptions (People Ops → PickMe Commute / LaaS) is the same shape of
+  // problem once more, with one extra wrinkle worth naming: its backend
+  // publishes the NAMES of its two admin Asgardeo groups on
+  // /subscriptions/meta-info and leaves the comparison against the caller's own
+  // groups to the client, because it has no `/me` of its own. So the gate here
+  // is a join of that response and the id_token, not a single backend verdict —
+  // see useSubscriptionGate. Only fetched while People Ops is the active
+  // perspective; every other perspective has no business calling it.
+  const isPeopleOps = active.key === "people";
+  const subscriptionGate = useSubscriptionGate(isPeopleOps);
+
+  // Both services are a Colombo-office perk, so the section as a whole is
+  // Sri-Lanka-only — see isSriLankaWorkLocation. `userInfo` is the SAME call
+  // `caps` above already makes (people-app's /user-info), so this piggybacks
+  // on an existing fetch rather than adding one: no new request, just one more
+  // field read off a response already in flight for every perspective. While
+  // it's unresolved, `workLocation` reads as undefined and this returns false
+  // — the same fail-closed-while-loading behaviour `caps`-gated items already
+  // get from `capabilitiesFromPrivileges` defaulting privileges to `[]`, so a
+  // gate is never mistakenly satisfied just because its data hasn't landed
+  // yet.
+  //
+  // Beyond that: the group and the self-service screen are open to every Sri
+  // Lanka employee — opting yourself in and out is not an HR-team action.
+  // Only the manage-on-behalf screen ALSO needs a group, and it stays hidden
+  // while that gate is still resolving too: showing it first and withdrawing
+  // it a moment later reads as the rail flickering, and failing CLOSED is the
+  // right default for an admin entry point either way.
+  const isSriLankaEmployee = isSriLankaWorkLocation(userInfo.data?.workLocation);
+  const subscriptionCanSee = (id: string): boolean => {
+    if (!isSriLankaEmployee) return false;
+    return id === "people-subscriptions-manage"
+      ? subscriptionGate.isAdmin && !subscriptionGate.isResolving
+      : true;
+  };
+
   const resolveVisible = (s: PerspectiveSection): boolean => {
     if (FINANCE_ITEM_IDS.has(s.id)) return financeGate.canSee(s.id);
     if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
+    if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
     if (isMarketingOps) return marketingOpsGate.canSee(s.id);
     return sectionAllowed(s.requires, caps);
   };
