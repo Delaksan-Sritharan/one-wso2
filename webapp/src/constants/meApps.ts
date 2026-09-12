@@ -19,7 +19,7 @@
 // Same App → items shape as @constants/financeApps; see
 // that file's header for the general rationale.
 
-import { TreePalmIcon, UtensilsIcon } from "@wso2/oxygen-ui-icons-react";
+import { ClipboardCheckIcon, TreePalmIcon, UtensilsIcon } from "@wso2/oxygen-ui-icons-react";
 import type { MenuApp } from "@constants/appMenu";
 
 export const ME_APPS: readonly MenuApp[] = [
@@ -58,6 +58,30 @@ export const ME_APPS: readonly MenuApp[] = [
         label: "Home",
         desc: "View the cafeteria menu, submit feedback, order dinner.",
         path: "/me/menu",
+      },
+    ],
+  },
+  // par-app's employee half, ported one screen at a time — see
+  // docs/ported-apps/par-app.md. Names below match par-app's own tab labels
+  // (OngoingCycleView.tsx's ParCycleViewTabs), not invented ones. Employee
+  // Feedback is the first; F2F scheduling follows as more items here (or
+  // tabs within them, matching Leave's General/Sabbatical shape) rather than
+  // as separate apps. `alwaysGroup` because this is deliberately NOT a
+  // one-screen app like Menu — it stays a named group even while it holds
+  // only one item, the same reasoning as Master Data's in
+  // @constants/perspectives.
+  {
+    key: "par",
+    name: "PAR",
+    icon: ClipboardCheckIcon,
+    purpose: "Your PAR: employee feedback, 360° feedback, and the face-to-face meeting.",
+    alwaysGroup: true,
+    items: [
+      {
+        id: "par-employee-feedback",
+        label: "Employee Portal",
+        desc: "Complete and share your PAR for the current cycle.",
+        path: "/me/performance",
       },
     ],
   },

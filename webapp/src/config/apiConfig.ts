@@ -153,6 +153,14 @@ export const parBackendUrl: string =
   window.config?.ONE_WSO2_PAR_BACKEND_URL ?? "";
 
 export const parServiceUrls = {
+  // GET /employees/{workEmail} — par-app's OWN employee record, distinct
+  // from people-app's. Carries `leadEmail: string?` — the exact field
+  // OngoingCycleView.tsx gates its tab set on (`leadEmail !== null`).
+  // Deliberately NOT people-app's `managerEmail`: the two disagreed in
+  // practice for at least one real account, so this is fetched from
+  // par-app's own backend rather than assumed from a different one's org
+  // chart. Self-lookup is allowed (isSelf in service.bal).
+  parEmployeeInfo: (workEmail: string) => `${parBackendUrl}/employees/${encodeURIComponent(workEmail)}`,
   // GET /par-cycles?email=<workEmail>&status=OPEN — returns ParCycle[] for
   // the caller's own active review cycles. Non-lead/non-admin callers can
   // only query their own email.
@@ -189,11 +197,14 @@ export const parServiceUrls = {
   par360Review: (parCycleId: number, employeeWorkEmail: string) =>
     `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(employeeWorkEmail)}/review`,
 
-  // GET /meta/employees — every employee in the org (name, email, thumbnail).
-  // Backs "Voluntary Feedback" (OfferFeedbackView.tsx's participant picker) —
-  // offering a review to someone who never asked has no existing request row
-  // to search against, so the picker needs the whole directory.
-  metaEmployees: `${parBackendUrl}/meta/employees`,
+  // GET /par-cycles/{cycleId}/participants — the people IN THIS CYCLE (name +
+  // email only), leadEmail omitted (par-app's OfferFeedbackView.tsx always
+  // passes `leadEmail: null`, i.e. every participant, not one lead's team).
+  // Backs "Voluntary Feedback"'s picker — offering a review to someone who
+  // never asked has no existing request row to search against. NOT the same
+  // as GET /meta/employees, which is org-wide and not scoped to this cycle.
+  par360Participants: (parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/participants`,
 };
 
 // Leave app backend (people-ops-suite/apps/leave-app). Its own service
