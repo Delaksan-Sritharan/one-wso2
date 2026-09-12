@@ -110,6 +110,13 @@ export function useSubscriptionGate(enabled = true): SubscriptionGate {
     errorMessage: meta.isError
       ? describeError(meta.error)
       : (identity.error ?? undefined),
-    retry: () => void meta.refetch(),
+    // Both halves, unconditionally — a caller here (SubscriptionsShell's
+    // ErrorNotice) has no way to tell which one actually failed, and retrying
+    // the healthy half is a harmless no-op. Retrying only meta.refetch() left
+    // an identity-decode failure with no way to recover short of a reload.
+    retry: () => {
+      void meta.refetch();
+      identity.retry();
+    },
   };
 }

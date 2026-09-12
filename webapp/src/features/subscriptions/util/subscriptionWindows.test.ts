@@ -69,15 +69,36 @@ describe("isWindowOpen", () => {
 
 describe("periodLabel", () => {
   it("keeps a non-wrapping window inside one month", () => {
-    expect(periodLabel(25, 31, on(2026, 9, 12))).toBe("25 Sep to 31 Sep");
+    // September has 30 days: the end day (31) is clamped down rather than
+    // printed as a date September does not have.
+    expect(periodLabel(25, 31, on(2026, 9, 12))).toBe("25 Sep to 30 Sep");
   });
 
-  it("names the next month for a window that wraps", () => {
+  it("names the next month for a window that wraps, when today is in the first month", () => {
     expect(periodLabel(25, 5, on(2026, 9, 12))).toBe("25 Sep to 5 Oct");
   });
 
   it("rolls the year over at December", () => {
     expect(periodLabel(25, 5, on(2026, 12, 28))).toBe("25 Dec to 5 Jan");
+  });
+
+  it("names the PREVIOUS month as the start once today is in the wrap's tail", () => {
+    // The bug this guards: a 25 -> 5 window is still open on Oct 3 (it opened
+    // Sep 25), but Oct 3's own month is the window's SECOND month, not its
+    // first. Reading the start month off `now` unconditionally named this
+    // "25 Oct to 5 Nov" — a window that doesn't exist; the real one, still
+    // open on Oct 3, is 25 Sep to 5 Oct.
+    expect(periodLabel(25, 5, on(2026, 10, 3))).toBe("25 Sep to 5 Oct");
+    // Day 5 itself: still the tail of the same window.
+    expect(periodLabel(25, 5, on(2026, 10, 5))).toBe("25 Sep to 5 Oct");
+    // Day 6: the window has closed, so this is now describing the NEXT
+    // occurrence rather than the one that just ended — back to "now's own
+    // month" as the start.
+    expect(periodLabel(25, 5, on(2026, 10, 6))).toBe("25 Oct to 5 Nov");
+  });
+
+  it("clamps against February too, not just 30-day months", () => {
+    expect(periodLabel(25, 31, on(2026, 2, 20))).toBe("25 Feb to 28 Feb");
   });
 });
 
@@ -86,7 +107,8 @@ describe("actionWindow", () => {
     const w = actionWindow(META, true, on(2026, 9, 28));
     expect(w.action).toBe("opt out");
     expect(w.open).toBe(true);
-    expect(w.label).toBe("25 Sep to 31 Sep");
+    // September has 30 days — the configured end day (31) is clamped.
+    expect(w.label).toBe("25 Sep to 30 Sep");
     // The reverse window is what the dialog offers as the way back.
     expect(w.reverseLabel).toBe("25 Sep to 5 Oct");
   });
@@ -97,6 +119,10 @@ describe("actionWindow", () => {
     // Day 3 is inside the wrapped opt-in window but outside opt-out — the
     // case that proves the right window was chosen, not just any open one.
     expect(w.open).toBe(true);
+    // The window that is actually open on Oct 3 opened Sep 25, not Oct 25 —
+    // see periodLabel's own "wrap's tail" test for why this is the case that
+    // used to name the wrong month.
+    expect(w.label).toBe("25 Sep to 5 Oct");
     expect(actionWindow(META, true, on(2026, 10, 3)).open).toBe(false);
   });
 

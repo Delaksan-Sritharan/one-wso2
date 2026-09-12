@@ -19,7 +19,9 @@ import {
   Autocomplete,
   Avatar,
   Box,
+  Button,
   CircularProgress,
+  Stack,
   TextField,
   Typography,
 } from "@wso2/oxygen-ui";
@@ -89,10 +91,31 @@ export default function SubscriptionEmployeePicker({
       loading={employees.isLoading}
       loadingText="Loading employees…"
       // MUI's default "No options" reads as if the picker is broken (or
-      // still loading). It only shows once loading is done and nothing
-      // matched — either the typed search or, in principle, an empty
-      // roster — so "No employees found" is accurate either way.
-      noOptionsText="No employees found"
+      // still loading). It only shows once loading is done — so a failed
+      // roster fetch (network blip, the gateway timing out) would otherwise
+      // render identically to "no employees matched", with no way to tell
+      // the admin their search is broken rather than genuinely empty, and no
+      // way to retry short of leaving the page. `noOptionsText` accepts a
+      // node, not just a string, so the error case gets its own message and
+      // an actual retry action instead of settling for text alone.
+      noOptionsText={
+        employees.isError ? (
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: "center", justifyContent: "space-between" }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Couldn&apos;t load employees.
+            </Typography>
+            <Button size="small" onClick={() => void employees.refetch()}>
+              Retry
+            </Button>
+          </Stack>
+        ) : (
+          "No employees found"
+        )
+      }
       autoHighlight
       size="small"
       sx={{ maxWidth: 460 }}

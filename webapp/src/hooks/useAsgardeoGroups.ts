@@ -49,6 +49,14 @@ export interface AsgardeoGroups {
   groups: string[];
   /** Set when the decode itself failed, so callers can offer a retry. */
   error?: string;
+  /**
+   * Retries whichever half failed — the `sub` resolution itself
+   * (`useAsgardeoSub`'s own retry) and the groups query's refetch, both
+   * unconditionally: calling the one that didn't fail is a harmless no-op
+   * (a cache hit), and the caller has no way to know which half is actually
+   * broken from out here.
+   */
+  retry: () => void;
 }
 
 // Asgardeo emits `groups` as an array, but a user in exactly ONE group can
@@ -63,7 +71,7 @@ function normalizeGroups(claim: unknown): string[] {
 
 export function useAsgardeoGroups(): AsgardeoGroups {
   const { isSignedIn, getDecodedIdToken } = useAsgardeo();
-  const { state: subState } = useAsgardeoSub();
+  const { state: subState, retry: retryIdentity } = useAsgardeoSub();
   const userSub = subState.status === "ready" ? subState.sub : undefined;
 
   // Keyed on `sub`, which is what makes a sign-out → different-user sign-in in
@@ -90,11 +98,19 @@ export function useAsgardeoGroups(): AsgardeoGroups {
     retry: false,
   });
 
+  // Retries whichever half is actually broken. The caller (a gate's own
+  // `retry`) has no visibility into which one that is, so both run — the
+  // healthy half's call is just a cache hit / a no-op refetch.
+  const retry = () => {
+    retryIdentity();
+    void query.refetch();
+  };
+
   // Checked first: with identity unresolved the query stays disabled forever,
   // so leaving it to `isPending` below would report "still loading" for a
   // failure that is never going to resolve.
   if (subState.status === "error") {
-    return { ready: true, groups: [], error: subState.message };
+    return { ready: true, groups: [], error: subState.message, retry };
   }
 
   if (query.isError) {
@@ -106,14 +122,15 @@ export function useAsgardeoGroups(): AsgardeoGroups {
       ready: true,
       groups: [],
       error: "Couldn't read your group memberships from your session.",
+      retry,
     };
   }
 
   // `isPending` covers the disabled window too (before `sub` resolves), which
   // is exactly what callers should treat as "not decided yet".
-  if (query.isPending) return { ready: false, groups: [] };
+  if (query.isPending) return { ready: false, groups: [], retry };
 
-  return { ready: true, groups: query.data };
+  return { ready: true, groups: query.data, retry };
 }
 
 /** True when `groups` contains any of `required`. Empty `required` → false. */

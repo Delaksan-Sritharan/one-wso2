@@ -12,8 +12,8 @@ to be faithful to, only existing *rules*, which are reproduced exactly.
 
 | Route | Screen | Who |
 |---|---|---|
-| `/people-ops/subscriptions` | My subscriptions | every signed-in employee |
-| `/people-ops/subscriptions/manage` | Manage for employees | commute and/or LaaS admins |
+| `/people-ops/subscriptions` | My subscriptions | signed-in employees in Sri Lanka |
+| `/people-ops/subscriptions/manage` | Manage for employees | Sri Lanka-based commute and/or LaaS admins |
 
 Backend reached via `ONE_WSO2_SUBSCRIPTION_BACKEND_URL`; the existing service is reused unchanged.
 

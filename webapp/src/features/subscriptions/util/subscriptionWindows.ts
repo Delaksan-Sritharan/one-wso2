@@ -47,6 +47,11 @@ export function isWindowOpen(startDay: number, endDay: number, now: Date): boole
   return isWithinDayRange(startDay, endDay, now.getDate());
 }
 
+/** The last real day of the month `monthDate` falls in, e.g. 30 for September. */
+function lastDayOfMonth(monthDate: Date): number {
+  return new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+}
+
 /**
  * The window as a sentence: "25 Sep to 5 Oct".
  *
@@ -59,14 +64,39 @@ export function isWindowOpen(startDay: number, endDay: number, now: Date): boole
  * has no year in it at all — the window is the 25th of whatever month it is
  * now. Naming the day and month directly says the recurring rule rather than
  * one arbitrary instance of it.
+ *
+ * `now`'s own month is NOT always the window's start month. A wrapping
+ * window (25 → 5) can be OPEN while `now` sits in its second calendar month —
+ * `now` = Oct 3 for a window that opened Sep 25 — and that is the one case
+ * where the start month is the one BEFORE `now`'s, not `now`'s own. Every
+ * other case (the window closed, or open but still in its first month, or
+ * not wrapping at all) starts in `now`'s own month. Getting this wrong named
+ * the wrong month on both ends: "25 Oct to 5 Nov" for a window that was
+ * actually 25 Sep to 5 Oct.
+ *
+ * Each day is also clamped to the last real day of ITS OWN label month —
+ * the default opt-out window's end day (31) is a real date in most months
+ * but not in September (30) or February, and an unclamped label would print
+ * "31 Sep".
  */
 export function periodLabel(startDay: number, endDay: number, now: Date): string {
-  const thisMonth = now.toLocaleString("en-US", { month: "short" });
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleString("en-US", {
-    month: "short",
-  });
-  const endMonth = startDay <= endDay ? thisMonth : nextMonth;
-  return `${startDay} ${thisMonth} to ${endDay} ${endMonth}`;
+  const wraps = startDay > endDay;
+  const isTailOfOpenWrap = wraps && now.getDate() <= endDay;
+
+  const startMonthDate = isTailOfOpenWrap
+    ? new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    : new Date(now.getFullYear(), now.getMonth(), 1);
+  const endMonthDate = wraps
+    ? new Date(startMonthDate.getFullYear(), startMonthDate.getMonth() + 1, 1)
+    : startMonthDate;
+
+  const startDayClamped = Math.min(startDay, lastDayOfMonth(startMonthDate));
+  const endDayClamped = Math.min(endDay, lastDayOfMonth(endMonthDate));
+
+  const startMonth = startMonthDate.toLocaleString("en-US", { month: "short" });
+  const endMonth = endMonthDate.toLocaleString("en-US", { month: "short" });
+
+  return `${startDayClamped} ${startMonth} to ${endDayClamped} ${endMonth}`;
 }
 
 /**

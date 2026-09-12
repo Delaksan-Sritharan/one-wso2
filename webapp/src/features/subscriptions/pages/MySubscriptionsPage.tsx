@@ -20,6 +20,7 @@ import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { SERVICES } from "../api/subscriptionTypes";
 import { useSubscriptionGate } from "../api/useSubscriptionGate";
 import { useSubscriptionsMetaInfo } from "../api/useSubscriptionData";
+import { useMidnightClock } from "../util/useMidnightClock";
 import ServiceCard from "../components/ServiceCard";
 import SubscriptionsShell from "../components/SubscriptionsShell";
 
@@ -33,12 +34,14 @@ import SubscriptionsShell from "../components/SubscriptionsShell";
 //
 // Two things worth knowing here specifically:
 //
-//  - `now` is read ONCE, here, and passed down. Nothing below this page reads
-//    the clock, which is what makes the opt-in/opt-out window rules testable
-//    (see util/subscriptionWindows). It is read on render rather than held in
-//    state: the windows turn over on a day boundary, and a tab left open
-//    across midnight is corrected by any navigation — where a captured `now`
-//    would stay wrong until a reload.
+//  - `now` comes from useMidnightClock and flows down as a prop. Nothing
+//    below this page reads the clock, which is what makes the opt-in/opt-out
+//    window rules testable (see util/subscriptionWindows). A tab left open
+//    across midnight with no other reason to re-render would otherwise keep
+//    showing a window that just opened as closed — or one that just closed
+//    as still open — until something else happened to force a re-render;
+//    the clock schedules its own update at the boundary instead of waiting
+//    for one.
 //  - The subject of every call is the signed-in user's own email, taken from
 //    the id_token. The backend compares it with the token's own address and
 //    applies the self-service rules; the same components with a different
@@ -47,7 +50,7 @@ export default function MySubscriptionsPage() {
   const gate = useSubscriptionGate();
   const meta = useSubscriptionsMetaInfo();
   const user = useAsgardeoUser();
-  const now = new Date();
+  const now = useMidnightClock();
 
   return (
     <SubscriptionsShell
