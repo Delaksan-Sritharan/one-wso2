@@ -28,6 +28,11 @@ import ResignationsReportPage from "@features/people-ops/pages/ResignationsRepor
 import OrgStructurePage from "@features/people-ops/pages/OrgStructurePage";
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
+import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par/pages/ParGroupPage";
+import ParEmployeeFeedbackTab from "@features/par/pages/ParEmployeeFeedbackTab";
+import ParRequestFeedbackTab from "@features/par/pages/ParRequestFeedbackTab";
+import ParProvideFeedbackTab from "@features/par/pages/ParProvideFeedbackTab";
+import ParHistoryTab from "@features/par/pages/ParHistoryTab";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import FinancePage from "@features/finance/pages/FinancePage";
@@ -110,6 +115,39 @@ export default function App() {
               spec and the deviation list are in docs/ported-apps/my-team.md. */}
           <Route path="me/my-team" element={<MyTeamPage />} />
           <Route path="me/my-team/:employeeId" element={<TeamMemberPage />} />
+          {/* Me → Performance: the employee half of par-app, ported one
+              screen at a time. Tab names match par-app's own OngoingCycleView
+              tab bar (Employee Feedback / Request 360° Feedback / Provide
+              360° Feedback / F2F) rather than invented ones; F2F isn't ported
+              yet. See docs/ported-apps/par-app.md for the placement rationale
+              (this stays under Me rather than becoming its own perspective —
+              the "Performance & growth" card on the Me home already reads
+              this same backend). */}
+          <Route path="me/performance" element={<ParGroupPage />}>
+            <Route index element={<ParGroupIndex />} />
+            {/* Employee Feedback and Request 360° are hidden from a leadless
+                employee entirely in the source (OngoingCycleView.tsx), not
+                merely disabled — ParRequiresLeadRoute enforces that at the
+                route, the same way the tab bar itself is filtered. */}
+            <Route
+              path="employee-feedback"
+              element={
+                <ParRequiresLeadRoute>
+                  <ParEmployeeFeedbackTab />
+                </ParRequiresLeadRoute>
+              }
+            />
+            <Route
+              path="request-360"
+              element={
+                <ParRequiresLeadRoute>
+                  <ParRequestFeedbackTab />
+                </ParRequiresLeadRoute>
+              }
+            />
+            <Route path="provide-360" element={<ParProvideFeedbackTab />} />
+            <Route path="history" element={<ParHistoryTab />} />
+          </Route>
           {/* Me → Leave: native screens ported from leave-app. Lives here
               (not People Ops) — it's something every employee does for
               themself, not an HR-team tool. */}
