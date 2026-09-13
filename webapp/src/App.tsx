@@ -128,31 +128,35 @@ export default function App() {
               (this stays under Me rather than becoming its own perspective —
               the "Performance & growth" card on the Me home already reads
               this same backend). */}
-          <Route path="me/performance" element={<ParGroupPage />}>
-            <Route index element={<ParGroupIndex />} />
-            {/* Employee Feedback and Request 360° are hidden from a leadless
-                employee entirely in the source (OngoingCycleView.tsx), not
-                merely disabled — ParRequiresLeadRoute enforces that at the
-                route, the same way the tab bar itself is filtered. */}
-            <Route
-              path="employee-feedback"
-              element={
-                <ParRequiresLeadRoute>
-                  <ParEmployeeFeedbackTab />
-                </ParRequiresLeadRoute>
-              }
-            />
-            <Route
-              path="request-360"
-              element={
-                <ParRequiresLeadRoute>
-                  <ParRequestFeedbackTab />
-                </ParRequiresLeadRoute>
-              }
-            />
-            <Route path="provide-360" element={<ParProvideFeedbackTab />} />
-            <Route path="history" element={<ParHistoryTab />} />
-          </Route>
+          {/* Behind the same preview flag as its menu entry — hiding only the
+              entry would leave every tab reachable by URL. */}
+          {isPreviewEnabled("par") && (
+            <Route path="me/performance" element={<ParGroupPage />}>
+              <Route index element={<ParGroupIndex />} />
+              {/* Employee Feedback and Request 360° are hidden from a leadless
+                  employee entirely in the source (OngoingCycleView.tsx), not
+                  merely disabled — ParRequiresLeadRoute enforces that at the
+                  route, the same way the tab bar itself is filtered. */}
+              <Route
+                path="employee-feedback"
+                element={
+                  <ParRequiresLeadRoute>
+                    <ParEmployeeFeedbackTab />
+                  </ParRequiresLeadRoute>
+                }
+              />
+              <Route
+                path="request-360"
+                element={
+                  <ParRequiresLeadRoute>
+                    <ParRequestFeedbackTab />
+                  </ParRequiresLeadRoute>
+                }
+              />
+              <Route path="provide-360" element={<ParProvideFeedbackTab />} />
+              <Route path="history" element={<ParHistoryTab />} />
+            </Route>
+          )}
           {/* Me → Leave: native screens ported from leave-app. Lives here
               (not People Ops) — it's something every employee does for
               themself, not an HR-team tool. */}

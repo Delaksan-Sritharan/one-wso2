@@ -20,6 +20,7 @@
 // that file's header for the general rationale.
 
 import { ClipboardCheckIcon, TreePalmIcon, UtensilsIcon } from "@wso2/oxygen-ui-icons-react";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import type { MenuApp } from "@constants/appMenu";
 
 export const ME_APPS: readonly MenuApp[] = [
@@ -70,21 +71,27 @@ export const ME_APPS: readonly MenuApp[] = [
   // one-screen app like Menu — it stays a named group even while it holds
   // only one item, the same reasoning as Master Data's in
   // @constants/perspectives.
-  {
-    key: "par",
-    name: "PAR",
-    icon: ClipboardCheckIcon,
-    purpose: "Your PAR: employee feedback, 360° feedback, and the face-to-face meeting.",
-    alwaysGroup: true,
-    items: [
-      {
-        id: "par-employee-feedback",
-        label: "Employee Portal",
-        desc: "Complete and share your PAR for the current cycle.",
-        path: "/me/performance",
-      },
-    ],
-  },
+  // Spread in rather than filtered out, so with the flag off the entry does not
+  // exist at all — the rail sections and favourites both derive from this list.
+  ...(isPreviewEnabled("par")
+    ? [
+        {
+          key: "par",
+          name: "PAR",
+          icon: ClipboardCheckIcon,
+          purpose: "Your PAR: employee feedback, 360° feedback, and the face-to-face meeting.",
+          alwaysGroup: true,
+          items: [
+            {
+              id: "par-employee-feedback",
+              label: "Employee Portal",
+              desc: "Complete and share your PAR for the current cycle.",
+              path: "/me/performance",
+            },
+          ],
+        },
+      ]
+    : []),
 ];
 
 // Item ids the rail must route to Leave's OWN gate rather than resolving
