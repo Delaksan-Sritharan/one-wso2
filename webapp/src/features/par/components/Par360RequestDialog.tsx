@@ -65,6 +65,7 @@ export default function Par360RequestDialog({
 }) {
   const employees = useLeaveEmployees(open);
   const [selected, setSelected] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useState("");
 
   const offerable = useMemo(
     () =>
@@ -83,7 +84,40 @@ export default function Par360RequestDialog({
 
   const handleClose = () => {
     setSelected([]);
+    setInputValue("");
     onClose();
+  };
+
+  // EmailAutocomplete.tsx's own handlePaste: a comma/semicolon/newline
+  // separated paste is split and matched against the available options,
+  // rather than left for the field to reject wholesale.
+  const handlePaste = (event: React.ClipboardEvent) => {
+    const pastedText = event.clipboardData.getData("text");
+    if (!/[,;\n]/.test(pastedText)) return;
+    event.preventDefault();
+    const pasted = pastedText
+      .split(/[,;\n\s]+/)
+      .map((e) => e.trim())
+      .filter((e) => e.length > 0 && options.includes(e));
+    setSelected((prev) => Array.from(new Set([...prev, ...pasted])));
+    setInputValue("");
+  };
+
+  // EmailAutocomplete.tsx's own handleKeyDown: typing a comma or semicolon
+  // after a valid address adds it, the same as picking it from the list.
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      return;
+    }
+    if ((event.key === "," || event.key === ";") && inputValue.trim()) {
+      const email = inputValue.trim().replace(/[,;]$/, "");
+      if (options.includes(email) && !selected.includes(email)) {
+        event.preventDefault();
+        setSelected((prev) => [...prev, email]);
+        setInputValue("");
+      }
+    }
   };
 
   return (
@@ -100,6 +134,8 @@ export default function Par360RequestDialog({
           options={options}
           value={selected}
           onChange={(_e, v) => setSelected(v as string[])}
+          inputValue={inputValue}
+          onInputChange={(_e, v) => setInputValue(v)}
           loading={employees.isLoading}
           loadingText="Loading colleagues…"
           noOptionsText={employees.isError ? "Couldn't load colleagues" : "No colleagues found"}
@@ -168,6 +204,8 @@ export default function Par360RequestDialog({
               {...params}
               label="Search by email or paste comma-separated emails"
               autoFocus
+              onPaste={handlePaste}
+              onKeyDown={handleKeyDown}
             />
           )}
         />

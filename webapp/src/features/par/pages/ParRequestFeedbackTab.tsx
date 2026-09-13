@@ -20,7 +20,7 @@ import { PlusIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useMeProfile } from "@features/my/api/useMeProfile";
 import { formatDate } from "@features/my/api/derive";
-import { useActiveParCycle } from "../api/useParData";
+import { useActiveParCycle, useParEmployeeInfo, useParRating } from "../api/useParData";
 import { useReviewers, useRequestReviewers } from "../api/usePar360";
 import Par360RequestDialog from "../components/Par360RequestDialog";
 import ParEmptyState from "../components/ParEmptyState";
@@ -37,10 +37,16 @@ import { isDeadlinePassed } from "../util/parDeadline";
 export default function ParRequestFeedbackTab() {
   const profile = useMeProfile();
   const workEmail = profile.data?.userInfo.workEmail;
-  const leadEmail = profile.data?.employee.managerEmail;
+  // par-app's own leadEmail, not people-app's managerEmail — the two can
+  // disagree (see useParHasLead).
+  const leadEmail = useParEmployeeInfo(workEmail).data?.leadEmail ?? undefined;
   const activeCycles = useActiveParCycle(workEmail);
   const cycle = activeCycles.data?.[0];
 
+  // RequestFeedbackTab.tsx:76 also blocks once the lead has shared their own
+  // side (ratings.parLeadStatus === SHARED) — fetch the caller's own record
+  // for that, same as the Employee Feedback tab already does.
+  const rating = useParRating(cycle?.parCycleId, workEmail);
   const reviewers = useReviewers(cycle?.parCycleId, workEmail);
   const requestReviewers = useRequestReviewers(cycle?.parCycleId, workEmail);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
@@ -66,21 +72,22 @@ export default function ParRequestFeedbackTab() {
     return <Alert severity="info">There's no PAR cycle open for you right now.</Alert>;
   }
 
-  // RequestFeedbackTab.tsx:71-79 also blocks once the lead has shared the
-  // PAR (ratings.parLeadStatus === SHARED) — not reproduced here because
-  // this tab doesn't otherwise fetch the caller's own par-rating; the
-  // deadline is the reproducible half of that gate.
   const deadlinePassed = isDeadlinePassed(cycle.parThreeSixtyRatingDeadline);
-  const blocked = deadlinePassed;
+  // RequestFeedbackTab.tsx:76-84 — the lead-shared alert takes priority over
+  // the deadline copy, and blocks the action even before the deadline.
+  const leadShared = rating.data?.parLeadStatus === "SHARED";
+  const blocked = deadlinePassed || leadShared;
 
   return (
     <Box sx={{ maxWidth: 880 }}>
-      {/* RequestFeedbackTab.tsx:74-81 — exact wording, always info severity
+      {/* RequestFeedbackTab.tsx:74-84 — exact wording, always info severity
           regardless of deadline (unlike ProvideFeedbackTab's own alert). */}
       <Alert severity="info" sx={{ mb: 1.5 }}>
-        {deadlinePassed
-          ? `The deadline for requesting 360° feedback has passed on ${formatDate(cycle.parThreeSixtyRatingDeadline)}.`
-          : `Please request feedback before the deadline: ${formatDate(cycle.parThreeSixtyRatingDeadline)}.`}
+        {leadShared
+          ? "Lead has shared the PAR"
+          : deadlinePassed
+            ? `The deadline for requesting 360° feedback has passed on ${formatDate(cycle.parThreeSixtyRatingDeadline)}.`
+            : `Please request feedback before the deadline: ${formatDate(cycle.parThreeSixtyRatingDeadline)}.`}
       </Alert>
 
       {reviewers.isLoading ? (

@@ -36,7 +36,7 @@ import { useMyReview, useSubmitReview } from "../api/usePar360";
 import { decodeParComment, encodeParComment, isEmptyHtml } from "../util/parComment";
 import { isDeadlinePassed as checkDeadlinePassed } from "../util/parDeadline";
 import ParRichTextField from "./ParRichTextField";
-import { ParQuestionText } from "./ParContent";
+import { ParCommentView, ParQuestionText } from "./ParContent";
 
 // par-app's own copy for the panel intro — config/constant.ts's
 // parUiText.ThreeSixtyReviewPanelDescription.
@@ -125,9 +125,17 @@ export default function Par360ReviewDialog({
   const reviewStatus = existing.data?.reviewStatus ?? "PENDING";
 
   // ReviewProvideModal.tsx's autosave: 5s after the comment stops changing,
-  // save a draft silently — no confirmation dialog open, not mid-decline.
+  // save a draft silently — no confirmation dialog open, not mid-decline,
+  // not past the deadline.
   useEffect(() => {
-    if (!open || existing.isLoading || declining || comment.trim() === savedComment.trim() || !commentValid) {
+    if (
+      !open ||
+      existing.isLoading ||
+      declining ||
+      deadlinePassed ||
+      comment.trim() === savedComment.trim() ||
+      !commentValid
+    ) {
       return;
     }
     const timer = window.setTimeout(() => {
@@ -137,7 +145,7 @@ export default function Par360ReviewDialog({
     }, 5000);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [comment, open, declining, existing.isLoading]);
+  }, [comment, open, declining, deadlinePassed, existing.isLoading]);
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -201,7 +209,14 @@ export default function Par360ReviewDialog({
               <ParQuestionText html={reviewQuestion} fallback="360° feedback" />
             )}
             <Box sx={{ position: "relative" }}>
-              <ParRichTextField value={comment} onChange={setComment} />
+              {/* ReviewProvideModal.tsx:484-507 — past the deadline the
+                  field becomes read-only (CommentPaper), not just the
+                  actions below. */}
+              {deadlinePassed ? (
+                <ParCommentView html={comment} />
+              ) : (
+                <ParRichTextField value={comment} onChange={setComment} />
+              )}
               {/* ReviewProvideModal.tsx:508-515 — shown while autosaving. */}
               {autoSaved && (
                 <Typography variant="caption" color="text.secondary" sx={{ position: "absolute", bottom: -20, left: 0 }}>
@@ -238,12 +253,16 @@ export default function Par360ReviewDialog({
           <>
             <Button
               variant="outlined"
-              disabled={!commentValid || submit.isPending}
+              disabled={!commentValid || submit.isPending || deadlinePassed}
               onClick={() => submitReview("DRAFT")}
             >
               Save draft
             </Button>
-            <Button variant="contained" disabled={!canSubmit} onClick={() => setConfirmingAction("share")}>
+            <Button
+              variant="contained"
+              disabled={!canSubmit || deadlinePassed}
+              onClick={() => setConfirmingAction("share")}
+            >
               Share
             </Button>
           </>

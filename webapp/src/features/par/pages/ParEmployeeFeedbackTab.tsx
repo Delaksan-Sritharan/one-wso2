@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Alert,
   Box,
@@ -34,7 +34,7 @@ import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useMeProfile } from "@features/my/api/useMeProfile";
 import { formatDate } from "@features/my/api/derive";
-import { useActiveParCycle, useParRating } from "../api/useParData";
+import { useActiveParCycle, useParEmployeeInfo, useParRating } from "../api/useParData";
 import { useSaveParRating } from "../api/useParMutations";
 import { decodeParComment, encodeParComment, isEmptyHtml } from "../util/parComment";
 import { isDeadlinePassed } from "../util/parDeadline";
@@ -50,7 +50,8 @@ import type { ParCycle, ParRating } from "../api/types";
 export default function ParEmployeeFeedbackTab() {
   const profile = useMeProfile();
   const workEmail = profile.data?.userInfo.workEmail;
-  const leadEmail = profile.data?.employee.managerEmail;
+  // par-app's own leadEmail, not people-app's managerEmail — the two can disagree.
+  const leadEmail = useParEmployeeInfo(workEmail).data?.leadEmail ?? undefined;
 
   const activeCycles = useActiveParCycle(workEmail);
   // manager.bal refuses to have two cycles OPEN at once, so there is at most
@@ -124,6 +125,7 @@ export default function ParEmployeeFeedbackTab() {
               // Silent for the autosave path — only the manual button shows a toast.
               onSuccess: () => {
                 if (!opts?.silent) showSuccess("Draft saved.");
+                opts?.onSuccess?.();
               },
               onError: (err) => {
                 if (!opts?.silent) showError(describeError(err));
@@ -191,7 +193,7 @@ function SelfReviewForm({
   unsharing: boolean;
   setUnsharing: (v: boolean) => void;
   isSaving: boolean;
-  onSaveDraft: (opts?: { silent?: boolean }) => void;
+  onSaveDraft: (opts?: { silent?: boolean; onSuccess?: () => void }) => void;
   onSubmit: () => void;
   onUnshare: () => void;
 }) {
@@ -215,6 +217,9 @@ function SelfReviewForm({
 
   // Autosave 1s after the comment changes (ParInputForm.tsx's handleAutoSave).
   const [autoSaved, setAutoSaved] = useState(false);
+  // ParInputForm.tsx's lastChangeTimestamp guard — ignore a stale autosave
+  // completing after a newer one has started.
+  const autoSaveTokenRef = useRef(0);
   useEffect(() => {
     if (
       finalized ||
@@ -227,9 +232,17 @@ function SelfReviewForm({
       return;
     }
     const timer = window.setTimeout(() => {
-      onSaveDraft({ silent: true });
-      setAutoSaved(true);
-      window.setTimeout(() => setAutoSaved(false), 2000);
+      const token = ++autoSaveTokenRef.current;
+      // ParInputForm.tsx sets isDraftSaved from updateParRating's own
+      // success callback, not optimistically at dispatch time.
+      onSaveDraft({
+        silent: true,
+        onSuccess: () => {
+          if (token !== autoSaveTokenRef.current) return;
+          setAutoSaved(true);
+          window.setTimeout(() => setAutoSaved(false), 2000);
+        },
+      });
     }, 1000);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps

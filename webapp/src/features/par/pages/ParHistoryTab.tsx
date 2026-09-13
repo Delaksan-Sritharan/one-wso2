@@ -113,7 +113,21 @@ function HistoryTable({ rows, onOpen }: { rows: ParCycle[]; onOpen: (cycle: ParC
         </TableHead>
         <TableBody>
           {rows.map((cycle) => (
-            <TableRow key={cycle.parCycleId} hover sx={{ cursor: "pointer" }} onClick={() => onOpen(cycle)}>
+            <TableRow
+              key={cycle.parCycleId}
+              hover
+              tabIndex={0}
+              role="button"
+              aria-label={`Open ${cycle.parCycleName} review`}
+              sx={{ cursor: "pointer" }}
+              onClick={() => onOpen(cycle)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onOpen(cycle);
+                }
+              }}
+            >
               <TableCell>{cycle.parCycleName}</TableCell>
               <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>{formatDate(cycle.parCycleStartDate)}</TableCell>
               <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>{formatDate(cycle.parCycleEndDate)}</TableCell>
