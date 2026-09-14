@@ -151,7 +151,19 @@ export default function PartnerDashboardPage() {
     }
   };
 
-  const canSeeFinance = gate.hasRole("financeRole");
+  // Not just financeRole: the four internal notification/approval emails go
+  // to financeApprover, financialCreator, financialReviewer, and
+  // financeSpecialApprover — none of which is financeRole — so a strict
+  // financeRole-only check bounced every one of those emails' actual
+  // recipients to Profile the moment they clicked through. Same class of gap
+  // as canSeeLegal's missing legalApprover, above.
+  const canSeeFinance =
+    gate.hasRole("financeRole") ||
+    gate.hasRole("financeApprover") ||
+    gate.hasRole("financeSpecialApprover") ||
+    gate.hasRole("financialCreator") ||
+    gate.hasRole("financialReviewer") ||
+    gate.hasRole("superRole");
   const canSeeLegal =
     gate.hasRole("legalRole") ||
     gate.hasRole("legalApprover") ||
