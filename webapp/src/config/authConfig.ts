@@ -44,6 +44,10 @@ declare global {
       // Cafeteria menu backend (daily menu, lunch feedback, dinner orders).
       // Optional — when absent the Menu screen shows a not-connected state.
       ONE_WSO2_MENU_BACKEND_URL?: string;
+      // Base URL for the digiops-hr subscription-app backend (PickMe Commute
+      // and LaaS opt-in/opt-out). Optional — when absent the Subscriptions
+      // screens show a not-connected state.
+      ONE_WSO2_SUBSCRIPTION_BACKEND_URL?: string;
       // Base URL for the digiops-hr promotion-app backend. Optional — when
       // absent, ConnectedServices' "Last promoted date" row falls back to a
       // "not configured" state and doesn't fire a request.
@@ -111,6 +115,11 @@ declare global {
       // Asgardeo. Ignored in production builds (see devBypassAuth below),
       // so a stray true in a prod config.js can't disable auth.
       ONE_WSO2_DEV_BYPASS_AUTH?: boolean;
+      // Features built but not yet released — see @config/previewFeatures.
+      // Absent or false hides the feature, so a deployment that says nothing
+      // shows nothing. Typed loosely here and narrowed by `PreviewFeature` at
+      // the read, so this declaration does not have to be edited for each flag.
+      ONE_WSO2_PREVIEW_FEATURES?: Record<string, boolean | undefined>;
     };
   }
 }

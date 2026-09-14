@@ -21,6 +21,14 @@ window.config = {
   // makes no requests. See docs/ported-apps/menu-app.md for the contract.
   // ONE_WSO2_MENU_BACKEND_URL: "https://<gateway>/menu-app/v1",
 
+  // digiops-hr subscription-app backend base URL (PickMe Commute + LaaS
+  // opt-in/opt-out). Optional — when absent the People Ops → Subscriptions
+  // screens show a not-connected state and make no requests. See
+  // docs/ported-apps/subscription-app.md for the contract, including the
+  // two Asgardeo admin groups this backend's own /subscriptions/meta-info
+  // publishes (there is no separate config key for them).
+  // ONE_WSO2_SUBSCRIPTION_BACKEND_URL: "<your-subscription-app-backend-url>",
+
   // people-ops-suite people-app backend base URL. Same value as people-app's
   // REACT_APP_BACKEND_BASE_URL — usually a Choreo API gateway URL. Powers
   // the live My profile page (employee + personal info fetch).
@@ -106,4 +114,16 @@ window.config = {
   // alive; true signs out at 30 minutes, which is what the security checklist
   // (ONEWSO2-R1) asks for.
   // ONE_WSO2_IDLE_AUTO_SIGN_OUT: false,
+
+  // Features that are built and merged but not released yet. Absent or false
+  // hides the feature — a deployment that says nothing shows nothing, so
+  // production is safe without anyone remembering to add an entry.
+  //
+  // NOT the same as an empty backend URL above. That means "not wired up";
+  // this means "wired up, but not for you yet".
+  //
+  // Each entry is deleted when its feature ships — a list that only grows
+  // stops describing anything.
+  //
+  // ONE_WSO2_PREVIEW_FEATURES: { expenseSubmitter: false },
 };

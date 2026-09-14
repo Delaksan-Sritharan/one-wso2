@@ -830,3 +830,47 @@ export const menuServiceUrls = {
   // GET the current order, POST to place or change it, DELETE to cancel.
   dinner: `${menuBackendUrl}/dinner`,
 };
+
+// ---------------------------------------------------------------------------
+// Subscription backend (digiops-hr subscription-app). The two paid staff
+// services an employee opts in and out of — PickMe Commute and LaaS (lunch as
+// a service) — plus the admin screens that manage them on someone's behalf.
+// See docs/ported-apps/subscription-app.md for the contract.
+//
+// Unlike every builder above, the subject's email is a PATH SEGMENT rather
+// than something the token alone decides. The service reads it and compares it
+// with the JWT's own email: equal means self-service (date windows enforced),
+// different means an admin acting for someone else (windows bypassed, admin
+// group required). So each builder takes an email — the caller's own address
+// for the self-service screen, the selected employee's for the admin one.
+export const subscriptionBackendUrl: string =
+  window.config?.ONE_WSO2_SUBSCRIPTION_BACKEND_URL ?? "";
+
+export function isSubscriptionBackendConfigured(): boolean {
+  return Boolean(subscriptionBackendUrl);
+}
+
+export const subscriptionServiceUrls = {
+  // Distance ranges, the four opt-in/opt-out day boundaries, the LaaS price,
+  // the fee-exempt groups AND the names of the two admin groups. One call
+  // supplies both the page's content and the vocabulary its gate needs — see
+  // useSubscriptionGate for why the group names can't be hard-coded here.
+  metaInfo: `${subscriptionBackendUrl}/subscriptions/meta-info`,
+  // The admin picker's roster: active + marked-leaver employees. 403s for a
+  // caller in neither admin group, so it is only ever fetched from the admin
+  // screen.
+  employees: `${subscriptionBackendUrl}/employees`,
+  // GET returns the subscription or 404 when the employee has never had one.
+  commute: (email: string) =>
+    `${subscriptionBackendUrl}/commutes/${encodeURIComponent(email)}`,
+  subscribeCommute: (email: string) =>
+    `${subscriptionBackendUrl}/commutes/${encodeURIComponent(email)}/subscribe`,
+  unsubscribeCommute: (email: string) =>
+    `${subscriptionBackendUrl}/commutes/${encodeURIComponent(email)}/unsubscribe`,
+  // Singular "meal" — the service's own spelling, not a typo.
+  meal: (email: string) => `${subscriptionBackendUrl}/meal/${encodeURIComponent(email)}`,
+  subscribeMeal: (email: string) =>
+    `${subscriptionBackendUrl}/meal/${encodeURIComponent(email)}/subscribe`,
+  unsubscribeMeal: (email: string) =>
+    `${subscriptionBackendUrl}/meal/${encodeURIComponent(email)}/unsubscribe`,
+};

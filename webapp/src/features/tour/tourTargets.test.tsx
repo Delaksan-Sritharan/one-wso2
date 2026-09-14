@@ -58,6 +58,12 @@ vi.mock("@features/leave/api/useLeaveGate", () => ({ useLeaveGate: () => gate })
 vi.mock("@features/marketing-ops/api/useMarketingOpsGate", () => ({
   useMarketingOpsGate: () => ({ ...gate, isAuthorized: true, isAdmin: true }),
 }));
+// Mocked for the same reason as the three above — SideRail asks every gate on
+// every render — and for one extra: this gate reaches Asgardeo's SDK to read
+// the id_token's `groups` claim, which does not resolve under the test runner.
+vi.mock("@features/subscriptions/api/useSubscriptionGate", () => ({
+  useSubscriptionGate: () => ({ ...gate, isAdmin: true, isCommuteAdmin: true, isLunchAdmin: true }),
+}));
 
 /** The selector a named step carries, so a rename fails here rather than silently. */
 function selectorFor(fragment: string): string {

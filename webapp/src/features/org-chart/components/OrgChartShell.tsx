@@ -22,6 +22,21 @@ import type { ReactNode } from "react";
 import { Alert, Box, Chip, Typography } from "@wso2/oxygen-ui";
 import type { LucideIcon } from "@wso2/oxygen-ui-icons-react";
 
+// Shrinks an element to a 1x1px clipped box instead of hiding it outright —
+// unlike display:none/visibility:hidden, this keeps it in the accessibility
+// tree, so assistive tech still sees it while sighted users don't.
+const visuallyHidden = {
+  border: 0,
+  clip: "rect(0 0 0 0)",
+  height: "1px",
+  margin: "-1px",
+  overflow: "hidden",
+  padding: 0,
+  position: "absolute",
+  whiteSpace: "nowrap",
+  width: "1px",
+} as const;
+
 export default function OrgChartShell({
   eyebrow,
   title,
@@ -54,7 +69,15 @@ export default function OrgChartShell({
             size="small"
             sx={{ mb: 0.5 }}
           />
-          <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
+          {/* A real h1, not a styled div — a screen-reader user navigating
+              by headings needs one (same reasoning as MenuShell). Visually
+              hidden rather than dropped: the eyebrow Chip already shows
+              "Org Chart" on screen, so a second, visible "Org chart"
+              heading directly under it read as a duplicate — but removing
+              the h1 outright would leave the page with no heading at all
+              for assistive tech, since neither the Chip (a div) nor any
+              layout above this contributes one. */}
+          <Typography component="h1" variant="h5" sx={{ mb: 0.5, ...visuallyHidden }}>
             {title}
           </Typography>
         </Box>

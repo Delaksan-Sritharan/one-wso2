@@ -22,11 +22,14 @@ import SettingsPage from "@features/settings/pages/SettingsPage";
 import MenuHomePage from "@features/menu/pages/MenuHomePage";
 import OrgChartPage from "@features/org-chart/pages/OrgChartPage";
 import AuthGuard from "@layouts/AuthGuard";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import AppLayout from "@layouts/AppLayout";
 import PeopleOpsPage from "@features/people-ops/pages/PeopleOpsPage";
 import ActiveEmployeesReportPage from "@features/people-ops/pages/ActiveEmployeesReportPage";
 import ResignationsReportPage from "@features/people-ops/pages/ResignationsReportPage";
 import OrgStructurePage from "@features/people-ops/pages/OrgStructurePage";
+import MySubscriptionsPage from "@features/subscriptions/pages/MySubscriptionsPage";
+import ManageSubscriptionsPage from "@features/subscriptions/pages/ManageSubscriptionsPage";
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
@@ -229,7 +232,12 @@ export default function App() {
           </Route>
           <Route path="me/claims/expense/new" element={<ExpenseNewClaimPage />} />
           <Route path="me/claims/opd/new" element={<OpdNewClaimPage />} />
-          <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
+          {/* Behind the same preview flag as its menu entry. Hiding only the
+              entry would leave the page reachable by anyone with the URL, which
+              is not what "not released yet" means. */}
+          {isPreviewEnabled("expenseSubmitter") && (
+            <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
+          )}
           <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
           <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
           <Route path="finance/cc/pending" element={<CcPendingPage />} />
@@ -244,6 +252,22 @@ export default function App() {
               canvas) — the functional spec and the deviation list live in
               docs/ported-apps/org-chart.md. */}
           <Route path="people-ops/org-chart" element={<OrgChartPage />} />
+          {/* People Ops → Subscriptions: PickMe Commute and LaaS, ported from
+              the digiops-hr subscription-app — until now a mobile microapp
+              with no web view at all. Spec and deviations in
+              docs/ported-apps/subscription-app.md.
+
+              Neither route is guarded here, and the manage route's absence of
+              a guard is deliberate rather than an oversight: the service's own
+              admin groups decide it, and SubscriptionsShell turns a refusal
+              into an explanation. Someone who types the URL gets a sentence
+              telling them who to ask, not a blank page — and the backend
+              refuses the calls regardless. */}
+          <Route path="people-ops/subscriptions" element={<MySubscriptionsPage />} />
+          <Route
+            path="people-ops/subscriptions/manage"
+            element={<ManageSubscriptionsPage />}
+          />
           {/* People Ops reports. Admin-only, but enforced by the backend and
               explained by PeopleOpsShell — there is no route-level guard, so
               a non-admin reaching this URL gets the shell's "no access"
