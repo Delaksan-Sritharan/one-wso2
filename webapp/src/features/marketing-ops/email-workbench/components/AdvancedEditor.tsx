@@ -127,6 +127,9 @@ export default function AdvancedEditor({
   const scrollRestore = useRef<number | null>(null);
   const scrollNewRef = useRef(false);
   const editingRef = useRef<HTMLElement | null>(null);
+  // Where the current mousedown started, relative to the block being edited — set by the mousedown
+  // listener, read by the click listener below (see there for why a click's own target isn't enough).
+  const mouseDownInEditingRef = useRef(false);
   const savedRange = useRef<Range | null>(null);
   const undoRef = useRef<string[]>([]);
   const redoRef = useRef<string[]>([]);
@@ -1234,6 +1237,20 @@ export default function AdvancedEditor({
       if (bar) bar.style.display = "none";
     });
 
+    // Track where the drag started: a click's own target only tells us where the mouse came UP, and a
+    // text-selection drag that starts inside the block being edited can easily end (mouseup) over a
+    // neighboring block or gap once the cursor drifts past its edge. Without this, that stray mouseup
+    // looks just like a genuine "click elsewhere" below and tears down the selection mid-drag.
+    d.addEventListener(
+      "mousedown",
+      (e) => {
+        mouseDownInEditingRef.current = !!(
+          editingRef.current && editingRef.current.contains(e.target as Node)
+        );
+      },
+      true,
+    );
+
     // Capture-phase click: decide what was selected before the email's own markup
     // (links especially) can act on it.
     d.addEventListener(
@@ -1241,8 +1258,10 @@ export default function AdvancedEditor({
       (e) => {
         const t = e.target as HTMLElement;
         if (t.closest("#ew-toolbar") || t.closest("#ew-insertbar") || t.closest("#ew-insertmenu")) return;
-        // Already editing this block — let the browser handle caret and drag-select.
-        if (editingRef.current && editingRef.current.contains(t)) return;
+        // Already editing this block — let the browser handle caret and drag-select. A drag that
+        // started inside it counts too, even if the mouseup (and so this click's target) ended up
+        // outside — see the mousedown listener above.
+        if (editingRef.current && (editingRef.current.contains(t) || mouseDownInEditingRef.current)) return;
         const menu = d.getElementById("ew-insertmenu") as HTMLElement | null;
         if (menu) menu.style.display = "none";
         e.preventDefault();
