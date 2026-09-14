@@ -151,7 +151,19 @@ export default function PartnerDashboardPage() {
     }
   };
 
-  const canSeeFinance = gate.hasRole("financeRole");
+  // Not just financeRole: the four internal notification/approval emails go
+  // to financeApprover, financialCreator, financialReviewer, and
+  // financeSpecialApprover — none of which is financeRole — so a strict
+  // financeRole-only check bounced every one of those emails' actual
+  // recipients to Profile the moment they clicked through. Same class of gap
+  // as canSeeLegal's missing legalApprover, above.
+  const canSeeFinance =
+    gate.hasRole("financeRole") ||
+    gate.hasRole("financeApprover") ||
+    gate.hasRole("financeSpecialApprover") ||
+    gate.hasRole("financialCreator") ||
+    gate.hasRole("financialReviewer") ||
+    gate.hasRole("superRole");
   const canSeeLegal =
     gate.hasRole("legalRole") ||
     gate.hasRole("legalApprover") ||
@@ -162,13 +174,22 @@ export default function PartnerDashboardPage() {
   // A tab the caller can't use redirects to Profile, mirroring the source's
   // switchToTab() pushing to the no-access page — Profile is always open,
   // so landing there instead of a dead end is the more useful failure.
+  //
+  // Gated on `!gate.isResolving`: canSeeFinance/canSeeLegal are computed from
+  // gate.hasRole, which reads `/user-info`'s response — on first mount that
+  // hasn't loaded yet, so both are false regardless of the caller's actual
+  // roles. Without this guard, landing directly on .../finance (e.g. from an
+  // email link) fired this redirect on that very first render, before the
+  // real role check ever got a chance to run, and by the time the roles
+  // loaded a moment later the URL had already changed to .../profile.
   useEffect(() => {
+    if (gate.isResolving) return;
     if (tabName === "finance" && !canSeeFinance) navigate(`/due-diligence/partners/${id}/profile`, { replace: true });
     if (tabName === "legal" && !canSeeLegal) navigate(`/due-diligence/partners/${id}/profile`, { replace: true });
     if (tabName && !TAB_NAMES.includes(tabName as TabName)) {
       navigate(`/due-diligence/partners/${id}/profile`, { replace: true });
     }
-  }, [tabName, canSeeFinance, canSeeLegal, id, navigate]);
+  }, [tabName, canSeeFinance, canSeeLegal, id, navigate, gate.isResolving]);
 
   const activeTab: TabName = TAB_NAMES.includes(tabName as TabName) ? (tabName as TabName) : "profile";
 

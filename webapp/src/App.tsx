@@ -32,6 +32,14 @@ import MySubscriptionsPage from "@features/subscriptions/pages/MySubscriptionsPa
 import ManageSubscriptionsPage from "@features/subscriptions/pages/ManageSubscriptionsPage";
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
+import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par/pages/ParGroupPage";
+// Lazy on purpose, same reasoning as the leave report tabs below —
+// react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
+// transitively, and only someone who opens /people-ops/performance needs them.
+const ParEmployeeFeedbackTab = lazy(() => import("@features/par/pages/ParEmployeeFeedbackTab"));
+const ParRequestFeedbackTab = lazy(() => import("@features/par/pages/ParRequestFeedbackTab"));
+const ParProvideFeedbackTab = lazy(() => import("@features/par/pages/ParProvideFeedbackTab"));
+const ParHistoryTab = lazy(() => import("@features/par/pages/ParHistoryTab"));
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import FinancePage from "@features/finance/pages/FinancePage";
@@ -115,6 +123,7 @@ import DueDiligencePreferencesPage from "@features/due-diligence/preferences/pag
 import ViewPdfPage from "@features/due-diligence/shared/pages/ViewPdfPage";
 import ViewImagePage from "@features/due-diligence/shared/pages/ViewImagePage";
 import ExpenseApprovalsScreen from "@features/finance/expense/approvals/ExpenseApprovalsScreen";
+import ExpenseLeadApprovalsScreen from "@features/finance/expense/approvals/ExpenseLeadApprovalsScreen";
 import UmtHomePage from "@features/umt/pages/UmtHomePage";
 
 export default function App() {
@@ -250,8 +259,13 @@ export default function App() {
               have already filed has no such duplicate to reconcile. */}
           <Route path="finance/expense-claims/history" element={<ExpenseClaimHistoryPage />} />
           {/* Approving sits beside filing, where the source app's sidebar keeps
-              it. The screen gates itself on the finance flag, so a typed URL is
-              no more revealing than the menu entry it belongs to. */}
+              it — one entry per stage, on the source's own two URLs. Each screen
+              gates itself on its own flag, so a typed URL is no more revealing
+              than the menu entry it belongs to. */}
+          <Route
+            path="finance/expense-claims/lead-approvals"
+            element={<ExpenseLeadApprovalsScreen />}
+          />
           <Route
             path="finance/expense-claims/finance-approvals"
             element={<ExpenseApprovalsScreen stage="FINANCE" />}
@@ -286,6 +300,59 @@ export default function App() {
             path="people-ops/subscriptions/manage"
             element={<ManageSubscriptionsPage />}
           />
+          {/* People Ops → PAR: the employee half of par-app, ported one screen
+              at a time. Tab names match par-app's own OngoingCycleView tab bar
+              (Employee Feedback / Request 360° Feedback / Provide 360°
+              Feedback / F2F) rather than invented ones; F2F isn't ported yet.
+              See docs/ported-apps/par-app.md. Not admin-gated — every employee
+              has their own PAR, same as Org Chart and Subscriptions above.
+              Behind the same preview flag as its rail entry — hiding only the
+              entry would leave every tab reachable by URL. */}
+          {isPreviewEnabled("par") && (
+            <Route path="people-ops/performance" element={<ParGroupPage />}>
+              <Route index element={<ParGroupIndex />} />
+              {/* Employee Feedback and Request 360° are hidden from a leadless
+                  employee entirely in the source (OngoingCycleView.tsx), not
+                  merely disabled — ParRequiresLeadRoute enforces that at the
+                  route, the same way the tab bar itself is filtered. */}
+              <Route
+                path="employee-feedback"
+                element={
+                  <ParRequiresLeadRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParEmployeeFeedbackTab />
+                    </Suspense>
+                  </ParRequiresLeadRoute>
+                }
+              />
+              <Route
+                path="request-360"
+                element={
+                  <ParRequiresLeadRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParRequestFeedbackTab />
+                    </Suspense>
+                  </ParRequiresLeadRoute>
+                }
+              />
+              <Route
+                path="provide-360"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParProvideFeedbackTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="history"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParHistoryTab />
+                  </Suspense>
+                }
+              />
+            </Route>
+          )}
           {/* People Ops reports. Admin-only, but enforced by the backend and
               explained by PeopleOpsShell — there is no route-level guard, so
               a non-admin reaching this URL gets the shell's "no access"

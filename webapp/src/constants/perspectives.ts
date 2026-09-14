@@ -21,6 +21,7 @@ import { csmUrl, isCsmConfigured, isIsacConfigured, isacUrl } from "@config/apiC
 import { isPreviewEnabled } from "@config/previewFeatures";
 import {
   CheckCheckIcon,
+  ClipboardCheckIcon,
   DatabaseIcon,
   HouseIcon,
   LifeBuoyIcon,
@@ -162,6 +163,36 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
       },
     ],
   },
+  // par-app's employee half, ported one screen at a time — see
+  // docs/ported-apps/par-app.md. `alwaysGroup` for the same reason Master
+  // Data below carries it: this holds only one item today (Employee
+  // Portal) but more are coming (F2F scheduling), so it stays a named
+  // group rather than a bare leaf that would need reshaping later. Not
+  // `requires: ["admin"]` — every employee has their own PAR, same as Org
+  // Chart and Subscriptions above. Spread in rather than filtered out, so
+  // with the flag off the entry does not exist at all.
+  //
+  // `description` overrides PeopleOpsPage's default group copy ("Reference
+  // data used across the app.", written for Master Data) — PAR is not a
+  // reference-data lookup.
+  ...(isPreviewEnabled("par")
+    ? [
+        {
+          id: "people-par",
+          label: "PAR",
+          icon: ClipboardCheckIcon,
+          alwaysGroup: true,
+          description: "Complete and share your PAR for the current cycle.",
+          children: [
+            {
+              id: "par-employee-feedback",
+              label: "Employee Portal",
+              path: "/people-ops/performance",
+            },
+          ],
+        },
+      ]
+    : []),
   {
     id: "people-active-employee-report",
     label: "Active employees",

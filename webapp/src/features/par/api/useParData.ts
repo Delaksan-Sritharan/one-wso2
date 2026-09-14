@@ -19,8 +19,56 @@ import { useAsgardeo } from "@asgardeo/react";
 import { authedGet, HttpError, defaultQueryRetry } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { parBackendUrl, parServiceUrls } from "@config/apiConfig";
-import type { ParCycle, ParRating } from "./types";
-import { digiopsHeaders } from "../util/digiopsHeaders";
+import { digiopsHeaders } from "@features/my/util/digiopsHeaders";
+import type { ParCycle, ParEmployeeInfo, ParRating } from "./types";
+
+// GET par-app's own /employees/{workEmail} — carries `leadEmail`, the exact
+// field OngoingCycleView.tsx gates its tab set on. Not people-app's
+// `managerEmail`: the two don't reliably agree, so this fetches par-app's
+// own field directly rather than assuming the equivalent from elsewhere.
+export function useParEmployeeInfo(workEmail: string | undefined) {
+  const { isSignedIn } = useAsgardeo();
+  const getAccessToken = useAccessToken();
+  const backendConfigured = Boolean(parBackendUrl);
+  return useQuery<ParEmployeeInfo>({
+    queryKey: ["par-employee-info", workEmail],
+    enabled: isSignedIn && backendConfigured && Boolean(workEmail),
+    queryFn: async () => {
+      const accessToken = await getAccessToken();
+      return authedGet<ParEmployeeInfo>(
+        parServiceUrls.parEmployeeInfo(workEmail!),
+        accessToken,
+        digiopsHeaders(),
+      );
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: defaultQueryRetry,
+  });
+}
+
+/**
+ * Whether the signed-in employee has a lead, per par-app's own `leadEmail`
+ * — drives OngoingCycleView.tsx's tab-set gate; see ParGroupPage.tsx.
+ *
+ * Fails OPEN: true unless the fetch has actually succeeded and confirmed
+ * `leadEmail === null`. This is a UX-only tab-visibility decision, not a
+ * security boundary (each screen's own API calls enforce access
+ * server-side), so a slow or failed fetch should never hide tabs from
+ * someone who does have a lead.
+ *
+ * `isLoading` deliberately tracks only the caller's own profile fetch
+ * (`workEmailLoading`), not this hook's own `info` query — that's what
+ * makes the fail-open above work; a slow/failed lead lookup must never
+ * read as "still loading" to `ParRequiresLeadRoute`, which renders `null`
+ * while `isLoading` is true.
+ */
+export function useParHasLead(workEmail: string | undefined, workEmailLoading: boolean): { hasLead: boolean; isLoading: boolean } {
+  const info = useParEmployeeInfo(workEmail);
+  return {
+    hasLead: !(info.isSuccess && info.data.leadEmail === null),
+    isLoading: workEmailLoading,
+  };
+}
 
 // Returns the caller's currently-OPEN par cycle (if any). Non-lead/non-admin
 // callers can only query their own email; backend enforces that.
@@ -47,14 +95,22 @@ export function useActiveParCycle(workEmail: string | undefined) {
 // Returns the caller's ParRating record for a specific cycle. Only fires
 // once we have a cycleId. A 404 from the backend means "no rating record
 // exists yet for you in this cycle" — surface it as null, not an error.
-export function useParRating(parCycleId: number | undefined, workEmail: string | undefined) {
+//
+// `enabled` lets a caller hold the request until it's wanted — the History
+// tab uses this to fetch a past cycle's record only once its row is opened,
+// rather than one request per row on load.
+export function useParRating(
+  parCycleId: number | undefined,
+  workEmail: string | undefined,
+  enabled = true,
+) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
   const backendConfigured = Boolean(parBackendUrl);
   return useQuery<ParRating | null>({
     queryKey: ["par-rating", parCycleId, workEmail],
     enabled:
-      isSignedIn && backendConfigured && Boolean(parCycleId) && Boolean(workEmail),
+      enabled && isSignedIn && backendConfigured && Boolean(parCycleId) && Boolean(workEmail),
     queryFn: async () => {
       const accessToken = await getAccessToken();
       try {
