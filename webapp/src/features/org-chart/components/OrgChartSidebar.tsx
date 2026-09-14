@@ -112,10 +112,6 @@ export default function OrgChartSidebar({
 
   return (
     <Box sx={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", gap: 1.75, pr: 2.5 }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-        Company org chart
-      </Typography>
-
       <Stack direction="row" spacing={1.5}>
         <Box sx={{ flex: 1, border: 1, borderColor: "divider", borderRadius: 1, px: 1.25, py: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>

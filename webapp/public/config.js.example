@@ -21,6 +21,14 @@ window.config = {
   // makes no requests. See docs/ported-apps/menu-app.md for the contract.
   // ONE_WSO2_MENU_BACKEND_URL: "https://<gateway>/menu-app/v1",
 
+  // digiops-hr subscription-app backend base URL (PickMe Commute + LaaS
+  // opt-in/opt-out). Optional — when absent the People Ops → Subscriptions
+  // screens show a not-connected state and make no requests. See
+  // docs/ported-apps/subscription-app.md for the contract, including the
+  // two Asgardeo admin groups this backend's own /subscriptions/meta-info
+  // publishes (there is no separate config key for them).
+  // ONE_WSO2_SUBSCRIPTION_BACKEND_URL: "<your-subscription-app-backend-url>",
+
   // people-ops-suite people-app backend base URL. Same value as people-app's
   // REACT_APP_BACKEND_BASE_URL — usually a Choreo API gateway URL. Powers
   // the live My profile page (employee + personal info fetch).
@@ -69,6 +77,12 @@ window.config = {
   // that prefix). Same Choreo API gateway URL pattern otherwise. Optional —
   // when absent, the Marketing Ops screens show a "not connected" state.
   // ONE_WSO2_MARKETINGOPS_BACKEND_URL: "<your-marketing-ops-backend-url>",
+
+  // digiops-finance due_diligence backend base URL — the Due Diligence app,
+  // surfaced under both the Finance and Legal perspectives. Same Choreo API
+  // gateway URL pattern as the other digiops-finance backends above. Optional
+  // — when absent, the Due Diligence screens show a "not connected" state.
+  // ONE_WSO2_DUE_DILIGENCE_BACKEND_URL: "<your-due-diligence-backend-url>",
 
   // ISAC base URL — a separate marketing application, linked to from the top of
   // the Marketing Ops rail and opened in a new tab. Nothing here calls it as an

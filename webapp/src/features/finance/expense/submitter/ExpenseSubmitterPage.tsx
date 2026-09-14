@@ -102,9 +102,11 @@ function SubmitterBody() {
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
   const [confirmingDeleteAll, setConfirmingDeleteAll] = useState(false);
   const [receiptLoad, setReceiptLoad] = useState<(() => Promise<ReceiptSource>) | null>(null);
-  // Null means "Myself", which is everyone's only option until the backend
-  // says otherwise.
+  // Null means "Myself". Starts there and is never seeded from the saved draft
+  // — NewClaim.tsx keeps `onBehalfOfEmail: null` initially, so a draft filed
+  // for a colleague simply is not offered until that colleague is picked.
   const [onBehalfOfEmail, setOnBehalfOfEmail] = useState<string | null>(null);
+  const savedDraftOnBehalfOf = appData.data?.draft?.onBehalfOfEmail ?? null;
 
   const email = appData.data?.userInfo.workEmail ?? "";
   const leadEmail = appData.data?.userInfo.managerEmail ?? null;
@@ -174,11 +176,29 @@ function SubmitterBody() {
     }));
   }, [appData.data]);
 
-  // Restoring a draft also restores WHOSE it was, which would silently
-  // override whoever is currently picked. Simplest correct rule: only offer it
-  // for Myself — picking someone else always starts a fresh claim for them.
-  const draftOffered = items.length === 0 && savedDraft.length > 0 && onBehalfOfEmail === null;
-  const savedDraftOnBehalfOf = appData.data?.draft?.onBehalfOfEmail ?? null;
+  // A draft belongs to whoever it was being filed FOR, so it is offered
+  // against that person and nobody else — `NewClaim.tsx:53` does the same.
+  //
+  // That is what fixes the reported bug: a draft saved for a colleague no
+  // longer appears on your own empty claim, where restoring it used to switch
+  // the picker to them unasked. Pick that colleague and it is offered, because
+  // then it really is the draft in front of you.
+  const draftOffered =
+    items.length === 0 && savedDraft.length > 0 && onBehalfOfEmail === savedDraftOnBehalfOf;
+
+  /**
+   * Whether starting a line would destroy the stored draft — regardless of who
+   * it was saved for, and of whether it can be restored here.
+   *
+   * `NewClaim.tsx:200` gates the warning on `draftClaimItems.length > 0` alone,
+   * while only the Restore button keys off the owner matching. So the warning
+   * legitimately appears where the button does not: the draft table is keyed
+   * on the caller's email alone, giving one slot per person, and a new line
+   * overwrites whatever is in it — including a colleague's draft.
+   */
+  const draftAtRisk = items.length === 0 && savedDraft.length > 0;
+
+
 
   const draftState = useDraftAutosave(JSON.stringify(items), appData.isSuccess, async () => {
     if (items.length > 0) {
@@ -201,9 +221,9 @@ function SubmitterBody() {
   }
 
   const handleRestoreDraft = () => {
-    // Restore WHO it was for alongside the lines, batched into the same update
-    // so the travels query re-keys and starts fetching immediately.
-    setOnBehalfOfEmail(savedDraftOnBehalfOf);
+    // Only the lines. The picker is already on the draft's owner — that is the
+    // condition for offering it at all — so there is nothing to switch, and
+    // NewClaim.tsx's own handler does no more than this either.
     setItems(savedDraft);
     showSuccess("Draft restored successfully");
   };
@@ -337,8 +357,10 @@ function SubmitterBody() {
               <Button
                 variant="contained"
                 onClick={() => {
-                  // Starting a new line discards the saved draft.
-                  if (draftOffered) {
+                  // Same condition as the Restore button, so the two always
+                  // agree: you are warned about the draft you were offered,
+                  // and never about one that is not on the screen.
+                  if (draftAtRisk) {
                     setConfirmingDraftLoss(true);
                     return;
                   }
@@ -553,7 +575,14 @@ function SubmitterBody() {
         <DialogTitle sx={{ fontSize: 17, fontWeight: 700 }}>Draft Deletion Warning</DialogTitle>
         <DialogContent dividers>
           <Typography sx={{ fontSize: 13.5 }}>
-            Adding a new claim will delete your draft. Are you sure you want to proceed?
+            {onBehalfOfName ? (
+              <>
+                Adding a new claim for <b>{onBehalfOfName}</b> will delete your draft. Are you sure
+                you want to proceed?
+              </>
+            ) : (
+              <>Adding a new claim will delete your draft. Are you sure you want to proceed?</>
+            )}
           </Typography>
         </DialogContent>
         <DialogActions>

@@ -188,9 +188,14 @@ describe("filing on behalf of someone else", () => {
 
   it("puts the chosen employee on the submitted claim", async () => {
     state.onBehalfOfEmployees = ["colleague@wso2.com"];
-    state.draft = { transactions: [draftLine], onBehalfOfEmail: "colleague@wso2.com" };
+    state.employees = [
+      { workEmail: "colleague@wso2.com", firstName: "Grace", lastName: "Hopper", employeeThumbnail: null },
+    ];
+    state.onBehalfOfTravels = [{ jobNumber: "JOB-HERS", customerName: null }];
     show();
-    fireEvent.click(await screen.findByRole("button", { name: "Restore Draft" }));
+    fireEvent.change(await screen.findByLabelText("Submitting for"), { target: { value: "Grace" } });
+    fireEvent.click(await screen.findByText("Grace Hopper"));
+    await addOneLine();
 
     fireEvent.click(await screen.findByRole("button", { name: /Submit claim/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Submit" }));
@@ -210,9 +215,11 @@ describe("filing on behalf of someone else", () => {
       { workEmail: "lead@wso2.com", firstName: "Ada", lastName: "Lovelace", employeeThumbnail: null },
       { workEmail: "colleague@wso2.com", firstName: "Grace", lastName: "Hopper", employeeThumbnail: null },
     ];
-    state.draft = { transactions: [draftLine], onBehalfOfEmail: "colleague@wso2.com" };
+    state.onBehalfOfTravels = [{ jobNumber: "JOB-HERS", customerName: null }];
     show();
-    fireEvent.click(await screen.findByRole("button", { name: "Restore Draft" }));
+    fireEvent.change(await screen.findByLabelText("Submitting for"), { target: { value: "Grace" } });
+    fireEvent.click(await screen.findByText("Grace Hopper"));
+    await addOneLine();
     fireEvent.click(await screen.findByRole("button", { name: /Submit claim/ }));
 
     expect(await screen.findByText(/on behalf of/)).toBeInTheDocument();
@@ -255,7 +262,8 @@ describe("a saved draft is offered, not assumed", () => {
   });
 
   // Restoring also restores WHOSE draft it was, so it is only offered for
-  // "Myself" — picking someone else always starts a fresh claim for them.
+  // A draft saved for Myself belongs to Myself, so picking someone else starts
+  // a fresh claim for them rather than carrying your own draft over.
   it("is not offered once an employee is picked", async () => {
     state.onBehalfOfEmployees = ["colleague@wso2.com"];
     state.employees = [
@@ -272,6 +280,82 @@ describe("a saved draft is offered, not assumed", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Restore Draft" })).not.toBeInTheDocument(),
     );
+  });
+
+  // A draft belongs to whoever it was being filed FOR. Offering it under
+  // "Myself" put a colleague's draft on your own empty claim, and restoring it
+  // then switched the picker to them without being asked.
+  // Restoring an on-behalf draft is not supported yet, so the button must not
+  // appear in that case at all — neither on your own claim (the bug: a
+  // colleague's draft offered under "Myself") nor on theirs.
+  describe("a draft saved for a colleague", () => {
+    beforeEach(() => {
+      state.onBehalfOfEmployees = ["colleague@wso2.com"];
+      state.employees = [
+        { workEmail: "colleague@wso2.com", firstName: "Grace", lastName: "Hopper", employeeThumbnail: null },
+      ];
+      state.draft = { transactions: [draftLine], onBehalfOfEmail: "colleague@wso2.com" };
+    });
+
+    it("is not offered while the picker is on Myself", async () => {
+      show();
+      await screen.findByText(/haven't added any expenses yet/);
+      expect(screen.queryByRole("button", { name: "Restore Draft" })).not.toBeInTheDocument();
+    });
+
+    it("warns that adding a line will destroy it", async () => {
+      show();
+      fireEvent.change(await screen.findByLabelText("Submitting for"), { target: { value: "Grace" } });
+      fireEvent.click(await screen.findByText("Grace Hopper"));
+
+      fireEvent.click(await screen.findByRole("button", { name: "+ Add expense" }));
+      expect(await screen.findByText("Draft Deletion Warning")).toBeInTheDocument();
+      // ...and the line form only opens once the loss is accepted.
+      expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
+    });
+
+    // NewClaim.tsx:200 warns whenever a draft EXISTS, not only when it can be
+    // restored — so the warning appears under "Myself" too, where the
+    // colleague's draft is not on offer but would still be destroyed.
+    it("warns under Myself as well, where it is not on offer", async () => {
+      show();
+      await screen.findByText(/haven't added any expenses yet/);
+      expect(screen.queryByRole("button", { name: "Restore Draft" })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "+ Add expense" }));
+      expect(await screen.findByText("Draft Deletion Warning")).toBeInTheDocument();
+      // Filing as yourself, so nobody else is named.
+      expect(screen.queryByText(/Grace Hopper/)).not.toBeInTheDocument();
+    });
+
+    // Filing for someone else, the warning says whose claim it is.
+    it("names who the claim is for when one is picked", async () => {
+      show();
+      fireEvent.change(await screen.findByLabelText("Submitting for"), { target: { value: "Grace" } });
+      fireEvent.click(await screen.findByText("Grace Hopper"));
+
+      fireEvent.click(await screen.findByRole("button", { name: "+ Add expense" }));
+      expect(await screen.findByText("Draft Deletion Warning")).toBeInTheDocument();
+      expect(screen.getByText(/Grace Hopper/)).toBeInTheDocument();
+    });
+
+    it("is offered once that colleague is picked", async () => {
+      show();
+      fireEvent.change(await screen.findByLabelText("Submitting for"), { target: { value: "Grace" } });
+      fireEvent.click(await screen.findByText("Grace Hopper"));
+
+      expect(await screen.findByRole("button", { name: "Restore Draft" })).toBeInTheDocument();
+    });
+
+    it("restores their lines under their name", async () => {
+      show();
+      fireEvent.change(await screen.findByLabelText("Submitting for"), { target: { value: "Grace" } });
+      fireEvent.click(await screen.findByText("Grace Hopper"));
+      fireEvent.click(await screen.findByRole("button", { name: "Restore Draft" }));
+
+      expect(await screen.findByText("(for Grace Hopper)")).toBeInTheDocument();
+      expect(screen.getByText("EXPENSE ITEM 1")).toBeInTheDocument();
+    });
   });
 
   it("saves the employee onto the autosaved draft", async () => {
@@ -487,6 +571,31 @@ describe("attaching a receipt", () => {
     fireEvent.drop(zone, { dataTransfer: { files: [file] } });
     expect(await screen.findByText(/Invalid file type/)).toBeInTheDocument();
     expect(uploadMutate).not.toHaveBeenCalled();
+  });
+
+  // A receipt is required for the line to validate, so a pointer-only control
+  // makes the whole form impossible to complete from the keyboard.
+  it("opens the file picker from the keyboard", async () => {
+    show();
+    fireEvent.click(await screen.findByRole("button", { name: "+ Add expense" }));
+    const zone = await screen.findByRole("button", { name: /Add a receipt/ });
+    expect(zone).toHaveAttribute("tabindex", "0");
+
+    const picker = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const clicked = vi.spyOn(picker, "click");
+    fireEvent.keyDown(zone, { key: "Enter" });
+    expect(clicked).toHaveBeenCalled();
+
+    fireEvent.keyDown(zone, { key: " " });
+    expect(clicked).toHaveBeenCalledTimes(2);
+    clicked.mockRestore();
+  });
+
+  it("names the attached receipt on the control once one is on", async () => {
+    const zone = await openForm();
+    fireEvent.drop(zone, { dataTransfer: { files: [new File(["x"], "taxi.pdf", { type: "application/pdf" })] } });
+    await waitFor(() => expect(uploadMutate).toHaveBeenCalled());
+    expect(await screen.findByRole("button", { name: /Receipt taxi\.pdf/ })).toBeInTheDocument();
   });
 
   it("refuses a multi-file drop rather than silently taking the first", async () => {
