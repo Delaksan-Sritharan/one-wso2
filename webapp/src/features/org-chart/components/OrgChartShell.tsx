@@ -32,7 +32,9 @@ export default function OrgChartShell({
   children,
 }: {
   eyebrow: { icon: LucideIcon; label: string };
-  title: string;
+  /** Optional — the eyebrow chip already names the page; only pass this
+   *  when the heading needs to say something the chip doesn't. */
+  title?: string;
   subtitle?: string;
   configured: boolean;
   configKey: string;
@@ -54,9 +56,11 @@ export default function OrgChartShell({
             size="small"
             sx={{ mb: 0.5 }}
           />
-          <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
-            {title}
-          </Typography>
+          {title && (
+            <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
+              {title}
+            </Typography>
+          )}
         </Box>
         {configured && action && <Box sx={{ flexShrink: 0, mt: 0.5 }}>{action}</Box>}
       </Box>
