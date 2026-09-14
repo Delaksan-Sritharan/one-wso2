@@ -30,6 +30,9 @@ export type Sel =
       bold: boolean;
       italic: boolean;
       underline: boolean;
+      // Explicit inline colour override at the selection (its TEXT_COLORS hex), or null for "Default"
+      // (no override — inherits the template's own styling).
+      color: string | null;
       hasMerge: boolean;
       linked?: boolean;
       linkHref?: string;

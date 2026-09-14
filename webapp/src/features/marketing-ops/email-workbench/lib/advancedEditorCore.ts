@@ -70,6 +70,29 @@ export const aiKinds = (catalog: BlockDef[]): string[] => visibleBlocks(catalog)
 // Approved, enumerated style options (the start of the configurable style catalog — token
 // values are sensible defaults for now; the brand doc will replace them once confirmed).
 export const BULLET_COLORS = [{ n: 'Orange', v: '#ff7300' }, { n: 'Black', v: '#000000' }]
+// Approved rich-text colour overrides. 'default' (v: null) means "no inline colour" — the text
+// inherits the template's own styling, which is the common case and must stay the common case:
+// see clearInlineColor below for why it's implemented as a real removal, not a CSS no-op.
+export interface TextColor { key: string; n: string; v: string | null }
+export const TEXT_COLORS: TextColor[] = [
+  { key: 'default', n: 'Default', v: null },
+  { key: 'gray', n: 'Gray', v: '#6b7280' },
+  { key: 'orange', n: 'Orange', v: '#ff7300' },
+]
+// Remove an explicit inline text colour from one span (the "Default" choice). Just setting the
+// colour to 'inherit' would still leave a bare <span style="color: inherit"> behind — and, as with
+// the old Bold command (see richFmt), a bare span is exactly what a template's own dark-mode CSS
+// (a broad "p span" rule meant for one specific highlighted span) can latch onto. So "Default" drops
+// the colour declaration outright, unwrapping the span entirely if nothing else is left on it.
+export function clearInlineColor(span: Element): void {
+  const decls = (span.getAttribute('style') || '').split(';').map(s => s.trim()).filter(Boolean)
+  const kept = decls.filter(d => !/^color\s*:/i.test(d))
+  if (kept.length) { span.setAttribute('style', kept.join('; ') + ';'); return }
+  const parent = span.parentNode
+  if (!parent) return
+  while (span.firstChild) parent.insertBefore(span.firstChild, span)
+  parent.removeChild(span)
+}
 // Approved text sizes for a text block. Body is the paragraph default; the rest are heading sizes.
 // (Sensible defaults for now; the brand doc will set the scale once confirmed.)
 export const TEXT_SIZES = [

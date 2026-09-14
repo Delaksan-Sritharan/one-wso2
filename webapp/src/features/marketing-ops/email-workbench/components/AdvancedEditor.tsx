@@ -34,6 +34,7 @@ import type { TargetBlock, TemplateBlockSnap } from "../emailWorkbenchTypes";
 import {
   aiKinds,
   BTN_VARIANTS,
+  clearInlineColor,
   disableOsDarkMedia,
   doctypeStr,
   escHtml,
@@ -48,6 +49,8 @@ import {
   rebuildLinkUtm,
   SPACER_SIZES,
   stripEditorAttrs,
+  TEXT_COLORS,
+  toHex,
   visibleBlocks,
   CATEGORY_ORDER,
   type BlockDef,
@@ -731,6 +734,7 @@ export default function AdvancedEditor({
     }
     let linked = false;
     let linkHref = "";
+    let color: string | null = null;
     const s = d.getSelection?.();
     const el = editingRef.current;
     if (s && s.anchorNode && el) {
@@ -742,8 +746,13 @@ export default function AdvancedEditor({
         linked = true;
         linkHref = a.getAttribute("href") || "";
       }
+      const colored = start?.closest('span[style*="color"]');
+      if (colored && el.contains(colored)) {
+        const m = (colored.getAttribute("style") || "").match(/color\s*:\s*([^;]+)/i);
+        if (m) color = toHex(m[1].replace(/!important/i, "").trim());
+      }
     }
-    setSel((s2) => (s2 && s2.kind === "rich" ? { ...s2, bold, italic, underline, linked, linkHref } : s2));
+    setSel((s2) => (s2 && s2.kind === "rich" ? { ...s2, bold, italic, underline, linked, linkHref, color } : s2));
   }
 
   function endRichEdit() {
@@ -774,6 +783,7 @@ export default function AdvancedEditor({
       bold: false,
       italic: false,
       underline: false,
+      color: null,
       hasMerge: hasMergeField(liveEl.textContent ?? ""),
     });
     refreshFmtState();
@@ -805,6 +815,54 @@ export default function AdvancedEditor({
       d.execCommand(cmd, false);
     } catch {
       // Nothing to do — the selection simply stays unformatted.
+    }
+    syncRich(el);
+    refreshFmtState();
+  }
+
+  // Apply/clear an approved text colour on the selection. "Default" runs execCommand with 'inherit'
+  // (there's no native "unset" command) then immediately strips that literal marker via
+  // clearInlineColor — scanning the whole block for a bare "color: inherit" is safe because that
+  // exact declaration can only come from this command, never from a deliberately-applied gray/orange
+  // elsewhere, so it can't accidentally clear a colour set on other text in the same block.
+  function richColor(key: string) {
+    const d = iframeRef.current?.contentDocument;
+    const el = editingRef.current;
+    if (!d || !el) return;
+    const target = TEXT_COLORS.find((c) => c.key === key);
+    if (!target) return;
+    el.focus();
+    if (savedRange.current) {
+      const s = d.getSelection?.();
+      s?.removeAllRanges();
+      s?.addRange(savedRange.current);
+    }
+    beginEdit("rich-color:" + key);
+    try {
+      d.execCommand("styleWithCSS", false, "true");
+    } catch {
+      // Not supported everywhere; the command below still applies formatting.
+    }
+    try {
+      d.execCommand("foreColor", false, target.v ?? "inherit");
+    } catch {
+      // Nothing to do — the selection simply keeps its current colour.
+    }
+    if (target.v == null) {
+      el.querySelectorAll("span[style]").forEach((span) => {
+        if (/color\s*:\s*inherit\b/i.test(span.getAttribute("style") || "")) clearInlineColor(span);
+      });
+    } else {
+      // execCommand's inline colour is NOT !important, so a template's own dark-mode CSS can still
+      // carry a broad "p span { color: ... !important }" rule (meant for one specific highlighted
+      // span — the same one that used to hijack Bold) that overrides it back to the template's colour
+      // regardless of which swatch was picked. An !important author style beats an !important
+      // stylesheet rule of the same origin because inline specificity always wins, so force it here —
+      // this is a deliberate, explicit colour choice, unlike Bold, which wants no override at all.
+      const hex = target.v;
+      el.querySelectorAll<HTMLElement>('span[style*="color"]').forEach((span) => {
+        if (toHex(span.style.color) === hex) span.style.setProperty("color", hex, "important");
+      });
     }
     syncRich(el);
     refreshFmtState();
@@ -1558,6 +1616,7 @@ export default function AdvancedEditor({
             linkUrl={linkUrl}
             onDeselect={deselect}
             onRichFmt={richFmt}
+            onRichColor={richColor}
             onOpenLinkEditor={(u) => {
               setLinkUrl(u);
               setLinkOpen(true);
