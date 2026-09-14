@@ -1,9 +1,9 @@
 # PAR (Performance Appraisal Review) — functional specification
 
-**Status:** the employee-facing half of par-app is ported and live under Me; the Lead Portal, Admin
-Portal, and F2F scheduling are not. Written from the source and cross-checked against the running
-staging app (screenshots) — this is the reference for verifying the port and for writing test cases
-against it, not a proposal.
+**Status:** the employee-facing half of par-app is ported and live under People Ops; the Lead Portal,
+Admin Portal, and F2F scheduling are not. Written from the source and cross-checked against the
+running staging app (screenshots) — this is the reference for verifying the port and for writing test
+cases against it, not a proposal.
 
 **Source of truth for behaviour:** `digiops-hr/apps/par-app/webapp/src` — `OngoingCycleView.tsx` and
 its panels/components for the four tabs below (`views/ongoingCycleView/`, `components/common/
@@ -11,10 +11,10 @@ RequestFeedbackTab.tsx`, `ProvideFeedbackTab.tsx`, `OfferFeedbackView.tsx`, `vie
 ParHistory.tsx`) — and `par-app/backend` (`service.bal` for the endpoint surface, `manager.bal` for
 cycle lifecycle, `modules/types/types.bal` for states, roles and field-level authorization).
 
-**In One WSO2:** `/me/performance`, a tab group (`features/par/`) under the Me perspective —
-**Employee Feedback**, **Request 360° Feedback**, **Provide 360° Feedback**, and **History**, each a
-real route (`employee-feedback` / `request-360` / `provide-360` / `history`). Backend is par-app's own
-Ballerina service, configured as `ONE_WSO2_PAR_BACKEND_URL`.
+**In One WSO2:** `/people-ops/performance`, a tab group (`features/par/`) under the People Ops
+perspective — **Employee Feedback**, **Request 360° Feedback**, **Provide 360° Feedback**, and
+**History**, each a real route (`employee-feedback` / `request-360` / `provide-360` / `history`).
+Backend is par-app's own Ballerina service, configured as `ONE_WSO2_PAR_BACKEND_URL`.
 
 ---
 

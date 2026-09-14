@@ -43,7 +43,7 @@ import ParRichTextField from "../components/ParRichTextField";
 import { ParCommentView, ParQuestionText } from "../components/ParContent";
 import type { ParCycle, ParRating } from "../api/types";
 
-// Me → Performance → Employee Feedback (OngoingCycleView.tsx's
+// People Ops → Performance → Employee Feedback (OngoingCycleView.tsx's
 // ParCycleViewTabs.EMPLOYEE): ParInputForm/ParStatusView for the form,
 // ParRatingSummary (shared with History) for what shows once the lead has
 // shared.

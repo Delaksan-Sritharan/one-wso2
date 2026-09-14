@@ -35,7 +35,7 @@ import MyProfilePage from "@features/my/pages/MyProfilePage";
 import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par/pages/ParGroupPage";
 // Lazy on purpose, same reasoning as the leave report tabs below —
 // react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
-// transitively, and only someone who opens /me/performance needs them.
+// transitively, and only someone who opens /people-ops/performance needs them.
 const ParEmployeeFeedbackTab = lazy(() => import("@features/par/pages/ParEmployeeFeedbackTab"));
 const ParRequestFeedbackTab = lazy(() => import("@features/par/pages/ParRequestFeedbackTab"));
 const ParProvideFeedbackTab = lazy(() => import("@features/par/pages/ParProvideFeedbackTab"));
@@ -140,61 +140,6 @@ export default function App() {
               spec and the deviation list are in docs/ported-apps/my-team.md. */}
           <Route path="me/my-team" element={<MyTeamPage />} />
           <Route path="me/my-team/:employeeId" element={<TeamMemberPage />} />
-          {/* Me → Performance: the employee half of par-app, ported one
-              screen at a time. Tab names match par-app's own OngoingCycleView
-              tab bar (Employee Feedback / Request 360° Feedback / Provide
-              360° Feedback / F2F) rather than invented ones; F2F isn't ported
-              yet. See docs/ported-apps/par-app.md for the placement rationale
-              (this stays under Me rather than becoming its own perspective —
-              the "Performance & growth" card on the Me home already reads
-              this same backend). */}
-          {/* Behind the same preview flag as its menu entry — hiding only the
-              entry would leave every tab reachable by URL. */}
-          {isPreviewEnabled("par") && (
-            <Route path="me/performance" element={<ParGroupPage />}>
-              <Route index element={<ParGroupIndex />} />
-              {/* Employee Feedback and Request 360° are hidden from a leadless
-                  employee entirely in the source (OngoingCycleView.tsx), not
-                  merely disabled — ParRequiresLeadRoute enforces that at the
-                  route, the same way the tab bar itself is filtered. */}
-              <Route
-                path="employee-feedback"
-                element={
-                  <ParRequiresLeadRoute>
-                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                      <ParEmployeeFeedbackTab />
-                    </Suspense>
-                  </ParRequiresLeadRoute>
-                }
-              />
-              <Route
-                path="request-360"
-                element={
-                  <ParRequiresLeadRoute>
-                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                      <ParRequestFeedbackTab />
-                    </Suspense>
-                  </ParRequiresLeadRoute>
-                }
-              />
-              <Route
-                path="provide-360"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParProvideFeedbackTab />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="history"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParHistoryTab />
-                  </Suspense>
-                }
-              />
-            </Route>
-          )}
           {/* Me → Leave: native screens ported from leave-app. Lives here
               (not People Ops) — it's something every employee does for
               themself, not an HR-team tool. */}
@@ -350,6 +295,59 @@ export default function App() {
             path="people-ops/subscriptions/manage"
             element={<ManageSubscriptionsPage />}
           />
+          {/* People Ops → PAR: the employee half of par-app, ported one screen
+              at a time. Tab names match par-app's own OngoingCycleView tab bar
+              (Employee Feedback / Request 360° Feedback / Provide 360°
+              Feedback / F2F) rather than invented ones; F2F isn't ported yet.
+              See docs/ported-apps/par-app.md. Not admin-gated — every employee
+              has their own PAR, same as Org Chart and Subscriptions above.
+              Behind the same preview flag as its rail entry — hiding only the
+              entry would leave every tab reachable by URL. */}
+          {isPreviewEnabled("par") && (
+            <Route path="people-ops/performance" element={<ParGroupPage />}>
+              <Route index element={<ParGroupIndex />} />
+              {/* Employee Feedback and Request 360° are hidden from a leadless
+                  employee entirely in the source (OngoingCycleView.tsx), not
+                  merely disabled — ParRequiresLeadRoute enforces that at the
+                  route, the same way the tab bar itself is filtered. */}
+              <Route
+                path="employee-feedback"
+                element={
+                  <ParRequiresLeadRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParEmployeeFeedbackTab />
+                    </Suspense>
+                  </ParRequiresLeadRoute>
+                }
+              />
+              <Route
+                path="request-360"
+                element={
+                  <ParRequiresLeadRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParRequestFeedbackTab />
+                    </Suspense>
+                  </ParRequiresLeadRoute>
+                }
+              />
+              <Route
+                path="provide-360"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParProvideFeedbackTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="history"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParHistoryTab />
+                  </Suspense>
+                }
+              />
+            </Route>
+          )}
           {/* People Ops reports. Admin-only, but enforced by the backend and
               explained by PeopleOpsShell — there is no route-level guard, so
               a non-admin reaching this URL gets the shell's "no access"

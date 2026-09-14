@@ -24,7 +24,7 @@ async function load(preview: { par?: boolean } = {}) {
     ...(window.config ?? {}),
     ONE_WSO2_PREVIEW_FEATURES: preview,
   } as Window["config"];
-  return import("./meApps");
+  return import("./perspectives");
 }
 
 const originalConfig = window.config;
@@ -33,26 +33,26 @@ afterEach(() => {
   window.config = originalConfig;
 });
 
-describe("PAR's rail entry", () => {
+describe("PAR's People Ops rail entry", () => {
   it("is there once staging switches the flag on", async () => {
-    const { ME_APPS } = await load({ par: true });
-    expect(ME_APPS.map((a) => a.key)).toContain("par");
+    const { PEOPLE_OPS_SECTIONS } = await load({ par: true });
+    expect(PEOPLE_OPS_SECTIONS.map((s) => s.id)).toContain("people-par");
   });
 
   it("is gone when the flag is off", async () => {
-    const { ME_APPS } = await load({ par: false });
-    expect(ME_APPS.map((a) => a.key)).not.toContain("par");
+    const { PEOPLE_OPS_SECTIONS } = await load({ par: false });
+    expect(PEOPLE_OPS_SECTIONS.map((s) => s.id)).not.toContain("people-par");
   });
 
   // Production sets no preview config at all — absent has to mean off, or the
   // feature ships itself the day it merges.
   it("is gone when nothing is configured", async () => {
-    const { ME_APPS } = await load();
-    expect(ME_APPS.map((a) => a.key)).not.toContain("par");
+    const { PEOPLE_OPS_SECTIONS } = await load();
+    expect(PEOPLE_OPS_SECTIONS.map((s) => s.id)).not.toContain("people-par");
   });
 
-  it("leaves the apps that are not gated alone", async () => {
-    const { ME_APPS } = await load();
-    expect(ME_APPS.map((a) => a.key)).toContain("leave");
+  it("leaves the sections that are not gated alone", async () => {
+    const { PEOPLE_OPS_SECTIONS } = await load();
+    expect(PEOPLE_OPS_SECTIONS.map((s) => s.id)).toContain("people-org-chart");
   });
 });

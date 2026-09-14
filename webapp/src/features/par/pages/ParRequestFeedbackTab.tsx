@@ -26,7 +26,7 @@ import Par360RequestDialog from "../components/Par360RequestDialog";
 import ParEmptyState from "../components/ParEmptyState";
 import { isDeadlinePassed } from "../util/parDeadline";
 
-// Me → Performance → Request 360° Feedback: par-app's own tab name
+// People Ops → Performance → Request 360° Feedback: par-app's own tab name
 // (OngoingCycleView.tsx's ParCycleViewTabs.REQUESTTHREESIXTYREVIEWS) — asks
 // colleagues to review you. par-app's RequestFeedbackTab.tsx.
 //
