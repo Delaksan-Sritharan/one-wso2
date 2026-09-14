@@ -59,7 +59,13 @@ export type PreviewFeature =
    * in #43. Held back because Me → Claims already offers a new-claim flow and
    * the two entry points need reconciling before both are shown.
    */
-  "expenseSubmitter";
+  | "expenseSubmitter"
+  /**
+   * Me → Performance, par-app's Employee Portal ported in #61. Held back until
+   * the Lead Portal, Admin Portal, Report Chain and F2F follow it over — see
+   * docs/ported-apps/par-app.md §7.
+   */
+  | "par";
 
 /**
  * Whether a preview feature should be shown.

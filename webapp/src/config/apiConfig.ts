@@ -146,13 +146,21 @@ export const bankingServiceUrls = {
     `${bankingBackendUrl}/employee/accounts?employeeWorkEmail=${encodeURIComponent(workEmail)}`,
 };
 
-// PAR (Performance Appraisal Review) app backend. Same Choreo gateway
-// rewrite pattern as promotion-app. Also uses x-user-timezone-offset via
+// ---- PAR app backend ---------------------------------------------------------
+// Same Choreo gateway rewrite pattern as promotion-app. Also uses x-user-timezone-offset via
 // digiopsHeaders().
 export const parBackendUrl: string =
   window.config?.ONE_WSO2_PAR_BACKEND_URL ?? "";
 
 export const parServiceUrls = {
+  // GET /employees/{workEmail} — par-app's OWN employee record, distinct
+  // from people-app's. Carries `leadEmail: string?` — the exact field
+  // OngoingCycleView.tsx gates its tab set on (`leadEmail !== null`).
+  // Deliberately NOT people-app's `managerEmail`: the two disagreed in
+  // practice for at least one real account, so this is fetched from
+  // par-app's own backend rather than assumed from a different one's org
+  // chart. Self-lookup is allowed (isSelf in service.bal).
+  parEmployeeInfo: (workEmail: string) => `${parBackendUrl}/employees/${encodeURIComponent(workEmail)}`,
   // GET /par-cycles?email=<workEmail>&status=OPEN — returns ParCycle[] for
   // the caller's own active review cycles. Non-lead/non-admin callers can
   // only query their own email.
@@ -163,6 +171,40 @@ export const parServiceUrls = {
   // parEmployeeStatus / parLeadStatus we use for the chip + copy).
   parRating: (parCycleId: number, workEmail: string) =>
     `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(workEmail)}/par-ratings`,
+  // PATCH .../par-ratings/{parRatingId} — save a draft or submit the
+  // self-review (parEmployeeStatus: DRAFT | SHARED). Backend enforces which
+  // fields the caller may set for their own record — see ParRatingModify.
+  parRatingUpdate: (parCycleId: number, workEmail: string, parRatingId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(workEmail)}/par-ratings/${parRatingId}`,
+
+  // ---- 360° feedback ---------------------------------------------------------
+  //
+  // `workEmail` in these four is always the employee BEING reviewed — for
+  // "reviewers"/"review-requests" that's the caller themself; for "review" the
+  // caller is the reviewer, resolved from the token, so this is the employee
+  // whose review they're reading/writing.
+
+  // GET .../reviewers, POST .../reviewers (Par360ReviewRequestCreate) — the
+  // people you've asked (or your lead asked, on your behalf) to review you.
+  par360Reviewers: (parCycleId: number, workEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(workEmail)}/reviewers`,
+  // GET — the requests waiting on YOU as a reviewer, for every employee who
+  // asked. `workEmail` here is the caller's own email — see the resource's
+  // `email` param, which the backend also accepts as the invoker's identity.
+  par360ReviewRequests: (workEmail: string, parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(workEmail)}/review-requests`,
+  // GET/PATCH .../review — the caller's own review OF `employeeWorkEmail`.
+  par360Review: (parCycleId: number, employeeWorkEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(employeeWorkEmail)}/review`,
+
+  // GET /par-cycles/{cycleId}/participants — the people IN THIS CYCLE (name +
+  // email only), leadEmail omitted (par-app's OfferFeedbackView.tsx always
+  // passes `leadEmail: null`, i.e. every participant, not one lead's team).
+  // Backs "Voluntary Feedback"'s picker — offering a review to someone who
+  // never asked has no existing request row to search against. NOT the same
+  // as GET /meta/employees, which is org-wide and not scoped to this cycle.
+  par360Participants: (parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/participants`,
 };
 
 // Leave app backend (people-ops-suite/apps/leave-app). Its own service
@@ -310,8 +352,7 @@ export const expenseServiceUrls = {
     `${expenseBackendUrl}/claims/${encodeURIComponent(claimId)}/transactions`,
   employees: `${expenseBackendUrl}/employees`,
   expenseTypes: (travelJobNumber?: string) =>
-    `${expenseBackendUrl}/user-configurations/expense-types${
-      travelJobNumber ? `?travelJobNumber=${encodeURIComponent(travelJobNumber)}` : ""
+    `${expenseBackendUrl}/user-configurations/expense-types${travelJobNumber ? `?travelJobNumber=${encodeURIComponent(travelJobNumber)}` : ""
     }`,
   exchangeRates: (baseCode: string, date: string) =>
     `${expenseBackendUrl}/currencies/${encodeURIComponent(baseCode)}/rates/${encodeURIComponent(date)}`,
@@ -478,8 +519,7 @@ export const marketingOpsServiceUrls = {
   emailWorkbenchTemplate: (id: string) =>
     `${marketingOpsBackendUrl}/api/email-workbench/templates/${encodeURIComponent(id)}`,
   emailWorkbenchTemplateThumbnail: (id: string, version?: string) =>
-    `${marketingOpsBackendUrl}/api/email-workbench/templates/${encodeURIComponent(id)}/thumbnail${
-      version ? `?v=${encodeURIComponent(version)}` : ""
+    `${marketingOpsBackendUrl}/api/email-workbench/templates/${encodeURIComponent(id)}/thumbnail${version ? `?v=${encodeURIComponent(version)}` : ""
     }`,
   emailWorkbenchCategories: `${marketingOpsBackendUrl}/api/email-workbench/categories`,
   emailWorkbenchDrafts: `${marketingOpsBackendUrl}/api/email-workbench/drafts`,
