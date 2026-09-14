@@ -28,6 +28,8 @@ import PeopleOpsPage from "@features/people-ops/pages/PeopleOpsPage";
 import ActiveEmployeesReportPage from "@features/people-ops/pages/ActiveEmployeesReportPage";
 import ResignationsReportPage from "@features/people-ops/pages/ResignationsReportPage";
 import OrgStructurePage from "@features/people-ops/pages/OrgStructurePage";
+import MySubscriptionsPage from "@features/subscriptions/pages/MySubscriptionsPage";
+import ManageSubscriptionsPage from "@features/subscriptions/pages/ManageSubscriptionsPage";
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
@@ -238,6 +240,22 @@ export default function App() {
               canvas) — the functional spec and the deviation list live in
               docs/ported-apps/org-chart.md. */}
           <Route path="people-ops/org-chart" element={<OrgChartPage />} />
+          {/* People Ops → Subscriptions: PickMe Commute and LaaS, ported from
+              the digiops-hr subscription-app — until now a mobile microapp
+              with no web view at all. Spec and deviations in
+              docs/ported-apps/subscription-app.md.
+
+              Neither route is guarded here, and the manage route's absence of
+              a guard is deliberate rather than an oversight: the service's own
+              admin groups decide it, and SubscriptionsShell turns a refusal
+              into an explanation. Someone who types the URL gets a sentence
+              telling them who to ask, not a blank page — and the backend
+              refuses the calls regardless. */}
+          <Route path="people-ops/subscriptions" element={<MySubscriptionsPage />} />
+          <Route
+            path="people-ops/subscriptions/manage"
+            element={<ManageSubscriptionsPage />}
+          />
           {/* People Ops reports. Admin-only, but enforced by the backend and
               explained by PeopleOpsShell — there is no route-level guard, so
               a non-admin reaching this URL gets the shell's "no access"

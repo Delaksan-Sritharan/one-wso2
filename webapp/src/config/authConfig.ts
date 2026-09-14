@@ -44,6 +44,10 @@ declare global {
       // Cafeteria menu backend (daily menu, lunch feedback, dinner orders).
       // Optional — when absent the Menu screen shows a not-connected state.
       ONE_WSO2_MENU_BACKEND_URL?: string;
+      // Base URL for the digiops-hr subscription-app backend (PickMe Commute
+      // and LaaS opt-in/opt-out). Optional — when absent the Subscriptions
+      // screens show a not-connected state.
+      ONE_WSO2_SUBSCRIPTION_BACKEND_URL?: string;
       // Base URL for the digiops-hr promotion-app backend. Optional — when
       // absent, ConnectedServices' "Last promoted date" row falls back to a
       // "not configured" state and doesn't fire a request.
