@@ -79,7 +79,19 @@ export default function ManageSubscriptionsPage() {
 
           {employee ? (
             <>
-              <Card variant="outlined" sx={{ p: 2 }}>
+              <Card
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  // Matches the panel grid below: a single card there is
+                  // capped to 442px rather than the Stack's full 900px, so
+                  // this card follows the same width — otherwise a
+                  // commute-only or LaaS-only admin would see a full-width
+                  // employee row sitting above one narrow panel, unaligned
+                  // with it on the right edge.
+                  maxWidth: services.length > 1 ? undefined : 442,
+                }}
+              >
                 <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
                   <Avatar
                     src={employee.employeeThumbnail ?? undefined}
@@ -104,10 +116,15 @@ export default function ManageSubscriptionsPage() {
                   display: "grid",
                   gridTemplateColumns: {
                     xs: "1fr",
-                    // A lone panel shouldn't stretch to the full width of a
-                    // two-panel grid — an admin of one service gets a card the
-                    // same size as everyone else's.
-                    md: services.length > 1 ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 1fr)",
+                    // A lone panel gets a fixed-width column rather than the
+                    // full row: `1fr` here would still be 100% of the
+                    // container's width (it's the ONLY track), which is a
+                    // commute-only or LaaS-only admin's actual, common case —
+                    // stretching one small card edge-to-edge looked broken,
+                    // not deliberate. 442px matches what one card is already
+                    // sized at in the two-panel case below (and in the
+                    // self-service grid): (900 max-width - 16px gap) / 2.
+                    md: services.length > 1 ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 442px)",
                   },
                   gap: 2,
                   // Stretch, for the same reason as the self-service grid:
