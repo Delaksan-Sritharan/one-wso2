@@ -33,11 +33,13 @@ import {
   TableRow,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
 import { CheckIcon } from "@wso2/oxygen-ui-icons-react";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { describeError } from "../util/financeError";
+import { CC_SNACK } from "./ccCopy";
 import { money, formatNice } from "../util/financeFormat";
 import { CC_ATTACHMENT_ACCEPT, CC_ATTACHMENT_MAX_BYTES, maxSizeLabel } from "../util/financeReceipts";
 import { useCcJobNumberDetails, useCcMenus } from "./useCc";
@@ -75,6 +77,7 @@ function CcEditForm({
   onSave: (patched: CcTransaction) => void;
 }) {
   const menus = useCcMenus();
+  const { showSuccess } = useNotifications();
   const [category, setCategory] = useState(txn.expenseCategoryLabel ?? "");
   const [typeLabel, setTypeLabel] = useState(txn.expenseTypeLabel ?? "");
   const [comment, setComment] = useState(txn.txnComment ?? "");
@@ -297,6 +300,11 @@ function CcEditForm({
               onPick={async (file) => {
                 const name = await attachment.upload.mutateAsync({ id: txn.id, attachmentType: "receipt", file });
                 setReceiptFileName(name || file.name);
+                showSuccess(CC_SNACK.success.uploadAttachment);
+              }}
+              onRemove={async () => {
+                await attachment.remove.mutateAsync({ id: txn.id, attachmentType: "receipt" });
+                setReceiptFileName(null);
               }}
             />
             <AttachmentField
@@ -306,6 +314,11 @@ function CcEditForm({
               onPick={async (file) => {
                 const name = await attachment.upload.mutateAsync({ id: txn.id, attachmentType: "contract", file });
                 setContractFileName(name || file.name);
+                showSuccess(CC_SNACK.success.uploadAttachment);
+              }}
+              onRemove={async () => {
+                await attachment.remove.mutateAsync({ id: txn.id, attachmentType: "contract" });
+                setContractFileName(null);
               }}
             />
           </Box>
@@ -315,9 +328,17 @@ function CcEditForm({
         <Button size="small" onClick={onClose}>
           Cancel
         </Button>
-        <Button size="small" variant="contained" disabled={!valid} onClick={() => onSave(patched)}>
-          Save
-        </Button>
+        {/* EditPane.tsx:370-378 says this when a save is attempted with fields
+            still empty. The port disables Save instead, which stops the
+            pointless round trip but left the reason unsaid — so the source's
+            line goes where it can still be read. */}
+        <Tooltip title={valid ? "" : "Please fill in all required fields."}>
+          <span>
+            <Button size="small" variant="contained" disabled={!valid} onClick={() => onSave(patched)}>
+              Save
+            </Button>
+          </span>
+        </Tooltip>
       </DialogActions>
     </Dialog>
   );
@@ -359,18 +380,45 @@ function FieldLabel({ children, id }: { children: React.ReactNode; id?: string }
   );
 }
 
+/**
+ * One attachment slot: upload, replace, remove.
+ *
+ * Removal exists in the source — a Remove button in the attachment viewer's
+ * toolbar next to Download (AttachmentButton.tsx:466-477, calling
+ * removeAttachment at :139-153). The port had the DELETE mutation built and
+ * never called it, so a receipt attached by mistake could only be replaced
+ * by another file, never taken off.
+ *
+ * It sits beside Replace rather than inside a viewer: this port manages
+ * attachments from the form, and burying the only way to undo an upload
+ * behind "open the file first" is a worse place for it.
+ */
 function AttachmentField({
   label,
   fileName,
   busy,
   onPick,
+  onRemove,
 }: {
   label: string;
   fileName: string | null;
   busy: boolean;
   onPick: (file: File) => Promise<void>;
+  onRemove: () => Promise<void>;
 }) {
-  const { showError } = useNotifications();
+  const { showSuccess, showError } = useNotifications();
+  const [removing, setRemoving] = useState(false);
+  const remove = async () => {
+    setRemoving(true);
+    try {
+      await onRemove();
+      showSuccess(CC_SNACK.success.removeAttachment);
+    } catch (err) {
+      showError(describeError(err));
+    } finally {
+      setRemoving(false);
+    }
+  };
   const input = useRef<HTMLInputElement>(null);
   const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -401,6 +449,18 @@ function AttachmentField({
         >
           {busy ? "Uploading…" : fileName ? "Replace" : "Upload"}
         </Button>
+        {fileName && (
+          <Button
+            size="small"
+            variant="text"
+            color="error"
+            onClick={remove}
+            disabled={busy || removing}
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
+            {removing ? "Removing…" : "Remove"}
+          </Button>
+        )}
         <Typography sx={{ fontSize: 12, color: fileName ? "success.main" : "text.disabled" }} noWrap>
           {fileName && (
             <CheckIcon size={13} style={{ color: "var(--oxygen-palette-success-main)", flexShrink: 0 }} />

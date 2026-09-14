@@ -29,6 +29,8 @@
 
 import { CreditCardIcon, ReceiptTextIcon } from "@wso2/oxygen-ui-icons-react";
 import { CC_PATH } from "@features/finance/cc/ccPaths";
+import { expenseFinancePaths } from "@features/finance/expense/expenseFinancePaths";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import type { MenuApp } from "@constants/appMenu";
 
 /**
@@ -65,17 +67,57 @@ export const ME_FINANCE_APPS: readonly MenuApp[] = [
  */
 export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
   {
+    key: "expense",
+    name: "Expense Claims",
+    icon: ReceiptTextIcon,
+    purpose: "File an expense claim, track the ones you submitted, and decide on the ones waiting on you.",
+    items: [
+      // New Claim is held behind a preview flag: Me → Claims already offers a
+      // new-claim flow, and showing a second entry point under Finance before
+      // the two are reconciled would leave people with two ways in and no way
+      // to tell which one they want.
+      //
+      // Spread in rather than filtered out, so with the flag off the item does
+      // not exist at all — the rail sections and favourites both derive from
+      // this list. It is NOT the whole story: the Finance overview builds its
+      // tiles by hand and asks `useFinanceGate` by item id, so that surface is
+      // gated there too.
+      //
+      // The flag is on the ITEM, not the app. Claim History has no duplicate
+      // under Me to reconcile — the Me-side history is a different screen on a
+      // different route — so hiding the whole app would hold back something
+      // that is ready.
+      ...(isPreviewEnabled("expenseSubmitter")
+        ? [
+            { id: "expense-new", label: "New Claim", desc: "File a new expense claim.", path: expenseFinancePaths.new },
+          ]
+        : []),
+      { id: "expense-history", label: "Claim History", desc: "Claims you have submitted, and where each one has got to.", path: expenseFinancePaths.history },
+      // Approving sits beside filing, where the source app's own sidebar keeps
+      // it. Only the finance stage is here: the source's Lead Approvals entry
+      // is not ported yet, and the entry is absent entirely for the many people
+      // who hold no finance flag.
+      {
+        id: "expense-finance-approvals",
+        label: "Finance Approvals",
+        desc: "Expense claims that passed their lead and are waiting on finance.",
+        requires: ["lead", "admin"],
+        path: expenseFinancePaths.financeApprovals,
+      },
+    ],
+  },
+  {
     key: "cc",
     name: "Credit Card Expenses",
     icon: CreditCardIcon,
     purpose: "Reconcile and submit corporate credit-card transactions for approval.",
     items: [
       { id: "cc-dashboard", label: "Dashboard", desc: "Unsubmitted spend, how long it has been sitting, and what has been claimed.", path: `${CC_PATH}/dashboard` },
-      { id: "cc-new", label: "New Transactions", desc: "Unsubmitted card transactions to categorise and submit.", path: `${CC_PATH}/new` },
-      { id: "cc-pending", label: "Pending Submissions", desc: "Submissions awaiting approval.", path: `${CC_PATH}/pending` },
+      { id: "cc-new", label: "Pending Submissions", desc: "Unsubmitted card transactions to categorise and submit.", path: `${CC_PATH}/new` },
+      { id: "cc-pending", label: "Pending Approvals", desc: "Submissions awaiting approval.", path: `${CC_PATH}/pending` },
       { id: "cc-approve", label: "Approve Submissions", desc: "Review and approve your team's submitted card transactions.", requires: ["lead", "admin"], path: `${CC_PATH}/approve` },
       { id: "cc-history", label: "History", desc: "Your submitted past card transactions.", path: `${CC_PATH}/history` },
-      { id: "cc-settings", label: "Statement ingestion", desc: "Upload and reconcile bank statements (finance).", requires: ["admin"], path: `${CC_PATH}/settings` },
+      { id: "cc-settings", label: "Settings", desc: "Upload and reconcile bank statements (finance).", requires: ["admin"], path: `${CC_PATH}/settings` },
     ],
   },
 ];
@@ -98,8 +140,17 @@ export const FINANCE_ITEM_IDS: ReadonlySet<string> = new Set([
 // Eyebrow descriptors for FinanceShell, derived from the registry above so the
 // chip on every finance screen can't drift from the app's own name and icon.
 function eyebrowFor(key: string): { icon: MenuApp["icon"]; label: string } {
-  const app = FINANCE_APPS.find((a) => a.key === key)!;
-  return { icon: app.icon, label: app.name };
+  // No `!` here. An app can legitimately be absent from the registry — a
+  // preview feature whose flag is off is not in the list at all — and this
+  // runs at module load, so asserting would take the whole app down with a
+  // TypeError before anything rendered, not just lose a chip.
+  //
+  // The fallback is never seen in practice: if an app is hidden, the screens
+  // that wear its eyebrow are unreachable too.
+  const app = FINANCE_APPS.find((a) => a.key === key);
+  return app
+    ? { icon: app.icon, label: app.name }
+    : { icon: ReceiptTextIcon, label: "Finance" };
 }
 
 export const FINANCE_EYEBROW = {
@@ -107,4 +158,5 @@ export const FINANCE_EYEBROW = {
   // now, and their own titles say which type is being filed.
   claims: eyebrowFor("claims"),
   cc: eyebrowFor("cc"),
+  expense: eyebrowFor("expense"),
 } as const;

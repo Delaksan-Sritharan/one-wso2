@@ -20,6 +20,7 @@ import type { ReactElement } from "react";
 import {
   CsmMark,
   FinanceMark,
+  LegalMark,
   MarketingMark,
   MeMark,
   PeopleMark,
@@ -37,6 +38,7 @@ const APP_MARKS: Record<string, (p: MarkProps) => ReactElement> = {
   finance: FinanceMark,
   marketing: MarketingMark,
   csm: CsmMark,
+  legal: LegalMark,
   umt: UmtMark,
 };
 

@@ -25,7 +25,10 @@ import {
   LifeBuoyIcon,
   LayoutDashboard,
   MegaphoneIcon,
+  NetworkIcon,
   SatelliteDishIcon,
+  ScaleIcon,
+  TicketIcon,
   UserRoundIcon,
   UserRoundMinusIcon,
   UsersIcon,
@@ -37,6 +40,7 @@ import type { Capability, MenuApp } from "@constants/appMenu";
 import { FINANCE_PERSPECTIVE_APPS, ME_FINANCE_APPS } from "@constants/financeApps";
 import { CLAIM_APPROVAL_PATH } from "@features/finance/approvals/claimApprovalTabs";
 import { MARKETING_OPS_APPS } from "@constants/marketingOpsApps";
+import { DUE_DILIGENCE_APPS } from "@constants/dueDiligenceApps";
 import { ME_APPS } from "@constants/meApps";
 
 export interface PerspectiveSection {
@@ -54,6 +58,11 @@ export interface PerspectiveSection {
   // When set, a leaf item is a route (rail navigates) rather than a
   // scroll-anchor. Used by the native Leave screens.
   path?: string;
+  // Overrides PeopleOpsPage's default overview-card copy, which otherwise
+  // assumes every shipped leaf is a filterable/exportable report (true for
+  // Active employees / Resignations, not for something like Org Chart).
+  // Omitted = the default copy applies.
+  description?: string;
   // Render as a group even with a single visible child — see MenuApp.alwaysGroup.
   alwaysGroup?: boolean;
   // When set, a leaf item leaves One WSO2 entirely: it renders as an anchor
@@ -93,7 +102,65 @@ function appsToSections(apps: readonly MenuApp[]): PerspectiveSection[] {
 // rejects non-admins on both /employees/search (org-wide) and
 // /reports/employees/generate, and PeopleOpsShell turns that into an
 // explanation. Someone who types the URL still gets a clear answer.
+//
+// Org Chart is the one section here WITHOUT `requires: ["admin"]` — same
+// people-app backend as everything else here, but a different endpoint
+// (/employees/basic-info) with its own access model: any employee in that
+// endpoint's configured group, not a people-app admin privilege. See
+// docs/ported-apps/org-chart.md.
 export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
+  {
+    id: "people-org-chart",
+    label: "Org Chart",
+    icon: NetworkIcon,
+    path: "/people-ops/org-chart",
+    description: "Browse who reports to whom, company-wide.",
+  },
+  // Subscriptions — PickMe Commute and LaaS, ported from the digiops-hr
+  // subscription-app (previously a mobile microapp only). A group rather than
+  // a leaf because the two screens answer to different people: everyone opts
+  // themself in and out, and a much smaller set manages other employees.
+  //
+  // Note what is NOT here: `requires: ["admin"]` on the Manage child. The
+  // capability vocabulary `requires` speaks is people-app privilege numbers,
+  // and these screens gate on the SUBSCRIPTION service's own Asgardeo groups
+  // (commuteAdminGroup / lunchAdminGroup, whose names it publishes on
+  // /subscriptions/meta-info). The two are unrelated — a People Ops admin is
+  // not a commute admin — so the rail asks useSubscriptionGate for these ids
+  // instead, exactly as it does for Leave, Finance and Marketing Ops. See
+  // SUBSCRIPTION_ITEM_IDS and the wiring in SideRail.
+  {
+    id: "people-subscriptions",
+    label: "Subscriptions",
+    icon: TicketIcon,
+    // NOT alwaysGroup. Most people hold exactly one visible child (their own
+    // subscriptions), and SideRail already collapses a single-child group to
+    // a plain leaf — so an ordinary employee gets one clickable "Subscriptions"
+    // row, not an accordion they have to open to find their only option. Once
+    // useSubscriptionGate marks the caller an admin, "Manage" becomes visible
+    // too and the very same section expands into a real group of two. Unlike
+    // Master Data below, this is never "about to grow" for a given viewer —
+    // it genuinely differs by WHO is looking, not by what has shipped yet,
+    // which is the case `alwaysGroup` exists to override.
+    description: "Opt in and out of PickMe Commute and LaaS.",
+    children: [
+      {
+        id: "people-subscriptions-mine",
+        label: "My subscriptions",
+        path: "/people-ops/subscriptions",
+      },
+      {
+        id: "people-subscriptions-manage",
+        // Short on purpose: this is a rail label, and the rail's nested-item
+        // slot is narrow enough that "Manage for employees" was landing as
+        // "Manage for employ…" with no way to read the rest. The full
+        // sentence lives on the page itself (ManageSubscriptionsPage's
+        // title and subtitle both spell out what it does).
+        label: "Manage",
+        path: "/people-ops/subscriptions/manage",
+      },
+    ],
+  },
   {
     id: "people-active-employee-report",
     label: "Active employees",
@@ -129,6 +196,26 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   },
 ];
 
+/**
+ * The Subscriptions rail ids, which the rail must route through
+ * `useSubscriptionGate` rather than through `requires`/`caps`.
+ *
+ * Same role as FINANCE_ITEM_IDS and LEAVE_ITEM_IDS, and here for the same
+ * reason: these ids answer to a different backend's Asgardeo groups, so
+ * reading them against people-app capabilities would show a People Ops admin
+ * an admin screen the subscription service then 403s — and hide it from an
+ * actual commute admin who is not a People Ops admin.
+ *
+ * Derived from the section above so it cannot fall out of step when a screen
+ * is added, and exported from here so the definition and the list of ids that
+ * need special handling stay in one file.
+ */
+export const SUBSCRIPTION_ITEM_IDS: ReadonlySet<string> = new Set(
+  PEOPLE_OPS_SECTIONS.filter((s) => s.id === "people-subscriptions").flatMap((s) => [
+    s.id,
+    ...(s.children ?? []).map((c) => c.id),
+  ]),
+);
 
 // Marketing Ops. Built from the registry now so the rail is ready, but the
 // perspective itself stays locked (`access: false` below) until Phase 1
@@ -231,7 +318,28 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
       // not something everyone has — unlike leave or claims, it is not part of
       // the set every employee needs.
       ...appsToSections(FINANCE_PERSPECTIVE_APPS),
+      // Due Diligence — also surfaced under Legal (see the `legal` perspective
+      // below). ONE registry (DUE_DILIGENCE_APPS), included in both places, so
+      // the two rails can't drift. Gated on the due-diligence backend's own
+      // roles, not the coarse capability model — see useDueDiligenceGate and
+      // its dispatch in SideRail.
+      ...appsToSections(DUE_DILIGENCE_APPS),
     ],
+  },
+  // Legal. Currently just a second entry point into Due Diligence (see the
+  // `finance` perspective above) — the same registry, included here too, so
+  // both rails show the identical set of screens and can't drift apart.
+  // `externallyGated: true` for the same reason Marketing Ops carries it:
+  // `access: true` only means the perspective is built, not that everyone who
+  // opens it can use what's inside — see useDueDiligenceGate.
+  {
+    key: "legal",
+    label: "Legal",
+    icon: ScaleIcon,
+    externallyGated: true,
+    access: true,
+    path: "/legal",
+    sections: [...appsToSections(DUE_DILIGENCE_APPS)],
   },
   // A separate application, opened in a new tab. `access` follows the URL being
   // configured: without one the tile stays in its unbuilt state rather than

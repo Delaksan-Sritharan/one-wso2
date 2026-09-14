@@ -20,12 +20,16 @@ import { Navigate, Route, Routes } from "react-router";
 import { landingPath } from "@config/landingConfig";
 import SettingsPage from "@features/settings/pages/SettingsPage";
 import MenuHomePage from "@features/menu/pages/MenuHomePage";
+import OrgChartPage from "@features/org-chart/pages/OrgChartPage";
 import AuthGuard from "@layouts/AuthGuard";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import AppLayout from "@layouts/AppLayout";
 import PeopleOpsPage from "@features/people-ops/pages/PeopleOpsPage";
 import ActiveEmployeesReportPage from "@features/people-ops/pages/ActiveEmployeesReportPage";
 import ResignationsReportPage from "@features/people-ops/pages/ResignationsReportPage";
 import OrgStructurePage from "@features/people-ops/pages/OrgStructurePage";
+import MySubscriptionsPage from "@features/subscriptions/pages/MySubscriptionsPage";
+import ManageSubscriptionsPage from "@features/subscriptions/pages/ManageSubscriptionsPage";
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
@@ -33,6 +37,7 @@ import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import FinancePage from "@features/finance/pages/FinancePage";
 import MarketingOpsPage from "@features/marketing-ops/pages/MarketingOpsPage";
 import AdCampaignsAnalyticsPage from "@features/marketing-ops/ad-campaigns/pages/AdCampaignsAnalyticsPage";
+import CampaignTrackerPage from "@features/marketing-ops/ad-campaigns/pages/CampaignTrackerPage";
 import UtmGeneratorPage from "@features/marketing-ops/utilities/pages/UtmGeneratorPage";
 import AssetNameGeneratorPage from "@features/marketing-ops/utilities/pages/AssetNameGeneratorPage";
 import UtmSettingsPage from "@features/marketing-ops/admin/pages/UtmSettingsPage";
@@ -40,6 +45,7 @@ import AssetNameSettingsPage from "@features/marketing-ops/admin/pages/AssetName
 import EmailWorkbenchSettingsPage from "@features/marketing-ops/admin/pages/EmailWorkbenchSettingsPage";
 import BlockCatalogPage from "@features/marketing-ops/email-workbench/pages/BlockCatalogPage";
 import EventsSettingsPage from "@features/marketing-ops/admin/pages/EventsSettingsPage";
+import PostBuilderPage from "@features/marketing-ops/design-studio/pages/PostBuilderPage";
 import {
   EventsMinePage,
   EventsReviewPage,
@@ -86,6 +92,8 @@ import CcApprovePage from "@features/finance/cc/pages/CcApprovePage";
 import CcHistoryPage from "@features/finance/cc/pages/CcHistoryPage";
 import CcSettingsPage from "@features/finance/cc/pages/CcSettingsPage";
 import ExpenseNewClaimPage from "@features/finance/expense/pages/ExpenseNewClaimPage";
+import ExpenseSubmitterPage from "@features/finance/expense/submitter/ExpenseSubmitterPage";
+import ExpenseClaimHistoryPage from "@features/finance/expense/history/ExpenseClaimHistoryPage";
 import ExpenseClaimsTab from "@features/finance/expense/pages/ExpenseHistoryPage";
 import ClaimApprovalPage, {
   ClaimApprovalIndex,
@@ -94,6 +102,19 @@ import ClaimApprovalPage, {
 import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
+import LegalPage from "@features/legal/pages/LegalPage";
+import PartnersListPage from "@features/due-diligence/partners/pages/PartnersListPage";
+import PartnerPendingPage from "@features/due-diligence/partners/pages/PartnerPendingPage";
+import PartnerDashboardPage from "@features/due-diligence/partners/pages/PartnerDashboardPage";
+import TradeReferencesListPage from "@features/due-diligence/trade-references/pages/TradeReferencesListPage";
+import TradeReferenceDashboardPage from "@features/due-diligence/trade-references/pages/TradeReferenceDashboardPage";
+import TradeReferencePendingPage from "@features/due-diligence/trade-references/pages/TradeReferencePendingPage";
+import TradeReferenceRejectedPage from "@features/due-diligence/trade-references/pages/TradeReferenceRejectedPage";
+import TradeReferenceDeactivatedPage from "@features/due-diligence/trade-references/pages/TradeReferenceDeactivatedPage";
+import DueDiligencePreferencesPage from "@features/due-diligence/preferences/pages/PreferencesPage";
+import ViewPdfPage from "@features/due-diligence/shared/pages/ViewPdfPage";
+import ViewImagePage from "@features/due-diligence/shared/pages/ViewImagePage";
+import ExpenseApprovalsScreen from "@features/finance/expense/approvals/ExpenseApprovalsScreen";
 import UmtHomePage from "@features/umt/pages/UmtHomePage";
 
 export default function App() {
@@ -216,6 +237,23 @@ export default function App() {
           </Route>
           <Route path="me/claims/expense/new" element={<ExpenseNewClaimPage />} />
           <Route path="me/claims/opd/new" element={<OpdNewClaimPage />} />
+          {/* Behind the same preview flag as its menu entry. Hiding only the
+              entry would leave the page reachable by anyone with the URL, which
+              is not what "not released yet" means. */}
+          {isPreviewEnabled("expenseSubmitter") && (
+            <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
+          )}
+          {/* Not behind that flag. The preview holds back a SECOND way to file
+              a claim until it is reconciled with Me → Claims; reading what you
+              have already filed has no such duplicate to reconcile. */}
+          <Route path="finance/expense-claims/history" element={<ExpenseClaimHistoryPage />} />
+          {/* Approving sits beside filing, where the source app's sidebar keeps
+              it. The screen gates itself on the finance flag, so a typed URL is
+              no more revealing than the menu entry it belongs to. */}
+          <Route
+            path="finance/expense-claims/finance-approvals"
+            element={<ExpenseApprovalsScreen stage="FINANCE" />}
+          />
           <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
           <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
           <Route path="finance/cc/pending" element={<CcPendingPage />} />
@@ -223,6 +261,29 @@ export default function App() {
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
           <Route path="people-ops" element={<PeopleOpsPage />} />
+          {/* People Ops → Org Chart: the company's reporting hierarchy, ported
+              from the standalone org-chart app. Unlike every other People Ops
+              screen, this is NOT admin-gated — it has its own access model.
+              The UI is deliberately redesigned (outline instead of pan/zoom
+              canvas) — the functional spec and the deviation list live in
+              docs/ported-apps/org-chart.md. */}
+          <Route path="people-ops/org-chart" element={<OrgChartPage />} />
+          {/* People Ops → Subscriptions: PickMe Commute and LaaS, ported from
+              the digiops-hr subscription-app — until now a mobile microapp
+              with no web view at all. Spec and deviations in
+              docs/ported-apps/subscription-app.md.
+
+              Neither route is guarded here, and the manage route's absence of
+              a guard is deliberate rather than an oversight: the service's own
+              admin groups decide it, and SubscriptionsShell turns a refusal
+              into an explanation. Someone who types the URL gets a sentence
+              telling them who to ask, not a blank page — and the backend
+              refuses the calls regardless. */}
+          <Route path="people-ops/subscriptions" element={<MySubscriptionsPage />} />
+          <Route
+            path="people-ops/subscriptions/manage"
+            element={<ManageSubscriptionsPage />}
+          />
           {/* People Ops reports. Admin-only, but enforced by the backend and
               explained by PeopleOpsShell — there is no route-level guard, so
               a non-admin reaching this URL gets the shell's "no access"
@@ -319,6 +380,12 @@ export default function App() {
             path="marketing-ops/ad-campaigns/analytics"
             element={<AdCampaignsAnalyticsPage />}
           />
+          {/* Ad Campaigns → Campaign Tracker. Register / Weekly Log / Budget
+              Pacing / BU Owners — the weekly operating rhythm for live campaigns. */}
+          <Route
+            path="marketing-ops/ad-campaigns/campaign-tracker"
+            element={<CampaignTrackerPage />}
+          />
           {/* Utilities — open to any authorized Marketing Ops caller. */}
           <Route path="marketing-ops/utilities/utm" element={<UtmGeneratorPage />} />
           <Route
@@ -344,11 +411,51 @@ export default function App() {
           <Route path="marketing-ops/crm-upload/runs" element={<CrmUploadRunLogPage />} />
           <Route path="marketing-ops/crm-upload/records" element={<CrmUploadRecordsPage />} />
           <Route path="marketing-ops/crm-upload/review" element={<CrmUploadReviewPage />} />
+          {/* Design Studio → Post Builder — the canvas editor for branded LinkedIn
+              post and banner graphics. */}
+          <Route
+            path="marketing-ops/design-studio/post-builder"
+            element={<PostBuilderPage />}
+          />
           <Route path="settings" element={<SettingsPage />} />
           {/* Me → Menu: the cafeteria screen ported from the standalone
               menu app. One page, as the original was. The functional spec and
               the deviation list live in docs/ported-apps/menu-app.md. */}
           <Route path="me/menu" element={<MenuHomePage />} />
+          {/* Legal perspective — currently just a second entry point into Due
+              Diligence, alongside Finance (see the finance/ routes below and
+              DUE_DILIGENCE_APPS). */}
+          <Route path="legal" element={<LegalPage />} />
+          {/* Due Diligence — ported from digiops-finance/apps/due_diligence's
+              admin-app. Routes live OUTSIDE both the Finance and Legal path
+              prefixes (same reason /settings does): a screen reachable from
+              two different rails can't itself live under either one's own
+              prefix. See DUE_DILIGENCE_APPS and SideRail's fromPerspective
+              navigation state for how each rail stays selected once inside. */}
+          <Route path="due-diligence" element={<Navigate to="/due-diligence/partners" replace />} />
+          <Route path="due-diligence/partners" element={<PartnersListPage />} />
+          <Route path="due-diligence/partners/pending/:id" element={<PartnerPendingPage />} />
+          <Route path="due-diligence/partners/:id/:tabName" element={<PartnerDashboardPage />} />
+          <Route path="due-diligence/trade-references" element={<TradeReferencesListPage />} />
+          <Route
+            path="due-diligence/trade-references/pending/:linkId"
+            element={<TradeReferencePendingPage />}
+          />
+          <Route
+            path="due-diligence/trade-references/rejected/:companyId/:linkId"
+            element={<TradeReferenceRejectedPage />}
+          />
+          <Route
+            path="due-diligence/trade-references/deactivated/:linkId"
+            element={<TradeReferenceDeactivatedPage />}
+          />
+          <Route
+            path="due-diligence/trade-references/:companyId/:linkId"
+            element={<TradeReferenceDashboardPage />}
+          />
+          <Route path="due-diligence/preferences" element={<DueDiligencePreferencesPage />} />
+          <Route path="due-diligence/view-pdf" element={<ViewPdfPage />} />
+          <Route path="due-diligence/view-image" element={<ViewImagePage />} />
           {/* Catch-all → landing */}
           <Route path="*" element={<Navigate to={landingPath()} replace />} />
         </Route>

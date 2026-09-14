@@ -17,7 +17,7 @@
  */
 
 /**
- * Filled, two-tone marks for the five perspectives, used ONLY by the app
+ * Filled, two-tone marks for the seven perspectives, used ONLY by the app
  * launcher.
  *
  * Why these exist at all: Lucide ships no filled icons, so the launcher tile got
@@ -65,17 +65,21 @@ function Svg({ size = 48, children }: MarkProps & { children: React.ReactNode })
   );
 }
 
-/** Me — a house, keeping the metaphor the line icon already used. */
+/**
+ * Me — a house. Traced from the same silhouette as the rail's line icon
+ * (lucide's House, scaled 2x for this 48-unit grid) rather than a separately
+ * drawn roof-on-a-box, so the two only differ in fill style, not in what
+ * shape they're actually showing.
+ */
 export function MeMark({ size }: MarkProps) {
   const t = appMarkTones("me")!;
   return (
     <Svg size={size}>
-      <path d="M10 23h28v13.5a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4z" fill={t.field} />
       <path
-        d="M21.9 6.6a3.2 3.2 0 0 1 4.2 0l17 14.6c1.6 1.4.6 4-1.5 4H6.4c-2.1 0-3.1-2.6-1.5-4z"
+        d="M6 20a4 4 0 0 1 1.418-3.056l14-12a4 4 0 0 1 5.164 0l14 12A4 4 0 0 1 42 20v18a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z"
         fill={t.lead}
       />
-      <path d="M20.5 40.5v-8a3.5 3.5 0 0 1 7 0v8z" fill={t.detail} />
+      <path d="M30 42v-16a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v16z" fill={t.detail} />
     </Svg>
   );
 }
@@ -149,6 +153,37 @@ export function CsmMark({ size }: MarkProps) {
         <rect x="2.5" y="21.6" width="12" height="4.8" rx="2.4" />
         <rect x="33.5" y="21.6" width="12" height="4.8" rx="2.4" />
       </g>
+    </Svg>
+  );
+}
+
+/**
+ * Legal — scales of justice, traced from the same silhouette as the rail's
+ * line icon (lucide's Scale, scaled 2x for this 48-unit grid) rather than
+ * separately-drawn straight-edged triangles for the pans — the real icon's
+ * pans have a scalloped bottom curve, not a hard point, so a from-scratch
+ * triangle read as a different (and, per feedback, wrong-looking) shape.
+ * Post/crossbar/base stay stroked lines (they have no fillable area of their
+ * own); the two pans are closed shapes, so they're filled solid instead of
+ * stroked, keeping the launcher's bold/filled look.
+ */
+export function LegalMark({ size }: MarkProps) {
+  const t = appMarkTones("legal")!;
+  return (
+    <Svg size={size}>
+      <path
+        d="M6 14h4c4 0 10-2 14-4 4 2 10 4 14 4h4"
+        fill="none"
+        stroke={t.lead}
+        strokeWidth={4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M24 6v36" stroke={t.lead} strokeWidth={4} strokeLinecap="round" />
+      <path d="M14 42h20" stroke={t.lead} strokeWidth={4} strokeLinecap="round" />
+      <path d="M4 32l6-16 6 16c-1.74 1.3-3.84 2-6 2s-4.26-.7-6-2z" fill={t.field} />
+      <path d="M32 32l6-16 6 16c-1.74 1.3-3.84 2-6 2s-4.26-.7-6-2z" fill={t.field} />
+      <circle cx="24" cy="8" r="3" fill={t.detail} />
     </Svg>
   );
 }

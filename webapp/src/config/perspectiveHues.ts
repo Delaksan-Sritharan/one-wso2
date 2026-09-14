@@ -27,7 +27,7 @@
  * the launcher is the one surface with nothing else doing that job.
  *
  * SIZING, and the constraint that will eventually break this: the registry holds
- * five perspectives and every one of them has a hue, so the set is at five of the
+ * seven perspectives and every one of them has a hue, so the set is at seven of the
  * eight it can carry. Hue discrimination collapses somewhere past that, and each
  * new perspective wants one — at which point the answer is a different encoding
  * (hue per domain family, or back to monochrome), not a longer list.
@@ -49,7 +49,7 @@
  * reviewed, and asserted — see perspectiveHues.test.ts, which fails if any pair
  * drops below the 3:1 floor.
  *
- * OPEN: four of these five are not brand colours. The WSO2 brand system defines one
+ * OPEN: six of these seven are not brand colours. The WSO2 brand system defines one
  * accent, so a palette this wide needs a brand-owner ruling — the same conversation
  * as the 180x72px logo minimum and the contained-button contrast. Until then this is
  * launcher-local and easy to withdraw.
@@ -106,6 +106,16 @@ export const PERSPECTIVE_HUES: Record<string, PerspectiveHue> = {
     hue: "#9B5DE0",
     light: { bg: "#F1E8FB", fg: "#7C4AB3" },
     dark: { bg: "#241D2C", fg: "#9B5DE0" },
+  },
+  // Indigo — distinct from both people's sky blue (207°) and csm's violet
+  // (268°) by sitting at 225°, between them but far enough from each to read
+  // as its own colour rather than a shade of either. Tints computed against
+  // the same contrast formula the test uses — 4.92:1 light, 4.30:1 dark, both
+  // inside the 3.5 headroom rule with the wash treatment.
+  legal: {
+    hue: "#6C89E0",
+    light: { bg: "#CFD8F3", fg: "#3854A8" },
+    dark: { bg: "#262A34", fg: "#6C89E0" },
   },
 
   // Burnished amber separates UMT from Me's brand orange without introducing

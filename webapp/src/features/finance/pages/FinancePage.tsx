@@ -17,12 +17,15 @@
  */
 
 import { Box, Card, Skeleton, Typography } from "@wso2/oxygen-ui";
-import { ArrowRightIcon, CheckCheckIcon, CreditCardIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArrowRightIcon, CheckCheckIcon, CreditCardIcon, ReceiptTextIcon } from "@wso2/oxygen-ui-icons-react";
 import { NavLink } from "react-router";
 import PerspectiveHeader from "@components/perspective-header/PerspectiveHeader";
 import { useFinanceGate } from "../api/useFinanceGate";
 import { CLAIM_APPROVAL_PATH } from "../approvals/claimApprovalTabs";
 import { ccPaths } from "../cc/ccPaths";
+import { expenseFinancePaths } from "../expense/expenseFinancePaths";
+import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
+import { DUE_DILIGENCE_APPS, DUE_DILIGENCE_EYEBROW } from "@constants/dueDiligenceApps";
 
 // The Finance overview. It said "coming soon" while the perspective was empty;
 // Claim approval is here now, so it lists what is here instead.
@@ -36,6 +39,10 @@ import { ccPaths } from "../cc/ccPaths";
 // claims should not be offered a link to a screen that will turn them away.
 export default function FinancePage() {
   const gate = useFinanceGate();
+  // Due Diligence gates on its OWN backend's roles, not Finance's three
+  // claim-app backends — same reason Marketing Ops needs its own gate. See
+  // useDueDiligenceGate and DUE_DILIGENCE_APPS (also surfaced under Legal).
+  const dueDiligenceGate = useDueDiligenceGate();
 
   // Each card is gated by the same id the rail uses for that entry, so the
   // overview and the menu cannot disagree about what is here.
@@ -49,6 +56,14 @@ export default function FinancePage() {
       description: "Expense and OPD claims waiting on your decision, and the ones already decided.",
     },
     {
+      id: "expense",
+      show: gate.canSee("expense-new"),
+      to: expenseFinancePaths.new,
+      icon: ReceiptTextIcon,
+      title: "Expense Claims",
+      description: "File a new expense claim.",
+    },
+    {
       id: "cc",
       // The app's own landing screen, and the id its rail entry is gated by.
       show: gate.canSee("cc-dashboard"),
@@ -56,6 +71,14 @@ export default function FinancePage() {
       icon: CreditCardIcon,
       title: "Credit Card Expenses",
       description: "Categorise and submit your corporate card spend, and see what is outstanding.",
+    },
+    {
+      id: "due-diligence",
+      show: dueDiligenceGate.canSee("dd-partners"),
+      to: "/due-diligence/partners",
+      icon: DUE_DILIGENCE_EYEBROW.icon,
+      title: DUE_DILIGENCE_EYEBROW.label,
+      description: DUE_DILIGENCE_APPS[0].purpose,
     },
   ].filter((entry) => entry.show);
 
@@ -67,7 +90,7 @@ export default function FinancePage() {
         subtitle="Operations and tools for company finances."
       />
 
-      {gate.isResolving ? (
+      {gate.isResolving || dueDiligenceGate.isResolving ? (
         <Skeleton variant="rectangular" height={132} sx={{ borderRadius: 1.5, maxWidth: 480 }} />
       ) : entries.length === 0 ? (
         // Not an error, and not "coming soon" either: the perspective is built,
@@ -117,6 +140,12 @@ function OverviewCard({
       variant="outlined"
       component={NavLink}
       to={to}
+      // Due Diligence lives at its own top-level path (shared with Legal),
+      // outside "/finance" — without this, landing there falls back to the
+      // default perspective instead of staying on Finance. Harmless for the
+      // other two entries, whose paths already sit under "/finance" and
+      // resolve there regardless — see SideRail.tsx for the same fix.
+      state={{ fromPerspective: "finance" }}
       sx={{
         p: 2.5,
         display: "block",

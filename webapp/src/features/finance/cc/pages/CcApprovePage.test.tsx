@@ -80,8 +80,16 @@ vi.mock("../ccTypes", async () => {
 
 const saveEdit = vi.fn();
 const mutations = { savePending: false };
+// Records which stage was approved, so a test can prove the mode picked the
+// endpoint rather than merely that something was called.
+const approveCalls: { stage: string; ids: number[] }[] = [];
 vi.mock("../useCcMutations", () => ({
-  useCcApprove: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCcApprove: (stage: string) => ({
+    mutateAsync: async (ids: number[]) => {
+      approveCalls.push({ stage, ids });
+    },
+    isPending: false,
+  }),
   useCcSaveEdit: () => ({ mutate: saveEdit, isPending: mutations.savePending }),
   useCcAttachment: () => ({
     upload: { mutateAsync: vi.fn(), isPending: false },
@@ -100,7 +108,14 @@ beforeEach(() => {
   state.access = ["finance"];
   mutations.savePending = false;
   saveEdit.mockClear();
+  approveCalls.length = 0;
 });
+
+/** The per-row checkboxes only — the grid's header has a select-all. */
+const rowBoxes = async () =>
+  (await screen.findAllByRole("checkbox")).filter(
+    (b) => b.getAttribute("name") === "select_row",
+  );
 
 function show() {
   return render(
@@ -126,7 +141,7 @@ describe("what a finance approver sees", () => {
 
   it("cannot select the row still with the lead", async () => {
     show();
-    const boxes = await screen.findAllByRole("checkbox");
+    const boxes = await rowBoxes();
     // Row order follows the data: pending_lead first.
     expect(boxes[0]).toBeDisabled();
     expect(boxes[1]).toBeEnabled();
@@ -146,7 +161,7 @@ describe("what a lead sees", () => {
 
   it("can select it", async () => {
     show();
-    const boxes = await screen.findAllByRole("checkbox");
+    const boxes = await rowBoxes();
     expect(boxes[0]).toBeEnabled();
   });
 });
@@ -159,13 +174,195 @@ describe("an edit still in flight", () => {
   it("holds the approve button until the save lands", async () => {
     mutations.savePending = true;
     show();
-    await userEvent.click(screen.getAllByRole("checkbox")[1]);
+    await userEvent.click((await rowBoxes())[1]);
     expect(screen.getByRole("button", { name: /^Approve/ })).toBeDisabled();
   });
 
   it("allows approval once nothing is in flight", async () => {
     show();
-    await userEvent.click(screen.getAllByRole("checkbox")[1]);
+    await userEvent.click((await rowBoxes())[1]);
     expect(screen.getByRole("button", { name: /^Approve/ })).toBeEnabled();
+  });
+});
+
+// index.tsx:83-87 derives one mode with finance winning, :198 offers the
+// switcher only to someone holding both roles, and :116-127 makes the mode
+// decide the queue. None of this was covered: both suites above hold a single
+// role, which is exactly the case the mode leaves unchanged.
+describe("someone who is both a lead and a finance approver", () => {
+  beforeEach(() => {
+    state.access = ["lead", "finance"];
+  });
+
+  it("starts in finance mode, because finance wins", async () => {
+    show();
+    await waitFor(() => expect(screen.getAllByRole("checkbox").length).toBeGreaterThan(0));
+    // Finance's queue spans both stages.
+    expect(screen.getAllByRole("row")).toHaveLength(3); // header + 2
+    expect(screen.getByLabelText("Approve Role")).toHaveTextContent("Approve as Finance");
+  });
+
+  it("switching to lead narrows the queue to its own first-stage rows", async () => {
+    show();
+    const user = userEvent.setup();
+    await screen.findByLabelText("Approve Role");
+    await user.click(screen.getByLabelText("Approve Role"));
+    await user.click(await screen.findByRole("option", { name: "Approve as Lead" }));
+
+    await waitFor(() => expect(screen.getAllByRole("row")).toHaveLength(2)); // header + 1
+    // And the row it kept is the one it can act on.
+    expect((await rowBoxes())[0]).toBeEnabled();
+  });
+
+  it("approves as the selected role, not both at once", async () => {
+    show();
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("Approve Role"));
+    await user.click(await screen.findByRole("option", { name: "Approve as Lead" }));
+
+    await user.click((await rowBoxes())[0]);
+    await user.click(screen.getByRole("button", { name: /Approve/ }));
+
+    await waitFor(() => expect(approveCalls).toHaveLength(1));
+    expect(approveCalls[0].stage).toBe("lead");
+    expect(approveCalls[0].ids).toEqual([1]);
+  });
+});
+
+describe("the approve-role switcher", () => {
+  it("is not offered to a lead who is not also finance", async () => {
+    state.access = ["lead"];
+    show();
+    await screen.findAllByRole("checkbox");
+    expect(screen.queryByLabelText("Approve Role")).toBeNull();
+  });
+
+  it("is not offered to finance alone", async () => {
+    state.access = ["finance"];
+    show();
+    await screen.findAllByRole("checkbox");
+    expect(screen.queryByLabelText("Approve Role")).toBeNull();
+  });
+});
+
+// PendingTransactionsDataGrid.tsx / ApproveTransactionsDataGrid.tsx both lead
+// with ID and head the amount "Amount($)" over a bare number. The port had
+// dropped the column and moved the currency into the cell.
+describe("the shared transaction table", () => {
+  it("leads with the row id", async () => {
+    show();
+    await screen.findAllByRole("checkbox");
+    expect(screen.getByRole("columnheader", { name: "ID" })).toBeInTheDocument();
+    // The grid's own cells carry the field name, which is sturdier than
+    // counting columns that the show* flags can add or drop.
+    const idCells = document.querySelectorAll('[data-field="id"][role="gridcell"]');
+    expect(idCells.length).toBeGreaterThan(0);
+    expect(idCells[0]).toHaveTextContent("1");
+  });
+
+  it("puts the currency in the header, not the cell", async () => {
+    show();
+    await screen.findAllByRole("checkbox");
+    expect(screen.getByRole("columnheader", { name: "Amount($)" })).toBeInTheDocument();
+    expect(screen.getAllByText("500.00").length).toBeGreaterThan(0);
+    expect(screen.queryByText("$500.00")).toBeNull();
+  });
+});
+
+// The point of putting these two screens on the grid: the hand-built table had
+// none of this, and the source gets all of it from the component.
+describe("what the grid brings to the approve queue", () => {
+  it("offers search, columns and paging", async () => {
+    show();
+    await screen.findAllByRole("checkbox");
+    for (const name of ["Columns", "Filters", "Search"]) {
+      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    }
+  });
+
+  it("does not offer export, which the source keeps to history", async () => {
+    // These screens show other people's spend. The source's approve and
+    // pending grids build a toolbar holding only GridToolbarQuickFilter;
+    // export appears on history and on the statement screen, not here.
+    show();
+    await screen.findAllByRole("checkbox");
+    expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
+  });
+
+  it("still refuses to tick a row the mode cannot action", async () => {
+    // The grid's own isRowSelectable is wired to the same predicate the
+    // approve button uses, so the two cannot disagree.
+    state.access = ["lead"];
+    show();
+    const boxes = await rowBoxes();
+    expect(boxes).toHaveLength(1);
+    expect(boxes[0]).toBeEnabled();
+  });
+});
+
+// ApproveFilterPopover.tsx — the source narrows this queue by user, by card
+// and, for finance only, by stage. The port had none of the three, so finance
+// read both stages mixed together with no way to see just its own.
+describe("narrowing the approve queue", () => {
+  const pick = async (label: string, option: string) => {
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText(label));
+    await user.click(await screen.findByRole("option", { name: option }));
+  };
+
+  it("offers user and card to a lead", async () => {
+    state.access = ["lead"];
+    show();
+    await screen.findAllByRole("checkbox");
+    expect(screen.getByLabelText("User")).toBeInTheDocument();
+    expect(screen.getByLabelText("Card")).toBeInTheDocument();
+  });
+
+  it("keeps the stage filter to finance, whose queue spans two stages", async () => {
+    state.access = ["lead"];
+    show();
+    await screen.findAllByRole("checkbox");
+    // index.tsx:91-95 — a lead's queue is one stage by definition.
+    expect(screen.queryByLabelText("Status")).toBeNull();
+  });
+
+  it("lets finance see just its own stage", async () => {
+    state.access = ["finance"];
+    show();
+    // Both stages to begin with.
+    await waitFor(() => expect(screen.getAllByRole("row")).toHaveLength(3));
+
+    await pick("Status", "Pending Finance");
+    await waitFor(() => expect(screen.getAllByRole("row")).toHaveLength(2));
+  });
+
+  it("uses the source's words for the stages", async () => {
+    state.access = ["finance"];
+    show();
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText("Status"));
+    // FilterMenu.tsx:79-88 — not the raw pending_lead / pending_finance.
+    expect(await screen.findByRole("option", { name: "Pending Lead" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Pending Finance" })).toBeInTheDocument();
+  });
+});
+
+// The grid's select-all emits {type:"exclude", ids:Set()} — "everything except
+// these" — not an include-set. Reading model.ids without checking the type
+// inverts it: select-all clears the selection instead of making it.
+describe("the header select-all", () => {
+  it("selects every row the mode can action", async () => {
+    state.access = ["finance"];
+    show();
+    const all = (await screen.findAllByRole("checkbox")).find(
+      (b) => b.getAttribute("name") === "select_all_rows",
+    );
+    expect(all).toBeDefined();
+    await userEvent.setup().click(all as HTMLElement);
+
+    // One of the two rows is pending_finance, so exactly one is actionable.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Approve 1/ })).toBeInTheDocument(),
+    );
   });
 });
