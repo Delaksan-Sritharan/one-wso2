@@ -32,9 +32,7 @@ export default function OrgChartShell({
   children,
 }: {
   eyebrow: { icon: LucideIcon; label: string };
-  /** Optional — the eyebrow chip already names the page; only pass this
-   *  when the heading needs to say something the chip doesn't. */
-  title?: string;
+  title: string;
   subtitle?: string;
   configured: boolean;
   configKey: string;
@@ -56,11 +54,13 @@ export default function OrgChartShell({
             size="small"
             sx={{ mb: 0.5 }}
           />
-          {title && (
-            <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
-              {title}
-            </Typography>
-          )}
+          {/* An h1, not a styled div: this is the page's heading, and a
+              screen-reader user navigating by headings needs it. Same
+              comment as MenuShell — the eyebrow Chip has no heading
+              semantics and doesn't substitute for it. */}
+          <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
+            {title}
+          </Typography>
         </Box>
         {configured && action && <Box sx={{ flexShrink: 0, mt: 0.5 }}>{action}</Box>}
       </Box>

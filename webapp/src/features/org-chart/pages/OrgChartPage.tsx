@@ -256,6 +256,7 @@ export default function OrgChartPage() {
   return (
     <OrgChartShell
       eyebrow={{ icon: NetworkIcon, label: "Org Chart" }}
+      title="Org chart"
       subtitle="The company's reporting hierarchy, from the Chairman down."
       configured={configured}
       configKey="ONE_WSO2_PEOPLE_BACKEND_URL"
