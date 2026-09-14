@@ -14,14 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { Box, Button, Card, Chip, Stack, Typography } from "@wso2/oxygen-ui";
 import { FileDownIcon } from "@wso2/oxygen-ui-icons-react";
 import type { ParCycle, ParRating } from "../api/types";
-import { decodeParComment, sanitizeParHtml } from "../util/parComment";
+import { decodeParComment } from "../util/parComment";
 import { ParCommentView, ParQuestionText } from "./ParContent";
-import { employeeChipLabel, pdfRatingText } from "../util/parLabels";
+import { employeeChipLabel } from "../util/parLabels";
+import { downloadParPdf } from "../util/parPdf";
 
 // The read-only view of one cycle's record from the employee's side: their
 // own submitted comment, and — once the lead has shared — the lead's
@@ -83,82 +82,4 @@ export default function ParRatingSummary({
       )}
     </Stack>
   );
-}
-
-// Ports par-app's EmployeePar.tsx downloadPDF/formatCommentForPDF: a
-// two-column table under a header naming the employee, their PAR rating,
-// special rating and who shared it. No employee-name lookup is available
-// here, so email addresses stand in, same as "Shared by" above.
-function downloadParPdf(rating: ParRating, selfComment: string, leadComment: string): void {
-  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-
-  const rows: (string | { content: string; styles: Record<string, unknown> })[][] = [];
-  if (selfComment) {
-    rows.push([
-      "Employee Comment",
-      "",
-      { content: htmlToPdfText(selfComment), styles: { textColor: [50, 50, 50], cellPadding: 6 } },
-    ]);
-  }
-  if (leadComment) {
-    rows.push([
-      "Lead Comment",
-      "",
-      { content: htmlToPdfText(leadComment), styles: { textColor: [50, 50, 50], cellPadding: 6 } },
-    ]);
-  }
-
-  autoTable(doc, {
-    head: [
-      [
-        {
-          content:
-            ` - Employee: ${rating.parEmployeeEmail}\n` +
-            ` - PAR Rating: ${pdfRatingText(rating.parRating)}\n` +
-            ` - Top 5%/20% Rating: ${pdfRatingText(rating.parSpecialRating)}\n` +
-            ` - PAR Shared By: ${rating.parRatingSharedBy || "Not Provided"}`,
-          colSpan: 3,
-          styles: { halign: "left", fontSize: 12, cellPadding: 10 },
-        },
-      ],
-    ],
-    showHead: "firstPage",
-    body: rows,
-    startY: 30,
-    styles: { fontSize: 9, cellPadding: 4, overflow: "linebreak", valign: "top" },
-    columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 60 }, 2: { cellWidth: "auto" } },
-  });
-
-  doc.save(`${rating.parEmployeeEmail}_par_summary.pdf`);
-}
-
-// Converts sanitized comment HTML into indented plain text for the PDF body
-// — lists become "•"/"1." lines, matching what the rich-text editor showed.
-function htmlToPdfText(html: string): string {
-  const root = document.createElement("div");
-  root.innerHTML = sanitizeParHtml(html);
-
-  const walk = (el: Element, depth: number): string => {
-    const indent = "    ".repeat(depth);
-    if (el.tagName === "UL" || el.tagName === "OL") {
-      const ordered = el.tagName === "OL";
-      return Array.from(el.children)
-        .map((li, i) => `${indent}${ordered ? `${i + 1}.` : "•"} ${walk(li, depth + 1).trim()}\n`)
-        .join("");
-    }
-    if (el.children.length > 0) {
-      return Array.from(el.children)
-        .map((child) => walk(child, depth))
-        .join("");
-    }
-    const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
-    return text ? `${text}\n` : "";
-  };
-
-  const text = walk(root, 0)
-    .split("\n")
-    .map((line) => (line.trim() ? `    ${line}` : line))
-    .join("\n")
-    .trim();
-  return text || "-";
 }

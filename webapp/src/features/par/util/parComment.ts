@@ -55,7 +55,13 @@ export function decodeParComment(value: string | undefined): string {
 // threeSixtyReviewQuestion), which can carry real markup like a `<br/>`.
 // Both go through the same sanitize pass, whether being edited or read back.
 
-// Mirrors par-app's config/constant.ts SANITIZE_CONFIG exactly.
+// Mirrors par-app's config/constant.ts SANITIZE_CONFIG exactly, contradictions
+// and all: `style` is listed in both ALLOWED_ATTR and FORBID_ATTR (FORBID
+// wins — it's actually stripped), "alert" in FORBID_TAGS isn't a real HTML
+// element, and "on*" sits beside four already-covered named handlers.
+// DOMPurify resolves all of it safely; kept as source has it rather than
+// tidied, since a "cleanup" here is exactly how a security config drifts
+// from what it's actually enforcing.
 const SANITIZE_CONFIG = {
   ALLOWED_TAGS: ["b", "i", "em", "strong", "a", "p", "br", "li", "ol", "ul", "div", "span", "u"],
   ALLOWED_ATTR: ["href", "target", "class", "style", "data-list"],

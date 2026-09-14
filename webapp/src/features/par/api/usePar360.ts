@@ -139,6 +139,11 @@ export function useSubmitReview(parCycleId: number | undefined) {
     onSuccess: async (_data, { employeeWorkEmail }) => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["par-360-review", parCycleId, employeeWorkEmail] }),
+        // Wholesale, not the specific [parCycleId, reviewerWorkEmail] tuple
+        // useOfferToReview below invalidates: the reviewer's own email isn't
+        // one of this mutation's variables (only the employee being
+        // reviewed is), so there's no narrower key available to target here
+        // without threading it through as an extra hook argument.
         qc.invalidateQueries({ queryKey: ["par-360-review-requests"] }),
       ]);
     },

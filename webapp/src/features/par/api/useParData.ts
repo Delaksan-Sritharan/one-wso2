@@ -55,6 +55,12 @@ export function useParEmployeeInfo(workEmail: string | undefined) {
  * security boundary (each screen's own API calls enforce access
  * server-side), so a slow or failed fetch should never hide tabs from
  * someone who does have a lead.
+ *
+ * `isLoading` deliberately tracks only the caller's own profile fetch
+ * (`workEmailLoading`), not this hook's own `info` query — that's what
+ * makes the fail-open above work; a slow/failed lead lookup must never
+ * read as "still loading" to `ParRequiresLeadRoute`, which renders `null`
+ * while `isLoading` is true.
  */
 export function useParHasLead(workEmail: string | undefined, workEmailLoading: boolean): { hasLead: boolean; isLoading: boolean } {
   const info = useParEmployeeInfo(workEmail);

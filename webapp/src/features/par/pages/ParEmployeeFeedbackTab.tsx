@@ -231,6 +231,11 @@ function SelfReviewForm({
     ) {
       return;
     }
+    // A save (this autosave or the manual button) is already in flight —
+    // don't dispatch a second, possibly-overlapping PATCH. `isSaving`
+    // flipping back to false re-runs this effect with whatever `comment`
+    // is current then, so the latest text still gets saved once it clears.
+    if (isSaving) return;
     const timer = window.setTimeout(() => {
       const token = ++autoSaveTokenRef.current;
       // ParInputForm.tsx sets isDraftSaved from updateParRating's own
@@ -246,7 +251,7 @@ function SelfReviewForm({
     }, 1000);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [comment, finalized, deadlinePassed, showForm, confirming]);
+  }, [comment, finalized, deadlinePassed, showForm, confirming, isSaving]);
 
   return (
     <Stack spacing={1.75} sx={{ maxWidth: 1100 }}>

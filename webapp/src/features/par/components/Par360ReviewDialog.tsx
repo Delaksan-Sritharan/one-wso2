@@ -103,7 +103,10 @@ export default function Par360ReviewDialog({
     onClose();
   };
 
-  const submitReview = (status: "DRAFT" | "SHARED" | "REJECTED", opts?: { silent?: boolean }) => {
+  const submitReview = (
+    status: "DRAFT" | "SHARED" | "REJECTED",
+    opts?: { silent?: boolean; onSuccess?: () => void },
+  ) => {
     submit.mutate(
       {
         employeeWorkEmail: employeeEmail,
@@ -114,7 +117,7 @@ export default function Par360ReviewDialog({
           ...(isOfferedFeedback && reviewerEmail ? { reviewerEmail } : {}),
         },
       },
-      opts?.silent ? {} : { onSuccess: handleClose },
+      opts?.silent ? { onSuccess: opts.onSuccess } : { onSuccess: handleClose },
     );
   };
 
@@ -126,26 +129,34 @@ export default function Par360ReviewDialog({
 
   // ReviewProvideModal.tsx's autosave: 5s after the comment stops changing,
   // save a draft silently — no confirmation dialog open, not mid-decline,
-  // not past the deadline.
+  // not past the deadline. `confirmingAction` must gate (and be a dep of)
+  // this effect: without it, a save already scheduled before Share was
+  // clicked keeps its timer and can PATCH a stale DRAFT after the SHARED
+  // submit that the confirm dialog just sent.
   useEffect(() => {
     if (
       !open ||
       existing.isLoading ||
       declining ||
       deadlinePassed ||
+      confirmingAction !== null ||
       comment.trim() === savedComment.trim() ||
       !commentValid
     ) {
       return;
     }
     const timer = window.setTimeout(() => {
-      submitReview("DRAFT", { silent: true });
-      setAutoSaved(true);
-      window.setTimeout(() => setAutoSaved(false), 2000);
+      submitReview("DRAFT", {
+        silent: true,
+        onSuccess: () => {
+          setAutoSaved(true);
+          window.setTimeout(() => setAutoSaved(false), 2000);
+        },
+      });
     }, 5000);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [comment, open, declining, deadlinePassed, existing.isLoading]);
+  }, [comment, open, declining, deadlinePassed, confirmingAction, existing.isLoading]);
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
