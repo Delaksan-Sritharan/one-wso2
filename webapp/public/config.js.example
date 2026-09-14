@@ -130,5 +130,5 @@ window.config = {
   // Each entry is deleted when its feature ships — a list that only grows
   // stops describing anything.
   //
-  // ONE_WSO2_PREVIEW_FEATURES: { expenseSubmitter: false },
+  // ONE_WSO2_PREVIEW_FEATURES: { expenseSubmitter: false, umt: false },
 };

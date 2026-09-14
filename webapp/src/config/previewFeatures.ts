@@ -59,7 +59,17 @@ export type PreviewFeature =
    * in #43. Held back because Me → Claims already offers a new-claim flow and
    * the two entry points need reconciling before both are shown.
    */
-  "expenseSubmitter";
+  | "expenseSubmitter"
+  /**
+   * The whole UMT perspective — rail entry, launcher tile, landing-page
+   * option, favourites eligibility, and the `/umt` route. UMT is still being
+   * ported: only its dashboard exists so far (see perspectives.ts), and that
+   * is gated as a whole rather than screen-by-screen because the thing that
+   * needs to stay preview-only is the perspective's presence itself, not one
+   * route inside it. `useUmtGate`'s own role check against the UMT backend is
+   * unrelated and keeps working the same regardless of this flag.
+   */
+  | "umt";
 
 /**
  * Whether a preview feature should be shown.

@@ -126,8 +126,10 @@ export default function App() {
           <Route index element={<Navigate to={landingPath()} replace />} />
           {/* Me home — the full profile page including Connected apps. */}
           <Route path="me" element={<MyProfilePage />} />
-          {/* Only the UMT dashboard is mounted in this phase; UmtShell owns its role gate. */}
-          <Route path="umt" element={<UmtHomePage />} />
+          {/* Only the UMT dashboard is mounted in this phase; UmtShell owns its role
+              gate. Behind the same preview flag as its perspective entry — hiding
+              only the rail/launcher tile would leave the route reachable by URL. */}
+          {isPreviewEnabled("umt") && <Route path="umt" element={<UmtHomePage />} />}
           {/* My Team — placeholder for now; the real subordinates view is on
               hold this iteration (mirrors people-app's lead-only nav item). */}
           {/* My Team — a lead's reporting chain, ported from people-app. The

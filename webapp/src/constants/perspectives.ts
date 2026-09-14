@@ -18,6 +18,7 @@
 // from this — one edit here changes every entry point.
 
 import { csmUrl, isCsmConfigured, isIsacConfigured, isacUrl } from "@config/apiConfig";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import {
   CheckCheckIcon,
   DatabaseIcon,
@@ -392,15 +393,26 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
   // UMT currently exposes only its dashboard. An empty section list keeps the
   // rail at Overview until the update, product, chunk and statistics routes are
   // actually ported; UmtShell performs the service-owned role check at /umt.
-  {
-    key: "umt",
-    label: "UMT",
-    icon: LayoutDashboard,
-    externallyGated: true,
-    access: true,
-    path: "/umt",
-    sections: [],
-  },
+  //
+  // Held behind a preview flag, whole perspective and all, until it's ready for
+  // production — not just `access: false`, because that would still leave a
+  // disabled "not available yet" tile in the waffle (see FUNCTIONAL_PERSPECTIVES
+  // below, which is unfiltered). Spread in exactly like FINANCE_PERSPECTIVE_APPS
+  // does for the expense app, so with the flag off the entry does not exist at
+  // all, and every surface that reads PERSPECTIVES stays clean.
+  ...(isPreviewEnabled("umt")
+    ? [
+        {
+          key: "umt",
+          label: "UMT",
+          icon: LayoutDashboard,
+          externallyGated: true,
+          access: true,
+          path: "/umt",
+          sections: [],
+        },
+      ]
+    : []),
 ];
 
 /**
