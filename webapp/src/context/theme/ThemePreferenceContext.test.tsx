@@ -36,8 +36,8 @@ function Probe() {
     <div>
       <span data-testid="applied">{themeKey}</span>
       <span data-testid="count">{options.length}</span>
-      <button type="button" onClick={() => setThemeKey("choreo")}>
-        pick choreo
+      <button type="button" onClick={() => setThemeKey("acrylicPurple")}>
+        pick acrylicPurple
       </button>
     </div>
   );
@@ -51,9 +51,9 @@ const renderProbe = () =>
   );
 
 describe("ThemePreferenceProvider", () => {
-  it("exposes all five options to the picker", () => {
+  it("exposes all seven options to the picker", () => {
     renderProbe();
-    expect(screen.getByTestId("count")).toHaveTextContent("5");
+    expect(screen.getByTestId("count")).toHaveTextContent("7");
   });
 
   it("starts on the deployment default when nothing is saved", () => {
@@ -75,9 +75,9 @@ describe("ThemePreferenceProvider", () => {
 
   it("applies and persists a new choice", async () => {
     renderProbe();
-    await userEvent.setup().click(screen.getByRole("button", { name: "pick choreo" }));
-    expect(screen.getByTestId("applied")).toHaveTextContent("choreo");
-    expect(localStorage.getItem(STORAGE_KEY)).toBe("choreo");
+    await userEvent.setup().click(screen.getByRole("button", { name: "pick acrylicPurple" }));
+    expect(screen.getByTestId("applied")).toHaveTextContent("acrylicPurple");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("acrylicPurple");
   });
 
   it("ignores a saved value that is no longer a theme", () => {
@@ -86,13 +86,15 @@ describe("ThemePreferenceProvider", () => {
     // resolver.
     localStorage.setItem(STORAGE_KEY, "retired-theme");
     renderProbe();
-    expect(screen.getByTestId("applied")).toHaveTextContent("acrylicOrange");
+    expect(screen.getByTestId("applied")).toHaveTextContent("wso2");
   });
 
   it("folds a preference saved under the superseded key onto the listed one", () => {
     // Otherwise it resolves to the right theme but ticks no row in the menu.
     localStorage.setItem(STORAGE_KEY, "oneWso2");
     renderProbe();
+    // Folds onto acrylicOrange, NOT onto the default — the alias names that
+    // specific theme, so a saved preference keeps resolving to it.
     expect(screen.getByTestId("applied")).toHaveTextContent("acrylicOrange");
   });
 });

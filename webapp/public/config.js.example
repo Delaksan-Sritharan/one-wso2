@@ -14,7 +14,7 @@ window.config = {
   // ONE_WSO2_ASGARDEO_MYACCOUNT_URL: "https://myaccount.asgardeo.io/t/<your-org>",
 
   // UI
-  ONE_WSO2_THEME: "acrylicOrange",
+  ONE_WSO2_THEME: "wso2",
 
   // Cafeteria menu backend (daily menu, lunch feedback, dinner orders).
   // Optional — when absent the Menu screen shows a not-connected state and
