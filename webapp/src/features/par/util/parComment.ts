@@ -38,11 +38,13 @@ export function encodeParComment(value: string): string {
 }
 
 /** Returns "" for an absent/malformed field rather than throwing — a
- * comment that hasn't been saved yet is not an error. */
+ * comment that hasn't been saved yet is not an error. Sanitized before
+ * being handed back, since callers either seed an editable field with it
+ * or render it read-only — both need it safe to put in the DOM. */
 export function decodeParComment(value: string | undefined): string {
   if (!value || !BASE64_RE.test(value)) return "";
   try {
-    return decodeURIComponent(atob(value));
+    return sanitizeParHtml(decodeURIComponent(atob(value)));
   } catch {
     return "";
   }

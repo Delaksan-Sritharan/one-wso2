@@ -54,6 +54,11 @@ describe("decoding a field that isn't there", () => {
     // Valid base64, but not valid URI-encoded text underneath.
     expect(decodeParComment(btoa("%E0%A4%A"))).toBe("");
   });
+
+  it("sanitizes on the way out, not just on the way into the editor", () => {
+    const stored = encodeParComment("<p>hi</p><script>steal()</script>");
+    expect(decodeParComment(stored)).toBe("<p>hi</p>");
+  });
 });
 
 describe("sanitizing", () => {

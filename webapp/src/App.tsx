@@ -33,10 +33,13 @@ import ManageSubscriptionsPage from "@features/subscriptions/pages/ManageSubscri
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
 import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par/pages/ParGroupPage";
-import ParEmployeeFeedbackTab from "@features/par/pages/ParEmployeeFeedbackTab";
-import ParRequestFeedbackTab from "@features/par/pages/ParRequestFeedbackTab";
-import ParProvideFeedbackTab from "@features/par/pages/ParProvideFeedbackTab";
-import ParHistoryTab from "@features/par/pages/ParHistoryTab";
+// Lazy on purpose, same reasoning as the leave report tabs below —
+// react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
+// transitively, and only someone who opens /me/performance needs them.
+const ParEmployeeFeedbackTab = lazy(() => import("@features/par/pages/ParEmployeeFeedbackTab"));
+const ParRequestFeedbackTab = lazy(() => import("@features/par/pages/ParRequestFeedbackTab"));
+const ParProvideFeedbackTab = lazy(() => import("@features/par/pages/ParProvideFeedbackTab"));
+const ParHistoryTab = lazy(() => import("@features/par/pages/ParHistoryTab"));
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import FinancePage from "@features/finance/pages/FinancePage";
@@ -157,7 +160,9 @@ export default function App() {
                 path="employee-feedback"
                 element={
                   <ParRequiresLeadRoute>
-                    <ParEmployeeFeedbackTab />
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParEmployeeFeedbackTab />
+                    </Suspense>
                   </ParRequiresLeadRoute>
                 }
               />
@@ -165,12 +170,28 @@ export default function App() {
                 path="request-360"
                 element={
                   <ParRequiresLeadRoute>
-                    <ParRequestFeedbackTab />
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParRequestFeedbackTab />
+                    </Suspense>
                   </ParRequiresLeadRoute>
                 }
               />
-              <Route path="provide-360" element={<ParProvideFeedbackTab />} />
-              <Route path="history" element={<ParHistoryTab />} />
+              <Route
+                path="provide-360"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParProvideFeedbackTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="history"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParHistoryTab />
+                  </Suspense>
+                }
+              />
             </Route>
           )}
           {/* Me → Leave: native screens ported from leave-app. Lives here

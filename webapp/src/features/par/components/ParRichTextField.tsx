@@ -20,8 +20,13 @@ import { Box, useTheme } from "@wso2/oxygen-ui";
 import { sanitizeParHtml } from "../util/parComment";
 
 // Ports par-app's CustomRichTextField: same toolbar, same auto-expanding
-// editor, same sanitize-on-write pass. `react-quill-new` in place of
-// `react-quill` — the fork that supports React 19.
+// editor. `react-quill-new` in place of `react-quill` — the fork that
+// supports React 19.
+//
+// Sanitize on write only, not on the controlled `value` — re-sanitizing it
+// on every render (as the source does) double-decodes entities and is the
+// classic trigger for Quill's caret-jump bug. decodeParComment already
+// sanitizes once at the read boundary, so `value` is safe as-is here.
 const MODULES = {
   toolbar: [["bold", "italic", "underline"], [{ list: "ordered" }, { list: "bullet" }], [{ indent: "-1" }, { indent: "+1" }], ["clean"]],
   clipboard: { matchVisual: false, matchers: [] },
@@ -82,7 +87,7 @@ export default function ParRichTextField({
     >
       <ReactQuill
         theme="snow"
-        value={sanitizeParHtml(value)}
+        value={value}
         onChange={(html) => onChange(sanitizeParHtml(html))}
         placeholder={placeholder}
         modules={MODULES}
