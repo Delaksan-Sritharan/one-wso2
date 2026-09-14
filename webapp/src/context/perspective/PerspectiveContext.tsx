@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import {
   findPerspectiveByPath,
@@ -29,6 +29,30 @@ interface PerspectiveContextValue {
 const PerspectiveContext = createContext<PerspectiveContextValue | undefined>(
   undefined,
 );
+
+// Same-tab-only, and deliberately not React state: this is read once per
+// render inside the useMemo below, and written from an effect that has
+// nothing else watching it — the "sync to an external system" case the
+// hooks lint rules DO allow, as opposed to mirroring location into a state
+// variable only to re-render off of it (the pattern the note below rejects).
+const LAST_PERSPECTIVE_STORAGE_KEY = "one-wso2:last-perspective";
+
+function readLastPerspective(): string | undefined {
+  try {
+    return sessionStorage.getItem(LAST_PERSPECTIVE_STORAGE_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeLastPerspective(key: string): void {
+  try {
+    sessionStorage.setItem(LAST_PERSPECTIVE_STORAGE_KEY, key);
+  } catch {
+    // Private browsing / storage blocked: losing the "survives a refresh"
+    // convenience is fine — nothing else depends on this value existing.
+  }
+}
 
 // Derive the "active" perspective from the current route so the rail /
 // top-bar stay in sync without a duplicate state store.
@@ -53,22 +77,45 @@ const PerspectiveContext = createContext<PerspectiveContextValue | undefined>(
 // render, and mirroring the location into state is the cascading-render pattern
 // the hooks lint rules forbid.
 //
-// A cold deep link to /settings carries no state, so it still lands on Me.
+// A cold deep link to /settings carries no state, so it still lands on Me —
+// UNLESS sessionStorage remembers a better answer, see below.
+//
+// A `?from=` query param is the same idea, for the one case navigation state
+// can't reach: a file viewer opened with `window.open` (e.g. a Due Diligence
+// attachment) is a brand-new tab, not a client-side navigation — there is no
+// history entry to attach state to, but the URL that opens it is built by
+// the caller, so it can carry the origin perspective itself.
+//
+// sessionStorage is the last fallback before Me, for the one case NEITHER
+// state NOR a query param survives: a plain browser refresh on a page that
+// owns no perspective (e.g. /due-diligence/partners, reached earlier via a
+// rail click) carries no history state and no query param — the URL is just
+// its own path. Whenever `active` resolves to something other than Me by any
+// other means, that key is remembered for the rest of the tab, so a refresh
+// here recovers Finance/Legal instead of silently falling back to Me.
 export function PerspectiveProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const fromPerspective = (location.state as { fromPerspective?: unknown } | null)
     ?.fromPerspective;
-  const value = useMemo<PerspectiveContextValue>(
-    () => ({
-      active:
-        findPerspectiveByPath(location.pathname) ??
-        (typeof fromPerspective === "string"
-          ? findPerspectiveByKey(fromPerspective)
-          : undefined) ??
-        findPerspectiveByKey("me")!,
-    }),
-    [location.pathname, fromPerspective],
-  );
+  const fromQuery = new URLSearchParams(location.search).get("from");
+  const active = useMemo<PerspectiveDef>(() => {
+    const lastPerspective = readLastPerspective();
+    return (
+      findPerspectiveByPath(location.pathname) ??
+      (typeof fromPerspective === "string"
+        ? findPerspectiveByKey(fromPerspective)
+        : undefined) ??
+      (fromQuery ? findPerspectiveByKey(fromQuery) : undefined) ??
+      (lastPerspective ? findPerspectiveByKey(lastPerspective) : undefined) ??
+      findPerspectiveByKey("me")!
+    );
+  }, [location.pathname, fromPerspective, fromQuery]);
+
+  useEffect(() => {
+    if (active.key !== "me") writeLastPerspective(active.key);
+  }, [active.key]);
+
+  const value = useMemo<PerspectiveContextValue>(() => ({ active }), [active]);
   return (
     <PerspectiveContext.Provider value={value}>
       {children}

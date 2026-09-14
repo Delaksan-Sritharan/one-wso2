@@ -23,6 +23,7 @@ import { SUBSCRIPTION_ITEM_IDS, type PerspectiveSection } from "@constants/persp
 import { capabilitiesFromPrivileges, type Capability } from "@constants/appMenu";
 import { FINANCE_ITEM_IDS } from "@constants/financeApps";
 import { LEAVE_ITEM_IDS } from "@constants/meApps";
+import { DUE_DILIGENCE_ITEM_IDS } from "@constants/dueDiligenceApps";
 import { useUserInfo } from "@api/useUserInfo";
 import { useFinanceGate } from "@features/finance/api/useFinanceGate";
 import { useLeaveGate } from "@features/leave/api/useLeaveGate";
@@ -31,6 +32,7 @@ import {
   activeItemId as activeItemIdFor,
 } from "./railActive";
 import { useMarketingOpsGate } from "@features/marketing-ops/api/useMarketingOpsGate";
+import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
 import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
 import { isSriLankaWorkLocation } from "@features/subscriptions/util/locationGate";
 
@@ -131,6 +133,13 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   const isMarketingOps = active.key === "marketing";
   const marketingOpsGate = useMarketingOpsGate(isMarketingOps);
 
+  // Due Diligence is the same shape of problem again, and needs the same
+  // treatment: it gates on ITS OWN backend's roles, which bear no relation to
+  // the people-app privilege numbers `caps` is built from. It is reachable
+  // from two perspectives (Finance and Legal — see DUE_DILIGENCE_APPS), so
+  // the gate is enabled for either.
+  const dueDiligenceGate = useDueDiligenceGate(active.key === "finance" || active.key === "legal");
+
   // Subscriptions (People Ops → PickMe Commute / LaaS) is the same shape of
   // problem once more, with one extra wrinkle worth naming: its backend
   // publishes the NAMES of its two admin Asgardeo groups on
@@ -168,6 +177,7 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   };
 
   const resolveVisible = (s: PerspectiveSection): boolean => {
+    if (DUE_DILIGENCE_ITEM_IDS.has(s.id)) return dueDiligenceGate.canSee(s.id);
     if (FINANCE_ITEM_IDS.has(s.id)) return financeGate.canSee(s.id);
     if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
     if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
@@ -285,7 +295,15 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
     if (id === OVERVIEW_ID) return;
     const path = pathById.get(id);
     if (path) {
-      navigate(path);
+      // Carry the perspective along, same as the Settings navigation above.
+      // Harmless for a path that lives under this perspective's own prefix
+      // (findPerspectiveByPath resolves it directly and never reads this
+      // state) — load-bearing for one that doesn't, like Due Diligence's
+      // /due-diligence/* routes, which are reachable from both Finance and
+      // Legal and can't live under either one's own path prefix. Without
+      // this, landing there would fall back to the Me rail instead of
+      // keeping whichever of the two the caller actually came from.
+      navigate(path, { state: { fromPerspective: active.key } });
       return;
     }
     scrollToSection(id);
@@ -307,7 +325,7 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
               clickable eyebrow label; as a real row it can also be
               highlighted when you're on it. */}
           {active.path && (
-            <RouteItem id={OVERVIEW_ID} to={active.path}>
+            <RouteItem id={OVERVIEW_ID} to={active.path} fromPerspective={active.key}>
               <Sidebar.Item id={OVERVIEW_ID}>
                 <Sidebar.ItemIcon>
                   <active.icon />
@@ -323,6 +341,7 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
               section={s}
               resolveVisible={resolveVisible}
               containsActiveRoute={activeGroupIds.has(s.id)}
+              fromPerspective={active.key}
             />
           ))}
 
@@ -367,13 +386,29 @@ function sectionAllowed(requires: Capability[] | undefined, caps: Set<Capability
 function RouteItem({
   to,
   children,
+  fromPerspective,
 }: {
   id: string;
   to: string;
   children: ReactNode;
+  /**
+   * Carried as navigation state, same as SideRail's own Settings navigation.
+   * Harmless for a route under this perspective's own path prefix
+   * (PerspectiveProvider resolves it directly and never reads this state) —
+   * load-bearing for one that isn't, like Due Diligence's routes, which are
+   * reachable from both Finance and Legal and can't live under either one's
+   * own prefix.
+   */
+  fromPerspective?: string;
 }): JSX.Element {
   return (
-    <Link component={RouterLink} to={to} color="inherit" underline="none">
+    <Link
+      component={RouterLink}
+      to={to}
+      state={fromPerspective ? { fromPerspective } : undefined}
+      color="inherit"
+      underline="none"
+    >
       {children}
     </Link>
   );
@@ -391,6 +426,7 @@ function SectionNode({
   section,
   resolveVisible,
   containsActiveRoute,
+  fromPerspective,
 }: {
   section: PerspectiveSection;
   resolveVisible: (section: PerspectiveSection) => boolean;
@@ -404,6 +440,8 @@ function SectionNode({
    * navigation, and closing it again is the user's business.
    */
   containsActiveRoute: boolean;
+  /** The perspective this section is rendered under — see RouteItem. */
+  fromPerspective: string;
 }): JSX.Element | null {
   if (section.children && section.children.length > 0) {
     const visible = section.children.filter((c) => resolveVisible(c));
@@ -417,7 +455,15 @@ function SectionNode({
     // child's name vanishes from the rail until the second one arrives.
     if (visible.length === 1 && !section.alwaysGroup) {
       const only = visible[0];
-      return <LeafItem id={only.id} label={section.label} icon={section.icon} to={only.path} />;
+      return (
+        <LeafItem
+          id={only.id}
+          label={section.label}
+          icon={section.icon}
+          to={only.path}
+          fromPerspective={fromPerspective}
+        />
+      );
     }
 
 
@@ -453,6 +499,7 @@ function SectionNode({
       icon={section.icon}
       to={section.path}
       href={section.externalUrl}
+      fromPerspective={fromPerspective}
     />
   );
 }
@@ -471,6 +518,7 @@ function LeafItem({
   icon: Icon,
   to,
   href,
+  fromPerspective,
 }: {
   id: string;
   label: string;
@@ -480,6 +528,8 @@ function LeafItem({
   // active-highlighted: no route of ours is current once the user is over
   // there, and highlighting it would claim otherwise.
   href?: string;
+  /** The perspective this leaf is rendered under — see RouteItem. */
+  fromPerspective?: string;
 }): JSX.Element {
   const item = (
     <Sidebar.Item id={id}>
@@ -509,7 +559,7 @@ function LeafItem({
     );
   }
   return to ? (
-    <RouteItem id={id} to={to}>
+    <RouteItem id={id} to={to} fromPerspective={fromPerspective}>
       {item}
     </RouteItem>
   ) : (
