@@ -44,7 +44,7 @@ import ParEmptyState from "../components/ParEmptyState";
 import { isDeadlinePassed } from "../util/parDeadline";
 import type { Par360ReviewRequest } from "../api/types";
 
-// Me → Performance → Provide 360° Feedback: par-app's own tab name
+// People Ops → Performance → Provide 360° Feedback: par-app's own tab name
 // (OngoingCycleView.tsx's ParCycleViewTabs.PROVIDETHREESIXTYREVIEWS) —
 // respond to the requests other employees (or their leads) sent you as a
 // reviewer, or offer feedback nobody asked for. par-app's
