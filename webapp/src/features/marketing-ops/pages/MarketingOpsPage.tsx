@@ -312,12 +312,12 @@ function OperationTile({
         // breathing room; leaving it at the top dumps it all under the last link,
         // which is what reads as a hole.
         !feature && { justifyContent: "center" },
-        // The page's only brand wash, on the page's only feature tile. Same two
-        // radial pools the app paints on the body canvas in brandTheme.ts, at the
-        // same alphas — so it belongs to the product rather than to this page. The
-        // alphas rise in dark mode for the reason they do there too: the pools
-        // vanish against #0C0C0E otherwise. `palette.mode` is unreliable under
-        // CssVars, hence applyStyles.
+        // A two-pool radial wash on the page's only feature tile. This used to
+        // mirror the same pools the app painted on the body canvas; that canvas
+        // treatment left with the brand layer when Oxygen's themes became the
+        // shipped ones, so this is now local to this tile. The alphas rise in
+        // dark mode because the pools otherwise vanish against a near-black
+        // ground. `palette.mode` is unreliable under CssVars, hence applyStyles.
         feature &&
           ((t) => ({
             "&::before": {
