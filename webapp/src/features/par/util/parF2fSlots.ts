@@ -65,6 +65,11 @@ export function generateAvailableTimeSlots(date: string, freeBusy: ParFreeBusyRe
       const slotEnd = new Date(slotStart);
       slotEnd.setMinutes(slotEnd.getMinutes() + 30);
 
+      // Starting from the current hour still lets in one elapsed slot when
+      // "now" is partway through it (e.g. 13:15 → the 13:00 slot is already
+      // in the past).
+      if (isToday && slotStart.getTime() <= today.getTime()) continue;
+
       const overlapsBusy = busySlots.some(
         (busy) => slotStart.getTime() < busy.end && slotEnd.getTime() > busy.start,
       );

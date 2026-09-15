@@ -60,7 +60,14 @@ export default function ParDateField({
       disabled={disabled}
       error={error}
       helperText={helperText}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        // min/max on a native date input only constrain the calendar widget
+        // — typing a value directly bypasses them, and neither consumer's
+        // backend re-validates the range. Reject rather than pass through.
+        const v = e.target.value;
+        if (v && ((min && v < min) || (max && v > max))) return;
+        onChange(v);
+      }}
       inputRef={inputRef}
       slotProps={{
         inputLabel: label ? { shrink: true } : undefined,

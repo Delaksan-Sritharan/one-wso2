@@ -91,4 +91,11 @@ describe("generateAvailableTimeSlots", () => {
     const slots = generateAvailableTimeSlots("2026-03-10", noBusy);
     expect(new Date(slots[0].start).getHours()).toBe(13);
   });
+
+  it("excludes the current partial hour's slot once it has already elapsed", () => {
+    vi.setSystemTime(new Date(2026, 2, 10, 13, 15, 0));
+    const slots = generateAvailableTimeSlots("2026-03-10", noBusy);
+    // The 13:00 slot started before 13:15 "now" — only 13:30 onward is offered.
+    expect(slots[0].label).toBe("1:30 PM - 2:00 PM");
+  });
 });
