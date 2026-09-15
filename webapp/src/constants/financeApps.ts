@@ -30,6 +30,7 @@
 import { CreditCardIcon, ReceiptTextIcon } from "@wso2/oxygen-ui-icons-react";
 import { CC_PATH } from "@features/finance/cc/ccPaths";
 import { expenseFinancePaths } from "@features/finance/expense/expenseFinancePaths";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import type { MenuApp } from "@constants/appMenu";
 
 /**
@@ -69,9 +70,47 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
     key: "expense",
     name: "Expense Claims",
     icon: ReceiptTextIcon,
-    purpose: "File a new expense claim.",
+    purpose: "File an expense claim, track the ones you submitted, and decide on the ones waiting on you.",
     items: [
-      { id: "expense-new", label: "New Claim", desc: "File a new expense claim.", path: expenseFinancePaths.new },
+      // New Claim is held behind a preview flag: Me → Claims already offers a
+      // new-claim flow, and showing a second entry point under Finance before
+      // the two are reconciled would leave people with two ways in and no way
+      // to tell which one they want.
+      //
+      // Spread in rather than filtered out, so with the flag off the item does
+      // not exist at all — the rail sections and favourites both derive from
+      // this list. It is NOT the whole story: the Finance overview builds its
+      // tiles by hand and asks `useFinanceGate` by item id, so that surface is
+      // gated there too.
+      //
+      // The flag is on the ITEM, not the app. Claim History has no duplicate
+      // under Me to reconcile — the Me-side history is a different screen on a
+      // different route — so hiding the whole app would hold back something
+      // that is ready.
+      ...(isPreviewEnabled("expenseSubmitter")
+        ? [
+            { id: "expense-new", label: "New Claim", desc: "File a new expense claim.", path: expenseFinancePaths.new },
+          ]
+        : []),
+      { id: "expense-history", label: "Claim History", desc: "Claims you have submitted, and where each one has got to.", path: expenseFinancePaths.history },
+      // Approving sits beside filing, where the source app's own sidebar keeps
+      // it — and in its order, lead before finance, which is the order a claim
+      // travels. Each entry stands on its own backend flag, so somebody holding
+      // both sees both and somebody holding neither sees neither.
+      {
+        id: "expense-lead-approvals",
+        label: "Lead Approvals",
+        desc: "Expense claims from the people you lead, waiting on your decision.",
+        requires: ["lead", "admin"],
+        path: expenseFinancePaths.leadApprovals,
+      },
+      {
+        id: "expense-finance-approvals",
+        label: "Finance Approvals",
+        desc: "Expense claims that passed their lead and are waiting on finance.",
+        requires: ["lead", "admin"],
+        path: expenseFinancePaths.financeApprovals,
+      },
     ],
   },
   {
@@ -108,8 +147,17 @@ export const FINANCE_ITEM_IDS: ReadonlySet<string> = new Set([
 // Eyebrow descriptors for FinanceShell, derived from the registry above so the
 // chip on every finance screen can't drift from the app's own name and icon.
 function eyebrowFor(key: string): { icon: MenuApp["icon"]; label: string } {
-  const app = FINANCE_APPS.find((a) => a.key === key)!;
-  return { icon: app.icon, label: app.name };
+  // No `!` here. An app can legitimately be absent from the registry — a
+  // preview feature whose flag is off is not in the list at all — and this
+  // runs at module load, so asserting would take the whole app down with a
+  // TypeError before anything rendered, not just lose a chip.
+  //
+  // The fallback is never seen in practice: if an app is hidden, the screens
+  // that wear its eyebrow are unreachable too.
+  const app = FINANCE_APPS.find((a) => a.key === key);
+  return app
+    ? { icon: app.icon, label: app.name }
+    : { icon: ReceiptTextIcon, label: "Finance" };
 }
 
 export const FINANCE_EYEBROW = {

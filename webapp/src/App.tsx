@@ -22,13 +22,24 @@ import SettingsPage from "@features/settings/pages/SettingsPage";
 import MenuHomePage from "@features/menu/pages/MenuHomePage";
 import OrgChartPage from "@features/org-chart/pages/OrgChartPage";
 import AuthGuard from "@layouts/AuthGuard";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import AppLayout from "@layouts/AppLayout";
 import PeopleOpsPage from "@features/people-ops/pages/PeopleOpsPage";
 import ActiveEmployeesReportPage from "@features/people-ops/pages/ActiveEmployeesReportPage";
 import ResignationsReportPage from "@features/people-ops/pages/ResignationsReportPage";
 import OrgStructurePage from "@features/people-ops/pages/OrgStructurePage";
+import MySubscriptionsPage from "@features/subscriptions/pages/MySubscriptionsPage";
+import ManageSubscriptionsPage from "@features/subscriptions/pages/ManageSubscriptionsPage";
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
+import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par/pages/ParGroupPage";
+// Lazy on purpose, same reasoning as the leave report tabs below —
+// react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
+// transitively, and only someone who opens /people-ops/performance needs them.
+const ParEmployeeFeedbackTab = lazy(() => import("@features/par/pages/ParEmployeeFeedbackTab"));
+const ParRequestFeedbackTab = lazy(() => import("@features/par/pages/ParRequestFeedbackTab"));
+const ParProvideFeedbackTab = lazy(() => import("@features/par/pages/ParProvideFeedbackTab"));
+const ParHistoryTab = lazy(() => import("@features/par/pages/ParHistoryTab"));
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import FinancePage from "@features/finance/pages/FinancePage";
@@ -90,6 +101,7 @@ import CcHistoryPage from "@features/finance/cc/pages/CcHistoryPage";
 import CcSettingsPage from "@features/finance/cc/pages/CcSettingsPage";
 import ExpenseNewClaimPage from "@features/finance/expense/pages/ExpenseNewClaimPage";
 import ExpenseSubmitterPage from "@features/finance/expense/submitter/ExpenseSubmitterPage";
+import ExpenseClaimHistoryPage from "@features/finance/expense/history/ExpenseClaimHistoryPage";
 import ExpenseClaimsTab from "@features/finance/expense/pages/ExpenseHistoryPage";
 import ClaimApprovalPage, {
   ClaimApprovalIndex,
@@ -98,6 +110,20 @@ import ClaimApprovalPage, {
 import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
+import LegalPage from "@features/legal/pages/LegalPage";
+import PartnersListPage from "@features/due-diligence/partners/pages/PartnersListPage";
+import PartnerPendingPage from "@features/due-diligence/partners/pages/PartnerPendingPage";
+import PartnerDashboardPage from "@features/due-diligence/partners/pages/PartnerDashboardPage";
+import TradeReferencesListPage from "@features/due-diligence/trade-references/pages/TradeReferencesListPage";
+import TradeReferenceDashboardPage from "@features/due-diligence/trade-references/pages/TradeReferenceDashboardPage";
+import TradeReferencePendingPage from "@features/due-diligence/trade-references/pages/TradeReferencePendingPage";
+import TradeReferenceRejectedPage from "@features/due-diligence/trade-references/pages/TradeReferenceRejectedPage";
+import TradeReferenceDeactivatedPage from "@features/due-diligence/trade-references/pages/TradeReferenceDeactivatedPage";
+import DueDiligencePreferencesPage from "@features/due-diligence/preferences/pages/PreferencesPage";
+import ViewPdfPage from "@features/due-diligence/shared/pages/ViewPdfPage";
+import ViewImagePage from "@features/due-diligence/shared/pages/ViewImagePage";
+import ExpenseApprovalsScreen from "@features/finance/expense/approvals/ExpenseApprovalsScreen";
+import ExpenseLeadApprovalsScreen from "@features/finance/expense/approvals/ExpenseLeadApprovalsScreen";
 
 export default function App() {
   return (
@@ -217,7 +243,28 @@ export default function App() {
           </Route>
           <Route path="me/claims/expense/new" element={<ExpenseNewClaimPage />} />
           <Route path="me/claims/opd/new" element={<OpdNewClaimPage />} />
-          <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
+          {/* Behind the same preview flag as its menu entry. Hiding only the
+              entry would leave the page reachable by anyone with the URL, which
+              is not what "not released yet" means. */}
+          {isPreviewEnabled("expenseSubmitter") && (
+            <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
+          )}
+          {/* Not behind that flag. The preview holds back a SECOND way to file
+              a claim until it is reconciled with Me → Claims; reading what you
+              have already filed has no such duplicate to reconcile. */}
+          <Route path="finance/expense-claims/history" element={<ExpenseClaimHistoryPage />} />
+          {/* Approving sits beside filing, where the source app's sidebar keeps
+              it — one entry per stage, on the source's own two URLs. Each screen
+              gates itself on its own flag, so a typed URL is no more revealing
+              than the menu entry it belongs to. */}
+          <Route
+            path="finance/expense-claims/lead-approvals"
+            element={<ExpenseLeadApprovalsScreen />}
+          />
+          <Route
+            path="finance/expense-claims/finance-approvals"
+            element={<ExpenseApprovalsScreen stage="FINANCE" />}
+          />
           <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
           <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
           <Route path="finance/cc/pending" element={<CcPendingPage />} />
@@ -232,6 +279,75 @@ export default function App() {
               canvas) — the functional spec and the deviation list live in
               docs/ported-apps/org-chart.md. */}
           <Route path="people-ops/org-chart" element={<OrgChartPage />} />
+          {/* People Ops → Subscriptions: PickMe Commute and LaaS, ported from
+              the digiops-hr subscription-app — until now a mobile microapp
+              with no web view at all. Spec and deviations in
+              docs/ported-apps/subscription-app.md.
+
+              Neither route is guarded here, and the manage route's absence of
+              a guard is deliberate rather than an oversight: the service's own
+              admin groups decide it, and SubscriptionsShell turns a refusal
+              into an explanation. Someone who types the URL gets a sentence
+              telling them who to ask, not a blank page — and the backend
+              refuses the calls regardless. */}
+          <Route path="people-ops/subscriptions" element={<MySubscriptionsPage />} />
+          <Route
+            path="people-ops/subscriptions/manage"
+            element={<ManageSubscriptionsPage />}
+          />
+          {/* People Ops → PAR: the employee half of par-app, ported one screen
+              at a time. Tab names match par-app's own OngoingCycleView tab bar
+              (Employee Feedback / Request 360° Feedback / Provide 360°
+              Feedback / F2F) rather than invented ones; F2F isn't ported yet.
+              See docs/ported-apps/par-app.md. Not admin-gated — every employee
+              has their own PAR, same as Org Chart and Subscriptions above.
+              Behind the same preview flag as its rail entry — hiding only the
+              entry would leave every tab reachable by URL. */}
+          {isPreviewEnabled("par") && (
+            <Route path="people-ops/performance" element={<ParGroupPage />}>
+              <Route index element={<ParGroupIndex />} />
+              {/* Employee Feedback and Request 360° are hidden from a leadless
+                  employee entirely in the source (OngoingCycleView.tsx), not
+                  merely disabled — ParRequiresLeadRoute enforces that at the
+                  route, the same way the tab bar itself is filtered. */}
+              <Route
+                path="employee-feedback"
+                element={
+                  <ParRequiresLeadRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParEmployeeFeedbackTab />
+                    </Suspense>
+                  </ParRequiresLeadRoute>
+                }
+              />
+              <Route
+                path="request-360"
+                element={
+                  <ParRequiresLeadRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParRequestFeedbackTab />
+                    </Suspense>
+                  </ParRequiresLeadRoute>
+                }
+              />
+              <Route
+                path="provide-360"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParProvideFeedbackTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="history"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParHistoryTab />
+                  </Suspense>
+                }
+              />
+            </Route>
+          )}
           {/* People Ops reports. Admin-only, but enforced by the backend and
               explained by PeopleOpsShell — there is no route-level guard, so
               a non-admin reaching this URL gets the shell's "no access"
@@ -370,6 +486,40 @@ export default function App() {
               menu app. One page, as the original was. The functional spec and
               the deviation list live in docs/ported-apps/menu-app.md. */}
           <Route path="me/menu" element={<MenuHomePage />} />
+          {/* Legal perspective — currently just a second entry point into Due
+              Diligence, alongside Finance (see the finance/ routes below and
+              DUE_DILIGENCE_APPS). */}
+          <Route path="legal" element={<LegalPage />} />
+          {/* Due Diligence — ported from digiops-finance/apps/due_diligence's
+              admin-app. Routes live OUTSIDE both the Finance and Legal path
+              prefixes (same reason /settings does): a screen reachable from
+              two different rails can't itself live under either one's own
+              prefix. See DUE_DILIGENCE_APPS and SideRail's fromPerspective
+              navigation state for how each rail stays selected once inside. */}
+          <Route path="due-diligence" element={<Navigate to="/due-diligence/partners" replace />} />
+          <Route path="due-diligence/partners" element={<PartnersListPage />} />
+          <Route path="due-diligence/partners/pending/:id" element={<PartnerPendingPage />} />
+          <Route path="due-diligence/partners/:id/:tabName" element={<PartnerDashboardPage />} />
+          <Route path="due-diligence/trade-references" element={<TradeReferencesListPage />} />
+          <Route
+            path="due-diligence/trade-references/pending/:linkId"
+            element={<TradeReferencePendingPage />}
+          />
+          <Route
+            path="due-diligence/trade-references/rejected/:companyId/:linkId"
+            element={<TradeReferenceRejectedPage />}
+          />
+          <Route
+            path="due-diligence/trade-references/deactivated/:linkId"
+            element={<TradeReferenceDeactivatedPage />}
+          />
+          <Route
+            path="due-diligence/trade-references/:companyId/:linkId"
+            element={<TradeReferenceDashboardPage />}
+          />
+          <Route path="due-diligence/preferences" element={<DueDiligencePreferencesPage />} />
+          <Route path="due-diligence/view-pdf" element={<ViewPdfPage />} />
+          <Route path="due-diligence/view-image" element={<ViewImagePage />} />
           {/* Catch-all → landing */}
           <Route path="*" element={<Navigate to={landingPath()} replace />} />
         </Route>

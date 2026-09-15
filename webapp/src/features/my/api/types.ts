@@ -158,54 +158,6 @@ export interface BankAccountsResponse {
   count: number;
 }
 
-// PAR (Performance Appraisal Review) app types. Subset of
-// digiops-hr/apps/par-app backend modules/types/types.bal — only fields
-// we render in the Connected apps' review row today.
-
-export type ParCycleStatus =
-  | "PENDING"
-  | "PENDING_QUOTA"
-  | "OPEN"
-  | "CLOSED"
-  | "FAILED";
-
-export type ParEmployeeStatus = "PENDING" | "DRAFT" | "SHARED" | "SHARED_BLOCKED";
-export type ParLeadStatus = "PENDING" | "DRAFT" | "SHARED";
-export type ParF2fStatus = "PENDING" | "SCHEDULED" | "COMPLETED";
-export type ParEmployeeAcceptanceStatus = "PENDING" | "ACCEPTED" | "REJECTED";
-
-export interface ParCycle {
-  parCycleId: number;
-  parCycleName: string;
-  parCycleStartDate: string;
-  parCycleEndDate: string;
-  parEvaluationStartDate: string;
-  parEvaluationEndDate: string;
-  // Per-stage deadlines. Matches the four stages the employee moves
-  // through (self-eval → 360 → lead → F2F).
-  parEmployeeDeadline: string;
-  parThreeSixtyRatingDeadline: string;
-  parLeadDeadline: string;
-  parF2FDeadline: string;
-  parSpecialRatingDeadline?: string;
-  parCycleStatus: ParCycleStatus;
-}
-
-// ParRating carries many fields (self-eval content, lead comments, F2F
-// status, 360 reviewers, etc.); we only pick the ones the four-stage
-// Performance & growth block surfaces. Additional fields can be added
-// on demand when a detail view lands.
-export interface ParRating {
-  parRatingId: number;
-  parCycleId: number;
-  parEmployeeEmail: string;
-  parEmployeeStatus: ParEmployeeStatus;
-  parLeadStatus: ParLeadStatus;
-  parF2fStatus: ParF2fStatus;
-  parF2fDate?: string;
-  parEmployeeAcceptanceStatus?: ParEmployeeAcceptanceStatus;
-}
-
 // Promotion-app /employee-info response. Mirrors digiops-hr/apps/promotion
 // backend/types.bal EmployeeInfo (outer) + EmployeeInfoWithLead (inner).
 // All string? fields default to "" server-side, so treat "" the same as
