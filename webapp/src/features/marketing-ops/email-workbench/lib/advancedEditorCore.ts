@@ -148,6 +148,11 @@ export function normalizeBoldSpans(root: Element): void {
     const decls = (span.getAttribute('style') || '').split(';').map(s => s.trim()).filter(Boolean)
     if (decls.length !== 1 || !BOLD_WEIGHT_RE.test(decls[0])) return
     const strong = span.ownerDocument.createElement('strong')
+    // Carry over everything except style (already fully consumed above) — class, id, lang, data-*,
+    // etc. — so a span that also served as a styling/metadata hook doesn't silently lose it.
+    Array.from(span.attributes).forEach(({ name, value }) => {
+      if (name !== 'style') strong.setAttribute(name, value)
+    })
     while (span.firstChild) strong.appendChild(span.firstChild)
     span.replaceWith(strong)
   })

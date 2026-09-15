@@ -189,10 +189,14 @@ export default function PreviewDialog({
           // rendering), and a theme-following backdrop would change how the edges read.
           bgcolor: "#f0f0f0",
           display: "flex",
-          justifyContent: "center",
-          // Centers the desktop/mobile frame too, but only matters visually for a custom
-          // height shorter than the gutter — desktop/mobile stay at height:100% either way.
-          alignItems: "center",
+          // flex-start, not center: centering a frame that's LARGER than the gutter pushes half its
+          // overflow to the start side (negative offset), which `overflow: auto` can't scroll to —
+          // that half of an oversized custom preview would be unreachable. Start-aligning the
+          // container and giving the frame `margin: auto` (below) gets the best of both: auto margins
+          // center it when it fits, and collapse to 0 (i.e. start-aligned, fully scrollable) when it's
+          // bigger than the gutter.
+          justifyContent: "flex-start",
+          alignItems: "flex-start",
           // Custom sizes can exceed the dialog's own viewport in either axis — scroll the
           // gutter rather than clipping or squashing the frame to fit.
           overflow: "auto",
@@ -212,6 +216,10 @@ export default function PreviewDialog({
             width: device === "mobile" ? MOBILE_W : device === "custom" ? customW : "100%",
             height: device === "custom" ? customH : "100%",
             flexShrink: 0,
+            // Auto margins center the frame within the now start-aligned gutter for any fixed-size
+            // mode (mobile's fixed 380px, or a custom size) — desktop stays 0 since it's width:100%
+            // and has no room to center within anyway.
+            m: device === "desktop" ? 0 : "auto",
             border: "none",
             bgcolor: "#fff",
             boxShadow: device === "desktop" ? "none" : "0 0 24px rgba(0,0,0,0.15)",
