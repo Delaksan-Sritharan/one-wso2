@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { Box, Button, Card, Typography } from "@wso2/oxygen-ui";
+import { Box, Button, Card, Divider, Typography } from "@wso2/oxygen-ui";
 import {
   ArrowLeftIcon,
   BarChart3,
@@ -72,7 +72,7 @@ export default function UmtLocked() {
         </Box>
       </Box>
 
-      <Box sx={{ height: "1px", bgcolor: "divider", my: 2.25 }} />
+      <Divider sx={{ my: 2.25 }} />
 
       <Typography
         component="h3"
@@ -128,7 +128,7 @@ export default function UmtLocked() {
         ))}
       </Box>
 
-      <Box sx={{ height: "1px", bgcolor: "divider", my: 2.25 }} />
+      <Divider sx={{ my: 2.25 }} />
 
       {/* /me is available to every authenticated employee, so it is a safe exit. */}
       <Button

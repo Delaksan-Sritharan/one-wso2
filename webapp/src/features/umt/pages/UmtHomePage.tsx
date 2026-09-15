@@ -19,6 +19,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  Divider,
   Stack,
 } from "@wso2/oxygen-ui";
 import { Pause, RefreshCw, Rocket, CheckCircle, Plus } from "@wso2/oxygen-ui-icons-react";
@@ -132,16 +133,15 @@ function UmtDashboardBody() {
             />
           </Box>
 
-          <Box
+          <Divider
+            orientation="vertical"
             aria-hidden="true"
             sx={{
-              bgcolor: "divider",
               bottom: 0,
               display: { xs: "none", md: "block" },
               left: "50%",
               position: "absolute",
               top: 0,
-              width: "1px",
             }}
           />
 
