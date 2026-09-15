@@ -21,7 +21,6 @@ import {
   CATEGORY_ORDER,
   hasMergeField,
   SPACER_SIZES,
-  TEXT_COLORS,
   visibleBlocks,
   type BlockDef,
 } from "../lib/advancedEditorCore";
@@ -80,7 +79,6 @@ export interface EditorInspectorProps {
   linkUrl: string;
   onDeselect: () => void;
   onRichFmt: (cmd: "bold" | "italic" | "underline") => void;
-  onRichColor: (key: string) => void;
   onOpenLinkEditor: (initialUrl: string) => void;
   onLinkUrlChange: (v: string) => void;
   onApplyLink: () => void;
@@ -114,7 +112,6 @@ export default function EditorInspector({
   linkUrl,
   onDeselect,
   onRichFmt,
-  onRichColor,
   onOpenLinkEditor,
   onLinkUrlChange,
   onApplyLink,
@@ -220,39 +217,6 @@ export default function EditorInspector({
                     <Link2 size={16} />
                   </IconButton>
                 </Tooltip>
-              </Box>
-
-              <Typography sx={labelSx}>Text color</Typography>
-              <Box sx={{ display: "flex", gap: 0.75, mb: 1.5 }}>
-                {TEXT_COLORS.map((c) => (
-                  <Tooltip key={c.key} title={c.n} arrow>
-                    <Box
-                      component="button"
-                      type="button"
-                      aria-label={c.n}
-                      aria-pressed={sel.color === c.v}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => onRichColor(c.key)}
-                      sx={{
-                        width: 22,
-                        height: 22,
-                        p: 0,
-                        borderRadius: "50%",
-                        cursor: "pointer",
-                        border: 2,
-                        borderColor: sel.color === c.v ? "primary.main" : "divider",
-                        bgcolor: c.v ?? "background.paper",
-                        // "Default" (no colour) renders as a diagonal-slash circle rather than a
-                        // colour fill, so it reads as "no override" instead of looking like a colour.
-                        backgroundImage: c.v
-                          ? undefined
-                          : "linear-gradient(to top right, transparent 46%, currentColor 47%, currentColor 53%, transparent 54%)",
-                        color: c.v ? undefined : "text.disabled",
-                        "&:hover": { borderColor: "primary.main" },
-                      }}
-                    />
-                  </Tooltip>
-                ))}
               </Box>
 
               {linkOpen && (
