@@ -409,7 +409,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     path: "/marketing-ops",
     sections: MARKETING_OPS_SECTIONS,
   },
-  // Security — the GRC platform's Risk Hub and Admin Console, lifted from
+  // Security — the GRC platform's Risk Hub, Audit Hub and Admin Console, lifted from
   // grc-tools rather than rewritten. Its own perspective: a different function,
   // and an authorization model no other perspective shares.
   //

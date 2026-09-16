@@ -79,12 +79,11 @@ declare global {
       // above.
       ONE_WSO2_DUE_DILIGENCE_BACKEND_URL?: string;
       // Base URL for the grc-tools grc-platform backend — the Security
-      // perspective. Optional/"not connected" like the others, but this
-      // backend needs changes of its own first: see apiConfig.ts.
-      // Base URL for the grc-tools grc-platform backend — the Security
-      // perspective. Keeps the SOURCE's key name rather than an ONE_WSO2_* one,
-      // because those screens are lifted rather than rewritten and a GRC
-      // deployment already publishes this exact key. See apiConfig.ts.
+      // perspective. Optional/"not connected" like the others, but that backend
+      // must accept this app's Asgardeo client id as an audience first. Keeps
+      // the SOURCE's key name rather than an ONE_WSO2_* one, because those
+      // screens are lifted rather than rewritten and a GRC deployment already
+      // publishes this exact key. See apiConfig.ts.
       GRC_PLATFORM_BACKEND_BASE_URL?: string;
       // Base URL of the leave-app frontend itself (not its backend) —
       // used to deep-link into flows this webapp doesn't replicate, like

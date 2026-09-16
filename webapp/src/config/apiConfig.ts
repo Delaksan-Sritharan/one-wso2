@@ -933,22 +933,28 @@ export const subscriptionServiceUrls = {
 };
 
 // ---------------------------------------------------------------------------
-// GRC Platform — the Security perspective (Risk Hub + Admin Console), lifted
-// from grc-tools/apps/grc-platform.
+// GRC Platform — the Security perspective (Risk Hub, Audit Hub and Admin
+// Console), lifted from grc-tools/apps/grc-platform.
 //
-// TWO THINGS ABOUT THIS BACKEND THAT NO SIBLING HERE SHARES, both of which must
-// be settled on the backend before any Security screen can load:
+// ONE THING ABOUT THIS BACKEND THAT NO SIBLING HERE SHARES, and it must be
+// settled on the backend before any Security screen can load: it verifies a
+// single AUTH_AUDIENCE (backend/internal/config/config.go loadIdPs), today the
+// GRC webapp's own Asgardeo client id. This app's is different, so every
+// request 401s with `token has invalid audience` until that accepts a set. A
+// second IdP entry is NOT an alternative — the runtime map is keyed by issuer
+// and both apps share one, so it would overwrite the first.
 //
-//   - It verifies a single AUTH_AUDIENCE (backend/internal/config/config.go
-//     loadIdPs), today the GRC webapp's own Asgardeo client id. This app's is
-//     different, so every request 401s until that accepts a set. A second IdP
-//     entry is NOT an alternative — the runtime map is keyed by issuer and both
-//     apps share one, so it would overwrite the first.
-//   - Its CORS allows exactly one origin and panics on "*" (middleware/cors.go),
-//     and that origin doubles as the email deep-link base.
+// CORS is NOT a second blocker, despite what that backend's own
+// middleware/cors.go suggests. It allows exactly one origin and panics on "*",
+// but it never reaches the browser: requests go through the Choreo gateway,
+// which answers the preflight itself and reflects the caller's origin. Measured
+// with an OPTIONS against stage — see docs/ported-apps/grc-security-lift.md.
+// The Go middleware only matters to a browser hitting the service directly,
+// bypassing the gateway.
 //
-// Note the Security screens authorize with the ID TOKEN, not the access token
-// every other backend here uses — see features/security/grc/shim.
+// These screens send THIS APP'S ACCESS TOKEN, like every other backend here —
+// not the ID token the GRC source sends. See features/security/grc/shim.
+//
 // GRC_PLATFORM_BACKEND_BASE_URL, NOT an ONE_WSO2_* name — the only key in this
 // file that breaks that convention, deliberately.
 //

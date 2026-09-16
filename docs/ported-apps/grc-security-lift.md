@@ -22,7 +22,7 @@ Nesting the fragments is what turns the source's `/risk/*`, `/audit/*` and
 per-route `PrivilegeGuard`s come along, including the deliberate absence of one
 on Risk Registers.
 
-Everything else was a mechanical import-alias rewrite across 31 files.
+Everything else was a mechanical import-alias rewrite across 108 files.
 
 **Security is on by default** — no preview flag. The perspective appears for
 everyone; the GRC backend's own privilege set decides what is inside it, and
@@ -50,6 +50,12 @@ wrong — the symptom would be specific and misleading: every Risk and Admin rou
 403s looking exactly like a missing permission, while `/me/privileges` itself
 succeeds. Decode both tokens with the dev debug panel before believing anything
 else.
+
+A comment in `config/apiConfig.ts` asserted the opposite — that these screens
+send the ID token — for several commits. The code never did; only the comment
+was wrong, and it has been corrected. Worth recording because of where it would
+have led: it is the first thing someone reads when a Security call 401s, and it
+would have sent them to swap tokens instead of at the audience.
 
 ## 3. Everything edited after copying
 
@@ -223,7 +229,33 @@ lifts, compiles, renders, and its data call is refused. Not introduced here.
 **⑲ Create Audit is 2,226 lines in one file.** Not a defect, but it is the
 largest single file in the port and the one most likely to be edited blind.
 
-### 4.5 What the Audit Hub lift got right that the others did not
+### 4.5 The copy is already drifting from source — measured
+
+A full sweep diffed all 176 lifted files against the source with the alias
+rewrite reversed. **161 were byte-identical**; 15 differed, and 14 of those are
+exactly E1–E6.
+
+The fifteenth was not an edit at all — `AddRisk.tsx` had gone **stale**. Upstream
+`fb294fa` (2026-09-15) landed after the risk module was copied and improved the
+attachment-failure message to name which files failed and why; our copy still
+said only "one or more". Refreshed from source with E1 re-applied, and verified
+by re-diffing: E1 is now the only difference.
+
+This is the cost of lifting, arriving on schedule rather than in theory, and it
+is worth naming precisely: **nothing warns you.** The copy compiles, tests pass,
+and the screens work — they are just a little behind, silently, and the gap only
+grows.
+
+Only a diff finds it, so repeat this one while both apps are live: for each file
+under `features/security/grc`, reverse the alias rewrite (`@features/security/grc/…`
+back to `@modules/`, `@components/`, and the two `shim/` paths to `@config/apiConfig`
+and `@hooks/useAuthApiClient`) and compare against the same path under
+`grc-tools/apps/grc-platform/webapp/src`. Everything should match except the
+files listed in §3 — those carry E1–E6. Anything else is drift.
+
+The audit module was copied after that same upstream fetch, so it is current.
+
+### 4.6 What the Audit Hub lift got right that the others did not
 
 **The source's own tests came across and pass.** `utils/frameworkRollup.test.ts`
 — 17 cases — needed only the alias rewrite. It is the only lifted file under
