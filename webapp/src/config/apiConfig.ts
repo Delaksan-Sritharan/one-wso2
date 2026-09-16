@@ -220,6 +220,13 @@ export const parServiceUrls = {
   // calling lead's own reports server-side (isLeadInActiveParCycle), not a
   // global send. MultiTeamSummary.tsx's "Send 360° Reminder" button.
   parSchedule360Reminders: () => `${parBackendUrl}/reminders/schedule-360-reminders`,
+  // GET .../special-rating-groups-quota?leadEmail= — SpecialRatingAllocationView's
+  // own fetchQuotaGroupRatings. Non-admin callers may only pass their own
+  // email (enforced server-side); leadEmail stays a required param here
+  // since the Lead Portal never omits it (that's the admin-only "everyone"
+  // view, out of scope for this portal).
+  parSpecialRatingAllocations: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups-quota?leadEmail=${encodeURIComponent(leadEmail)}`,
 };
 
 // Leave app backend (people-ops-suite/apps/leave-app). Its own service
