@@ -52,6 +52,9 @@ export function useLeadRatingUpdate(parCycleId: number | undefined) {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["par-rating", parCycleId, employeeEmail] }),
         qc.invalidateQueries({ queryKey: ["par-team-details"] }),
+        // A lead status / special-rating change also moves ParTeamSummary's
+        // own completion counts, shown back on the team-picker page.
+        qc.invalidateQueries({ queryKey: ["par-teams"] }),
       ]);
     },
   });

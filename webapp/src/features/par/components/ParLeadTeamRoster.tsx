@@ -100,9 +100,13 @@ export default function ParLeadTeamRoster({
 
   const selectedMembers = members.filter((m) => selectedIds.includes(m.parRatingId));
 
-  const handleCopyEmails = () => {
-    navigator.clipboard.writeText(selectedMembers.map((m) => m.parEmployeeEmail).join(", "));
-    showSuccess("Emails copied to clipboard");
+  const handleCopyEmails = async () => {
+    try {
+      await navigator.clipboard.writeText(selectedMembers.map((m) => m.parEmployeeEmail).join(", "));
+      showSuccess("Emails copied to clipboard");
+    } catch (err) {
+      showError(describeError(err));
+    }
   };
 
   const handleShareConfirmed = async () => {

@@ -2,7 +2,7 @@
 
 **Status:** the employee-facing half of par-app is ported and live under People Ops. The Lead Portal is
 partially ported — Direct Reports and Top 5%/20% Allocation are done; Additional Reports, Report
-Chain, and Employee History are not, planned for a follow-up PR (§8.6). Admin Portal and F2F
+Chain, and Employee History are not, planned for a follow-up PR (§9). Admin Portal and F2F
 scheduling are not started. Written from the source and cross-checked against the running staging app
 (screenshots) — this is the reference for verifying the port and for writing test cases against it,
 not a proposal.
@@ -27,8 +27,8 @@ as `ONE_WSO2_PAR_BACKEND_URL`.
 
 Every employee goes through a PAR cycle: write a self-assessment, take part in 360° feedback (both
 asking colleagues to review you and reviewing colleagues who asked you), and see your record once
-your lead has rated you. There is no separate people-management surface here — that's the Lead/Admin
-Portal, not yet ported (see §7).
+your lead has rated you. There is no separate people-management surface here — that's the Lead
+Portal (§8, partially ported) and the Admin Portal (not yet started — see §9).
 
 **Who sees which tabs** is decided by one fact: whether the employee has a lead
 (`OngoingCycleView.tsx`'s `employeeInfo.leadEmail !== null`, ported as `useParHasLead` reading
@@ -181,7 +181,7 @@ nothing else in this app has), and every `isAdminAuditViewOn`/`isAdminHistoryVie
 (force-edit-after-share, share-on-behalf-of-employee, admin comment) — those are Admin Portal, out of
 scope for this portal. Also not ported: "Sync an Employee" (`TeamSummary.tsx`'s temporary
 org-chart-search dialog for this cycle), and the "360 Reviews"/"F2F" sub-tabs `Review.tsx` also hosts
-alongside "Lead's Feedback" (§8.6).
+alongside "Lead's Feedback" (see §9).
 
 ### 8.2 Top 5%/20% Allocation (`ParLeadAllocationTab.tsx`)
 

@@ -189,7 +189,14 @@ export default function ParLeadAllocationTab() {
     );
   }
 
-  const groups = groupSpecialRatingAllocations(rows, searchQuery);
+  // groupSpecialRatingAllocations keeps every group regardless of match (it
+  // only flags which departments highlight) — source's own equivalent
+  // useMemo has the same shape, so its "No results" message never renders
+  // either. Filtered here instead of reproducing that dead code.
+  const groupedAllocations = groupSpecialRatingAllocations(rows, searchQuery);
+  const groups = searchQuery.trim()
+    ? groupedAllocations.filter((group) => group.departments.some((department) => department.highlight))
+    : groupedAllocations;
 
   return (
     <Stack spacing={2}>

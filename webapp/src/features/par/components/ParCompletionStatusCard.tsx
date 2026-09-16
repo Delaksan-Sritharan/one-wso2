@@ -16,9 +16,10 @@
 
 import { Box, LinearProgress, Typography } from "@wso2/oxygen-ui";
 
-// Ports CompletionStatusCard.tsx exactly — a name, a progress bar, and how
-// many are still pending (division by zero, e.g. an empty team, renders
-// LinearProgress's `value` as NaN; matches source, which has the same gap).
+// Ports CompletionStatusCard.tsx. Source divides by `total` unguarded (NaN
+// when it's 0); this port is reachable at zero both from an empty team and
+// from a search that matches no team, so it's clamped here rather than
+// reproduced.
 export default function ParCompletionStatusCard({
   name,
   completed,
@@ -35,7 +36,7 @@ export default function ParCompletionStatusCard({
       </Typography>
       <LinearProgress
         variant="determinate"
-        value={(completed * 100) / total}
+        value={total <= 0 ? 0 : Math.min((completed * 100) / total, 100)}
         sx={{ height: 15, borderRadius: 2 }}
       />
     </Box>
