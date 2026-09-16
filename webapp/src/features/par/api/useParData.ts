@@ -70,6 +70,22 @@ export function useParHasLead(workEmail: string | undefined, workEmailLoading: b
   };
 }
 
+/**
+ * Whether the signed-in employee should see the Lead Portal — par-app's own
+ * `Role.TEAM_LEAD` gate on `/lead-portal` (route.ts), sourced from this same
+ * `isTeamLead` field. Unlike useParHasLead, this fails CLOSED: hiding a nav
+ * item from someone who isn't a lead has no downside, whereas showing it to
+ * everyone while the lookup is in flight would flash an empty Lead Portal
+ * for every non-lead on every load.
+ */
+export function useParIsTeamLead(workEmail: string | undefined): { isTeamLead: boolean; isLoading: boolean } {
+  const info = useParEmployeeInfo(workEmail);
+  return {
+    isTeamLead: info.isSuccess && info.data.isTeamLead,
+    isLoading: info.isLoading,
+  };
+}
+
 // Returns the caller's currently-OPEN par cycle (if any). Non-lead/non-admin
 // callers can only query their own email; backend enforces that.
 export function useActiveParCycle(workEmail: string | undefined) {

@@ -24,6 +24,10 @@
 // (`employeeInfo?.leadEmail !== null`).
 export interface ParEmployeeInfo {
   leadEmail: string | null;
+  // par-app backend's isLeadInActiveParCycle, plus an "any active direct
+  // reports" fallback — scoped to the active PAR cycle, so this is false
+  // whenever there is none, even for someone who leads a team.
+  isTeamLead: boolean;
 }
 
 export type ParCycleStatus =
@@ -238,4 +242,18 @@ export interface ParRatingMinimal {
 // backend type — absent/empty roster reads the same as "no members yet".
 export interface ParTeamDetails extends ParTeamSummary {
   details: ParRatingMinimal[] | null;
+}
+
+// One row of GET /par-cycles/{cycleId}/special-rating-groups-quota — mirrors
+// service.bal's own SpecialRatingAllocation record exactly. Rows share a
+// parQuotaId across every (BU, department, team) combination the quota
+// group covers; SpecialRatingAllocationView groups by it client-side.
+export interface ParSpecialRatingAllocation {
+  parBusinessUnit: string;
+  parDepartment: string;
+  parTeam: string;
+  parQuotaId: number;
+  parSpecialQuotaName: string;
+  parTop5Quota: number;
+  parTop20Quota: number;
 }

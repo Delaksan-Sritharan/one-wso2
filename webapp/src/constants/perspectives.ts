@@ -162,11 +162,10 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
       },
     ],
   },
-  // par-app's employee half, ported one screen at a time — see
-  // docs/ported-apps/par-app.md. `alwaysGroup` for the same reason Master
-  // Data below carries it: this holds only one item today (Employee
-  // Portal) but more are coming (F2F scheduling), so it stays a named
-  // group rather than a bare leaf that would need reshaping later. Not
+  // par-app, ported one screen at a time — see docs/ported-apps/par-app.md.
+  // `alwaysGroup` for the same reason Master Data below carries it: a named
+  // group rather than a bare leaf, since more items (F2F scheduling; the
+  // rest of Lead Portal) are still coming. Employee Portal isn't
   // `requires: ["admin"]` — every employee has their own PAR, same as Org
   // Chart and Subscriptions above. Spread in rather than filtered out, so
   // with the flag off the entry does not exist at all.
@@ -187,6 +186,16 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
               id: "par-employee-feedback",
               label: "Employee Portal",
               path: "/people-ops/performance",
+            },
+            // `requires: ["lead"]` is a coarse nav-visibility heuristic, same
+            // as My Team above — one-wso2's general "lead" privilege, not
+            // par-app's own PAR-cycle-scoped isTeamLead. ParRequiresTeamLeadRoute
+            // is what actually enforces access at the route.
+            {
+              id: "par-lead-portal",
+              label: "Lead Portal",
+              path: "/people-ops/performance/lead",
+              requires: ["lead"],
             },
           ],
         },
