@@ -413,16 +413,17 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
   // grc-tools rather than rewritten. Its own perspective: a different function,
   // and an authorization model no other perspective shares.
   //
-  // `access` follows the preview flag while `path` stays permanent — reachable
-  // by URL for whoever is testing it, unadvertised in the waffle, and excluded
-  // from reachablePerspectives() so it is neither a landing choice nor a
-  // favourite until it ships.
+  // `externallyGated` for the same reason as Legal and Marketing Ops: `access`
+  // only says the perspective is built, not that whoever opens it can use it.
+  // Here the gate is the GRC backend's own privilege set — someone holding no
+  // grant sees the perspective and is told plainly that they have none, which
+  // is the right answer for a surface people are told exists.
   {
     key: "security",
     label: "Security",
     icon: ShieldCheckIcon,
     externallyGated: true,
-    access: isPreviewEnabled("security"),
+    access: true,
     path: "/security",
     sections: [...appsToSections(SECURITY_APPS)],
   },

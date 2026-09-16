@@ -65,7 +65,8 @@ window.config = {
   // app at all: it must accept this app's Asgardeo client id as a valid
   // audience, and this app's origin for CORS. See
   // docs/ported-apps/grc-security-lift.md.
-  // ONE_WSO2_SECURITY_BACKEND_URL: "<your-grc-platform-backend-url>",
+  // Keeps the source's key name — see src/config/apiConfig.ts.
+  // GRC_PLATFORM_BACKEND_BASE_URL: "<your-grc-platform-backend-url>",
 
   // digiops-finance backend base URLs — the three apps in the Finance
   // perspective. Each is a separate Ballerina service with its own

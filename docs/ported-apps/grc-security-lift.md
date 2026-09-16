@@ -23,6 +23,17 @@ on Risk Registers.
 
 Everything else was a mechanical import-alias rewrite across 31 files.
 
+**Security is on by default** — no preview flag. The perspective appears for
+everyone; the GRC backend's own privilege set decides what is inside it, and
+someone holding no grant is told plainly that they have none rather than never
+seeing the perspective at all.
+
+**The backend URL keeps the source's config key**, `GRC_PLATFORM_BACKEND_BASE_URL`
+— the only key in `apiConfig.ts` that is not `ONE_WSO2_*`-prefixed. A GRC
+deployment already publishes it with this value, so a config copies across
+unchanged and there is one name to search for across both apps. Inventing a
+second name for one thing to satisfy a prefix would cost more than it bought.
+
 ## 2. The seam
 
 `shim/useAuthApiClient.ts` reproduces the source's hook signature, which is what

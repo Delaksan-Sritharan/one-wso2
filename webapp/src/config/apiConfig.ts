@@ -949,14 +949,16 @@ export const subscriptionServiceUrls = {
 //
 // Note the Security screens authorize with the ID TOKEN, not the access token
 // every other backend here uses — see features/security/grc/shim.
-// GRC_PLATFORM_BACKEND_BASE_URL is accepted as a fallback: that is the key a
-// GRC deployment already publishes, so a config copied across from one works
-// unchanged. ONE_WSO2_SECURITY_BACKEND_URL is the name to prefer here, matching
-// every other backend in this file.
+// GRC_PLATFORM_BACKEND_BASE_URL, NOT an ONE_WSO2_* name — the only key in this
+// file that breaks that convention, deliberately.
+//
+// The Security screens are the GRC source lifted rather than rewritten, so they
+// keep the source's own names throughout. A GRC deployment already publishes
+// this key with this value, which means a config can be copied across
+// unchanged and there is one name to search for across both apps. Renaming it
+// here would create a second name for one thing purely to satisfy a prefix.
 export const securityBackendUrl: string = (
-  window.config?.ONE_WSO2_SECURITY_BACKEND_URL ??
-  window.config?.GRC_PLATFORM_BACKEND_BASE_URL ??
-  ""
+  window.config?.GRC_PLATFORM_BACKEND_BASE_URL ?? ""
 ).replace(/\/+$/, "");
 
 export function isSecurityBackendConfigured(): boolean {
