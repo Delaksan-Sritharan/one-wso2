@@ -47,19 +47,25 @@ export interface SecurityGate {
 // them is the point of lifting; fixing them here would be a rewrite by another
 // name, and would put this app's answer out of step with the screens'.
 export function useSecurityGate(enabled = true): SecurityGate {
-  const risk = useRiskPrivileges();
-  const admin = useAdminPrivileges();
+  // `enabled` MUST reach the hooks, not just the derived state below. The side
+  // rail asks for this gate on every perspective, so passing it only to
+  // `isResolving` left both hooks fetching on every page load — for every user
+  // of this app, including everyone with no GRC access, who then saw the 401s
+  // in their console. Also gated on `configured`: with no backend URL there is
+  // nothing to call.
+  const active = enabled && isSecurityBackendConfigured();
+  const risk = useRiskPrivileges(active);
+  const admin = useAdminPrivileges(active);
 
-  const configured = isSecurityBackendConfigured();
-  const isResolving = enabled && configured && (risk.loading || admin.loading);
+  const isResolving = active && (risk.loading || admin.loading);
 
   const can = (privilege: string): boolean =>
     privilege.startsWith("RISK_") ? risk.can(privilege) : admin.can(privilege);
 
   const canSee = (itemId: string): boolean => {
-    // Fail closed while resolving, and for an id nobody mapped — an unmapped
-    // item is a registry mistake, not an invitation.
-    if (isResolving) return false;
+    // Fail closed while resolving, while inactive, and for an id nobody mapped —
+    // an unmapped item is a registry mistake, not an invitation.
+    if (!active || isResolving) return false;
     const required = SECURITY_ITEM_PRIVILEGE[itemId];
     return required ? can(required) : false;
   };

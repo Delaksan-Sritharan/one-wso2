@@ -52,7 +52,7 @@ else.
 
 ## 3. Everything edited after copying
 
-Four categories, and nothing else was touched.
+Five categories, and nothing else was touched.
 
 | # | Change | Why |
 |---|---|---|
@@ -60,6 +60,27 @@ Four categories, and nothing else was touched.
 | E2 | **Theme literals replaced** in 8 files | `#ffffff`/`#1a1a24`/`#1e1e1e` hardcoded to opt dialogs out of AcrylicOrange's glassmorphism. This app now defaults to WSO2Theme, whose dark canvas is navy `#0f172a` — those literals would sit as a visibly wrong shade, and a theme switch would strand them. Now `var(--oxygen-palette-background-default)`, which follows the active theme. CSS variables not `theme.palette.*`, because that accessor freezes the light scheme at first paint under CssVarsProvider |
 | E3 | **Error pages replaced** with one self-contained `Error403Page` | The source's build on a `@assets/error/*.svg` alias this app lacks, and assume GRC's shell. Here the page already sits inside this app's layout, so a full-bleed error screen would render inside the frame and read as broken rather than refused |
 | E4 | **`nav.ts` deleted** from both modules | The source's sidebar tables. This app's rail reads `securityApps.ts` instead; the labels, ids, ordering and privileges there are transcribed from these so the two can be diffed |
+| E5 | **An `enabled` parameter added** to `useRiskPrivileges` and `useAdminPrivileges` | See below — the one edit made for a difference in how this app mounts the code, rather than for something wrong with it |
+
+**E5 in full**, because it is the only change driven by this app's shape rather than
+the source's content. In GRC these hooks only ever mount inside the GRC app, so
+fetching on mount is free. Here `SideRail` asks for a Security gate on **every**
+perspective, to decide whether the Security entry is shown at all. So an
+unconditional fetch meant every user of this app — including everyone holding no
+GRC grant at all — fired `GET /me/privileges` twice and `GET /risks/me/involvement`
+once on every page load, and collected the 401s in their console.
+
+The parameter **defaults to `true`**, so all the lifted call sites — every
+`PrivilegeGuard`, `admin/routes.tsx`, `UsersPage` — are unchanged and behave
+exactly as they do in GRC; they only ever mount on a Security route, where the
+answer is wanted anyway. Only `useSecurityGate` passes `false`, and it passes
+`enabled && isSecurityBackendConfigured()`, so an unconfigured deployment also
+calls nothing. `loading` initialises to `enabled` rather than `true`: a disabled
+hook is not in flight, and a consumer waiting on `isResolving` would otherwise
+wait for a request that is never made.
+
+`useSecurityGate.test.tsx` pins this — that a disabled gate makes **no** request.
+It was mutation-tested: reverting the parameter fails two of its cases.
 
 Semantic colours — status chips, risk-level swatches, the heatmap — are **not**
 touched. They carry meaning, not theming.
@@ -167,7 +188,9 @@ backend blockers (audience, CORS origin, and whichever token carries `email`)
 still gate whether any of it loads at all.
 
 **No tests came across.** The source's tests reference its own aliases and hooks.
-The 1,303 passing here are this app's existing suite; the lifted code adds none.
+Of the 1,309 passing here, 1,303 are this app's existing suite and 6 are
+`useSecurityGate.test.tsx` — written for E5, covering only whether the gate
+fetches, not whether any lifted screen works. No lifted file is under test.
 
 **The Audit Hub is not included** — the agreed scope is Risk + Admin. Worth
 knowing that lifting changes that tradeoff: the objection was that porting its

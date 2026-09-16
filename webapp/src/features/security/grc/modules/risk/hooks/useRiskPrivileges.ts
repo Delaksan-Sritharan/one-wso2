@@ -58,12 +58,23 @@ export interface RiskPrivilegeState {
 // reports `allowAll: true` in true local-dev (no privilege store configured
 // on the backend), so this stays correct in that mode too — nothing here
 // assumes the backend is in any particular mode.
-export function useRiskPrivileges(): RiskPrivilegeState {
+// `enabled` is an ADDITION for One WSO2, not part of the source.
+//
+// In GRC this hook only ever mounts inside the GRC app, so firing on mount is
+// free. Here the side rail asks for a Security gate on every perspective, so an
+// unconditional fetch meant every user of this app — including everyone with no
+// GRC access at all — called this backend twice on every page load, and saw the
+// 401s in their console. Defaults to true so the lifted call sites (PrivilegeGuard,
+// the pages) are unchanged.
+export function useRiskPrivileges(enabled = true): RiskPrivilegeState {
   const authFetch = useAuthApiClient();
   const [privileges, setPrivileges] = useState<Set<string> | null>(new Set());
-  const [loading, setLoading] = useState(true);
+  // Starts false when disabled: nothing is in flight, so a consumer must not be
+  // told to wait for it.
+  const [loading, setLoading] = useState(enabled);
 
   useEffect(() => {
+    if (!enabled) return;
     if (!_promise) {
       _promise = Promise.all([
         authFetch(`${BACKEND_BASE_URL}/api/v1/me/privileges`)
@@ -92,7 +103,7 @@ export function useRiskPrivileges(): RiskPrivilegeState {
       cancelled = true;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // intentionally empty — _promise deduplicates across instances and renders
+  }, [enabled]); // _promise deduplicates across instances and renders
 
   const can = useCallback(
     (priv: string) => privileges === null || privileges.has(priv),

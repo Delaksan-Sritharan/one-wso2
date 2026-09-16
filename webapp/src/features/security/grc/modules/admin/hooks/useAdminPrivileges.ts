@@ -36,12 +36,14 @@ export interface AdminPrivilegeState {
 }
 
 // Fetches the current user's resolved privilege list from GET /api/v1/me/privileges.
-export function useAdminPrivileges(): AdminPrivilegeState {
+// `enabled` is an ADDITION for One WSO2 — see the note on useRiskPrivileges.
+export function useAdminPrivileges(enabled = true): AdminPrivilegeState {
   const authFetch = useAuthApiClient();
   const [privileges, setPrivileges] = useState<Set<string> | null>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
 
   useEffect(() => {
+    if (!enabled) return;
     if (!_promise) {
       _promise = authFetch(`${BACKEND_BASE_URL}/api/v1/me/privileges`)
         .then((res) => res.json() as Promise<{ privileges?: string[]; allowAll?: boolean }>)
@@ -62,7 +64,7 @@ export function useAdminPrivileges(): AdminPrivilegeState {
       cancelled = true;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // intentionally empty — _promise deduplicates across instances and renders
+  }, [enabled]); // _promise deduplicates across instances and renders
 
   const can = useCallback(
     (priv: string) => privileges === null || privileges.has(priv),
