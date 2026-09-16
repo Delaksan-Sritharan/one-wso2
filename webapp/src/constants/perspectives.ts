@@ -30,7 +30,7 @@ import {
   NetworkIcon,
   SatelliteDishIcon,
   ScaleIcon,
-  ShieldCheckIcon,
+  ShieldIcon,
   TicketIcon,
   UserRoundIcon,
   UserRoundMinusIcon,
@@ -447,7 +447,12 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     // inside the lifted tree, for no change a user could see.
     key: "security",
     label: "Security and Compliance",
-    icon: ShieldCheckIcon,
+    // The plain shield, not ShieldCheck — that one is Audit Hub's, transcribed
+    // from the GRC source's nav.ts, and the two rendered identically one rail
+    // row apart. Plain is the right glyph for the container anyway: Risk Hub
+    // adds an exclamation, Audit Hub a tick, and this holds both. It also
+    // matches the banded-shield launcher mark.
+    icon: ShieldIcon,
     externallyGated: true,
     access: true,
     path: "/security",
