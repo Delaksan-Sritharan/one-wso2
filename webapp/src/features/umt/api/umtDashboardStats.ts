@@ -25,14 +25,8 @@ export interface UmtDashboardStats {
 
 export type UmtDashboardDatum = { name: string; value: number };
 
-function count(counts: Record<string, number>, name: string): number {
+export function count(counts: Record<string, number>, name: string): number {
   return counts[name] ?? 0;
-}
-
-function buildCount(counts: Record<string, number>, name: string): number {
-  // Build-status casing has varied between typed source values and live payloads.
-  const matchingEntry = Object.entries(counts).find(([status]) => status.toUpperCase() === name);
-  return matchingEntry?.[1] ?? 0;
 }
 
 export function lifecycleChartData(stats: UmtDashboardStats): UmtDashboardDatum[] {
@@ -52,12 +46,12 @@ export function releaseChunkChartData(stats: UmtDashboardStats): UmtDashboardDat
   // The source presents every terminal or unavailable build outcome as Failed,
   // and treats a rebuild in progress as Building rather than a separate slice.
   const failed = ["FAILURE", "UNSTABLE", "ABORTED", "UNKNOWN", "NOT_BUILT", "CANCELLED", "NO_BUILD_JOB"]
-    .reduce((total, status) => total + buildCount(counts, status), 0);
+    .reduce((total, status) => total + count(counts, status), 0);
 
   return [
-    { name: "Pending", value: buildCount(counts, "PENDING") },
-    { name: "Building", value: buildCount(counts, "BUILDING") + buildCount(counts, "REBUILDING") },
-    { name: "Successful", value: buildCount(counts, "SUCCESS") },
+    { name: "Pending", value: count(counts, "PENDING") },
+    { name: "Building", value: count(counts, "BUILDING") + count(counts, "REBUILDING") },
+    { name: "Successful", value: count(counts, "SUCCESS") },
     { name: "Failed", value: failed },
   ];
 }

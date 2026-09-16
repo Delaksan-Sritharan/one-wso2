@@ -17,6 +17,7 @@
 import { useMemo, useState } from "react";
 import {
   AdapterDateFns,
+  Alert,
   Autocomplete,
   Box,
   Button,
@@ -136,6 +137,11 @@ export default function UmtCreateUpdateDialog({
       </DialogTitle>
 
       <DialogContent dividers>
+        <Alert severity="info" sx={{ mb: 3 }}>
+          This form previews the Create Update workflow. Submitting isn&apos;t wired up
+          yet. Create will show an unavailable notice instead of creating an update.
+        </Alert>
+
         <Tabs
           value={isProactive ? "proactive" : "customer"}
           onChange={(_event, value) => setIsProactive(value === "proactive")}

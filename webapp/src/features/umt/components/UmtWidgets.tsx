@@ -80,7 +80,8 @@ export function DashboardDonut({
   total?: number;
 }) {
   const theme = useTheme();
-  const chartTotal = total ?? data.reduce((sum, item) => sum + item.value, 0);
+  const sliceTotal = data.reduce((sum, item) => sum + item.value, 0);
+  const chartTotal = total ?? sliceTotal;
 
   if (loading) {
     return (
@@ -90,7 +91,9 @@ export function DashboardDonut({
     );
   }
 
-  if (chartTotal === 0) {
+  // Emptiness is a question about the slices, not the supplied total: a caller-
+  // provided total of 0 alongside real slices must still render them.
+  if (sliceTotal === 0) {
     return (
       <Box
         sx={{

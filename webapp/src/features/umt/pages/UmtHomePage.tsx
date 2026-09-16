@@ -24,7 +24,7 @@ import {
 } from "@wso2/oxygen-ui";
 import { Pause, RefreshCw, Rocket, CheckCircle, Plus } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
-import { lifecycleChartData, releaseChunkChartData, type UmtDashboardDatum } from "../api/umtDashboardStats";
+import { count, lifecycleChartData, releaseChunkChartData, type UmtDashboardDatum } from "../api/umtDashboardStats";
 import { useUmtDashboardStats } from "../api/useUmtDashboardStats";
 import { useUmtGate } from "../api/useUmtGate";
 import {
@@ -78,6 +78,19 @@ function UmtDashboardBody() {
   const releaseChunkData = dashboardStats.data ? releaseChunkChartData(dashboardStats.data) : [];
   const activeUpdates = sumValues(lifecycleData);
   const lifecycleCounts = dashboardStats.data?.updateLifeCycleCounts ?? {};
+  // On Hold and Released aren't part of the Active donut, but they come from the
+  // same service-keyed map as Testing/Verifying/Pending above. Their service keys
+  // happen to match these display labels today, but that's an assumption, not a
+  // guarantee — read them through the same `count` helper so a future rename in
+  // the service is one place to fix, not a silent zero here.
+  const onHoldCount = count(lifecycleCounts, "OnHold");
+  const releasedCount = count(lifecycleCounts, "Released");
+  const statValue = (value: number | undefined) =>
+    dashboardStats.isPending
+      ? <CircularProgress color="inherit" size={22} />
+      : dashboardStats.isError
+        ? "—"
+        : (value ?? 0);
   return (
     <Stack spacing={3} sx={{ maxWidth: "100%", pb: 4, width: "100%" }}>
       {dashboardStats.isError && (
@@ -162,25 +175,25 @@ function UmtDashboardBody() {
             >
               <StatCard
                 label="Total"
-                value={dashboardStats.isPending ? <CircularProgress color="inherit" size={22} /> : (dashboardStats.data?.updateCount ?? 0)}
+                value={statValue(dashboardStats.data?.updateCount)}
                 icon={<RefreshCw size={32} />}
                 color="info"
               />
               <StatCard
                 label="Active"
-                value={dashboardStats.isPending ? <CircularProgress color="inherit" size={22} /> : activeUpdates}
+                value={statValue(activeUpdates)}
                 icon={<Rocket size={32} />}
                 color="warning"
               />
               <StatCard
                 label="On Hold"
-                value={dashboardStats.isPending ? <CircularProgress color="inherit" size={22} /> : (lifecycleCounts.OnHold ?? 0)}
+                value={statValue(onHoldCount)}
                 icon={<Pause size={32} />}
                 color="error"
               />
               <StatCard
                 label="Released"
-                value={dashboardStats.isPending ? <CircularProgress color="inherit" size={22} /> : (lifecycleCounts.Released ?? 0)}
+                value={statValue(releasedCount)}
                 icon={<CheckCircle size={32} />}
                 color="success"
               />
