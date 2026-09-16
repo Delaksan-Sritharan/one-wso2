@@ -17,6 +17,7 @@
 import { isSecurityBackendConfigured } from "@config/apiConfig";
 import { SECURITY_ITEM_PRIVILEGE } from "@constants/securityApps";
 import { useRiskPrivileges } from "@features/security/grc/modules/risk/hooks/useRiskPrivileges";
+import { useAuditPrivileges } from "@features/security/grc/modules/audit/hooks/useAuditPrivileges";
 import { useAdminPrivileges } from "@features/security/grc/modules/admin/hooks/useAdminPrivileges";
 
 export interface SecurityGate {
@@ -35,11 +36,13 @@ export interface SecurityGate {
 //
 // The cost is inherited, and it is real — see the issues listing in
 // docs/ported-apps/grc-security-lift.md:
-//   - the two hooks fire GET /me/privileges separately, so a Security page
-//     load makes two identical calls
+//   - the three hooks fire GET /me/privileges separately, so a Security page
+//     load makes three identical calls
 //   - each caches in a module-level promise that is NOT keyed on the user, so
 //     signing out and back in as someone else in the same tab can serve the
-//     previous user's decision until a reload
+//     previous user's decision until a reload. The audit one is the strict
+//     case: it never clears its promise at all, so it caches the first user's
+//     answer for the tab's whole lifetime
 //   - a failed call resolves to an empty privilege set, making a gateway
 //     timeout indistinguishable from "you have no grants"
 //
@@ -55,12 +58,20 @@ export function useSecurityGate(enabled = true): SecurityGate {
   // nothing to call.
   const active = enabled && isSecurityBackendConfigured();
   const risk = useRiskPrivileges(active);
+  const audit = useAuditPrivileges(active);
   const admin = useAdminPrivileges(active);
 
-  const isResolving = active && (risk.loading || admin.loading);
+  const isResolving = active && (risk.loading || audit.loading || admin.loading);
 
-  const can = (privilege: string): boolean =>
-    privilege.startsWith("RISK_") ? risk.can(privilege) : admin.can(privilege);
+  // Routed by prefix because each module has its own hook and its own cache.
+  // All three fetch the SAME endpoint and would answer identically — the split
+  // is the source's structure, not a difference in authority. Admin is the
+  // fallback because its privileges (MANAGE_*) carry no shared prefix.
+  const can = (privilege: string): boolean => {
+    if (privilege.startsWith("RISK_")) return risk.can(privilege);
+    if (privilege.startsWith("AUDIT_")) return audit.can(privilege);
+    return admin.can(privilege);
+  };
 
   const canSee = (itemId: string): boolean => {
     // Fail closed while resolving, while inactive, and for an id nobody mapped —

@@ -114,6 +114,7 @@ import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApproval
 import LegalPage from "@features/legal/pages/LegalPage";
 import SecurityPage from "@features/security/pages/SecurityPage";
 import { riskRoutes } from "@features/security/grc/modules/risk/routes";
+import { auditRoutes } from "@features/security/grc/modules/audit/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
 import PartnersListPage from "@features/due-diligence/partners/pages/PartnersListPage";
 import PartnerPendingPage from "@features/due-diligence/partners/pages/PartnerPendingPage";
@@ -509,15 +510,17 @@ export default function App() {
           <Route path="legal" element={<LegalPage />} />
           {/* Security — the GRC platform's Risk Hub and Admin Console, lifted
               from grc-tools rather than rewritten. The two route fragments are
-              the SOURCE's own (modules/{risk,admin}/routes.tsx), spread
+              the SOURCE's own (modules/{risk,audit,admin}/routes.tsx), spread
               unedited; nesting them here is what turns the source's /risk/* and
-              /admin/* into this app's /security/risk/* and /security/admin/*
+              /audit/* into this app's /security/risk/*, /security/audit/* and
+              /security/admin/*
               without touching either file. Their per-route PrivilegeGuards come
               along with them, including the deliberate absence of one on
               Risk Registers. */}
           <Route path="security">
             <Route index element={<SecurityPage />} />
             {riskRoutes}
+            {auditRoutes}
             {adminRoutes}
           </Route>
           {/* Due Diligence — ported from digiops-finance/apps/due_diligence's
