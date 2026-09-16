@@ -44,6 +44,8 @@ const ParF2fTab = lazy(() => import("@features/par/pages/ParF2fTab"));
 const ParHistoryTab = lazy(() => import("@features/par/pages/ParHistoryTab"));
 const ParLeadDirectReportsTab = lazy(() => import("@features/par/pages/ParLeadDirectReportsTab"));
 const ParLeadAllocationTab = lazy(() => import("@features/par/pages/ParLeadAllocationTab"));
+import EmailGroupsPage from "@features/my/email-groups/pages/EmailGroupsPage";
+import EmailSignaturePage from "@features/my/email-signature/pages/EmailSignaturePage";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import FinancePage from "@features/finance/pages/FinancePage";
@@ -589,6 +591,16 @@ export default function App() {
           <Route path="due-diligence/preferences" element={<DueDiligencePreferencesPage />} />
           <Route path="due-diligence/view-pdf" element={<ViewPdfPage />} />
           <Route path="due-diligence/view-image" element={<ViewImagePage />} />
+          {/* Me → Email Groups: the mailing-list subscription manager ported
+              from the standalone Email Group Manager app (the email-signature
+              half of that app is not part of this port). Every employee sees
+              the same screen — the backend enforces access, not a route
+              guard. */}
+          <Route path="me/email-groups" element={<EmailGroupsPage />} />
+          {/* Me → Email Signature: the other half of the same source app,
+              its own menu item rather than a tab — it shares no data or
+              backend with Email Groups. Pure client-side HTML generator. */}
+          <Route path="me/email-signature" element={<EmailSignaturePage />} />
           {/* Catch-all → landing */}
           <Route path="*" element={<Navigate to={landingPath()} replace />} />
         </Route>
