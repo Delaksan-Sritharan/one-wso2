@@ -478,11 +478,11 @@ function TabPanel({ tab, canApprove, canSubmit, emptyText }: TabPanelProps): JSX
                 <TableRow
                   key={item.controlId}
                   hover tabIndex={0} sx={{ cursor: "pointer" }}
-                  onClick={() => void navigate(`/audit/audits/${item.auditId}?control=${item.controlId}`)}
+                  onClick={() => void navigate(`/security/audit/audits/${item.auditId}?control=${item.controlId}`)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      void navigate(`/audit/audits/${item.auditId}?control=${item.controlId}`);
+                      void navigate(`/security/audit/audits/${item.auditId}?control=${item.controlId}`);
                     }
                   }}
                 >

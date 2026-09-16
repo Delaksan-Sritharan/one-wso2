@@ -89,7 +89,7 @@ export default function HighRiskDetailModal({ risk, onClose }: HighRiskDetailMod
             <Button onClick={onClose}>Close</Button>
             <Button
               variant="contained"
-              onClick={() => navigate(`/risk/registers?riskId=${risk.id}`)}
+              onClick={() => navigate(`/security/risk/registers?riskId=${risk.id}`)}
             >
               Open in Risk Registers
             </Button>

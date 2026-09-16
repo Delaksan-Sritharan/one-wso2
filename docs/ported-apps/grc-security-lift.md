@@ -18,9 +18,12 @@ new and a rewrite is where new bugs come from.
 
 Nesting the fragments is what turns the source's `/risk/*`, `/audit/*` and
 `/admin/*` into `/security/risk/*`, `/security/audit/*` and `/security/admin/*`
-**without editing any of the three**. Their
-per-route `PrivilegeGuard`s come along, including the deliberate absence of one
-on Risk Registers.
+without editing the route files themselves. Their per-route `PrivilegeGuard`s
+come along, including the deliberate absence of one on Risk Registers.
+
+Nesting does NOT fix navigation BETWEEN those routes — the source uses absolute
+paths, which had to be re-pointed. See E7, and read it before assuming anything
+else about the source's surroundings carried across.
 
 Everything else was a mechanical import-alias rewrite across 108 files.
 
@@ -59,7 +62,7 @@ would have sent them to swap tokens instead of at the audience.
 
 ## 3. Everything edited after copying
 
-Six categories, and nothing else was touched.
+Seven categories, and nothing else was touched.
 
 | # | Change | Why |
 |---|---|---|
@@ -69,6 +72,7 @@ Six categories, and nothing else was touched.
 | E4 | **`nav.ts` deleted** from all three modules | The source's sidebar tables. This app's rail reads `securityApps.ts` instead; the labels, ids, ordering and privileges there are transcribed from these so the two can be diffed |
 | E5 | **An `enabled` parameter added** to `useRiskPrivileges`, `useAuditPrivileges` and `useAdminPrivileges` | See below — the one edit made for a difference in how this app mounts the code, rather than for something wrong with it |
 | E6 | **Mock-auth bypass removed** from `audit/utils/auditor.ts` and `audit/hooks/useAuditPrivileges.ts` | Same class as E1 and worse: `isAssignedAuditor` returned `true` **unconditionally**, showing every auditor-only surface — sampling, evidence validation — to every user whenever the flag was set, and `useAuditPrivileges.can()` granted every privilege with no API call at all. The widest bypasses the port encountered |
+| E7 | **Absolute navigation paths re-pointed** under `/security` — 16 sites in 9 files | See below. The one place where "identical to the source" was itself the bug |
 
 **E5 in full**, because it is the only change driven by this app's shape rather than
 the source's content. In GRC these hooks only ever mount inside the GRC app, so
@@ -90,8 +94,57 @@ wait for a request that is never made.
 `useSecurityGate.test.tsx` pins this — that a disabled gate makes **no** request.
 It was mutation-tested: reverting the parameter fails two of its cases.
 
+**E7 in full**, because it corrects a claim §1 used to make. Nesting the route
+fragments does turn `/risk/*`, `/audit/*` and `/admin/*` into `/security/...`
+without editing them — but only the ROUTES. The source also navigates BETWEEN
+those routes with absolute paths:
+
+```js
+onClick={() => void navigate(`/audit/audits/${audit.id}`)}   // AuditsListPage
+```
+
+Correct in GRC, wrong here. This app has no `/audit/*` route, so `App.tsx`'s
+catch-all matched and redirected the user to their landing page — click an audit,
+land on Home, with no error anywhere. 14 sites in audit, 2 in risk, 0 in admin:
+every list-or-dashboard-into-detail link, the post-create redirect, both back
+buttons, and Add Risk's cancel.
+
+Worth dwelling on how this hid. A source diff cannot find it: these files were
+**byte-identical to the source**, and that was precisely the defect. The path is
+right in GRC and wrong at this mount point, so "matches source" was the wrong
+test. Anything the source asserts about its own surroundings — routes, DOM ids,
+origins — needs checking against THIS app, separately from checking the copy is
+faithful.
+
+The related case, same root: `AddRisk.tsx` scrolls its wizard by looking up
+`document.getElementById("main-scroll-container")`, GRC's shell element. This app
+scrolls an inner Box and the window not at all, so the lookup found nothing and
+the wizard silently stopped scrolling between steps. Fixed on OUR side instead —
+`AppLayout` now names that element `main-scroll-container` — because making the
+source's assumption true costs one line, where editing the copy costs a deviation
+to re-apply forever.
+
 Semantic colours — status chips, risk-level swatches, the heatmap — are **not**
 touched. They carry meaning, not theming.
+
+## 3a. Re-lifting a file: merge, never replace
+
+A file refreshed from source by copying **silently reverts whatever deviation it
+carried** — a mock-auth bypass comes back, a navigation path points outside
+`/security` again, a dialog goes back to a hardcoded `#1e1e1e`. Nothing fails:
+it compiles, the tests pass, and the bypass ships.
+
+So refreshing is a three-step merge, not a copy:
+
+1. Copy the file from source and re-apply the alias rewrite.
+2. Re-apply its E-entry from the table above. Every deviation is written to be
+   mechanically re-appliable for exactly this reason — E7 is a regex on
+   `navigate(`/`href=`/`to=` string literals, E1 and E6 delete named symbols,
+   E2 is one CSS variable substitution.
+3. Re-run the drift check, which verifies both halves: that nothing ELSE differs
+   from source, and that no navigation path escaped the prefix.
+
+`AddRisk.tsx` has now been through this once (§4.5) and it worked.
 
 ## 4. Issues the lift surfaced
 

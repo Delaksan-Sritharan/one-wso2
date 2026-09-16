@@ -2069,7 +2069,7 @@ export default function CreateAuditPage(): JSX.Element {
         });
       }
 
-      void navigate(`/audit/audits/${auditId}`);
+      void navigate(`/security/audit/audits/${auditId}`);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to create audit. Please try again.");
     }
@@ -2082,7 +2082,7 @@ export default function CreateAuditPage(): JSX.Element {
       {/* Back */}
       <Button
         startIcon={<ChevronLeft size={16} />}
-        onClick={() => void navigate("/audit/audits")}
+        onClick={() => void navigate("/security/audit/audits")}
         sx={{ mb: 2, textTransform: "none", color: "text.secondary", pl: 0 }}
       >
         Audits
@@ -2187,7 +2187,7 @@ export default function CreateAuditPage(): JSX.Element {
         <Button
           variant="outlined"
           onClick={() => {
-            if (step === 0) { void navigate("/audit/audits"); return; }
+            if (step === 0) { void navigate("/security/audit/audits"); return; }
             setStep2Attempted(false);
             setStep(step - 1);
           }}

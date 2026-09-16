@@ -316,7 +316,7 @@ export default function AuditDetailPage(): JSX.Element {
                   <Button
                     variant="outlined"
                     startIcon={<History size={16} />}
-                    onClick={() => void navigate(`/audit/audits/${auditId}/activity`)}
+                    onClick={() => void navigate(`/security/audit/audits/${auditId}/activity`)}
                     sx={{ textTransform: "none" }}
                   >
                     Activity Log

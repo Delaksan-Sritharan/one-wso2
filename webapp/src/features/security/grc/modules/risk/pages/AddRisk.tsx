@@ -97,7 +97,7 @@ function SuccessState({ onReset, warning }: { onReset: () => void; warning?: str
         <Button variant="outlined" onClick={onReset}>
           Add Another Risk
         </Button>
-        <Button variant="contained" href="/risk/registers">
+        <Button variant="contained" href="/security/risk/registers">
           View Risk Registers
         </Button>
       </Stack>

@@ -102,7 +102,7 @@ export default function AuditActivityLogPage(): JSX.Element {
   const entries = data?.items ?? [];
   const total = data?.total ?? 0;
 
-  const handleBack = () => void navigate(`/audit/audits/${auditId}`);
+  const handleBack = () => void navigate(`/security/audit/audits/${auditId}`);
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3 } }}>

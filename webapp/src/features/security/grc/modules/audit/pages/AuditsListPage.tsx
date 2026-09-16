@@ -427,7 +427,7 @@ export default function AuditsListPage(): JSX.Element {
                 <AuditCard
                   key={audit.id}
                   audit={audit}
-                  onClick={() => void navigate(`/audit/audits/${audit.id}`)}
+                  onClick={() => void navigate(`/security/audit/audits/${audit.id}`)}
                   onDelete={() => setAuditToDelete(audit)}
                   canDelete={canCreateAudit}
                   onArchiveToggle={() => handleArchiveToggle(audit)}
@@ -467,7 +467,7 @@ export default function AuditsListPage(): JSX.Element {
                   variant="contained"
                   startIcon={<Plus size={16} />}
                   sx={{ textTransform: "none" }}
-                  onClick={() => void navigate("/audit/audits/create")}
+                  onClick={() => void navigate("/security/audit/audits/create")}
                 >
                   New Audit
                 </Button>
@@ -561,7 +561,7 @@ export default function AuditsListPage(): JSX.Element {
                 <AuditCard
                   key={audit.id}
                   audit={audit}
-                  onClick={() => void navigate(`/audit/audits/${audit.id}`)}
+                  onClick={() => void navigate(`/security/audit/audits/${audit.id}`)}
                   onDelete={() => setAuditToDelete(audit)}
                   canDelete={canCreateAudit}
                   onArchiveToggle={() => handleArchiveToggle(audit)}

@@ -57,8 +57,8 @@ export default function AuditProgressList({ audits }: { audits: Audit[] }): JSX.
             key={audit.id}
             role="button"
             tabIndex={0}
-            onClick={() => void navigate(`/audit/audits/${audit.id}`)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void navigate(`/audit/audits/${audit.id}`); } }}
+            onClick={() => void navigate(`/security/audit/audits/${audit.id}`)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void navigate(`/security/audit/audits/${audit.id}`); } }}
             sx={{
               cursor: "pointer",
               borderRadius: 1.5,

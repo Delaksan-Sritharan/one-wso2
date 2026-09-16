@@ -66,11 +66,11 @@ export default function BlockerList({ scope, showAuditLabel }: BlockerListProps)
             key={blocker.controlId}
             role="button"
             tabIndex={0}
-            onClick={() => void navigate(`/audit/audits/${blocker.auditId}?control=${blocker.controlId}`)}
+            onClick={() => void navigate(`/security/audit/audits/${blocker.auditId}?control=${blocker.controlId}`)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                void navigate(`/audit/audits/${blocker.auditId}?control=${blocker.controlId}`);
+                void navigate(`/security/audit/audits/${blocker.auditId}?control=${blocker.controlId}`);
               }
             }}
             sx={{
