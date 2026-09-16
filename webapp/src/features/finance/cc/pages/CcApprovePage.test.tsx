@@ -49,6 +49,20 @@ const base = {
 };
 
 const withLead = { ...base, id: 1, status: "pending_lead" };
+/**
+ * Non-travel, so its units come from the aligned menu arrays rather than from a
+ * job number. With the menus empty — as they are here, and as they are for a
+ * moment on every real load — the pair cannot be resolved, which is the case
+ * that used to disable Save.
+ */
+const nonTravelWithLead = {
+  ...base,
+  id: 4,
+  status: "pending_lead",
+  expenseCategoryLabel: "Software",
+  expenseTypeLabel: "Subscriptions",
+  travelJobNumber: null,
+};
 const withFinance = { ...base, id: 2, status: "pending_finance" };
 
 const state = {
@@ -77,11 +91,13 @@ vi.mock("../useCc", () => ({
   }),
   // Read only for the reassignment list. Two leads across the cards, one of
   // whom has nothing pending — the list must still offer them.
-  useCreditCards: () => ({
-    data: [
+  useCreditCards: (includeInactive?: boolean) => ({
+    data: ([
       { id: 1, ccNumber: "4444", leadEmail: "lead@wso2.com, other@wso2.com", employeeEmail: "someone@wso2.com", status: "Active" },
-      { id: 2, ccNumber: "5555", leadEmail: "spare@wso2.com", employeeEmail: "nobody@wso2.com", status: "Active" },
-    ],
+      // Inactive on purpose: a pending row can outlive its card, and whoever
+      // leads it is still a valid target for reassignment.
+      { id: 2, ccNumber: "5555", leadEmail: "spare@wso2.com", employeeEmail: "nobody@wso2.com", status: "Inactive" },
+    ]).filter((c) => includeInactive || c.status === "Active"),
     isLoading: false,
     isError: false,
   }),
@@ -129,7 +145,7 @@ beforeEach(() => {
 /** The per-row checkboxes only — the grid's header has a select-all. */
 /** The filters live behind one trigger, as ApproveFilterPopover.tsx has them. */
 const openFilters = async (u: ReturnType<typeof userEvent.setup>) =>
-  u.click(await screen.findByRole("button", { name: "Filter" }));
+  u.click(await screen.findByRole("button", { name: /^Filter( \d+)?$/ }));
 
 const rowBoxes = async () =>
   (await screen.findAllByRole("checkbox")).filter(
@@ -531,5 +547,122 @@ describe("the filter panel", () => {
     await user.click(await screen.findByRole("button", { name: "Filter" }));
     await user.click(screen.getByRole("button", { name: "Close filters" }));
     await waitFor(() => expect(screen.queryByLabelText("Filter by user")).toBeNull());
+  });
+});
+
+// Review findings, each with the behaviour that was wrong before it.
+describe("reassigning is judged on its own terms", () => {
+  it("is not blocked by a categorisation the menus cannot resolve", async () => {
+    // The mocked menus are empty, so the row's stored unit pair resolves to
+    // nothing and `unitIndex` stays blank. Building the patch from the form
+    // then carried productUnit: null, `ccTxnComplete` failed, and Save was
+    // disabled — finance could not re-point the submission at all.
+    state.txns = [nonTravelWithLead];
+    const user = userEvent.setup();
+    show();
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+    await user.click(await screen.findByRole("combobox", { name: /Lead approver/ }));
+    await user.click(await screen.findByRole("option", { name: "spare@wso2.com" }));
+
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+  });
+
+  it("writes only the lead, leaving the categorisation alone", async () => {
+    state.txns = [nonTravelWithLead];
+    const user = userEvent.setup();
+    show();
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+    await user.click(await screen.findByRole("combobox", { name: /Lead approver/ }));
+    await user.click(await screen.findByRole("option", { name: "spare@wso2.com" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(saveEdit).toHaveBeenCalled());
+    const [rows] = saveEdit.mock.calls[0];
+    expect(rows[0].leadEmail).toBe("spare@wso2.com");
+    // The row's own categorisation goes back untouched — building the patch
+    // from the form would have sent null for both units.
+    expect(rows[0].productUnit).toBe("Integration");
+    expect(rows[0].businessUnit).toBe("Platform");
+    expect(rows[0].expenseTypeLabel).toBe("Subscriptions");
+  });
+
+  it("asks for a different lead, not the one already set", async () => {
+    const user = userEvent.setup();
+    show();
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+    await screen.findByRole("combobox", { name: /Lead approver/ });
+    // Opens on the row's current lead, so there is nothing to write yet.
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("offers a lead whose card is no longer active", async () => {
+    const user = userEvent.setup();
+    show();
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+    await user.click(await screen.findByRole("combobox", { name: /Lead approver/ }));
+    // The only source of this one is an inactive card.
+    expect(await screen.findByRole("option", { name: "spare@wso2.com" })).toBeInTheDocument();
+  });
+});
+
+describe("a selection made in one queue", () => {
+  it("does not survive a change of mode", async () => {
+    state.access = ["lead", "finance"];
+    const user = userEvent.setup();
+    show();
+    await user.click((await rowBoxes())[1]);
+    expect(screen.getByRole("button", { name: /^Approve 1/ })).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Approve Role"));
+    await user.click(await screen.findByRole("option", { name: "Approve as Lead" }));
+    // Back again: the row is visible and selectable once more. Without the
+    // clear, the old tick is still there and Approve is live for a selection
+    // the reader last saw in a different queue.
+    await user.click(screen.getByLabelText("Approve Role"));
+    await user.click(await screen.findByRole("option", { name: "Approve as Finance" }));
+    expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
+  });
+
+  it("does not survive a change of filter", async () => {
+    const user = userEvent.setup();
+    show();
+    await user.click((await rowBoxes())[1]);
+    expect(screen.getByRole("button", { name: /^Approve 1/ })).toBeInTheDocument();
+
+    await openFilters(user);
+    await user.click(screen.getByLabelText("Filter by status"));
+    await user.click(await screen.findByRole("option", { name: "Pending Lead" }));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    // And back, so the ticked row is on screen again.
+    await openFilters(user);
+    await user.click(screen.getByLabelText("Filter by status"));
+    await user.click(await screen.findAllByRole("option", { name: "No Filter" }).then((o) => o[0]));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
+  });
+});
+
+describe("an empty result", () => {
+  it("does not claim everything was approved when a filter emptied it", async () => {
+    // One row, still with its lead; then narrow to the other stage.
+    state.txns = [withLead];
+    const user = userEvent.setup();
+    show();
+    await openFilters(user);
+    await user.click(screen.getByLabelText("Filter by status"));
+    await user.click(await screen.findByRole("option", { name: "Pending Finance" }));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(await screen.findByText("No submissions match these filters.")).toBeInTheDocument();
+    // Work is still waiting behind the filter, so this would be a plain lie.
+    expect(screen.queryByText("All submissions have been Approved.")).toBeNull();
+  });
+
+  it("still says so when the queue itself is empty", async () => {
+    state.txns = [];
+    show();
+    expect(await screen.findByText("No submissions to approve.")).toBeInTheDocument();
+    expect(screen.getByText("All submissions have been Approved.")).toBeInTheDocument();
   });
 });

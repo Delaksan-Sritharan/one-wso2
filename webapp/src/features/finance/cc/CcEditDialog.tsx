@@ -177,7 +177,7 @@ function CcEditForm({
   const jobMissingUnits = Boolean(jobUnits) && !(jobUnits?.productUnit && jobUnits?.businessUnit);
   const jobUsable = Boolean(jobUnits) && fundingSources.length > 0;
 
-  const patched: CcTransaction = {
+  const edited: CcTransaction = {
     ...txn,
     expenseCategoryLabel: category || null,
     expenseTypeLabel: typeLabel || null,
@@ -197,11 +197,33 @@ function CcEditForm({
         : businessUnits[unitIndex] ?? null,
     receiptFileName,
     contractFileName,
-    leadEmail: leadOnly ? leadEmail || null : txn.leadEmail,
   };
+
+  /**
+   * What Save would write.
+   *
+   * In `leadOnly` the patch is built from the ROW, not from the form, and only
+   * the lead moves. The form's controls are disabled there but their state is
+   * still live, and the units are the problem: `unitIndex` only resolves once
+   * the aligned menu arrays have loaded and still contain this row's exact
+   * pair. Until then — or ever, if the pair has since been reorganised away —
+   * it reads empty, which would carry `productUnit: null` into the patch.
+   *
+   * That did two things, both bad. `ccTxnComplete` then failed, so Save stayed
+   * disabled and finance could not re-point the submission at all — the whole
+   * point of this screen's edit. And had it saved, it would have wiped the
+   * card holder's categorisation on the way past.
+   */
+  const patched: CcTransaction = leadOnly
+    ? { ...txn, leadEmail: leadEmail || null }
+    : edited;
   // A job with no funding sources is not applied, so it cannot complete the
   // row. Missing units deliberately do NOT block — see jobMissingUnits above.
-  const valid = ccTxnComplete(patched) && !jobUnusable;
+  // Reassignment asks only for a lead, and a different one — the row's
+  // categorisation is not this mode's to judge or to re-save unchanged.
+  const valid = leadOnly
+    ? Boolean(leadEmail) && leadEmail !== (txn.leadEmail?.split(",")[0]?.trim() ?? "")
+    : ccTxnComplete(patched) && !jobUnusable;
 
   return (
     <Dialog open onClose={onClose} maxWidth="sm" fullWidth>

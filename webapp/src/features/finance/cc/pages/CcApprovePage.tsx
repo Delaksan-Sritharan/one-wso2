@@ -119,7 +119,11 @@ function ApproveBody({
 }) {
   const txns = useCcTransactions();
   // Only for the reassignment list — the queue itself is not card-scoped here.
-  const allCards = useCreditCards();
+  // `true` to include inactive cards: a pending row can outlive its card, and
+  // whether someone is a valid lead has nothing to do with whether a card is
+  // still open. Without it the row's own current lead could be missing from
+  // the options, leaving the control showing a value it does not offer.
+  const allCards = useCreditCards(true);
   const { showSuccess, showError } = useNotifications();
   const [checked, setChecked] = useState<Set<number>>(new Set());
 
@@ -216,6 +220,20 @@ function ApproveBody({
   // waits for it. (The source does not guard this; see the spec.)
   const busy = approving || saveEdit.isPending;
 
+  /**
+   * Narrowing or switching mode clears the selection.
+   *
+   * `checked` holds ids and `selected` intersects it with what is on screen, so
+   * a hidden tick is never submitted — but it is not forgotten either. Widen the
+   * filter again, or switch role and back, and it returns as a live selection
+   * the reader last saw a different queue for. Cleared at the point of change
+   * rather than from an effect, which this codebase treats as an error.
+   */
+  const narrow = <T,>(set: (v: T) => void) => (v: T) => {
+    setChecked(new Set());
+    set(v);
+  };
+
   const toggle = (id: number) =>
     setChecked((prev) => {
       const next = new Set(prev);
@@ -298,7 +316,7 @@ function ApproveBody({
             fullWidth
             label="Approve Role"
             value={role}
-            onChange={(e) => onPickRole(e.target.value as ApproveRole)}
+            onChange={(e) => narrow(onPickRole)(e.target.value as ApproveRole)}
           >
             {/* FilterMenu.tsx:51-60 — the source's own option wording. */}
             <MenuItem value="lead">Approve as Lead</MenuItem>
@@ -367,14 +385,14 @@ function ApproveBody({
             <CcPickOne
               label="Filter by status"
               value={stage}
-              onChange={setStage}
+              onChange={narrow(setStage)}
               options={["pending_lead", "pending_finance"]}
               optionLabel={(o) => (o === "pending_lead" ? "Pending Lead" : "Pending Finance")}
               emptyLabel="No Filter"
             />
           )}
-          <CcPickOne label="Filter by user" value={user} onChange={setUser} options={users} emptyLabel="No Filter" />
-          <CcPickOne label="Filter by card" value={card} onChange={setCard} options={cards} emptyLabel="No Filter" />
+          <CcPickOne label="Filter by user" value={user} onChange={narrow(setUser)} options={users} emptyLabel="No Filter" />
+          <CcPickOne label="Filter by card" value={card} onChange={narrow(setCard)} options={cards} emptyLabel="No Filter" />
           <Stack direction="row" justifyContent="flex-end" spacing={1}>
             <Button
               size="small"
@@ -401,12 +419,26 @@ function ApproveBody({
       ) : txns.isError ? (
         <Alert severity="error">Couldn't load transactions. {describeError(txns.error)}</Alert>
       ) : rows.length === 0 ? (
-        // ApproveTransactionsDataGrid.tsx:216-220, both lines.
+        // ApproveTransactionsDataGrid.tsx:216-220 for the second pair. The
+        // first is ours: the source says "All submissions have been Approved."
+        // however the list came to be empty, which is plainly untrue when a
+        // filter is what emptied it and work is still waiting behind it.
         <Box sx={{ py: 3 }}>
-          <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>No submissions to approve.</Typography>
-          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            All submissions have been Approved.
-          </Typography>
+          {activeFilters > 0 ? (
+            <>
+              <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>No submissions match these filters.</Typography>
+              <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                Clear them to see the rest of the queue.
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>No submissions to approve.</Typography>
+              <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                All submissions have been Approved.
+              </Typography>
+            </>
+          )}
         </Box>
       ) : (
         // The source's 50/50 split (:365-380): the queue stays readable while a
