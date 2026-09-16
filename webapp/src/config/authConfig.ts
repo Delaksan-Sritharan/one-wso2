@@ -78,6 +78,13 @@ declare global {
       // perspectives. Same optional/"not connected" contract as the three
       // above.
       ONE_WSO2_DUE_DILIGENCE_BACKEND_URL?: string;
+      // Base URL for the grc-tools grc-platform backend — the Security
+      // perspective. Optional/"not connected" like the others, but that backend
+      // must accept this app's Asgardeo client id as an audience first. Keeps
+      // the SOURCE's key name rather than an ONE_WSO2_* one, because those
+      // screens are lifted rather than rewritten and a GRC deployment already
+      // publishes this exact key. See apiConfig.ts.
+      ONE_WSO2_GRC_PLATFORM_BACKEND_URL?: string;
       // Base URL of the leave-app frontend itself (not its backend) —
       // used to deep-link into flows this webapp doesn't replicate, like
       // sabbatical requests. Optional — when absent, that link is hidden.
