@@ -39,8 +39,8 @@ export default function SecurityPage(): JSX.Element {
 
   const header = (
     <PerspectiveHeader
-      title="Security"
-      subtitle="Governance, risk and compliance — the risk register and its approval workflow, plus the roles and reference data behind them."
+      title="Security and Compliance"
+      subtitle="The risk register and its approval workflow, compliance audits and the evidence collected against them, and the roles and reference data both are built from."
     />
   );
 
