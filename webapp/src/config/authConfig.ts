@@ -78,6 +78,10 @@ declare global {
       // perspectives. Same optional/"not connected" contract as the three
       // above.
       ONE_WSO2_DUE_DILIGENCE_BACKEND_URL?: string;
+      // Base URL for the grc-tools grc-platform backend — the Security
+      // perspective. Optional/"not connected" like the others, but this
+      // backend needs changes of its own first: see apiConfig.ts.
+      ONE_WSO2_SECURITY_BACKEND_URL?: string;
       // Base URL of the leave-app frontend itself (not its backend) —
       // used to deep-link into flows this webapp doesn't replicate, like
       // sabbatical requests. Optional — when absent, that link is hidden.

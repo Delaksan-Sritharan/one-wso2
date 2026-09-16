@@ -28,6 +28,7 @@ import {
   NetworkIcon,
   SatelliteDishIcon,
   ScaleIcon,
+  ShieldCheckIcon,
   TicketIcon,
   UserRoundIcon,
   UserRoundMinusIcon,
@@ -42,6 +43,7 @@ import { FINANCE_PERSPECTIVE_APPS, ME_FINANCE_APPS } from "@constants/financeApp
 import { CLAIM_APPROVAL_PATH } from "@features/finance/approvals/claimApprovalTabs";
 import { MARKETING_OPS_APPS } from "@constants/marketingOpsApps";
 import { DUE_DILIGENCE_APPS } from "@constants/dueDiligenceApps";
+import { SECURITY_APPS } from "@constants/securityApps";
 import { ME_APPS } from "@constants/meApps";
 
 export interface PerspectiveSection {
@@ -406,6 +408,23 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     access: true,
     path: "/marketing-ops",
     sections: MARKETING_OPS_SECTIONS,
+  },
+  // Security — the GRC platform's Risk Hub and Admin Console, lifted from
+  // grc-tools rather than rewritten. Its own perspective: a different function,
+  // and an authorization model no other perspective shares.
+  //
+  // `access` follows the preview flag while `path` stays permanent — reachable
+  // by URL for whoever is testing it, unadvertised in the waffle, and excluded
+  // from reachablePerspectives() so it is neither a landing choice nor a
+  // favourite until it ships.
+  {
+    key: "security",
+    label: "Security",
+    icon: ShieldCheckIcon,
+    externallyGated: true,
+    access: isPreviewEnabled("security"),
+    path: "/security",
+    sections: [...appsToSections(SECURITY_APPS)],
   },
   // "Me" is the Home landing: the person's own profile plus everyday apps —
   // Leave, Menu, and the finance claims.

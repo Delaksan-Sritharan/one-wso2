@@ -65,7 +65,14 @@ export type PreviewFeature =
    * the Lead Portal, Admin Portal, Report Chain and F2F follow it over — see
    * docs/ported-apps/par-app.md §7.
    */
-  | "par";
+  | "par"
+  /**
+   * Security, the GRC platform's Risk Hub and Admin Console lifted from
+   * grc-tools. Held back until that backend accepts this app's audience and
+   * origin — until then every screen behind it can only fail to load.
+   * See docs/ported-apps/grc-security-lift.md.
+   */
+  | "security";
 
 /**
  * Whether a preview feature should be shown.

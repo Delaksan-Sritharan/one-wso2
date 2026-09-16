@@ -931,3 +931,28 @@ export const subscriptionServiceUrls = {
   unsubscribeMeal: (email: string) =>
     `${subscriptionBackendUrl}/meal/${encodeURIComponent(email)}/unsubscribe`,
 };
+
+// ---------------------------------------------------------------------------
+// GRC Platform — the Security perspective (Risk Hub + Admin Console), lifted
+// from grc-tools/apps/grc-platform.
+//
+// TWO THINGS ABOUT THIS BACKEND THAT NO SIBLING HERE SHARES, both of which must
+// be settled on the backend before any Security screen can load:
+//
+//   - It verifies a single AUTH_AUDIENCE (backend/internal/config/config.go
+//     loadIdPs), today the GRC webapp's own Asgardeo client id. This app's is
+//     different, so every request 401s until that accepts a set. A second IdP
+//     entry is NOT an alternative — the runtime map is keyed by issuer and both
+//     apps share one, so it would overwrite the first.
+//   - Its CORS allows exactly one origin and panics on "*" (middleware/cors.go),
+//     and that origin doubles as the email deep-link base.
+//
+// Note the Security screens authorize with the ID TOKEN, not the access token
+// every other backend here uses — see features/security/grc/shim.
+export const securityBackendUrl: string = (
+  window.config?.ONE_WSO2_SECURITY_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
+
+export function isSecurityBackendConfigured(): boolean {
+  return Boolean(securityBackendUrl);
+}
