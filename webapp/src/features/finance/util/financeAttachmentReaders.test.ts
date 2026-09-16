@@ -53,6 +53,8 @@ describe("every cc attachment surface decodes base64", () => {
     "cc/CcTxnDetailsDialog.tsx",
     "cc/CcTxnTable.tsx",
     "cc/pages/CcHistoryPage.tsx",
+    // The approve panel opens a receipt without offering to change it.
+    "cc/CcApproveDetail.tsx",
   ])("%s", (file) => {
     const imports = importedReaders(file);
     expect(imports).toContain("fetchBase64Attachment");
