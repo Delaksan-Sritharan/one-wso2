@@ -18,8 +18,8 @@ import { useState } from "react";
 import {
   Box,
   Button,
-  CircularProgress,
   Divider,
+  Skeleton,
   Stack,
 } from "@wso2/oxygen-ui";
 import { Pause, RefreshCw, Rocket, CheckCircle, Plus } from "@wso2/oxygen-ui-icons-react";
@@ -87,7 +87,7 @@ function UmtDashboardBody() {
   const releasedCount = count(lifecycleCounts, "Released");
   const statValue = (value: number | undefined) =>
     dashboardStats.isPending
-      ? <CircularProgress color="inherit" size={22} />
+      ? <Skeleton variant="text" width={48} sx={{ fontSize: "inherit" }} />
       : dashboardStats.isError
         ? "—"
         : (value ?? 0);
@@ -143,6 +143,7 @@ function UmtDashboardBody() {
               data={lifecycleData}
               colorMap={LIFECYCLE_COLORS}
               loading={dashboardStats.isPending}
+              error={dashboardStats.isError}
             />
           </Box>
 
@@ -246,6 +247,7 @@ function UmtDashboardBody() {
             data={releaseChunkData}
             colorMap={BUILD_COLORS}
             loading={dashboardStats.isPending}
+            error={dashboardStats.isError}
             total={dashboardStats.data?.createdReleaseChunkBuildCount}
           />
         </Box>

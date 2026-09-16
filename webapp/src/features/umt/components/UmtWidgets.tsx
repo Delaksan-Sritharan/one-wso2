@@ -15,7 +15,7 @@
 // under the License.
 
 import type { ReactNode } from "react";
-import { Box, Card, CircularProgress, Stack, Typography, useTheme } from "@wso2/oxygen-ui";
+import { Alert, Box, Card, Skeleton, Stack, Typography, useTheme } from "@wso2/oxygen-ui";
 import { PieChart } from "@wso2/oxygen-ui-charts-react";
 import type { UmtDashboardDatum } from "../api/umtDashboardStats";
 
@@ -70,6 +70,7 @@ export function DashboardDonut({
   data,
   colorMap,
   loading,
+  error,
   total,
 }: {
   title: string;
@@ -77,6 +78,7 @@ export function DashboardDonut({
   data: UmtDashboardDatum[];
   colorMap: Record<string, UmtDashboardColor>;
   loading?: boolean;
+  error?: boolean;
   total?: number;
 }) {
   const theme = useTheme();
@@ -85,8 +87,26 @@ export function DashboardDonut({
 
   if (loading) {
     return (
+      <Box sx={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+        <Skeleton variant="circular" width={CHART_SIZE} height={CHART_SIZE} />
+        <Stack spacing={1.5} sx={{ minWidth: 190 }}>
+          <Skeleton variant="text" width={120} height={28} />
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} variant="text" width="100%" height={24} />
+          ))}
+        </Stack>
+      </Box>
+    );
+  }
+
+  // Checked before emptiness: a failed request has no real slices either, but
+  // saying "No data yet" about it is a false claim, not a rendering shortcut.
+  if (error) {
+    return (
       <Box sx={{ alignItems: "center", display: "flex", justifyContent: "center", minHeight: CHART_SIZE }}>
-        <CircularProgress size={24} />
+        <Alert severity="error" sx={{ width: "100%", maxWidth: 360 }}>
+          Couldn&apos;t load chart data.
+        </Alert>
       </Box>
     );
   }
