@@ -936,21 +936,24 @@ export const subscriptionServiceUrls = {
 // GRC Platform — the Security perspective (Risk Hub, Audit Hub and Admin
 // Console), lifted from grc-tools/apps/grc-platform.
 //
-// ONE THING ABOUT THIS BACKEND THAT NO SIBLING HERE SHARES, and it must be
-// settled on the backend before any Security screen can load: it verifies a
-// single AUTH_AUDIENCE (backend/internal/config/config.go loadIdPs), today the
-// GRC webapp's own Asgardeo client id. This app's is different, so every
-// request 401s with `token has invalid audience` until that accepts a set. A
-// second IdP entry is NOT an alternative — the runtime map is keyed by issuer
-// and both apps share one, so it would overwrite the first.
+// ONE THING ABOUT THIS BACKEND THAT NO SIBLING HERE SHARES: it verifies the
+// token's `aud`, and each Asgardeo application mints its own. It used to accept
+// a single AUTH_AUDIENCE — the GRC webapp's client id — so every request from
+// here 401'd with `token has invalid audience`. That backend now takes a
+// comma-separated set (grc-tools #82, merged and deployed), and AUTH_AUDIENCE
+// names this app's client id too.
 //
-// CORS is NOT a second blocker, despite what that backend's own
-// middleware/cors.go suggests. It allows exactly one origin and panics on "*",
-// but it never reaches the browser: requests go through the Choreo gateway,
-// which answers the preflight itself and reflects the caller's origin. Measured
-// with an OPTIONS against stage — see docs/ported-apps/grc-security-lift.md.
-// The Go middleware only matters to a browser hitting the service directly,
-// bypassing the gateway.
+// Left here because the failure is otherwise unrecognisable: a 401 on EVERY
+// Security call, including /me/privileges, while every other backend in this
+// app works. If that comes back, check AUTH_AUDIENCE before anything else. A
+// second IdP entry is NOT the fix — the backend's runtime map is keyed by
+// issuer and both apps share one, so it would overwrite the first.
+//
+// CORS is not a factor either way, despite that backend's own
+// middleware/cors.go allowing exactly one origin. It never reaches the browser:
+// requests go through the Choreo gateway, which answers the preflight itself
+// and reflects the caller's origin. Measured with an OPTIONS against stage. The
+// Go middleware only matters to a browser hitting the service directly.
 //
 // These screens send THIS APP'S ACCESS TOKEN, like every other backend here —
 // not the ID token the GRC source sends. See features/security/grc/shim.

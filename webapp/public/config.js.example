@@ -62,12 +62,9 @@ window.config = {
   // when absent the Security screens cannot load, and the perspective says so
   // rather than calling anything.
   //
-  // NOTE that backend must accept this app's Asgardeo client id as a valid
-  // audience before it will answer this app at all; until then every request
-  // 401s. CORS is handled by the Choreo gateway, not by that backend's own
-  // middleware, so it is not a second blocker. See
-  // docs/ported-apps/grc-security-lift.md.
-  // Keeps the source's key name — see src/config/apiConfig.ts.
+  // That backend must list this app's Asgardeo client id in its AUTH_AUDIENCE,
+  // or every request from here 401s. Already done for stage. See
+  // src/config/apiConfig.ts.
   // ONE_WSO2_GRC_PLATFORM_BACKEND_URL: "<your-grc-platform-backend-url>",
 
   // digiops-finance backend base URLs — the three apps in the Finance

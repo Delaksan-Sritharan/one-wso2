@@ -4,7 +4,25 @@ The GRC platform's Risk Hub, Audit Hub and Admin Console, **copied** from
 `grc-tools/apps/grc-platform` rather than rewritten, on the reasoning that GRC is
 new and a rewrite is where new bugs come from.
 
-**32,788 lines across 179 files**, carried unedited except where listed in §3.
+**32,824 lines across 178 files**, carried unedited except where listed in §3.
+
+**Lifted from grc-tools `e3395dc` (2026-09-16).** Record this on every refresh: a
+sweep needs a baseline, and without one "is the copy current?" cannot be
+answered — only "does it differ from whatever is checked out right now".
+
+**The two apps do not run the same pins**, which is worth knowing before
+blaming a lifted screen for behaving oddly:
+
+| | grc-tools | here |
+|---|---|---|
+| `@wso2/oxygen-ui` | 0.13.0 | 0.13.1 |
+| `react-router` | 7.1.5 | 7.18.2 |
+| `react` | 19.2.3 | 19.2.3 |
+
+MUI is identical in effect — both resolve it through Oxygen, which pins
+`@mui/material` 7.3.4 in either version. The Oxygen gap is a patch. The
+`react-router` gap is 17 minors under every lifted `navigate()` and `<Route>`,
+and none of it has been exercised against a running app (§5).
 
 ## 1. How it is wired
 
@@ -300,19 +318,27 @@ attachment-failure message to name which files failed and why; our copy still
 said only "one or more". Refreshed from source with E1 re-applied, and verified
 by re-diffing: E1 is now the only difference.
 
+**It then happened again, during review of this very PR.** grc-tools `#83`
+merged three hours before the PR opened and moved four more Risk files: the
+detail drawer's gross/residual `ScoreChip` header, and three tables where
+"Level" became "Residual Level". A reviewer re-ran this section's own diff and
+found them. None carried an E-deviation, so all four were straight refreshes —
+but the lesson is the timing, not the content: **twice now, in one working day,
+and neither time did anything fail.**
+
 This is the cost of lifting, arriving on schedule rather than in theory, and it
 is worth naming precisely: **nothing warns you.** The copy compiles, tests pass,
 and the screens work — they are just a little behind, silently, and the gap only
-grows.
+grows. That is also why the source commit is recorded at the top of this file:
+without a baseline, a sweep can only answer "does this differ from whatever is
+checked out right now", which is a different and much weaker question.
 
 Only a diff finds it, so repeat this one while both apps are live: for each file
 under `features/security/grc`, reverse the alias rewrite (`@features/security/grc/…`
 back to `@modules/`, `@components/`, and the two `shim/` paths to `@config/apiConfig`
 and `@hooks/useAuthApiClient`) and compare against the same path under
 `grc-tools/apps/grc-platform/webapp/src`. Everything should match except the
-files listed in §3 — those carry E1–E6. Anything else is drift.
-
-The audit module was copied after that same upstream fetch, so it is current.
+files listed in §3 — those carry E1–E7. Anything else is drift.
 
 ### 4.6 What the Audit Hub lift got right that the others did not
 
@@ -324,9 +350,15 @@ test, and it corrects §5's claim for this module: some tests did transfer.
 
 **Nothing here has been run.** Build success proves it compiles, bundles and
 tree-shakes; it does not prove a single screen renders, that the shimmed auth
-behaves like GRC's at runtime, or that the rethemed dialogs look right. The three
-backend blockers (audience, CORS origin, and whichever token carries `email`)
-still gate whether any of it loads at all.
+behaves like GRC's at runtime, or that the rethemed dialogs look right.
+
+The audience blocker is **gone** — grc-tools #82 merged and deployed, and
+AUTH_AUDIENCE now names this app's client id. CORS was measured and never
+applied (§1). What remains unverified is the `email` claim: the GRC backend
+reads it off the token in two load-bearing places, and this app sends its access
+token where the source sends the ID token. If that claim is absent, the symptom
+is a 403 on every Risk and Admin route that looks exactly like a missing
+permission — see §2 for the one-line swap.
 
 **Almost no tests came across.** Of the 1,326 passing here, 1,303 are this app's
 existing suite, 6 are `useSecurityGate.test.tsx` (written for E5, covering only
