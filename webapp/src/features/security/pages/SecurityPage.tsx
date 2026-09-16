@@ -50,9 +50,10 @@ export default function SecurityPage(): JSX.Element {
         {header}
         <Alert severity="info" sx={{ mt: 1.5, maxWidth: 720 }}>
           <AlertTitle>Not connected yet</AlertTitle>
-          Set <code>GRC_PLATFORM_BACKEND_BASE_URL</code> in <code>public/config.js</code> to the GRC
-          platform backend and reload. Note that backend also needs to accept this app's Asgardeo
-          audience and origin — see <code>docs/ported-apps/grc-security-lift.md</code>.
+          Set <code>ONE_WSO2_GRC_PLATFORM_BACKEND_URL</code> in <code>public/config.js</code> to the
+          GRC platform backend and reload. That backend also has to accept this app's Asgardeo client
+          id as a valid audience, or every request here fails — see{" "}
+          <code>docs/ported-apps/grc-security-lift.md</code>.
         </Alert>
       </Box>
     );

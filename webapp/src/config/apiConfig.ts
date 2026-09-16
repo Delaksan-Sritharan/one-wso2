@@ -955,16 +955,14 @@ export const subscriptionServiceUrls = {
 // These screens send THIS APP'S ACCESS TOKEN, like every other backend here —
 // not the ID token the GRC source sends. See features/security/grc/shim.
 //
-// GRC_PLATFORM_BACKEND_BASE_URL, NOT an ONE_WSO2_* name — the only key in this
-// file that breaks that convention, deliberately.
-//
-// The Security screens are the GRC source lifted rather than rewritten, so they
-// keep the source's own names throughout. A GRC deployment already publishes
-// this key with this value, which means a config can be copied across
-// unchanged and there is one name to search for across both apps. Renaming it
-// here would create a second name for one thing purely to satisfy a prefix.
+// Named for the BACKEND (grc-platform), not for the perspective. The label on
+// that perspective is a product decision that has already changed once —
+// "Security" became "Security and Compliance" — and a config key that tracks a
+// label goes stale the next time. The service, its Choreo component and its
+// repo are all called grc-platform, so this name stays greppable across all
+// three.
 export const securityBackendUrl: string = (
-  window.config?.GRC_PLATFORM_BACKEND_BASE_URL ?? ""
+  window.config?.ONE_WSO2_GRC_PLATFORM_BACKEND_URL ?? ""
 ).replace(/\/+$/, "");
 
 export function isSecurityBackendConfigured(): boolean {

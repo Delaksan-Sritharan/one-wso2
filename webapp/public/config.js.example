@@ -68,7 +68,7 @@ window.config = {
   // middleware, so it is not a second blocker. See
   // docs/ported-apps/grc-security-lift.md.
   // Keeps the source's key name — see src/config/apiConfig.ts.
-  // GRC_PLATFORM_BACKEND_BASE_URL: "<your-grc-platform-backend-url>",
+  // ONE_WSO2_GRC_PLATFORM_BACKEND_URL: "<your-grc-platform-backend-url>",
 
   // digiops-finance backend base URLs — the three apps in the Finance
   // perspective. Each is a separate Ballerina service with its own

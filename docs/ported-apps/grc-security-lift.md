@@ -32,11 +32,17 @@ everyone; the GRC backend's own privilege set decides what is inside it, and
 someone holding no grant is told plainly that they have none rather than never
 seeing the perspective at all.
 
-**The backend URL keeps the source's config key**, `GRC_PLATFORM_BACKEND_BASE_URL`
-— the only key in `apiConfig.ts` that is not `ONE_WSO2_*`-prefixed. A GRC
-deployment already publishes it with this value, so a config copies across
-unchanged and there is one name to search for across both apps. Inventing a
-second name for one thing to satisfy a prefix would cost more than it bought.
+**The backend URL is `ONE_WSO2_GRC_PLATFORM_BACKEND_URL`**, following this
+file's `ONE_WSO2_<app>_BACKEND_URL` convention like every other key. It carried
+the source's own name for a while, on the reasoning that a GRC deployment
+already publishes that value; but nobody copies a whole config between the two
+apps, so the only thing that bought was a shared search term, at the cost of one
+key in `apiConfig.ts` looking like an oversight.
+
+It names the BACKEND, not the perspective. The perspective's label has already
+changed once — "Security" became "Security and Compliance" — and a key that
+tracks a label goes stale the next time. The service, its Choreo component and
+its repo are all `grc-platform`, so this name stays greppable across all three.
 
 ## 2. The seam
 
