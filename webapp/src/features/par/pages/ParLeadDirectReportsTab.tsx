@@ -40,7 +40,7 @@ import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useMeProfile } from "@features/my/api/useMeProfile";
-import { formatDate } from "@features/my/api/derive";
+import { formatShortDate } from "../util/parDate";
 import { useActiveParCycle } from "../api/useParData";
 import { useParTeams } from "../api/useLeadTeams";
 import { useSend360Reminder } from "../api/useLeadReminders";
@@ -128,12 +128,12 @@ export default function ParLeadDirectReportsTab() {
     );
   }
 
-  // The search box narrows the completion cards above too, not just the grid.
+  // MultiTeamSummary.tsx's own onFilterModelChange: every field of the row
+  // is searched, not just the ones shown as columns — and the search box
+  // narrows the completion cards above too, not just the grid.
   const filteredRows = quickFilter
     ? rows.filter((row) =>
-        [row.parBusinessUnit, row.parDepartment, row.parTeam, row.parSubTeam]
-          .filter(Boolean)
-          .some((field) => field!.toLowerCase().includes(quickFilter.toLowerCase())),
+        Object.values(row).some((value) => String(value).toLowerCase().includes(quickFilter.toLowerCase())),
       )
     : rows;
   const totals = calculateTeamsCompletionTotals(filteredRows);
@@ -171,7 +171,7 @@ export default function ParLeadDirectReportsTab() {
             {cycle.parCycleName}{" "}
           </Typography>
           <Typography component="span" color="text.secondary">
-            ({formatDate(cycle.parCycleStartDate)} - {formatDate(cycle.parCycleEndDate)})
+            ({formatShortDate(cycle.parCycleStartDate)} - {formatShortDate(cycle.parCycleEndDate)})
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} alignItems="center">
@@ -243,7 +243,15 @@ export default function ParLeadDirectReportsTab() {
         />
       </Card>
 
-      <Dialog open={cycleDatesOpen} onClose={() => setCycleDatesOpen(false)} maxWidth="md" fullWidth>
+      {/* MultiTeamSummary.tsx opens this in its own CustomModal at
+          width="80vw" — much wider than a fixed maxWidth breakpoint, since
+          five stepper steps need the room. */}
+      <Dialog
+        open={cycleDatesOpen}
+        onClose={() => setCycleDatesOpen(false)}
+        maxWidth={false}
+        slotProps={{ paper: { sx: { width: "80vw" } } }}
+      >
         <DialogTitle>Cycle Dates</DialogTitle>
         <Divider />
         <DialogContent sx={{ pt: 4, pb: 4 }}>
@@ -251,7 +259,10 @@ export default function ParLeadDirectReportsTab() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={reminderConfirmOpen} onClose={() => setReminderConfirmOpen(false)} maxWidth="xs" fullWidth>
+      {/* ConfirmationDialog.tsx's own maxWidth="md" — every confirmation in
+          source uses this same shared component and size, not a narrower
+          one-off. */}
+      <Dialog open={reminderConfirmOpen} onClose={() => setReminderConfirmOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Send 360° Feedback Reminder?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">

@@ -14,29 +14,33 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { Box, Step, StepLabel, Stepper, Typography, useTheme } from "@wso2/oxygen-ui";
-import { CircleCheckIcon, CircleIcon } from "@wso2/oxygen-ui-icons-react";
-import { formatDate } from "@features/my/api/derive";
+import { Avatar, Box, Typography } from "@wso2/oxygen-ui";
+import { CheckIcon } from "@wso2/oxygen-ui-icons-react";
+import { formatShortDate } from "../util/parDate";
 import type { ParCycle } from "../api/types";
 
-// Ports StepperIcon.tsx — every step reads as "reached" (filled), never a
-// numbered/pending state; source has no notion of which date has actually
-// passed here, only which step is scrolled to.
-function StepIcon({ active, completed }: { active?: boolean; completed?: boolean }) {
-  const theme = useTheme();
-  return active || completed ? (
-    <CircleCheckIcon size={24} color={theme.palette.primary.main} />
+// Source's icons (MUI's CheckCircle/Circle) are solid filled shapes;
+// Lucide's equivalents are stroke-only outlines. An Avatar reproduces the
+// filled look, the same way ParStatusChip.tsx does for its own status dots.
+function StepIcon({ isDone }: { isDone: boolean }) {
+  return isDone ? (
+    <Avatar sx={{ width: 24, height: 24, bgcolor: "primary.main", color: "primary.contrastText" }}>
+      <CheckIcon size={16} />
+    </Avatar>
   ) : (
-    <CircleIcon size={24} color={theme.palette.action.disabled} />
+    <Box sx={{ width: 24, height: 24, borderRadius: "50%", bgcolor: "action.disabled" }} />
   );
 }
 
-// Ports CycleDatesStepper.tsx: the cycle's five dates, always shown as one
-// row. `activeStep` defaults to 0 — MultiTeamSummary.tsx opens this at 0
-// and never moves it; TeamSummary.tsx's own roster instead advances it
-// based on which deadlines have actually passed (see
-// calculateCycleActiveStep) — the same component, two different callers,
-// genuinely different behaviour in source, not a port inconsistency.
+// Ports CycleDatesStepper.tsx. `activeStep` defaults to 0 — MultiTeamSummary.tsx
+// opens this at 0 and never moves it; TeamSummary.tsx's own roster instead
+// advances it based on which deadlines have passed (calculateCycleActiveStep)
+// — the same component, two different callers, genuinely different behaviour
+// in source.
+//
+// Built with plain flex columns rather than MUI's Stepper/StepConnector:
+// their connector is absolutely positioned assuming the icon is the first
+// thing in each step, which breaks once a title sits above it.
 export default function ParCycleDatesStepper({
   cycle,
   activeStep = 0,
@@ -56,17 +60,31 @@ export default function ParCycleDatesStepper({
   ];
 
   return (
-    <Box>
-      <Stepper activeStep={activeStep} alternativeLabel>
-        {steps.map((step) => (
-          <Step key={step.label}>
-            <StepLabel StepIconComponent={StepIcon}>
-              <Typography>{step.date ? formatDate(step.date) : "—"}</Typography>
-              <Typography sx={{ mt: -1.5 }}>{step.label}</Typography>
-            </StepLabel>
-          </Step>
-        ))}
-      </Stepper>
+    <Box sx={{ display: "flex" }}>
+      {steps.map((step, index) => {
+        const isDone = index <= activeStep;
+        return (
+          <Box key={step.label} sx={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", px: 1 }}>
+            <Typography variant="caption" color="text.secondary" align="center" sx={{ mb: 1 }}>
+              {step.label}
+            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
+              <Box sx={{ flex: 1, height: 2, bgcolor: index === 0 ? "transparent" : isDone ? "primary.main" : "divider" }} />
+              <StepIcon isDone={isDone} />
+              <Box
+                sx={{
+                  flex: 1,
+                  height: 2,
+                  bgcolor: index === steps.length - 1 ? "transparent" : index < activeStep ? "primary.main" : "divider",
+                }}
+              />
+            </Box>
+            <Typography variant="body2" align="center" sx={{ fontWeight: 600, mt: 1 }}>
+              {step.date ? formatShortDate(step.date) : "—"}
+            </Typography>
+          </Box>
+        );
+      })}
     </Box>
   );
 }

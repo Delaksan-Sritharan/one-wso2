@@ -16,7 +16,6 @@
 
 import { useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   Card,
@@ -100,9 +99,6 @@ export default function ParLeadTeamRoster({
     .sort((a, b) => a.parEmployeeName.localeCompare(b.parEmployeeName));
 
   const selectedMembers = members.filter((m) => selectedIds.includes(m.parRatingId));
-  // TeamSummary.tsx's own validateRatings: every selected row must already
-  // be a lead-side DRAFT before a bulk share is allowed.
-  const canShare = selectedMembers.length > 0 && selectedMembers.every((m) => m.parLeadStatus === "DRAFT");
 
   const handleCopyEmails = () => {
     navigator.clipboard.writeText(selectedMembers.map((m) => m.parEmployeeEmail).join(", "));
@@ -111,6 +107,14 @@ export default function ParLeadTeamRoster({
 
   const handleShareConfirmed = async () => {
     setShareConfirmOpen(false);
+    // TeamSummary.tsx's own validateRatings: checked at confirm-time, not by
+    // disabling the button ahead of it — every selected row must already be
+    // a lead-side DRAFT, or the whole action bails with a toast and nothing
+    // is shared, not even the valid rows.
+    if (!selectedMembers.every((m) => m.parLeadStatus === "DRAFT")) {
+      showError("Unable to share selected reviews. Please select only draft reviews.");
+      return;
+    }
     setSharing(true);
     let passedCount = 0;
     let failedCount = 0;
@@ -328,7 +332,15 @@ export default function ParLeadTeamRoster({
         )}
       </Card>
 
-      <Dialog open={cycleDatesOpen} onClose={() => setCycleDatesOpen(false)} maxWidth="md" fullWidth>
+      {/* TeamSummary.tsx opens this in its own CustomModal at width="80vw"
+          — much wider than a fixed maxWidth breakpoint, since five stepper
+          steps need the room. */}
+      <Dialog
+        open={cycleDatesOpen}
+        onClose={() => setCycleDatesOpen(false)}
+        maxWidth={false}
+        slotProps={{ paper: { sx: { width: "80vw" } } }}
+      >
         <DialogTitle>Cycle Dates</DialogTitle>
         <Divider />
         <DialogContent sx={{ pt: 4, pb: 4 }}>
@@ -338,8 +350,9 @@ export default function ParLeadTeamRoster({
 
       {/* ConfirmationDialog's own threeSixtyReminder copy — same dialog as
           MultiTeamSummary.tsx's, reused here since both send the same
-          lead-scoped reminder regardless of which team you're viewing. */}
-      <Dialog open={reminderConfirmOpen} onClose={() => setReminderConfirmOpen(false)} maxWidth="xs" fullWidth>
+          lead-scoped reminder regardless of which team you're viewing.
+          ConfirmationDialog.tsx's own maxWidth="md", not a narrower one-off. */}
+      <Dialog open={reminderConfirmOpen} onClose={() => setReminderConfirmOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Send 360° Feedback Reminder?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
@@ -367,22 +380,21 @@ export default function ParLeadTeamRoster({
         </DialogActions>
       </Dialog>
 
-      {/* leadParBulkShare copy (config/constant.ts). */}
-      <Dialog open={shareConfirmOpen} onClose={() => setShareConfirmOpen(false)} maxWidth="xs" fullWidth>
+      {/* leadParBulkShare copy (config/constant.ts). Always the same
+          message regardless of selection validity — the draft-only check
+          runs at confirm-time (handleShareConfirmed), not here.
+          ConfirmationDialog.tsx's own maxWidth="md". */}
+      <Dialog open={shareConfirmOpen} onClose={() => setShareConfirmOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Bulk Share Lead's Feedback?</DialogTitle>
         <DialogContent>
-          {canShare ? (
-            <Typography variant="body2" color="text.secondary">
-              This will share the lead's feedback with all the selected members. You can't undo this
-              action.
-            </Typography>
-          ) : (
-            <Alert severity="error">Unable to share selected reviews. Please select only draft reviews.</Alert>
-          )}
+          <Typography variant="body2" color="text.secondary">
+            This will share the lead's feedback with all the selected members. You can't undo this
+            action.
+          </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setShareConfirmOpen(false)}>Cancel</Button>
-          <Button variant="contained" disabled={!canShare} onClick={handleShareConfirmed}>
+          <Button variant="contained" onClick={handleShareConfirmed}>
             Share
           </Button>
         </DialogActions>

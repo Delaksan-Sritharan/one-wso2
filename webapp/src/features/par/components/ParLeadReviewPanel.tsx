@@ -43,6 +43,7 @@ import { useParRating } from "../api/useParData";
 import { useLeadRatingUpdate } from "../api/useLeadRatingUpdate";
 import { decodeParComment, encodeParComment, isEmptyHtml } from "../util/parComment";
 import { isDeadlinePassed } from "../util/parDeadline";
+import { formatShortDate } from "../util/parDate";
 import ParRichTextField from "./ParRichTextField";
 import { ParCommentView } from "./ParContent";
 import ParEmptyState from "./ParEmptyState";
@@ -183,27 +184,37 @@ export default function ParLeadReviewPanel({
     // constant.ts's employeeParDraftSaved copy, reused verbatim here too —
     // source's own apparent copy-paste from the employee-side alert.
     <Alert severity="warning">
-      You have saved your PAR as a draft Please share on or before the deadline: {cycle.parLeadDeadline}.
+      You have saved your PAR as a draft Please share on or before the deadline: {formatShortDate(cycle.parLeadDeadline)}.
     </Alert>
   ) : (
     <Alert severity="info">
-      Please share the lead's feedback before the deadline: {cycle.parLeadDeadline}.
+      Please share the lead's feedback before the deadline: {formatShortDate(cycle.parLeadDeadline)}.
     </Alert>
   );
 
   // Save Draft only enables once something has actually changed; Share
   // additionally waits for the employee to have at least started their own
-  // side (LeadReviewPanel.tsx:1572-1574 — parEmployeeStatus !== PENDING).
+  // side (LeadReviewPanel.tsx:1572-1574 — parEmployeeStatus !== PENDING),
+  // and — per its own yup validationSchema (parRating/parLeadComment both
+  // "Required" for a non-admin caller) — for a rating to be picked and the
+  // comment to be non-empty. The backend doesn't enforce either, so this is
+  // the only place that does.
   const employeeHasStarted = parRatingData.parEmployeeStatus !== "PENDING";
   const canSaveDraft = !readOnly && !deadlinePassed && !ratingUpdate.isPending && dirty;
-  const canShare = !readOnly && !deadlinePassed && !ratingUpdate.isPending && employeeHasStarted;
+  const canShare =
+    !readOnly &&
+    !deadlinePassed &&
+    !ratingUpdate.isPending &&
+    employeeHasStarted &&
+    Boolean(parRatingValue) &&
+    !isEmptyHtml(leadComment);
 
   return (
     <Grid container spacing={2}>
       <Grid size={12}>
         {deadlinePassed && !shared && (
           <Alert severity="error" sx={{ mb: 1.5 }}>
-            Lead's feedback deadline is passed on: {cycle.parLeadDeadline}.
+            Lead's feedback deadline is passed on: {formatShortDate(cycle.parLeadDeadline)}.
           </Alert>
         )}
         {statusAlert}
@@ -335,8 +346,9 @@ export default function ParLeadReviewPanel({
         </Card>
       </Grid>
 
-      {/* leadParShare copy (config/constant.ts). */}
-      <Dialog open={confirming} onClose={() => setConfirming(false)} maxWidth="xs" fullWidth>
+      {/* leadParShare copy (config/constant.ts). ConfirmationDialog.tsx's
+          own maxWidth="md", not a narrower one-off. */}
+      <Dialog open={confirming} onClose={() => setConfirming(false)} maxWidth="md" fullWidth>
         <DialogTitle>Share Lead's Feedback?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
