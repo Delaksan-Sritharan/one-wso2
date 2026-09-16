@@ -931,3 +931,43 @@ export const subscriptionServiceUrls = {
   unsubscribeMeal: (email: string) =>
     `${subscriptionBackendUrl}/meal/${encodeURIComponent(email)}/unsubscribe`,
 };
+
+// ---------------------------------------------------------------------------
+// GRC Platform — the Security perspective (Risk Hub, Audit Hub and Admin
+// Console), lifted from grc-tools/apps/grc-platform.
+//
+// ONE THING ABOUT THIS BACKEND THAT NO SIBLING HERE SHARES: it verifies the
+// token's `aud`, and each Asgardeo application mints its own. It used to accept
+// a single AUTH_AUDIENCE — the GRC webapp's client id — so every request from
+// here 401'd with `token has invalid audience`. That backend now takes a
+// comma-separated set (grc-tools #82, merged and deployed), and AUTH_AUDIENCE
+// names this app's client id too.
+//
+// Left here because the failure is otherwise unrecognisable: a 401 on EVERY
+// Security call, including /me/privileges, while every other backend in this
+// app works. If that comes back, check AUTH_AUDIENCE before anything else. A
+// second IdP entry is NOT the fix — the backend's runtime map is keyed by
+// issuer and both apps share one, so it would overwrite the first.
+//
+// CORS is not a factor either way, despite that backend's own
+// middleware/cors.go allowing exactly one origin. It never reaches the browser:
+// requests go through the Choreo gateway, which answers the preflight itself
+// and reflects the caller's origin. Measured with an OPTIONS against stage. The
+// Go middleware only matters to a browser hitting the service directly.
+//
+// These screens send THIS APP'S ACCESS TOKEN, like every other backend here —
+// not the ID token the GRC source sends. See features/security/grc/shim.
+//
+// Named for the BACKEND (grc-platform), not for the perspective. The label on
+// that perspective is a product decision that has already changed once —
+// "Security" became "Security and Compliance" — and a config key that tracks a
+// label goes stale the next time. The service, its Choreo component and its
+// repo are all called grc-platform, so this name stays greppable across all
+// three.
+export const securityBackendUrl: string = (
+  window.config?.ONE_WSO2_GRC_PLATFORM_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
+
+export function isSecurityBackendConfigured(): boolean {
+  return Boolean(securityBackendUrl);
+}
