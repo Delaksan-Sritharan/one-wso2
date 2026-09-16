@@ -82,6 +82,8 @@ declare global {
       // perspective. Optional/"not connected" like the others, but this
       // backend needs changes of its own first: see apiConfig.ts.
       ONE_WSO2_SECURITY_BACKEND_URL?: string;
+      /** Fallback: the key a GRC deployment already publishes. */
+      GRC_PLATFORM_BACKEND_BASE_URL?: string;
       // Base URL of the leave-app frontend itself (not its backend) —
       // used to deep-link into flows this webapp doesn't replicate, like
       // sabbatical requests. Optional — when absent, that link is hidden.

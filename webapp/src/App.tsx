@@ -112,6 +112,7 @@ import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
 import LegalPage from "@features/legal/pages/LegalPage";
+import SecurityPage from "@features/security/pages/SecurityPage";
 import { riskRoutes } from "@features/security/grc/modules/risk/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
 import PartnersListPage from "@features/due-diligence/partners/pages/PartnersListPage";
@@ -515,6 +516,7 @@ export default function App() {
               along with them, including the deliberate absence of one on
               Risk Registers. */}
           <Route path="security">
+            <Route index element={<SecurityPage />} />
             {riskRoutes}
             {adminRoutes}
           </Route>

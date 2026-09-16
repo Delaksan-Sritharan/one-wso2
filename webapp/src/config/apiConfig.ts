@@ -949,8 +949,14 @@ export const subscriptionServiceUrls = {
 //
 // Note the Security screens authorize with the ID TOKEN, not the access token
 // every other backend here uses — see features/security/grc/shim.
+// GRC_PLATFORM_BACKEND_BASE_URL is accepted as a fallback: that is the key a
+// GRC deployment already publishes, so a config copied across from one works
+// unchanged. ONE_WSO2_SECURITY_BACKEND_URL is the name to prefer here, matching
+// every other backend in this file.
 export const securityBackendUrl: string = (
-  window.config?.ONE_WSO2_SECURITY_BACKEND_URL ?? ""
+  window.config?.ONE_WSO2_SECURITY_BACKEND_URL ??
+  window.config?.GRC_PLATFORM_BACKEND_BASE_URL ??
+  ""
 ).replace(/\/+$/, "");
 
 export function isSecurityBackendConfigured(): boolean {
