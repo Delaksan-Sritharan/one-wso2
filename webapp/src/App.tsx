@@ -519,8 +519,8 @@ export default function App() {
               Risk Registers. */}
           <Route path="security">
             <Route index element={<SecurityPage />} />
-            {riskRoutes}
             {auditRoutes}
+            {riskRoutes}
             {adminRoutes}
           </Route>
           {/* Due Diligence — ported from digiops-finance/apps/due_diligence's

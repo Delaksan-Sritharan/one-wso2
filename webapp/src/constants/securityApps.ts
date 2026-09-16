@@ -22,6 +22,11 @@
 // this app's rail's vocabulary badly, and the labels, ids, ordering and
 // privileges below are transcribed from them so the two can be diffed.
 //
+// ORDER IS THE SOURCE'S, not a preference: components/side-nav-bar/sections.ts
+// is `[auditNav, riskNav, adminNav]`, and its comment notes the order is both
+// the sidebar's top-to-bottom order and the order LandingRedirect walks to pick
+// the first tab a user can actually see. Keep these three in that order.
+//
 // THREE APPS, not one: the source has three sidebar sections serving different
 // people — a named Action Owner with no grant at all reaches Risk Hub and never
 // the Admin Console, and an audit team reaches Audit Hub and neither of the
@@ -36,20 +41,6 @@ import type { MenuApp } from "@constants/appMenu";
 
 export const SECURITY_APPS: readonly MenuApp[] = [
   {
-    key: "risk-hub",
-    name: "Risk Hub",
-    icon: ShieldAlertIcon,
-    purpose:
-      "Risk register, assessment and treatment — raise a risk, take it through owner, management and compliance approval, and track its action plans to completion.",
-    alwaysGroup: true,
-    items: [
-      { id: "security-risk-dashboard", label: "Dashboard", desc: "Risk posture at a glance — heatmap, residual matrix and distribution.", path: "/security/risk/dashboard" },
-      { id: "security-risk-registers", label: "Risk Registers", desc: "Every risk you can see, across the approval workflow.", path: "/security/risk/registers" },
-      { id: "security-risk-add", label: "Add Risk", desc: "Raise a new risk: basic information, assessment scoring, and its action plan.", path: "/security/risk/add" },
-      { id: "security-risk-analytics", label: "Analytics", desc: "Trends, workflow funnel and compliance coverage, with CSV export.", path: "/security/risk/analytics" },
-    ],
-  },
-  {
     key: "audit-hub",
     name: "Audit Hub",
     icon: ShieldCheckIcon,
@@ -62,6 +53,20 @@ export const SECURITY_APPS: readonly MenuApp[] = [
       // two rather than from the rail, so they get no entry here either.
       { id: "security-audit-dashboard", label: "Dashboard", desc: "Audit progress at a glance — the work queue, phase breakdown and team completion.", path: "/security/audit/dashboard" },
       { id: "security-audit-audits", label: "Audits", desc: "Every audit you can see, with its controls, evidence and validation state.", path: "/security/audit/audits" },
+    ],
+  },
+  {
+    key: "risk-hub",
+    name: "Risk Hub",
+    icon: ShieldAlertIcon,
+    purpose:
+      "Risk register, assessment and treatment — raise a risk, take it through owner, management and compliance approval, and track its action plans to completion.",
+    alwaysGroup: true,
+    items: [
+      { id: "security-risk-dashboard", label: "Dashboard", desc: "Risk posture at a glance — heatmap, residual matrix and distribution.", path: "/security/risk/dashboard" },
+      { id: "security-risk-registers", label: "Risk Registers", desc: "Every risk you can see, across the approval workflow.", path: "/security/risk/registers" },
+      { id: "security-risk-add", label: "Add Risk", desc: "Raise a new risk: basic information, assessment scoring, and its action plan.", path: "/security/risk/add" },
+      { id: "security-risk-analytics", label: "Analytics", desc: "Trends, workflow funnel and compliance coverage, with CSV export.", path: "/security/risk/analytics" },
     ],
   },
   {
@@ -90,12 +95,12 @@ export const SECURITY_APPS: readonly MenuApp[] = [
  * synthetically — see the source's mergeRiskPrivileges.
  */
 export const SECURITY_ITEM_PRIVILEGE: Readonly<Record<string, string>> = {
+  "security-audit-dashboard": "AUDIT_VIEW_AUDITS",
+  "security-audit-audits": "AUDIT_VIEW_AUDITS",
   "security-risk-dashboard": "RISK_VIEW_DASHBOARD",
   "security-risk-registers": "RISK_VIEW_RISKS",
   "security-risk-add": "RISK_CREATE",
   "security-risk-analytics": "RISK_VIEW_ANALYTICS",
-  "security-audit-dashboard": "AUDIT_VIEW_AUDITS",
-  "security-audit-audits": "AUDIT_VIEW_AUDITS",
   "security-admin-users": "MANAGE_USERS",
   "security-admin-audit-hub": "MANAGE_AUDIT_HUB",
   "security-admin-risk-hub": "MANAGE_RISK_HUB",

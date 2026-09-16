@@ -27,3 +27,4 @@ replay_pid*
 # Kept out of the repo deliberately: they carry gateway URLs, Asgardeo client
 # ids, group names and security observations that shouldn't be published.
 My Findings*.md
+.DS_Store
