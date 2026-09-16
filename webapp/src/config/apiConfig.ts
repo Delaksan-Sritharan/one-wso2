@@ -929,6 +929,45 @@ export function isSubscriptionBackendConfigured(): boolean {
   return Boolean(subscriptionBackendUrl);
 }
 
+// ---------------------------------------------------------------------------
+// Email Group Manager backend (digiops-infra/apps/email-group-manager). Lets
+// an employee browse the company's Google Groups mailing lists, subscribe or
+// unsubscribe themselves, and — client-side only, no backend of its own —
+// build an email signature. See docs/ported-apps/email-group-manager.md for
+// the contract.
+//
+// The source app's own GET /user-info is NOT reused here: this webapp already
+// has an identical call (people-app's, via @api/useUserInfo) for the
+// signed-in caller's name, designation and work email, and asking a second
+// backend the same question would just be a second round trip for the same
+// answer. `isAdmin` on the source response was dead code even in the
+// original — nothing in its UI branched on it — so it has no equivalent here.
+export const emailGroupsBackendUrl: string =
+  window.config?.ONE_WSO2_EMAIL_GROUPS_BACKEND_URL ?? "";
+
+export function isEmailGroupsBackendConfigured(): boolean {
+  return Boolean(emailGroupsBackendUrl);
+}
+
+export const emailGroupsServiceUrls = {
+  // Groups every employee is subscribed to automatically. Read-only — there is
+  // no endpoint to leave one.
+  defaultGroups: `${emailGroupsBackendUrl}/default-google-groups`,
+  // The full catalog the caller may subscribe to or unsubscribe from.
+  allGroups: `${emailGroupsBackendUrl}/all-google-groups`,
+  // The caller's own current memberships — a mix of default groups, catalog
+  // groups they opted into, and groups an admin added them to that aren't in
+  // the catalog at all ("other" groups on the page).
+  userGroups: `${emailGroupsBackendUrl}/user-google-groups`,
+  // PATCH, body `{groupName, userEmail}`. The subject is not decided by a path
+  // segment or the token alone — it's a field in the payload — so unlike every
+  // other backend in this file these two calls are the same URL regardless of
+  // who they're for; that's fine, because the only caller this page ever acts
+  // for is the signed-in employee themself.
+  subscribe: `${emailGroupsBackendUrl}/google-group/subscribe`,
+  unsubscribe: `${emailGroupsBackendUrl}/google-group/unsubscribe`,
+};
+
 export const subscriptionServiceUrls = {
   // Distance ranges, the four opt-in/opt-out day boundaries, the LaaS price,
   // the fee-exempt groups AND the names of the two admin groups. One call

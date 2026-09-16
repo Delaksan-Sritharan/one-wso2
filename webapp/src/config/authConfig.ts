@@ -48,6 +48,10 @@ declare global {
       // and LaaS opt-in/opt-out). Optional — when absent the Subscriptions
       // screens show a not-connected state.
       ONE_WSO2_SUBSCRIPTION_BACKEND_URL?: string;
+      // Base URL for the digiops-infra email-group-manager backend (Google
+      // Groups mailing-list subscriptions). Optional — when absent the Email
+      // Groups screen shows a not-connected state.
+      ONE_WSO2_EMAIL_GROUPS_BACKEND_URL?: string;
       // Base URL for the digiops-hr promotion-app backend. Optional — when
       // absent, ConnectedServices' "Last promoted date" row falls back to a
       // "not configured" state and doesn't fire a request.
