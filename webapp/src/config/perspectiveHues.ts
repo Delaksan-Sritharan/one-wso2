@@ -112,6 +112,20 @@ export const PERSPECTIVE_HUES: Record<string, PerspectiveHue> = {
   // as its own colour rather than a shade of either. Tints computed against
   // the same contrast formula the test uses — 4.92:1 light, 4.30:1 dark, both
   // inside the 3.5 headroom rule with the wash treatment.
+  // Gold, and the last hue this palette should gain casually. Chosen for the gap
+  // rather than the association: the six before it sit at 13, 162, 207, 225, 268
+  // and 332 degrees, leaving 13-162 as the only wide opening, and 43 degrees puts
+  // it 30 from Me's orange — wider than the tightest existing pair (People at 207
+  // and Legal at 225, 18 apart). It reads as audit/caution, which suits the
+  // subject, but that is a bonus rather than the reason.
+  //
+  // This takes the palette to seven of eight. The next one is the one that
+  // should trip the cap and force a different encoding.
+  security: {
+    hue: "#B8860B",
+    light: { bg: "#F9EFD7", fg: "#7E5C07" },
+    dark: { bg: "#282420", fg: "#B8860B" },
+  },
   legal: {
     hue: "#6C89E0",
     light: { bg: "#CFD8F3", fg: "#3854A8" },
