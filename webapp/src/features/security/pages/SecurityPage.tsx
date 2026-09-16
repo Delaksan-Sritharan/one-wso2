@@ -30,9 +30,11 @@ import { useSecurityGate } from "@features/security/api/useSecurityGate";
 // hand-build theirs, and that shape once shipped one.)
 //
 // It also exists to answer "why is nothing here", which is the first question
-// this perspective will raise: the backend needs changes of its own before any
-// lifted screen can load, so the not-configured and no-access states name what
-// is missing rather than rendering an empty page.
+// this perspective will raise — the backend needs changes of its own before any
+// lifted screen can load. Both dead-end states say so in the reader's terms and
+// name a person to ask. Neither names a config key, a repo path or a file to
+// edit: everyone who opens the perspective sees these, not only whoever deploys
+// it, and an instruction they cannot act on reads as a broken page.
 export default function SecurityPage(): JSX.Element {
   const configured = isSecurityBackendConfigured();
   const gate = useSecurityGate(configured);
@@ -48,12 +50,13 @@ export default function SecurityPage(): JSX.Element {
     return (
       <Box>
         {header}
+        {/* Shown to whoever opens the perspective, not only to whoever deploys
+            it, so it says what is true rather than what to go and edit. Repo
+            paths and config-file names belong in the docs, not on screen. */}
         <Alert severity="info" sx={{ mt: 1.5, maxWidth: 720 }}>
-          <AlertTitle>Not connected yet</AlertTitle>
-          Set <code>ONE_WSO2_GRC_PLATFORM_BACKEND_URL</code> in <code>public/config.js</code> to the
-          GRC platform backend and reload. That backend also has to accept this app's Asgardeo client
-          id as a valid audience, or every request here fails — see{" "}
-          <code>docs/ported-apps/grc-security-lift.md</code>.
+          <AlertTitle>Not available yet</AlertTitle>
+          Security and Compliance isn't connected in this environment. Ask your One WSO2 administrator
+          when it will be switched on.
         </Alert>
       </Box>
     );
@@ -88,9 +91,10 @@ export default function SecurityPage(): JSX.Element {
                 You don't have access yet
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ maxWidth: "52ch" }}>
-                Access here comes from a role granted inside the GRC platform itself, not from your
-                Asgardeo groups. Ask someone who can reach Security → Admin Console → Users to grant
-                you the role that covers your work.
+                Access here comes from a role granted in Admin Console, not from your Asgardeo
+                groups — so being in the right team does not grant it on its own. Ask someone who
+                can reach Security and Compliance → Admin Console → Users to grant you the role that
+                covers your work.
               </Typography>
             </Box>
           </Stack>

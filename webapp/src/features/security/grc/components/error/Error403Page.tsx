@@ -33,9 +33,9 @@ export default function Error403Page(): JSX.Element {
     <Box sx={{ p: 3, maxWidth: 620 }}>
       <Alert severity="warning">
         <AlertTitle>You don't have access to this page</AlertTitle>
-        Access here comes from a role granted inside the GRC platform itself, not from your
-        Asgardeo groups. Ask someone who can reach Security → Admin Console → Users to grant you
-        the role that covers your work.
+        Access here comes from a role granted in Admin Console, not from your Asgardeo groups —
+        so being in the right team does not grant it on its own. Ask someone who can reach
+        Security and Compliance → Admin Console → Users to grant you the role that covers your work.
       </Alert>
     </Box>
   );
