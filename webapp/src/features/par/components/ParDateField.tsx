@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { SxProps, Theme } from "@wso2/oxygen-ui";
 import { IconButton, InputAdornment, TextField } from "@wso2/oxygen-ui";
 import { CalendarIcon } from "@wso2/oxygen-ui-icons-react";
@@ -49,6 +49,7 @@ export default function ParDateField({
   sx?: SxProps<Theme>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [rejection, setRejection] = useState<string | undefined>(undefined);
 
   return (
     <TextField
@@ -58,14 +59,24 @@ export default function ParDateField({
       fullWidth={fullWidth}
       value={value}
       disabled={disabled}
-      error={error}
-      helperText={helperText}
+      error={error || Boolean(rejection)}
+      helperText={rejection ?? helperText}
       onChange={(e) => {
         // min/max on a native date input only constrain the calendar widget
         // — typing a value directly bypasses them, and neither consumer's
-        // backend re-validates the range. Reject rather than pass through.
+        // backend re-validates the range. Reject rather than pass through,
+        // but say why: the field is controlled, so a silent reject snaps
+        // the value back with no visible feedback.
         const v = e.target.value;
-        if (v && ((min && v < min) || (max && v > max))) return;
+        if (v && min && v < min) {
+          setRejection(`Must be on or after ${min}`);
+          return;
+        }
+        if (v && max && v > max) {
+          setRejection(`Must be on or before ${max}`);
+          return;
+        }
+        setRejection(undefined);
         onChange(v);
       }}
       inputRef={inputRef}

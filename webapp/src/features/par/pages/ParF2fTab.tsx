@@ -140,7 +140,7 @@ export default function ParF2fTab() {
               <Typography sx={{ fontWeight: 500, width: { sm: "20%" } }}>F2F Completed Date:</Typography>
               <ParDateField
                 value={completedDate}
-                min={cycle.parCycleStartDate}
+                min={formatDate(cycle.parCycleStartDate)}
                 max={todayDateOnly()}
                 disabled={!leadShared}
                 error={dateTouched && !completedDate}

@@ -50,4 +50,27 @@ describe("ParDateField", () => {
     fireEvent.change(screen.getByLabelText("date"), { target: { value: "" } });
     expect(onChange).toHaveBeenCalledWith("");
   });
+
+  it("shows why a too-early date was rejected instead of silently reverting", () => {
+    const onChange = vi.fn();
+    render(<ParDateField value="" onChange={onChange} min="2026-01-10" ariaLabel="date" />);
+    fireEvent.change(screen.getByLabelText("date"), { target: { value: "2026-01-01" } });
+    expect(screen.getByText("Must be on or after 2026-01-10")).toBeInTheDocument();
+  });
+
+  it("shows why a too-late date was rejected instead of silently reverting", () => {
+    const onChange = vi.fn();
+    render(<ParDateField value="" onChange={onChange} max="2026-01-10" ariaLabel="date" />);
+    fireEvent.change(screen.getByLabelText("date"), { target: { value: "2026-01-20" } });
+    expect(screen.getByText("Must be on or before 2026-01-10")).toBeInTheDocument();
+  });
+
+  it("clears the rejection message once a valid date is accepted", () => {
+    const onChange = vi.fn();
+    render(<ParDateField value="" onChange={onChange} min="2026-01-10" ariaLabel="date" />);
+    fireEvent.change(screen.getByLabelText("date"), { target: { value: "2026-01-01" } });
+    expect(screen.getByText("Must be on or after 2026-01-10")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("date"), { target: { value: "2026-01-15" } });
+    expect(screen.queryByText("Must be on or after 2026-01-10")).not.toBeInTheDocument();
+  });
 });

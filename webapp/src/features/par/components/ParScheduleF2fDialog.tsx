@@ -65,7 +65,6 @@ export default function ParScheduleF2fDialog({
   const [selectedSlot, setSelectedSlot] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [validationError, setValidationError] = useState("");
   const { showSuccess } = useNotifications();
 
   const busyTimes = useCalendarBusyTimes(date || undefined);
@@ -78,7 +77,6 @@ export default function ParScheduleF2fDialog({
     setSelectedSlot("");
     setTitle("");
     setDescription("");
-    setValidationError("");
     onClose();
   };
 
@@ -88,15 +86,8 @@ export default function ParScheduleF2fDialog({
   };
 
   const handleSchedule = () => {
-    if (!title.trim()) {
-      setValidationError("Please enter a meeting title");
-      return;
-    }
-    if (!selectedSlot) {
-      setValidationError("Please select a time slot");
-      return;
-    }
-    setValidationError("");
+    // Both the empty-title and no-slot-selected cases are already covered by
+    // the submit button's own disabled condition below.
     const [startTime, endTime] = selectedSlot.split("|");
     schedule.mutate(
       { parRatingId, title, description, startTime, endTime, date },
@@ -185,7 +176,6 @@ export default function ParScheduleF2fDialog({
             </>
           )}
 
-          {validationError && <Alert severity="error">{validationError}</Alert>}
           {schedule.isError && <Alert severity="error">{describeError(schedule.error)}</Alert>}
         </Stack>
       </DialogContent>
