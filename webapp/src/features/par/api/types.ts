@@ -175,10 +175,15 @@ export interface ParParticipant {
 // parRating/parSpecialRating/parLeadComment/parLeadStatus/parAdminComment/
 // parPerformanceNoticeAck; lead blocks parEmployeeComment/parEmployeeStatus/
 // parEmployeeAcceptanceStatus/parEmployeeAcceptanceComment/parAdminComment.
-// Everything else on the type goes through for that caller.
+// Everything else on the type goes through for that caller — which is why
+// parF2fStatus/parF2fDate are here too: neither denylist blocks them, and
+// both self (marking F2F complete) and the lead (scheduling it) use this
+// same endpoint to set them.
 export interface ParRatingModify {
   parEmployeeComment?: string;
   parEmployeeStatus?: ParEmployeeStatus;
+  parF2fStatus?: ParF2fStatus;
+  parF2fDate?: string;
   // Lead-only, per checkForModifiableFieldsForLead above.
   parRating?: string;
   parSpecialRating?: string;
@@ -256,4 +261,39 @@ export interface ParSpecialRatingAllocation {
   parSpecialQuotaName: string;
   parTop5Quota: number;
   parTop20Quota: number;
+}
+
+// ---- F2F scheduling ----------------------------------------------------------
+//
+// Mirrors par-app backend's raw Google Calendar freebusy shape (gcalendar:
+// FreeBusyResponse) and its own ScheduleMeetingRequest — see manager.bal's
+// getBusyTimeSlots / scheduleF2FMeeting.
+
+export interface ParCalendarBusySlot {
+  start: string;
+  end: string;
+}
+
+export interface ParCalendarBusy {
+  busy: ParCalendarBusySlot[];
+}
+
+// GET .../calendar/busy-times?date=YYYY-MM-DD.
+export interface ParFreeBusyResponse {
+  calendars: Record<string, ParCalendarBusy>;
+  kind: string;
+  timeMax: string;
+  timeMin: string;
+}
+
+// Body for POST .../calendar/schedule-f2f. The response is a bare 201 with
+// no payload (service.bal's own resource returns `http:CREATED` and nothing
+// else) — there is no meetLink to read back from this call.
+export interface ParScheduleF2fRequest {
+  parRatingId: number;
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  date: string;
 }

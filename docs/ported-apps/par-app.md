@@ -1,23 +1,24 @@
 # PAR (Performance Appraisal Review) — functional specification
 
-**Status:** the employee-facing half of par-app is ported and live under People Ops. The Lead Portal is
-partially ported — Direct Reports and Top 5%/20% Allocation are done; Additional Reports, Report
-Chain, and Employee History are not, planned for a follow-up PR (§9). Admin Portal and F2F
-scheduling are not started. Written from the source and cross-checked against the running staging app
+**Status:** the employee-facing half of par-app (all five tabs, including F2F) is ported and live under
+People Ops. The Lead Portal is partially ported — Direct Reports and Top 5%/20% Allocation are done;
+Additional Reports, Report Chain, and Employee History are not, planned for a follow-up PR (§9). Admin
+Portal is not started. Written from the source and cross-checked against the running staging app
 (screenshots) — this is the reference for verifying the port and for writing test cases against it,
 not a proposal.
 
 **Source of truth for behaviour:** `digiops-hr/apps/par-app/webapp/src` — `OngoingCycleView.tsx` and
-its panels/components for the four tabs below (`views/ongoingCycleView/`, `components/common/
-RequestFeedbackTab.tsx`, `ProvideFeedbackTab.tsx`, `OfferFeedbackView.tsx`, `views/parHistory/
-ParHistory.tsx`) — and `par-app/backend` (`service.bal` for the endpoint surface, `manager.bal` for
-cycle lifecycle, `modules/types/types.bal` for states, roles and field-level authorization).
+its panels/components for the five tabs below (`views/ongoingCycleView/`, `components/common/
+RequestFeedbackTab.tsx`, `ProvideFeedbackTab.tsx`, `OfferFeedbackView.tsx`, `F2fPanel.tsx`,
+`ScheduleF2F.tsx`, `views/parHistory/ParHistory.tsx`) — and `par-app/backend` (`service.bal` for the
+endpoint surface, `manager.bal` for cycle lifecycle and calendar integration, `modules/types/types.bal`
+for states, roles and field-level authorization).
 
 **In One WSO2:** `/people-ops/performance`, a tab group (`features/par/`) under the People Ops
-perspective — **Employee Feedback**, **Request 360° Feedback**, **Provide 360° Feedback**, and
-**History**, each a real route (`employee-feedback` / `request-360` / `provide-360` / `history`).
-The Lead Portal lives one level down at `/people-ops/performance/lead`, gated on par-app's own
-`Role.TEAM_LEAD` (`ParRequiresTeamLeadRoute`) — so far **Direct Reports** and **Top 5%/20%
+perspective — **Employee Feedback**, **Request 360° Feedback**, **Provide 360° Feedback**, **F2F**,
+and **History**, each a real route (`employee-feedback` / `request-360` / `provide-360` / `f2f` /
+`history`). The Lead Portal lives one level down at `/people-ops/performance/lead`, gated on par-app's
+own `Role.TEAM_LEAD` (`ParRequiresTeamLeadRoute`) — so far **Direct Reports** and **Top 5%/20%
 Allocation** (`direct-reports` / `allocation`). Backend is par-app's own Ballerina service, configured
 as `ONE_WSO2_PAR_BACKEND_URL`.
 
@@ -32,12 +33,12 @@ Portal (§8, partially ported) and the Admin Portal (not yet started — see §9
 
 **Who sees which tabs** is decided by one fact: whether the employee has a lead
 (`OngoingCycleView.tsx`'s `employeeInfo.leadEmail !== null`, ported as `useParHasLead` reading
-par-app's own `GET /employees/{email}`). Someone with a lead gets all four tabs; someone without one
+par-app's own `GET /employees/{email}`). Someone with a lead gets all five tabs; someone without one
 (e.g. the top of a reporting chain) gets only **Provide 360° Feedback** and **History** — there is
-nothing to self-assess or request reviewers for if nobody above you administers your cycle. The gate
-fails *open*: until the fetch has actually confirmed `leadEmail === null`, every tab shows. This is a
-UX-only visibility decision, not the access boundary — every screen's own API calls enforce who may
-read or write what, regardless of which tabs the client renders.
+nothing to self-assess, request reviewers, or hold a face-to-face for if nobody above you administers
+your cycle. The gate fails *open*: until the fetch has actually confirmed `leadEmail === null`, every
+tab shows. This is a UX-only visibility decision, not the access boundary — every screen's own API
+calls enforce who may read or write what, regardless of which tabs the client renders.
 
 ## 2. Screens and features
 
@@ -77,7 +78,30 @@ and rating scale, a rich-text comment, autosaving 5s after you stop typing. Shar
 behind their own confirmation dialog (irreversible once recorded). Declining asks for a reason instead
 of a rating. Voluntary/offered reviews hide Decline — there was no request to decline.
 
-### 2.4 History (`ParHistoryTab.tsx`)
+### 2.4 F2F (`ParF2fTab.tsx`)
+
+The employee-facing half of `F2fPanel.tsx` (`isEmployeeView=true`; the lead's own render of the same
+component belongs with the Lead Portal, not here). Five independent status alerts stack rather than
+switch — e.g. "F2F meeting is scheduled" and the deadline reminder both show together when the
+meeting is SCHEDULED and the deadline hasn't passed, matching source exactly rather than collapsing
+them into one.
+
+A **F2F Completed Date** field (native date input, min the cycle's start date, max today) and two
+actions, both disabled until the lead has shared their side (`parLeadStatus === SHARED`) and hidden
+entirely once COMPLETED or past the deadline:
+
+- **Schedule Google Meet** (shown only while `parF2fStatus === PENDING`) opens a picker
+  (`ParScheduleF2fDialog.tsx`, porting `ScheduleF2F.tsx`): pick a date, the app checks the caller's and
+  their lead's Google Calendar availability (`GET .../calendar/busy-times`) and computes free
+  half-hour slots client-side (9am–5pm, `util/parF2fSlots.ts`), then a title/description — **Schedule
+  Meeting** stays disabled until both a slot and a title are filled — creates the event
+  (`POST .../calendar/schedule-f2f`), which the backend also uses to flip `parF2fStatus` to `SCHEDULED`
+  as a side effect. The dialog closes immediately on success, same as source; see the deviation below
+  for why no Meet link is shown.
+- **Mark as completed** saves the picked date with `parF2fStatus: COMPLETED` through the same
+  par-rating PATCH every other tab uses.
+
+### 2.5 History (`ParHistoryTab.tsx`)
 
 Past (closed) cycles, in a table — click one to see that cycle's record (the same read-only summary
 as Employee Feedback's finalized view, including the PDF export). A standing notice explains that
@@ -85,9 +109,10 @@ history is only available from 2024 H2 onward.
 
 ## 3. Business rules
 
-1. **Deadlines** are per-field on the cycle (`parEmployeeDeadline`, `parThreeSixtyRatingDeadline`) and
-   evaluated as end-of-day in the browser's own timezone. Every screen disables rather than hides its
-   actions once passed, except Provide 360°'s per-row action, which the source hides entirely.
+1. **Deadlines** are per-field on the cycle (`parEmployeeDeadline`, `parThreeSixtyRatingDeadline`,
+   `parF2FDeadline`) and evaluated as end-of-day in the browser's own timezone. Every screen disables
+   rather than hides its actions once passed, except Provide 360°'s per-row action and F2F's
+   date-field/actions block, both of which the source hides entirely.
 2. **Comments are rich text**, base64-of-URI-encoded on the wire (the backend rejects anything else),
    sanitized through the same DOMPurify allowlist on both save and render.
 3. **The finalized summary only ever shows once your own status is SHARED/SHARED_BLOCKED.** A lapsed
@@ -100,6 +125,20 @@ history is only available from 2024 H2 onward.
    → "Not Assigned", etc. — `util/parLabels.ts`) on screen, but *not* in the PDF export, which writes a
    real code raw and only substitutes text for the placeholder — matching the source's own PDF exactly
    rather than "improving" on it.
+7. **`parF2fStatus`/`parF2fDate` are self-editable through the same `PATCH .../par-ratings/{id}` as the
+   comment/status pair**, despite being set by the employee for what looks like a lead-facing field.
+   `checkForModifiableFieldsForSelf` (backend) is a denylist (blocks `parRating`, `parSpecialRating`,
+   `parLeadComment`, `parLeadStatus`, `parAdminComment`, `parPerformanceNoticeAck`), not an allowlist —
+   anything not named there, F2F fields included, goes through.
+8. **F2F's "Schedule Google Meet" never shows a Meet link back to the user, and the dialog closes on
+   success rather than holding a confirmation screen — both matching source, not simplifying it.**
+   `ScheduleF2F.tsx`'s own `useEffect` calls `onClose()` the instant scheduling succeeds, before its
+   "click here to open Google Meet link" panel could ever be seen — and that panel could never have
+   shown a link anyway, since `POST .../calendar/schedule-f2f` returns a bare 201 with no body
+   (`CreateCalendarEventResponse` only ever carried `message`/`id`). The calendar event is real (Google
+   generates the Meet link, both attendees get an emailed invite via `sendUpdates=all`), and source's
+   actual confirmation is a snackbar toast ("F2F scheduled successfully") dispatched alongside the
+   auto-close — ported as the same toast text on success, dialog closing immediately after.
 
 ## 4. API contract
 
@@ -120,10 +159,13 @@ All requests carry the signed-in user's bearer token plus `x-user-timezone-offse
 | `GET /par-cycles/{id}/teams/{teamId}` | One team's roster |
 | `PATCH /reminders/schedule-360-reminders` | No body; sends 360° reminders to the calling lead's own reports |
 | `GET /par-cycles/{id}/special-rating-groups-quota?leadEmail=` | The calling lead's Top 5%/20% quota allocations |
+| `GET /calendar/busy-times?date=` | The caller's and their lead's busy periods for one day (flat path, not under `/par-cycles`) |
+| `POST /calendar/schedule-f2f` | Creates the Meet event + invite, and flips `parF2fStatus` to `SCHEDULED` server-side; returns bare 201, no body |
 
 ## 5. Test checklist
 
-- [ ] An employee with a lead sees all four tabs; one without sees only Provide 360° and History.
+- [ ] An employee with a lead sees all five tabs; one without sees only Provide 360° and History, and
+      is redirected away from a directly-typed F2F/Employee Feedback/Request 360° URL.
 - [ ] Employee Feedback: PENDING shows a disabled-after-deadline Start button; DRAFT shows the form;
       typing autosaves after 1s with a "Draft saved" flash; Save/Share disable but don't hide past the
       deadline; Share opens a confirmation naming your lead.
@@ -136,6 +178,11 @@ All requests carry the signed-in user's bearer token plus `x-user-timezone-offse
 - [ ] Provide 360°: Requested/Voluntary tabs show correct counts; a lapsed voluntary PENDING request
       reads "Abandoned"; declining requires a reason and a confirmation; offering voluntary feedback
       excludes yourself and existing requests and asks for confirmation first.
+- [ ] F2F: date field and both actions are disabled until your lead has shared, and disappear entirely
+      once COMPLETED or past the deadline; "Schedule Google Meet" only shows while PENDING, and its
+      "Schedule Meeting" button stays disabled until both a slot and a title are filled; scheduling
+      closes the dialog immediately with a toast (no in-dialog Meet link) and flips the status to
+      SCHEDULED; "Mark as completed" requires a date and moves the status to COMPLETED.
 - [ ] History: past cycles list, oldest data is explained by the notice, opening one shows the same
       read-only summary as a shared Employee Feedback record.
 - [ ] Lead Portal is reachable only by a team lead in the active cycle; a non-lead is redirected away
@@ -195,18 +242,21 @@ is 1 and Top 20% is 0 is a small-team special case — the Top 20% chip displays
 
 ## 9. Not yet ported
 
-- **F2F scheduling** — a fifth tab of the Employee Portal in source (`F2fPanel.tsx`), needs the
-  Google Calendar availability + Meet-booking integration, not wired to anything here yet.
 - **Lead Portal — Additional Reports, Report Chain, Employee History** (`EmployeeReportView.tsx`,
   `ReportChainView.tsx`, `EmployeeHistoryView.tsx`) — planned for a follow-up PR once Direct Reports
   and Allocation (§8) have landed.
-- **Lead Portal — evidence attachments and every Admin-only branch** of the Direct Reports review
-  screen (see §8.1).
+- **Lead Portal — evidence attachments, every Admin-only branch, and the "360 Reviews"/F2F sub-tabs**
+  of the Direct Reports review screen (see §8.1). The lead-facing F2F sub-tab is what marks a report's
+  F2F complete (`F2fPanel.tsx`'s `isEmployeeView=false` render); `ParF2fTab.tsx` only covers the
+  employee's own side.
 - **Admin Portal** — source's `/admin-portal` (`views/adminPortal/`): create/configure cycles, assign
   special-rating quotas, monitor org-wide completion, generate reports, send/schedule reminders, global
   configuration.
-- **One unified "no cycle" state.** Source gates all four Employee Portal tabs behind a single check
+- **PAR History's Chain view** — source's `ParHistory.tsx` has a second, lead-only tab alongside "My
+  History" (`views/parHistory/ChainViewTab.tsx`): a lead's view of their reports' PAR history across
+  cycles. Distinct from the Lead Portal's own "Report Chain" tab above (`ReportChainView.tsx`).
+- **One unified "no cycle" state.** Source gates all Employee Portal tabs behind a single check
   (`OngoingCycleView.tsx`) that replaces the whole tab body with one notice when there's no active
   cycle; this port instead repeats a similar (but not identically worded) message independently in
-  each tab file (Employee Portal and Lead Portal alike). Functionally equivalent today, but worth
-  consolidating the next time this area is touched rather than leaving further copies to drift.
+  each tab file across both portals. Functionally equivalent today, but worth consolidating the next
+  time this area is touched rather than leaving further copies to drift.
