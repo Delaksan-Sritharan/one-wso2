@@ -251,7 +251,8 @@ export default function UmtDescriptionInstructionForm({
           onChange={(event) => setHotfixDescription(event.target.value)}
           fullWidth
           multiline
-          rows={4}
+          minRows={4}
+          maxRows={12}
         />
         <TextField
           label="Hotfix Instruction"
@@ -259,7 +260,8 @@ export default function UmtDescriptionInstructionForm({
           onChange={(event) => setHotfixInstruction(event.target.value)}
           fullWidth
           multiline
-          rows={4}
+          minRows={4}
+          maxRows={12}
         />
         <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
           <Button variant="contained" loading={saveMutation.isPending} onClick={() => void handleSaveHotfix()}>
@@ -455,7 +457,8 @@ export default function UmtDescriptionInstructionForm({
                   onChange={(event) => setProductDescription(event.target.value)}
                   fullWidth
                   multiline
-                  rows={4}
+                  minRows={4}
+                  maxRows={12}
                   required
                 />
                 <TextField
@@ -464,7 +467,8 @@ export default function UmtDescriptionInstructionForm({
                   onChange={(event) => setProductInstruction(event.target.value)}
                   fullWidth
                   multiline
-                  rows={4}
+                  minRows={4}
+                  maxRows={12}
                   required
                 />
               </>
@@ -476,7 +480,8 @@ export default function UmtDescriptionInstructionForm({
                   onChange={(event) => setCommonDescription(event.target.value)}
                   fullWidth
                   multiline
-                  rows={4}
+                  minRows={4}
+                  maxRows={12}
                   required
                 />
                 <TextField
@@ -485,7 +490,8 @@ export default function UmtDescriptionInstructionForm({
                   onChange={(event) => setCommonInstruction(event.target.value)}
                   fullWidth
                   multiline
-                  rows={4}
+                  minRows={4}
+                  maxRows={12}
                   required
                 />
               </>
