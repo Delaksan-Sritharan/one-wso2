@@ -30,34 +30,36 @@ import {
   DialogTitle,
   FormControlLabel,
   Grid,
+  IconButton,
   MenuItem,
   Skeleton,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
+import { FileDownIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useParRating } from "../api/useParData";
 import { useLeadRatingUpdate } from "../api/useLeadRatingUpdate";
+import { useParEmployeeReviews } from "../api/useLeadHistory";
 import { decodeParComment, encodeParComment, isEmptyHtml } from "../util/parComment";
 import { isDeadlinePassed } from "../util/parDeadline";
 import { formatShortDate } from "../util/parDate";
+import { downloadParPdf } from "../util/parPdf";
 import ParRichTextField from "./ParRichTextField";
 import { ParCommentView } from "./ParContent";
 import ParEmptyState from "./ParEmptyState";
+import ParHistoryReviewSection from "./ParHistoryReviewSection";
 import type { ParCycle } from "../api/types";
 
 const TOP_5_20_ENABLED_RATING = "Successful";
 
-// Ports LeadReviewPanel.tsx — the lead-only path (isAdminAuditViewOn /
-// isAdminHistoryViewOn are Admin Portal view modes this same component
-// answers to in source; neither applies to a lead, so those branches are
-// left out rather than plumbed through unused). Not ported: evidence
-// attachments (parPerformanceNoticeAck as a list of Google Drive links,
-// gated behind rating === evidenceEnabledRating) — a separate Google Drive
-// picker integration nothing else in this app has, deferred by choice.
+// Ports LeadReviewPanel.tsx's lead-only path (Admin Portal view modes left
+// out). Not ported: evidence attachments (parPerformanceNoticeAck's Google
+// Drive picker — a capability nothing else in this app has).
 export default function ParLeadReviewPanel({
   cycle,
   employeeEmail,
@@ -67,6 +69,7 @@ export default function ParLeadReviewPanel({
 }) {
   const rating = useParRating(cycle.parCycleId, employeeEmail);
   const ratingUpdate = useLeadRatingUpdate(cycle.parCycleId);
+  const reviews = useParEmployeeReviews(cycle.parCycleId, employeeEmail);
   const { showSuccess, showError } = useNotifications();
 
   const [leadComment, setLeadComment] = useState("");
@@ -147,9 +150,6 @@ export default function ParLeadReviewPanel({
     );
   };
 
-  // LeadReviewPanel.tsx's own 5s autosave, guarded the same way
-  // ParEmployeeFeedbackTab.tsx's own autosave is: skip while a save (this
-  // one or the manual button) is already in flight.
   useEffect(() => {
     if (!parRatingData || readOnly) return;
     if (isEmptyHtml(leadComment) || leadComment.trim() === savedLeadComment.trim()) return;
@@ -191,14 +191,11 @@ export default function ParLeadReviewPanel({
     (parRatingValue !== (parRatingData.parRating ?? "") && parRatingValue !== "") ||
     specialRating !== (parRatingData.parSpecialRating ?? "NONE");
 
-  // LeadReviewPanel.tsx:1049-1062 — the lead's own status alert.
   const statusAlert = readOnly ? (
     <Alert severity={shared ? "success" : "info"}>
       {shared ? "Lead's feedback is shared with the employee" : "Lead's feedback is not shared with the employee"}
     </Alert>
   ) : parRatingData.parLeadStatus === "DRAFT" ? (
-    // constant.ts's employeeParDraftSaved copy, reused verbatim here too —
-    // source's own apparent copy-paste from the employee-side alert.
     <Alert severity="warning">
       You have saved your PAR as a draft Please share on or before the deadline: {formatShortDate(cycle.parLeadDeadline)}.
     </Alert>
@@ -228,12 +225,27 @@ export default function ParLeadReviewPanel({
   return (
     <Grid container spacing={2}>
       <Grid size={12}>
-        {deadlinePassed && !shared && (
-          <Alert severity="error" sx={{ mb: 1.5 }}>
-            Lead's feedback deadline is passed on: {formatShortDate(cycle.parLeadDeadline)}.
-          </Alert>
-        )}
-        {statusAlert}
+        <Box display="flex" alignItems="center" justifyContent="space-between" gap={2}>
+          <Box flex={1}>
+            {statusAlert}
+            {deadlinePassed && !shared && (
+              <Alert severity="error" sx={{ mt: 1.5 }}>
+                Lead's feedback deadline is passed on: {formatShortDate(cycle.parLeadDeadline)}.
+              </Alert>
+            )}
+          </Box>
+          <Tooltip title={reviews.isSuccess ? "Download PAR details" : "360° reviews are still loading"}>
+            <span>
+              <IconButton
+                aria-label="download"
+                disabled={!reviews.isSuccess}
+                onClick={() => downloadParPdf(parRatingData, employeeComment, savedLeadComment, reviews.data)}
+              >
+                <FileDownIcon size={18} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
       </Grid>
 
       <Grid size={{ xs: 12, md: 6 }}>
@@ -334,6 +346,12 @@ export default function ParLeadReviewPanel({
                 </Box>
               )}
 
+              {!readOnly && !employeeHasStarted && (
+                <Typography color="warning.main" textAlign="right" sx={{ mb: 1 }}>
+                  * Sharing lead's feedback is disabled until employee PAR is shared
+                </Typography>
+              )}
+
               {!readOnly && (
                 <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5 }}>
                   <Button variant="outlined" disabled={!canSaveDraft} onClick={() => submit("DRAFT")}>
@@ -362,8 +380,18 @@ export default function ParLeadReviewPanel({
         </Card>
       </Grid>
 
-      {/* leadParShare copy (config/constant.ts). ConfirmationDialog.tsx's
-          own maxWidth="md", not a narrower one-off. */}
+      <Grid size={12}>
+        {reviews.isLoading ? (
+          <Skeleton variant="rectangular" height={72} sx={{ borderRadius: 1.5 }} />
+        ) : reviews.isError ? (
+          <ErrorNotice error={reviews.error} onRetry={() => reviews.refetch()} retrying={reviews.isFetching}>
+            Couldn't load 360° feedback.
+          </ErrorNotice>
+        ) : (
+          <ParHistoryReviewSection reviews={reviews.data ?? []} />
+        )}
+      </Grid>
+
       <Dialog open={confirming} onClose={() => setConfirming(false)} maxWidth="md" fullWidth>
         <DialogTitle>Share Lead's Feedback?</DialogTitle>
         <DialogContent>

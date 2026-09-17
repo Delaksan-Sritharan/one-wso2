@@ -227,6 +227,39 @@ export const parServiceUrls = {
   // view, out of scope for this portal).
   parSpecialRatingAllocations: (parCycleId: number, leadEmail: string) =>
     `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups-quota?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../reports?leadEmail= — EmployeeReportView.tsx's own
+  // fetchDirectAndIndirectReports. Returns both direct and indirect reports;
+  // the Additional Reports tab keeps only the indirect ones.
+  parAdditionalReports: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/reports?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../report-levels?leadEmail= — ReportChainView.tsx's own
+  // fetchDirectEmployeePars. One drill-down level: the direct reports of
+  // whichever email is passed, not always the caller's own.
+  parReportLevels: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/report-levels?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET /employees?leadEmail= — EmployeeReportView.tsx's own
+  // fetchEntityEmployees. Org-chart direct reports, not PAR-cycle-scoped.
+  parLeadEmployees: (leadEmail: string) => `${parBackendUrl}/employees?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET /par-cycles?status=CLOSED, no email — EmployeeHistoryView.tsx's own
+  // fetchClosedParCycles: every closed cycle org-wide, gated only on the
+  // caller being a lead in the active cycle (or admin), not scoped to their
+  // own participation the way parCycles(email, "CLOSED") above is.
+  parAllClosedCycles: () => `${parBackendUrl}/par-cycles?status=CLOSED`,
+  // GET .../participants?leadEmail= — same endpoint parServiceUrls.par360Participants
+  // hits with no leadEmail (org-wide); EmployeeHistoryView.tsx's own
+  // fetchParticipants scopes it to the calling lead's own reports instead.
+  parHistoryParticipants: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/participants?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../employees/{email}/reviews — every review ABOUT that employee
+  // (reviewer, rating, comment, status), regardless of who's asking, as
+  // opposed to par360Review (the caller's OWN review of someone else).
+  parEmployeeReviews: (parCycleId: number, employeeEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(employeeEmail)}/reviews`,
+  // GET /legacy-par-history/{employeeEmail} — pre-migration PeopleHR export
+  // data. 360 feedback is server-side stripped when the caller IS the
+  // employee (self-view); a lead viewing a report's history gets it intact.
+  parLegacyHistory: (employeeEmail: string) =>
+    `${parBackendUrl}/legacy-par-history/${encodeURIComponent(employeeEmail)}`,
 
   // ---- F2F scheduling ---------------------------------------------------------
   //

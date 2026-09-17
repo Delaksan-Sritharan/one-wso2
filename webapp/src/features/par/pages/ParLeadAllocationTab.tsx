@@ -30,9 +30,9 @@ import {
   TableRow,
   TextField,
   Typography,
+  alpha,
   useTheme,
 } from "@wso2/oxygen-ui";
-import { alpha } from "@mui/material/styles";
 import { SearchIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useMeProfile } from "@features/my/api/useMeProfile";
@@ -189,14 +189,11 @@ export default function ParLeadAllocationTab() {
     );
   }
 
-  // groupSpecialRatingAllocations keeps every group regardless of match (it
-  // only flags which departments highlight) — source's own equivalent
-  // useMemo has the same shape, so its "No results" message never renders
-  // either. Filtered here instead of reproducing that dead code.
-  const groupedAllocations = groupSpecialRatingAllocations(rows, searchQuery);
-  const groups = searchQuery.trim()
-    ? groupedAllocations.filter((group) => group.departments.some((department) => department.highlight))
-    : groupedAllocations;
+  // groupSpecialRatingAllocations keeps every group regardless of match —
+  // it only flags which departments highlight. Source's own equivalent
+  // useMemo has the same shape: every group and every row always renders,
+  // searching only changes which rows highlight, nothing is ever hidden.
+  const groups = groupSpecialRatingAllocations(rows, searchQuery);
 
   return (
     <Stack spacing={2}>
@@ -216,12 +213,6 @@ export default function ParLeadAllocationTab() {
           },
         }}
       />
-
-      {groups.length === 0 && searchQuery.trim() && (
-        <Typography color="text.secondary" align="center">
-          No results found for "{searchQuery}"
-        </Typography>
-      )}
 
       {groups.map((group) => (
         <AllocationGroupCard key={group.quotaId} group={group} searchQuery={searchQuery} />

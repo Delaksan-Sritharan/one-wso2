@@ -49,7 +49,7 @@ import ParCompletionStatusCard from "../components/ParCompletionStatusCard";
 import ParCycleDatesStepper from "../components/ParCycleDatesStepper";
 import ParEmptyState from "../components/ParEmptyState";
 import ParLeadTeamRoster from "../components/ParLeadTeamRoster";
-import ParLeadReviewPanel from "../components/ParLeadReviewPanel";
+import ParLeadReviewTabs from "../components/ParLeadReviewTabs";
 import type { ParTeamSummary } from "../api/types";
 
 export default function ParLeadDirectReportsTab() {
@@ -107,12 +107,7 @@ export default function ParLeadDirectReportsTab() {
 
   if (reviewEmployeeEmail) {
     return (
-      <Stack spacing={1.5}>
-        <Button size="small" onClick={() => setReviewEmployeeEmail(undefined)} sx={{ alignSelf: "flex-start" }}>
-          ← Back
-        </Button>
-        <ParLeadReviewPanel cycle={cycle} employeeEmail={reviewEmployeeEmail} />
-      </Stack>
+      <ParLeadReviewTabs cycle={cycle} employeeEmail={reviewEmployeeEmail} onBack={() => setReviewEmployeeEmail(undefined)} />
     );
   }
 
