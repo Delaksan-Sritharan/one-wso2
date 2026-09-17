@@ -63,9 +63,13 @@ export default function EmailSignaturePage() {
   //
   // The same protection is needed within this ONE prefill too: the profile
   // fetch is a real network round trip, so someone can start typing before
-  // it resolves. `prev.name || name` (not `name || prev.name`) means
-  // whatever they've already typed wins over the fetched value — a field
-  // is only ever filled in from the profile while it's still blank.
+  // it resolves. Checking `prev.name.trim()` (not `prev.name` — whitespace
+  // isn't "already filled") means whatever they've already typed wins over
+  // the fetched value — a field is only ever filled in from the profile
+  // while it's still genuinely blank. Matches hasSignatureContent's own
+  // trimmed gate: without the trim, a stray space typed while waiting could
+  // block the prefill entirely, leaving hasSignatureContent seeing nothing
+  // to preview despite a real name being available.
   const [hasPrefilled, setHasPrefilled] = useState(false);
   if (userInfo.data && !hasPrefilled) {
     setHasPrefilled(true);
@@ -75,8 +79,8 @@ export default function EmailSignaturePage() {
     if (name || designation) {
       setData((prev) => ({
         ...prev,
-        name: prev.name || name,
-        designation: prev.designation || designation,
+        name: prev.name.trim() ? prev.name : name,
+        designation: prev.designation.trim() ? prev.designation : designation,
       }));
     }
   }

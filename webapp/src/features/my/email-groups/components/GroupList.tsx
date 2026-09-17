@@ -25,7 +25,7 @@ import {
   Typography,
 } from "@wso2/oxygen-ui";
 import { MailPlusIcon, MailXIcon } from "@wso2/oxygen-ui-icons-react";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import type { GroupCategory, GroupCategoryFilter, MyGroupRow } from "../api/emailGroupTypes";
 import { splitIntoColumns } from "../util/columns";
 
@@ -105,8 +105,16 @@ function GroupRow({
 }
 
 function EmptyRow({ text }: { text: string }) {
+  // role="status" so a screen reader announces the new text when a search
+  // narrows a list to nothing, or a filter switch reveals an empty
+  // category — otherwise it's just text that changed silently off-screen.
   return (
-    <Typography variant="body2" color="text.secondary" sx={{ py: 2, px: 1, fontStyle: "italic" }}>
+    <Typography
+      role="status"
+      variant="body2"
+      color="text.secondary"
+      sx={{ py: 2, px: 1, fontStyle: "italic" }}
+    >
       {text}
     </Typography>
   );
@@ -146,12 +154,17 @@ function GroupColumns<T>({
     >
       {columns.map((column, colIndex) => (
         <Box key={colIndex}>
+          {/* Fragment, not a div: a <ul>'s only valid children are <li>
+              elements, and ListItem/Divider both render as one. A div
+              wrapper here would sit between List and its rows in the DOM
+              (ul > div > li), which is exactly the shape that makes some
+              screen readers miscount or skip list items. */}
           <List dense disablePadding>
             {column.map((item, i) => (
-              <div key={keyOf(item)}>
+              <Fragment key={keyOf(item)}>
                 {renderRow(item)}
                 {i < column.length - 1 && <Divider component="li" />}
-              </div>
+              </Fragment>
             ))}
           </List>
           {colIndex < columns.length - 1 && column.length > 0 && (

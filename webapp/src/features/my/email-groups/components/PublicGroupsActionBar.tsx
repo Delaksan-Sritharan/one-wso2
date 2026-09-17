@@ -33,7 +33,9 @@ export default function PublicGroupsActionBar({
   if (selectedCount === 0) return null;
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-      <Typography variant="caption" color="text.secondary">
+      {/* role="status" so a screen reader announces the new count as rows
+          get checked or unchecked, rather than needing to be re-read manually. */}
+      <Typography role="status" variant="caption" color="text.secondary">
         {selectedCount} selected
       </Typography>
       <Badge badgeContent={selectedCount} color="primary">

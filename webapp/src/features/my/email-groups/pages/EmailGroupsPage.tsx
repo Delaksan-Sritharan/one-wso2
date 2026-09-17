@@ -165,13 +165,18 @@ export default function EmailGroupsPage() {
     }
     setIsSubmitting(false);
     setConfirmState(null);
-    // Only the groups THIS confirmation covered — never the whole selection.
-    // A single-row action (its own chip, not the bulk toolbar) can fire while
-    // an unrelated bulk selection is still pending elsewhere in the list, and
-    // wiping the entire Set here would silently discard it.
+    // Only the groups THIS confirmation covered, and only the ones that
+    // actually SUCCEEDED — never the whole selection, and never a group that
+    // failed. A single-row action (its own chip, not the bulk toolbar) can
+    // fire while an unrelated bulk selection is still pending elsewhere in
+    // the list, so wiping the entire Set would silently discard it; and a
+    // failed group left unchecked would force the user to go find and
+    // re-check it by hand just to retry, instead of hitting Subscribe again.
     setSelected((prev) => {
       const next = new Set(prev);
-      for (const groupName of groups) next.delete(groupName);
+      for (const groupName of groups) {
+        if (!failed.includes(groupName)) next.delete(groupName);
+      }
       return next;
     });
 
