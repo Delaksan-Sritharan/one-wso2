@@ -255,7 +255,7 @@ export default function OrgChartPage() {
 
   return (
     <OrgChartShell
-      title="Org chart"
+      title="Org Chart"
       subtitle="The company's reporting hierarchy, from the Chairman down."
       configured={configured}
       configKey="ONE_WSO2_PEOPLE_BACKEND_URL"

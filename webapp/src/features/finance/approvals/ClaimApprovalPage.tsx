@@ -45,7 +45,7 @@ export default function ClaimApprovalPage() {
           the chip said "Finance", which is the perspective the rail already
           shows. "Claim approval" identifies itself. */}
       <Typography variant="h5" sx={{ mb: 0.5 }}>
-        Claim approval
+        Claim Approval
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25, maxWidth: "70ch" }}>
         Claims waiting on your decision, and the ones already decided. Submitting a claim and looking

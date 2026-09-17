@@ -209,7 +209,7 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
     : []),
   {
     id: "people-active-employee-report",
-    label: "Active employees",
+    label: "Active Employees",
     icon: UserRoundIcon,
     path: "/people-ops/reports/active-employees",
     requires: ["admin"],
@@ -228,13 +228,13 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   // when more are known to be coming.
   {
     id: "people-master-data",
-    label: "Master data",
+    label: "Master Data",
     icon: DatabaseIcon,
     alwaysGroup: true,
     children: [
       {
         id: "people-master-data-org-structure",
-        label: "Org structure",
+        label: "Org Structure",
         path: "/people-ops/master-data/org-structure",
         requires: ["admin"],
       },
@@ -363,7 +363,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     sections: [
       {
         id: "claim-approval",
-        label: "Claim approval",
+        label: "Claim Approval",
         icon: CheckCheckIcon,
         path: CLAIM_APPROVAL_PATH,
       },
