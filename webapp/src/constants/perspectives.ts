@@ -28,6 +28,7 @@ import {
   NetworkIcon,
   SatelliteDishIcon,
   ScaleIcon,
+  ShieldCheckIcon,
   TicketIcon,
   UserRoundIcon,
   UserRoundMinusIcon,
@@ -42,6 +43,7 @@ import { FINANCE_PERSPECTIVE_APPS, ME_FINANCE_APPS } from "@constants/financeApp
 import { CLAIM_APPROVAL_PATH } from "@features/finance/approvals/claimApprovalTabs";
 import { MARKETING_OPS_APPS } from "@constants/marketingOpsApps";
 import { DUE_DILIGENCE_APPS } from "@constants/dueDiligenceApps";
+import { SECURITY_APPS } from "@constants/securityApps";
 import { ME_APPS } from "@constants/meApps";
 
 export interface PerspectiveSection {
@@ -406,6 +408,30 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     access: true,
     path: "/marketing-ops",
     sections: MARKETING_OPS_SECTIONS,
+  },
+  // Security and Compliance — the GRC platform's Risk Hub, Audit Hub and Admin
+  // Console, lifted from grc-tools rather than rewritten. Its own perspective:
+  // a different function, and an authorization model no other perspective
+  // shares.
+  //
+  // `externallyGated` for the same reason as Legal and Marketing Ops: `access`
+  // only says the perspective is built, not that whoever opens it can use it.
+  // Here the gate is the GRC backend's own privilege set — someone holding no
+  // grant sees the perspective and is told plainly that they have none, which
+  // is the right answer for a surface people are told exists.
+  {
+    // The key and path stay "security" while the LABEL is "Security and
+    // Compliance". They are not the same thing: the key threads through the
+    // route prefix, every item id, the privilege map, the hue and the app mark,
+    // and renaming it would churn all of that plus the 16 navigation paths
+    // inside the lifted tree, for no change a user could see.
+    key: "security",
+    label: "Security and Compliance",
+    icon: ShieldCheckIcon,
+    externallyGated: true,
+    access: true,
+    path: "/security",
+    sections: [...appsToSections(SECURITY_APPS)],
   },
   // "Me" is the Home landing: the person's own profile plus everyday apps —
   // Leave, Menu, and the finance claims.

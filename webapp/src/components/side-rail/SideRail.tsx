@@ -24,6 +24,7 @@ import { capabilitiesFromPrivileges, type Capability } from "@constants/appMenu"
 import { FINANCE_ITEM_IDS } from "@constants/financeApps";
 import { LEAVE_ITEM_IDS } from "@constants/meApps";
 import { DUE_DILIGENCE_ITEM_IDS } from "@constants/dueDiligenceApps";
+import { SECURITY_ITEM_IDS } from "@constants/securityApps";
 import { useUserInfo } from "@api/useUserInfo";
 import { useFinanceGate } from "@features/finance/api/useFinanceGate";
 import { useLeaveGate } from "@features/leave/api/useLeaveGate";
@@ -33,6 +34,7 @@ import {
 } from "./railActive";
 import { useMarketingOpsGate } from "@features/marketing-ops/api/useMarketingOpsGate";
 import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
+import { useSecurityGate } from "@features/security/api/useSecurityGate";
 import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
 import { isSriLankaWorkLocation } from "@features/subscriptions/util/locationGate";
 
@@ -139,6 +141,7 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   // from two perspectives (Finance and Legal — see DUE_DILIGENCE_APPS), so
   // the gate is enabled for either.
   const dueDiligenceGate = useDueDiligenceGate(active.key === "finance" || active.key === "legal");
+  const securityGate = useSecurityGate(active.key === "security");
 
   // Subscriptions (People Ops → PickMe Commute / LaaS) is the same shape of
   // problem once more, with one extra wrinkle worth naming: its backend
@@ -178,6 +181,7 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
 
   const resolveVisible = (s: PerspectiveSection): boolean => {
     if (DUE_DILIGENCE_ITEM_IDS.has(s.id)) return dueDiligenceGate.canSee(s.id);
+    if (SECURITY_ITEM_IDS.has(s.id)) return securityGate.canSee(s.id);
     if (FINANCE_ITEM_IDS.has(s.id)) return financeGate.canSee(s.id);
     if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
     if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
