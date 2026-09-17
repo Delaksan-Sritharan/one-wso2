@@ -206,6 +206,28 @@ export const parServiceUrls = {
   par360Participants: (parCycleId: number) =>
     `${parBackendUrl}/par-cycles/${parCycleId}/participants`,
 
+  // ---- Lead Portal -------------------------------------------------------------
+  //
+  // GET .../teams?leadEmail= — every team this lead owns (a lead can have
+  // more than one). `leadEmail` is a query param, not a path segment, so
+  // the backend can also resolve it from the token when self-querying.
+  parTeams: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/teams?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../teams/{teamId} — one team's roster (ParTeamDetails.details).
+  parTeamDetails: (parCycleId: number, parTeamId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/teams/${parTeamId}`,
+  // PATCH .../reminders/schedule-360-reminders — no body; scoped to the
+  // calling lead's own reports server-side (isLeadInActiveParCycle), not a
+  // global send. MultiTeamSummary.tsx's "Send 360° Reminder" button.
+  parSchedule360Reminders: () => `${parBackendUrl}/reminders/schedule-360-reminders`,
+  // GET .../special-rating-groups-quota?leadEmail= — SpecialRatingAllocationView's
+  // own fetchQuotaGroupRatings. Non-admin callers may only pass their own
+  // email (enforced server-side); leadEmail stays a required param here
+  // since the Lead Portal never omits it (that's the admin-only "everyone"
+  // view, out of scope for this portal).
+  parSpecialRatingAllocations: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups-quota?leadEmail=${encodeURIComponent(leadEmail)}`,
+
   // ---- F2F scheduling ---------------------------------------------------------
   //
   // Flat top-level paths on the same par-app backend, not nested under

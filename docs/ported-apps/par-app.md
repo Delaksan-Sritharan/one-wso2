@@ -1,7 +1,9 @@
 # PAR (Performance Appraisal Review) — functional specification
 
-**Status:** the employee-facing half of par-app is ported and live under People Ops; the Lead Portal
-and Admin Portal are not. Written from the source and cross-checked against the running staging app
+**Status:** the employee-facing half of par-app (all five tabs, including F2F) is ported and live under
+People Ops. The Lead Portal is partially ported — Direct Reports and Top 5%/20% Allocation are done;
+Additional Reports, Report Chain, and Employee History are not, planned for a follow-up PR (§9). Admin
+Portal is not started. Written from the source and cross-checked against the running staging app
 (screenshots) — this is the reference for verifying the port and for writing test cases against it,
 not a proposal.
 
@@ -15,7 +17,10 @@ for states, roles and field-level authorization).
 **In One WSO2:** `/people-ops/performance`, a tab group (`features/par/`) under the People Ops
 perspective — **Employee Feedback**, **Request 360° Feedback**, **Provide 360° Feedback**, **F2F**,
 and **History**, each a real route (`employee-feedback` / `request-360` / `provide-360` / `f2f` /
-`history`). Backend is par-app's own Ballerina service, configured as `ONE_WSO2_PAR_BACKEND_URL`.
+`history`). The Lead Portal lives one level down at `/people-ops/performance/lead`, gated on par-app's
+own `Role.TEAM_LEAD` (`ParRequiresTeamLeadRoute`) — so far **Direct Reports** and **Top 5%/20%
+Allocation** (`direct-reports` / `allocation`). Backend is par-app's own Ballerina service, configured
+as `ONE_WSO2_PAR_BACKEND_URL`.
 
 ---
 
@@ -23,8 +28,8 @@ and **History**, each a real route (`employee-feedback` / `request-360` / `provi
 
 Every employee goes through a PAR cycle: write a self-assessment, take part in 360° feedback (both
 asking colleagues to review you and reviewing colleagues who asked you), and see your record once
-your lead has rated you. There is no separate people-management surface here — that's the Lead/Admin
-Portal, not yet ported (see §7).
+your lead has rated you. There is no separate people-management surface here — that's the Lead
+Portal (§8, partially ported) and the Admin Portal (not yet started — see §9).
 
 **Who sees which tabs** is decided by one fact: whether the employee has a lead
 (`OngoingCycleView.tsx`'s `employeeInfo.leadEmail !== null`, ported as `useParHasLead` reading
@@ -73,7 +78,7 @@ and rating scale, a rich-text comment, autosaving 5s after you stop typing. Shar
 behind their own confirmation dialog (irreversible once recorded). Declining asks for a reason instead
 of a rating. Voluntary/offered reviews hide Decline — there was no request to decline.
 
-### 2.5 F2F (`ParF2fTab.tsx`)
+### 2.4 F2F (`ParF2fTab.tsx`)
 
 The employee-facing half of `F2fPanel.tsx` (`isEmployeeView=true`; the lead's own render of the same
 component belongs with the Lead Portal, not here). Five independent status alerts stack rather than
@@ -96,7 +101,7 @@ entirely once COMPLETED or past the deadline:
 - **Mark as completed** saves the picked date with `parF2fStatus: COMPLETED` through the same
   par-rating PATCH every other tab uses.
 
-### 2.6 History (`ParHistoryTab.tsx`)
+### 2.5 History (`ParHistoryTab.tsx`)
 
 Past (closed) cycles, in a table — click one to see that cycle's record (the same read-only summary
 as Employee Feedback's finalized view, including the PDF export). A standing notice explains that
@@ -150,6 +155,10 @@ All requests carry the signed-in user's bearer token plus `x-user-timezone-offse
 | `GET .../employees/{email}/review-requests` | Requests waiting on you as a reviewer |
 | `GET/PATCH .../employees/{email}/review` | Your review of one employee — draft, share, decline |
 | `GET /par-cycles/{id}/participants` | Cycle-scoped name+email list, for the voluntary-offer picker |
+| `GET /par-cycles/{id}/teams?leadEmail=` | Every team a lead owns (team picker) |
+| `GET /par-cycles/{id}/teams/{teamId}` | One team's roster |
+| `PATCH /reminders/schedule-360-reminders` | No body; sends 360° reminders to the calling lead's own reports |
+| `GET /par-cycles/{id}/special-rating-groups-quota?leadEmail=` | The calling lead's Top 5%/20% quota allocations |
 | `GET /calendar/busy-times?date=` | The caller's and their lead's busy periods for one day (flat path, not under `/par-cycles`) |
 | `POST /calendar/schedule-f2f` | Creates the Meet event + invite, and flips `parF2fStatus` to `SCHEDULED` server-side; returns bare 201, no body |
 
@@ -176,6 +185,14 @@ All requests carry the signed-in user's bearer token plus `x-user-timezone-offse
       SCHEDULED; "Mark as completed" requires a date and moves the status to COMPLETED.
 - [ ] History: past cycles list, oldest data is explained by the notice, opening one shows the same
       read-only summary as a shared Employee Feedback record.
+- [ ] Lead Portal is reachable only by a team lead in the active cycle; a non-lead is redirected away
+      even by direct URL, and nobody sees a flash of the portal while the lookup is in flight.
+- [ ] Direct Reports: a lead with one team skips the picker; bulk Share only enables when every
+      selected row is DRAFT and reports pass/fail counts correctly; opening a member's review shows
+      the exact Save Draft/Share rules (Share stays disabled until the employee's own status leaves
+      PENDING).
+- [ ] Top 5%/20% Allocation: rows group correctly by quota id; the search box highlights matches
+      across every card; a 1/0 (Top 5%/Top 20%) quota shows "1" for both with the small-team warning.
 
 ## 6. Deviations from the source app
 
@@ -186,21 +203,60 @@ All requests carry the signed-in user's bearer token plus `x-user-timezone-offse
 | 3 | Tab bar is label-only, no per-tab icons. | The shared routed-tab type this app's tab bars use doesn't carry an icon field; a one-off addition just for PAR was reverted to keep that type consistent app-wide. |
 | 4 | `parEmployeeAcceptanceStatus`/`parEmployeeAcceptanceComment` exist in the type but nothing sends them. | Matches source exactly — there is no accept/reject control anywhere in the running app despite the backend supporting the fields. |
 
-## 7. Not yet ported
+## 8. Lead Portal
 
-Only the Employee Portal's five tabs (§2) are ported. The rest of par-app is not:
+**Source of truth:** `views/leadPortal/LeadPortal.tsx` and its panels (`panels/LeadOngoingPanel.tsx`,
+`panels/TeamSummary.tsx`, the lead-only path of `components/Review.tsx`/`LeadReviewPanel.tsx`,
+`components/common/SpecialRatingAllocationView.tsx`), gated in source by `Role.TEAM_LEAD`
+(`route.ts`, `/lead-portal`) — sourced from par-app's own `GET /employees/{email}`'s `isTeamLead`
+field, which is scoped to the *active* PAR cycle (`isLeadInActiveParCycle`), not a standing role.
 
-- **Lead Portal** — a separate top-level view in source (`route.ts`'s `/lead-portal`,
-  `views/leadPortal/`): review direct/additional reports, rate them, allocate top-5%/20% special-rating
-  quota, monitor team completion, share results. Includes `F2fPanel.tsx`'s `isEmployeeView=false` render
-  (a lead marking F2F complete for a report), which this port's `ParF2fTab.tsx` doesn't cover.
+### 8.1 Direct Reports (`ParLeadDirectReportsTab.tsx`)
+
+Ports `LeadOngoingPanel.tsx` + `MultiTeamSummary.tsx` (team picker; a lead with exactly one team skips
+straight to it) and `TeamSummary.tsx` (`ParLeadTeamRoster.tsx` — one team's roster): completion cards,
+member search, bulk **Share** (a client-side loop over the same per-record `PATCH`, matching source's
+own `bulkUpdateParRatingOfEmployee` thunk — there is no real bulk endpoint), **Copy Emails**, and
+**Send 360° Reminder**. Opening a member's row (`ParLeadReviewPanel.tsx`, the lead-only path of
+`LeadReviewPanel.tsx`) gives rating + Top 5%/20% special-rating selection with its confirmation
+checkbox, a rich-text lead comment with 5s autosave, deadline gating on `parLeadDeadline`, and the
+exact Save Draft/Share enable rules (Share additionally waits for `parEmployeeStatus !== PENDING` —
+the employee must have at least started their own side).
+
+Not ported here: evidence attachments (`parPerformanceNoticeAck`'s Google Drive picker — a capability
+nothing else in this app has), and every `isAdminAuditViewOn`/`isAdminHistoryViewOn`-gated branch
+(force-edit-after-share, share-on-behalf-of-employee, admin comment) — those are Admin Portal, out of
+scope for this portal. Also not ported: "Sync an Employee" (`TeamSummary.tsx`'s temporary
+org-chart-search dialog for this cycle), and the "360 Reviews"/"F2F" sub-tabs `Review.tsx` also hosts
+alongside "Lead's Feedback" (see §9).
+
+### 8.2 Top 5%/20% Allocation (`ParLeadAllocationTab.tsx`)
+
+Ports `SpecialRatingAllocationView.tsx` (`isAdminView=false`): `GET
+/par-cycles/{id}/special-rating-groups-quota?leadEmail=` returns one row per (business unit,
+department, team) combination a quota group covers; rows sharing a `parQuotaId` are grouped
+client-side into one card each, showing the quota name and Top 5%/Top 20% counts, with a search box
+that highlights matching business-unit/department/team text across every card. A quota whose Top 5%
+is 1 and Top 20% is 0 is a small-team special case — the Top 20% chip displays "1" too (not the real
+0), alongside a warning explaining the pair represents one combined slot, not two.
+
+## 9. Not yet ported
+
+- **Lead Portal — Additional Reports, Report Chain, Employee History** (`EmployeeReportView.tsx`,
+  `ReportChainView.tsx`, `EmployeeHistoryView.tsx`) — planned for a follow-up PR once Direct Reports
+  and Allocation (§8) have landed.
+- **Lead Portal — evidence attachments, every Admin-only branch, and the "360 Reviews"/F2F sub-tabs**
+  of the Direct Reports review screen (see §8.1). The lead-facing F2F sub-tab is what marks a report's
+  F2F complete (`F2fPanel.tsx`'s `isEmployeeView=false` render); `ParF2fTab.tsx` only covers the
+  employee's own side.
 - **Admin Portal** — source's `/admin-portal` (`views/adminPortal/`): create/configure cycles, assign
   special-rating quotas, monitor org-wide completion, generate reports, send/schedule reminders, global
   configuration.
-- **Report Chain** — source's `ParHistory.tsx` has a second, lead-only tab alongside "My History"
-  (`views/parHistory/ChainViewTab.tsx`): a lead's view of their reports' PAR history.
+- **PAR History's Chain view** — source's `ParHistory.tsx` has a second, lead-only tab alongside "My
+  History" (`views/parHistory/ChainViewTab.tsx`): a lead's view of their reports' PAR history across
+  cycles. Distinct from the Lead Portal's own "Report Chain" tab above (`ReportChainView.tsx`).
 - **One unified "no cycle" state.** Source gates all Employee Portal tabs behind a single check
   (`OngoingCycleView.tsx`) that replaces the whole tab body with one notice when there's no active
   cycle; this port instead repeats a similar (but not identically worded) message independently in
-  each tab file. Functionally equivalent today, but worth consolidating the next time this area is
-  touched rather than leaving five copies to drift.
+  each tab file across both portals. Functionally equivalent today, but worth consolidating the next
+  time this area is touched rather than leaving further copies to drift.

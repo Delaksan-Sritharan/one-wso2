@@ -164,11 +164,10 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
       },
     ],
   },
-  // par-app's employee half, ported one screen at a time — see
-  // docs/ported-apps/par-app.md. `alwaysGroup` for the same reason Master
-  // Data below carries it: this holds only one item today (Employee
-  // Portal) but more are coming (F2F scheduling), so it stays a named
-  // group rather than a bare leaf that would need reshaping later. Not
+  // par-app, ported one screen at a time — see docs/ported-apps/par-app.md.
+  // `alwaysGroup` for the same reason Master Data below carries it: a named
+  // group rather than a bare leaf, since more items (F2F scheduling; the
+  // rest of Lead Portal) are still coming. Employee Portal isn't
   // `requires: ["admin"]` — every employee has their own PAR, same as Org
   // Chart and Subscriptions above. Spread in rather than filtered out, so
   // with the flag off the entry does not exist at all.
@@ -189,6 +188,19 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
               id: "par-employee-feedback",
               label: "Employee Portal",
               path: "/people-ops/performance",
+            },
+            // Note what is NOT here: `requires: ["lead"]`. one-wso2's generic
+            // "lead" capability is people-app privilege 993 — unrelated to
+            // par-app's own PAR-cycle-scoped isTeamLead, and not guaranteed to
+            // agree with it either way. SideRail asks useParIsTeamLead for
+            // this one instead (PAR_LEAD_PORTAL_ITEM_ID below), the same
+            // treatment Finance/Leave/Marketing Ops/Subscriptions already get
+            // for the identical reason. ParRequiresTeamLeadRoute is what
+            // actually enforces access at the route either way.
+            {
+              id: "par-lead-portal",
+              label: "Lead Portal",
+              path: "/people-ops/performance/lead",
             },
           ],
         },
@@ -249,6 +261,13 @@ export const SUBSCRIPTION_ITEM_IDS: ReadonlySet<string> = new Set(
     ...(s.children ?? []).map((c) => c.id),
   ]),
 );
+
+/**
+ * The Lead Portal's own rail id, which the rail must route through
+ * useParIsTeamLead rather than through `requires`/`caps` — see the comment
+ * on the section itself, above.
+ */
+export const PAR_LEAD_PORTAL_ITEM_ID = "par-lead-portal";
 
 // Marketing Ops. Built from the registry now so the rail is ready, but the
 // perspective itself stays locked (`access: false` below) until Phase 1

@@ -19,7 +19,7 @@ import { Box, Link, Sidebar, Typography } from "@wso2/oxygen-ui";
 import { ExternalLinkIcon, SettingsIcon } from "@wso2/oxygen-ui-icons-react";
 import { Link as RouterLink, matchPath, useLocation, useNavigate } from "react-router";
 import { useActivePerspective } from "@context/perspective/PerspectiveContext";
-import { SUBSCRIPTION_ITEM_IDS, type PerspectiveSection } from "@constants/perspectives";
+import { PAR_LEAD_PORTAL_ITEM_ID, SUBSCRIPTION_ITEM_IDS, type PerspectiveSection } from "@constants/perspectives";
 import { capabilitiesFromPrivileges, type Capability } from "@constants/appMenu";
 import { FINANCE_ITEM_IDS } from "@constants/financeApps";
 import { LEAVE_ITEM_IDS } from "@constants/meApps";
@@ -36,6 +36,7 @@ import { useMarketingOpsGate } from "@features/marketing-ops/api/useMarketingOps
 import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
 import { useSecurityGate } from "@features/security/api/useSecurityGate";
 import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
+import { useParIsTeamLead } from "@features/par/api/useParData";
 import { isSriLankaWorkLocation } from "@features/subscriptions/util/locationGate";
 
 // Context-sensitive left rail, built on Oxygen's compound `Sidebar`.
@@ -154,6 +155,14 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   const isPeopleOps = active.key === "people";
   const subscriptionGate = useSubscriptionGate(isPeopleOps);
 
+  // PAR's Lead Portal is the same shape of problem once more: its
+  // `isTeamLead` comes from par-app's own backend, PAR-cycle-scoped, and
+  // bears no fixed relationship to people-app's generic "lead" privilege
+  // `caps` is built from — the two can disagree in either direction. Only
+  // fetched while People Ops is active. Fails closed while resolving,
+  // same as `isTeamLead` itself already does for the route guard.
+  const parLeadPortalGate = useParIsTeamLead(userInfo.data?.workEmail, isPeopleOps);
+
   // Both services are a Colombo-office perk, so the section as a whole is
   // Sri-Lanka-only — see isSriLankaWorkLocation. `userInfo` is the SAME call
   // `caps` above already makes (people-app's /user-info), so this piggybacks
@@ -185,6 +194,7 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
     if (FINANCE_ITEM_IDS.has(s.id)) return financeGate.canSee(s.id);
     if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
     if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
+    if (s.id === PAR_LEAD_PORTAL_ITEM_ID) return parLeadPortalGate.isTeamLead;
     if (isMarketingOps) return marketingOpsGate.canSee(s.id);
     return sectionAllowed(s.requires, caps);
   };

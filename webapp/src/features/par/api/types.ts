@@ -24,6 +24,10 @@
 // (`employeeInfo?.leadEmail !== null`).
 export interface ParEmployeeInfo {
   leadEmail: string | null;
+  // par-app backend's isLeadInActiveParCycle, plus an "any active direct
+  // reports" fallback — scoped to the active PAR cycle, so this is false
+  // whenever there is none, even for someone who leads a team.
+  isTeamLead: boolean;
 }
 
 export type ParCycleStatus =
@@ -166,19 +170,97 @@ export interface ParParticipant {
 
 // Body for PATCH /par-cycles/{cycleId}/employees/{email}/par-ratings/{id}.
 // par-app's backend rejects (403) any field outside what the caller's role
-// may touch — checkForModifiableFieldsForSelf in modules/types/types.bal is
-// a DENYLIST, not an allowlist: it blocks parRating, parSpecialRating,
-// parLeadComment, parLeadStatus, parAdminComment and parPerformanceNoticeAck
-// for an employee acting on their own record, and lets everything else
-// through — which is why parF2fStatus/parF2fDate (below) are here despite
-// being set by the employee, same endpoint as the comment/status pair.
-// Lead/admin-only fields are a separate, larger type to add when the
-// lead-review screen is ported.
+// may touch — checkForModifiableFieldsForSelf/-ForLead in
+// modules/types/types.bal are each a DENYLIST, not an allowlist: self blocks
+// parRating/parSpecialRating/parLeadComment/parLeadStatus/parAdminComment/
+// parPerformanceNoticeAck; lead blocks parEmployeeComment/parEmployeeStatus/
+// parEmployeeAcceptanceStatus/parEmployeeAcceptanceComment/parAdminComment.
+// Everything else on the type goes through for that caller — which is why
+// parF2fStatus/parF2fDate are here too: neither denylist blocks them, and
+// both self (marking F2F complete) and the lead (scheduling it) use this
+// same endpoint to set them.
 export interface ParRatingModify {
   parEmployeeComment?: string;
   parEmployeeStatus?: ParEmployeeStatus;
   parF2fStatus?: ParF2fStatus;
   parF2fDate?: string;
+  // Lead-only, per checkForModifiableFieldsForLead above.
+  parRating?: string;
+  parSpecialRating?: string;
+  parLeadComment?: string;
+  parLeadStatus?: ParLeadStatus;
+}
+
+// ---- Lead Portal ---------------------------------------------------------
+//
+// Mirrors par-app backend's ParTeamSummary/ParTeamDetails/ParRatingMinimal
+// (modules/types/types.bal) — the "Direct Reports" tab's team browser.
+
+export interface ParTeamSummaryCounts {
+  employeeParCompletedCount: number;
+  leadsReviewCompletedCount: number;
+  f2fCompletedCount: number;
+}
+
+// GET /par-cycles/{cycleId}/teams?leadEmail= — one row per team a lead owns
+// (a lead can have more than one: different BU/department/team splits).
+export interface ParTeamSummary {
+  parTeamId: number;
+  parCycleId: number;
+  parBusinessUnit: string;
+  parDepartment: string;
+  parTeam?: string;
+  parSubTeam?: string;
+  parLeadEmail?: string;
+  numberOfTeamMembers: number;
+  numberOf5pSlots: number;
+  numberOf20pSlots: number;
+  available5pSlots: number;
+  available20pSlots: number;
+  summary: ParTeamSummaryCounts;
+}
+
+export interface Par360ReviewCounts {
+  requestedReviewCount: number;
+  sharedReviewCount: number;
+}
+
+// One row of a team's roster — GET /par-cycles/{cycleId}/teams/{teamId}'s
+// own `details` array.
+export interface ParRatingMinimal {
+  parRatingId: number;
+  parCycleId: number;
+  parEmployeeEmail: string;
+  parEmployeeName: string;
+  parTeamId: number;
+  parRating?: string;
+  parSpecialRating?: string;
+  parEmployeeStatus: ParEmployeeStatus;
+  parLeadStatus: ParLeadStatus;
+  par360ReviewStatus: Par360ReviewStatus;
+  par360ReviewCounts: Par360ReviewCounts;
+  parF2fStatus: ParF2fStatus;
+  parEmployeeAcceptanceStatus?: ParEmployeeAcceptanceStatus;
+}
+
+// GET /par-cycles/{cycleId}/teams/{teamId}. `details` is nullable in the
+// backend type — absent/empty roster reads the same as "no members yet".
+export interface ParTeamDetails extends ParTeamSummary {
+  details: ParRatingMinimal[] | null;
+}
+
+// One row of GET /par-cycles/{cycleId}/special-rating-groups-quota — mirrors
+// service.bal's own SpecialRatingAllocation record exactly. Rows share a
+// parQuotaId across every (BU, department, team) combination the quota
+// group covers; SpecialRatingAllocationView groups by it client-side.
+export interface ParSpecialRatingAllocation {
+  parBusinessUnit: string;
+  parDepartment: string;
+  parTeam: string;
+  parQuotaId: number;
+  parSpecialQuotaName: string;
+  parTop5Quota: number;
+  parTop20Quota: number;
 }
 
 // ---- F2F scheduling ----------------------------------------------------------

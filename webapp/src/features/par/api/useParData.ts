@@ -26,13 +26,13 @@ import type { ParCycle, ParEmployeeInfo, ParRating } from "./types";
 // field OngoingCycleView.tsx gates its tab set on. Not people-app's
 // `managerEmail`: the two don't reliably agree, so this fetches par-app's
 // own field directly rather than assuming the equivalent from elsewhere.
-export function useParEmployeeInfo(workEmail: string | undefined) {
+export function useParEmployeeInfo(workEmail: string | undefined, enabled = true) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
   const backendConfigured = Boolean(parBackendUrl);
   return useQuery<ParEmployeeInfo>({
     queryKey: ["par-employee-info", workEmail],
-    enabled: isSignedIn && backendConfigured && Boolean(workEmail),
+    enabled: enabled && isSignedIn && backendConfigured && Boolean(workEmail),
     queryFn: async () => {
       const accessToken = await getAccessToken();
       return authedGet<ParEmployeeInfo>(
@@ -67,6 +67,30 @@ export function useParHasLead(workEmail: string | undefined, workEmailLoading: b
   return {
     hasLead: !(info.isSuccess && info.data.leadEmail === null),
     isLoading: workEmailLoading,
+  };
+}
+
+/**
+ * Whether the signed-in employee should see the Lead Portal — par-app's own
+ * `Role.TEAM_LEAD` gate on `/lead-portal` (route.ts), sourced from this same
+ * `isTeamLead` field. Unlike useParHasLead, this fails CLOSED: hiding a nav
+ * item from someone who isn't a lead has no downside, whereas showing it to
+ * everyone while the lookup is in flight would flash an empty Lead Portal
+ * for every non-lead on every load.
+ *
+ * Used both by the route guard (always enabled) and by SideRail's nav-item
+ * gate, which passes `enabled` so this only fetches while People Ops is the
+ * active perspective — same reasoning as useFinanceGate/useLeaveGate.
+ */
+export function useParIsTeamLead(workEmail: string | undefined, enabled = true) {
+  const info = useParEmployeeInfo(workEmail, enabled);
+  return {
+    isTeamLead: info.isSuccess && info.data.isTeamLead,
+    isLoading: info.isLoading,
+    isError: info.isError,
+    error: info.error,
+    isFetching: info.isFetching,
+    refetch: info.refetch,
   };
 }
 

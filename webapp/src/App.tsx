@@ -33,6 +33,7 @@ import ManageSubscriptionsPage from "@features/subscriptions/pages/ManageSubscri
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
 import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par/pages/ParGroupPage";
+import ParLeadGroupPage, { ParLeadGroupIndex, ParRequiresTeamLeadRoute } from "@features/par/pages/ParLeadGroupPage";
 // Lazy on purpose, same reasoning as the leave report tabs below —
 // react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
 // transitively, and only someone who opens /people-ops/performance needs them.
@@ -41,6 +42,8 @@ const ParRequestFeedbackTab = lazy(() => import("@features/par/pages/ParRequestF
 const ParProvideFeedbackTab = lazy(() => import("@features/par/pages/ParProvideFeedbackTab"));
 const ParF2fTab = lazy(() => import("@features/par/pages/ParF2fTab"));
 const ParHistoryTab = lazy(() => import("@features/par/pages/ParHistoryTab"));
+const ParLeadDirectReportsTab = lazy(() => import("@features/par/pages/ParLeadDirectReportsTab"));
+const ParLeadAllocationTab = lazy(() => import("@features/par/pages/ParLeadAllocationTab"));
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import FinancePage from "@features/finance/pages/FinancePage";
@@ -361,6 +364,39 @@ export default function App() {
                 element={
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
                     <ParHistoryTab />
+                  </Suspense>
+                }
+              />
+            </Route>
+          )}
+          {/* People Ops → PAR → Lead Portal: par-app's LeadPortal.tsx, ported
+              one tab at a time. Only Direct Reports exists so far — see
+              docs/ported-apps/par-app.md. Gated on the same preview flag as
+              the Employee Portal, plus ParRequiresTeamLeadRoute (par-app's
+              own Role.TEAM_LEAD gate on /lead-portal). */}
+          {isPreviewEnabled("par") && (
+            <Route
+              path="people-ops/performance/lead"
+              element={
+                <ParRequiresTeamLeadRoute>
+                  <ParLeadGroupPage />
+                </ParRequiresTeamLeadRoute>
+              }
+            >
+              <Route index element={<ParLeadGroupIndex />} />
+              <Route
+                path="direct-reports"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadDirectReportsTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="allocation"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadAllocationTab />
                   </Suspense>
                 }
               />
