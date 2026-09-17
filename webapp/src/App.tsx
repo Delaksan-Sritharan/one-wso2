@@ -43,6 +43,9 @@ const ParProvideFeedbackTab = lazy(() => import("@features/par/pages/ParProvideF
 const ParF2fTab = lazy(() => import("@features/par/pages/ParF2fTab"));
 const ParHistoryTab = lazy(() => import("@features/par/pages/ParHistoryTab"));
 const ParLeadDirectReportsTab = lazy(() => import("@features/par/pages/ParLeadDirectReportsTab"));
+const ParLeadAdditionalReportsTab = lazy(() => import("@features/par/pages/ParLeadAdditionalReportsTab"));
+const ParLeadReportChainTab = lazy(() => import("@features/par/pages/ParLeadReportChainTab"));
+const ParLeadEmployeeHistoryTab = lazy(() => import("@features/par/pages/ParLeadEmployeeHistoryTab"));
 const ParLeadAllocationTab = lazy(() => import("@features/par/pages/ParLeadAllocationTab"));
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
@@ -389,6 +392,30 @@ export default function App() {
                 element={
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
                     <ParLeadDirectReportsTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="additional-reports"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadAdditionalReportsTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="report-chain"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadReportChainTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="employee-history"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadEmployeeHistoryTab />
                   </Suspense>
                 }
               />
