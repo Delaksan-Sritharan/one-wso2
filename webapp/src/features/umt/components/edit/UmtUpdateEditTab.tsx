@@ -24,11 +24,13 @@ import { useUmtLifecycleTransition } from "../../api/useUmtLifecycleTransition";
 import { useUmtProductAnalysis, useUmtPullRequestAnalysis } from "../../api/useUmtUpdateViewData";
 import {
   computeUmtEditSteps,
+  resolveUmtEditActiveIndex,
   umtActiveStepIndex,
   umtHasAdditionalFileOperations,
   type UmtEditStepId,
 } from "../../lib/umtEditSteps";
 import { computeUmtDemoteActions } from "../../lib/umtDemoteActions";
+import { readPersistedEditStep, writePersistedEditStep } from "../../lib/umtLocalState";
 import { isDescriptionInstructionComplete } from "../../lib/umtDescriptionInstruction";
 import { isIntegrationTestsComplete } from "../../lib/umtIntegrationTests";
 import { isTestingComplete } from "../../lib/umtTesting";
@@ -66,20 +68,33 @@ export default function UmtUpdateEditTab({
   const backendActiveIndex = umtActiveStepIndex(update.lifecycleState, steps);
   const backendActiveId = steps[backendActiveIndex]?.id;
 
-  // A small, session-only (non-persisted) step-position override: some
-  // adjacent steps share one backend lifecycleState value (see
-  // umtEditSteps.ts), so a step whose Proceed only advances locally
-  // (advancesLocallyToNextStep) moves this pointer instead of calling the
-  // real transition. Reset whenever the backend-derived step id itself
-  // changes — that only happens after a real transition actually fires.
-  const [localStepOverride, setLocalStepOverride] = useState<UmtEditStepId | null>(null);
+  // A small step-position override: some adjacent steps share one backend
+  // lifecycleState value (see umtEditSteps.ts), so a step whose Proceed only
+  // advances locally (advancesLocallyToNextStep) moves this pointer instead
+  // of calling the real transition. Persisted per update id (mirroring
+  // legacy's activeStep_${id}), so a refresh doesn't kick the user back to
+  // the backend-derived default (the first of the ambiguous steps). Reset
+  // whenever the backend-derived step id itself changes — that only happens
+  // after a real transition actually fires.
+  const [localStepOverride, setLocalStepOverride] = useState<UmtEditStepId | null>(
+    () => readPersistedEditStep(id) as UmtEditStepId | null,
+  );
+  const applyLocalStepOverride = (next: UmtEditStepId | null) => {
+    setLocalStepOverride(next);
+    writePersistedEditStep(id, next);
+  };
   const [lastBackendActiveId, setLastBackendActiveId] = useState(backendActiveId);
   if (backendActiveId !== lastBackendActiveId) {
     setLastBackendActiveId(backendActiveId);
-    setLocalStepOverride(null);
+    applyLocalStepOverride(null);
   }
+  // See resolveUmtEditActiveIndex: a persisted override behind the
+  // backend-derived step is stale (the update moved on without this
+  // browser's knowledge) and must be discarded rather than honoured.
+  const activeIndex = resolveUmtEditActiveIndex(steps, backendActiveIndex, localStepOverride);
   const overrideIndex = localStepOverride ? steps.findIndex((step) => step.id === localStepOverride) : -1;
-  const activeIndex = overrideIndex !== -1 ? overrideIndex : backendActiveIndex;
+  const isOverrideStale = overrideIndex !== -1 && overrideIndex < backendActiveIndex;
+  if (isOverrideStale) applyLocalStepOverride(null);
   const currentStep = steps[activeIndex];
 
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -113,7 +128,8 @@ export default function UmtUpdateEditTab({
   // Mirrors legacy's own two-part real Proceed gate: the environment/backend
   // side must have reached Staging, AND every product's manual test result
   // must already be submitted.
-  const testingReady = !isTesting || isTestingComplete(update.lifecycleState, stagingTestResults.data);
+  const testingReady =
+    !isTesting || (stagingTestResults.isSuccess && isTestingComplete(update.lifecycleState, stagingTestResults.data));
   // Only Released has a real forward action (the Complete Update dialog);
   // every other verifying-family state (UATStaging/UAT/UATRequested/OnHold)
   // has no working transition in this pass, so Proceed stays disabled rather
@@ -130,14 +146,17 @@ export default function UmtUpdateEditTab({
   // value this shell invents.
   const nextLifecycleState = isCloudDevelopment ? "Released" : update.promoteStages?.[0];
 
-  // Legacy shows a plain, backend-call-free "Back" only on these two steps —
-  // not a general go-back-a-step control. Reuses the same session-only
-  // localStepOverride pointer every advancesLocallyToNextStep step already
-  // moves forward with, just one step earlier instead.
-  const canGoBack = isIntegrationTests || isSecurityAdvisory;
+  const isValidate = currentStep.id === "validate";
+  // Legacy shows a plain, backend-call-free "Back" only on Integration Tests
+  // and Security Advisory — not a general go-back-a-step control. Validate
+  // and File Approval also get one here, per product decision, as a
+  // deliberate divergence from legacy. Reuses the same localStepOverride
+  // pointer every advancesLocallyToNextStep step already moves forward with,
+  // just one step earlier instead — still a local-only move, no backend call.
+  const canGoBack = isIntegrationTests || isSecurityAdvisory || isValidate || isFileApproval;
   const handleBack = () => {
     const prevStep = steps[activeIndex - 1];
-    if (prevStep) setLocalStepOverride(prevStep.id);
+    if (prevStep) applyLocalStepOverride(prevStep.id);
   };
 
   const demoteActions = computeUmtDemoteActions(
@@ -159,7 +178,7 @@ export default function UmtUpdateEditTab({
     if (!currentStep.proceedWired || !roleAllowed || !stepReady) return;
     if (currentStep.advancesLocallyToNextStep) {
       const nextStep = steps[activeIndex + 1];
-      if (nextStep) setLocalStepOverride(nextStep.id);
+      if (nextStep) applyLocalStepOverride(nextStep.id);
       return;
     }
     if (isReleasedVerifying) {

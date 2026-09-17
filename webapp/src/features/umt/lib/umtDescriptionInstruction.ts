@@ -24,9 +24,14 @@ export function umtProductHasDescriptionInstruction(product: UmtUpdateProduct): 
 
 // True when EVERY product on the update already has a non-blank description
 // AND instruction — the shell's Proceed-gate rule, mirroring legacy's own
-// container-level check. Vacuously true for an empty/absent product list.
+// container-level check (isButtonDisabled's DESCRIPTION_STATE case). Unlike
+// Integration Tests' equivalent gate, legacy explicitly disables Proceed
+// when there are no products at all, rather than treating an empty list as
+// vacuously complete — so this deliberately returns `false`, not `true`, for
+// a null/empty list.
 export function isDescriptionInstructionComplete(
   products: UmtUpdateProduct[] | null | undefined,
 ): boolean {
-  return (products ?? []).every(umtProductHasDescriptionInstruction);
+  if (!products || products.length === 0) return false;
+  return products.every(umtProductHasDescriptionInstruction);
 }

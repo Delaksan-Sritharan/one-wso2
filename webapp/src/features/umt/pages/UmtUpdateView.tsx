@@ -16,17 +16,36 @@
 
 import { useState } from "react";
 import { useParams } from "react-router";
-import { Alert, Box, Button, Chip, Divider, Skeleton, Stack, Tab, Tabs } from "@wso2/oxygen-ui";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Divider,
+  Skeleton,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+} from "@wso2/oxygen-ui";
 import { Bell, BellOff } from "@wso2/oxygen-ui-icons-react";
 import { describeError } from "@api/errors";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import type { UmtUpdateFieldChange } from "../api/useUmtUpdateFieldMutation";
 import { useUmtUpdateFieldMutation } from "../api/useUmtUpdateFieldMutation";
+import { useUmtLifecycleTransition } from "../api/useUmtLifecycleTransition";
 import { useUmtMeta } from "../api/useUmtMeta";
 import { useUmtUpdate } from "../api/useUmtUpdate";
+import { useUmtMarkAsDuplicate, useUmtOnHoldUpdate } from "../api/useUmtUpdateActions";
 import { useUmtUpdateSubscription } from "../api/useUmtUpdateSubscription";
 import { useUmtUserInfo } from "../api/useUmtUserInfo";
 import { UMT_ROLE_ID } from "../api/umtTypes";
+import { readPersistedSelectedTab, writePersistedSelectedTab } from "../lib/umtLocalState";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import UmtShell from "../components/UmtShell";
 import UmtUpdateDetailsGrid from "../components/UmtUpdateDetailsGrid";
@@ -55,13 +74,28 @@ export default function UmtUpdateView() {
 }
 
 function UmtUpdateBody({ id }: { id: string | undefined }) {
-  const [selectedTab, setSelectedTab] = useState("view");
+  // Persisted per update id (mirroring legacy's selectedTab, but id-scoped -
+  // legacy's own key is flat/global and carries the last-viewed tab over
+  // between different updates, which this fixes rather than reproduces).
+  const [selectedTab, setSelectedTabState] = useState(() => (id ? (readPersistedSelectedTab(id) ?? "view") : "view"));
+  const setSelectedTab = (tab: string) => {
+    setSelectedTabState(tab);
+    if (id) writePersistedSelectedTab(id, tab);
+  };
   const update = useUmtUpdate(id);
   const userInfo = useUmtUserInfo();
   const meta = useUmtMeta();
   const subscription = useUmtUpdateSubscription(id ?? "");
   const fieldMutation = useUmtUpdateFieldMutation(id ?? "");
+  const onHoldMutation = useUmtOnHoldUpdate(id ?? "");
+  const markDuplicateMutation = useUmtMarkAsDuplicate(id ?? "");
+  const reopenMutation = useUmtLifecycleTransition(id ?? "");
   const { showSuccess, showError } = useNotifications();
+
+  const [onHoldDialogOpen, setOnHoldDialogOpen] = useState(false);
+  const [onHoldReason, setOnHoldReason] = useState("");
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicateOfId, setDuplicateOfId] = useState("");
 
   if (!id || !/^\d+$/.test(id)) {
     return <Alert severity="error">The update id is invalid.</Alert>;
@@ -94,6 +128,12 @@ function UmtUpdateBody({ id }: { id: string | undefined }) {
   );
   const canEditDevelopmentFields =
     hasEditRole && update.data?.lifecycleState === "Development";
+  // Mirrors legacy's own action-row visibility: Mark as Duplicate and On
+  // Hold are only offered before the update has left early triage.
+  const canUseEarlyActionRow = ["Development", "PRAnalyzed", "ProductAnalyzed"].includes(
+    update.data?.lifecycleState ?? "",
+  );
+  const canReopen = update.data?.lifecycleState === "OnHold";
 
   const handleSubscription = () => {
     subscription.mutate(subscriptionAction, {
@@ -118,6 +158,41 @@ function UmtUpdateBody({ id }: { id: string | undefined }) {
     }
   };
 
+  async function handleOnHoldSubmit() {
+    const reason = onHoldReason.trim();
+    if (!reason) return;
+    try {
+      await onHoldMutation.mutateAsync(reason);
+      showSuccess(`Update ${id} put on hold.`);
+      setOnHoldDialogOpen(false);
+      setOnHoldReason("");
+    } catch (error) {
+      showError(`Failed to put update on hold. ${describeError(error)}`);
+    }
+  }
+
+  async function handleMarkDuplicateSubmit() {
+    const targetId = duplicateOfId.trim();
+    if (!targetId) return;
+    try {
+      await markDuplicateMutation.mutateAsync(targetId);
+      showSuccess(`Update ${id} marked as a duplicate of ${targetId}.`);
+      setDuplicateDialogOpen(false);
+      setDuplicateOfId("");
+    } catch (error) {
+      showError(`Failed to mark as duplicate. ${describeError(error)}`);
+    }
+  }
+
+  async function handleReopen() {
+    try {
+      await reopenMutation.mutateAsync("Development");
+      showSuccess(`Update ${id} reopened.`);
+    } catch (error) {
+      showError(`Failed to reopen update. ${describeError(error)}`);
+    }
+  }
+
   return (
     <Stack spacing={3} sx={{ maxWidth: "100%", pb: 4, width: "100%" }}>
       <DashboardWidgetHolder
@@ -134,6 +209,32 @@ function UmtUpdateBody({ id }: { id: string | undefined }) {
             >
               {isSubscribed ? "Unsubscribe" : "Subscribe"}
             </Button>
+            {canUseEarlyActionRow && (
+              <>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={() => setDuplicateDialogOpen(true)}
+                >
+                  Mark as Duplicate
+                </Button>
+                <Button variant="outlined" color="error" size="small" onClick={() => setOnHoldDialogOpen(true)}>
+                  On Hold
+                </Button>
+              </>
+            )}
+            {canReopen && (
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                loading={reopenMutation.isPending}
+                onClick={() => void handleReopen()}
+              >
+                Reopen
+              </Button>
+            )}
           </Stack>
         }
         backgroundColor="background.paper"
@@ -207,6 +308,60 @@ function UmtUpdateBody({ id }: { id: string | undefined }) {
           </Box>
         )}
       </DashboardWidgetHolder>
+
+      <Dialog open={onHoldDialogOpen} onClose={() => setOnHoldDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Enter reason to change for On Hold</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            multiline
+            rows={3}
+            label="Reason"
+            value={onHoldReason}
+            onChange={(event) => setOnHoldReason(event.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOnHoldDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            disabled={!onHoldReason.trim()}
+            loading={onHoldMutation.isPending}
+            onClick={() => void handleOnHoldSubmit()}
+          >
+            Proceed
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={duplicateDialogOpen} onClose={() => setDuplicateDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Duplicate of Update Id</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Enter the id of the update this one duplicates.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Update Id"
+            value={duplicateOfId}
+            onChange={(event) => setDuplicateOfId(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDuplicateDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            disabled={!duplicateOfId.trim()}
+            loading={markDuplicateMutation.isPending}
+            onClick={() => void handleMarkDuplicateSubmit()}
+          >
+            Proceed
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

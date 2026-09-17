@@ -15,7 +15,7 @@
 // under the License.
 
 import { useMemo, useState } from "react";
-import { Button, Checkbox, Divider, FormControlLabel, Paper, Stack, TextField, Typography } from "@wso2/oxygen-ui";
+import { Button, Checkbox, Chip, Divider, FormControlLabel, Paper, Stack, TextField, Typography } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import type { UmtProductIntegrationTestRequest, UmtUpdateProduct, UmtUpdateSummary } from "../../../api/umtUpdates";
@@ -34,10 +34,18 @@ export default function UmtIntegrationTestsStep({ id, update }: { id: string; up
   );
 
   const [isDirty, setIsDirty] = useState(false);
-  const [testPrDrafts, setTestPrDrafts] = useState<Record<string, string>>({});
-  const [ignoreDrafts, setIgnoreDrafts] = useState<Record<string, boolean>>({});
-  const [reasonDrafts, setReasonDrafts] = useState<Record<string, string>>({});
-  const [helmChartTagDraft, setHelmChartTagDraft] = useState("");
+  const [testPrDrafts, setTestPrDrafts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(products.map((p) => [String(p.productId), p.testPr ?? ""])),
+  );
+  const [ignoreDrafts, setIgnoreDrafts] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      products.map((p) => [String(p.productId), Boolean(p.ignoreTestReason?.trim()) && !p.testPr?.trim()]),
+    ),
+  );
+  const [reasonDrafts, setReasonDrafts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(products.map((p) => [String(p.productId), p.ignoreTestReason ?? ""])),
+  );
+  const [helmChartTagDraft, setHelmChartTagDraft] = useState(() => products[0]?.helmChartTag ?? "");
 
   const [lastProducts, setLastProducts] = useState(products);
   if (products !== lastProducts) {
@@ -113,9 +121,14 @@ export default function UmtIntegrationTestsStep({ id, update }: { id: string; up
             return (
               <Paper key={key} variant="outlined" sx={{ p: 2 }}>
                 <Stack spacing={1.5}>
-                  <Typography variant="h6">
-                    {product.product?.name ?? "N/A"} - {product.product?.version ?? "N/A"}
-                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                    <Typography variant="h6">
+                      {product.product?.name ?? "N/A"} - {product.product?.version ?? "N/A"}
+                    </Typography>
+                    {(product.type === "CompatibleInitial" || product.type === "Compatible") && (
+                      <Chip label={product.type === "CompatibleInitial" ? "Compatible Initial" : "Compatible"} size="small" />
+                    )}
+                  </Stack>
                   <TextField
                     label="Test PR"
                     value={testPrDrafts[key] ?? ""}

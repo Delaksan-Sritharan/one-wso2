@@ -28,6 +28,7 @@ import {
   Divider,
   FormControlLabel,
   IconButton,
+  Link,
   MenuItem,
   Radio,
   RadioGroup,
@@ -57,6 +58,7 @@ const { DataGrid: DataGridComponent } = DataGrid;
 
 type UmtManualFileOperation = "Added" | "Modified" | "Removed";
 type UmtManualFileSource = "upload" | "svn" | "github";
+type UmtBundleEntryType = "New" | "Update" | "Delete";
 
 interface UmtAddManualFilesSectionProps {
   updateId: string;
@@ -94,9 +96,25 @@ export default function UmtAddManualFilesSection({
   const [jarName, setJarName] = useState("");
   const [jarVersion, setJarVersion] = useState("");
   const [relativeJarPath, setRelativeJarPath] = useState("");
+  const [entryType, setEntryType] = useState<UmtBundleEntryType>("New");
 
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteBundleTarget, setDeleteBundleTarget] = useState<string | null>(null);
+  // Stable per-entry ids independent of `bundlesInfoPath`, so two entries
+  // sharing a path (legacy blocks this with a "Duplicate Entry" dialog; this
+  // port instead surfaces the collision inline and lets the user resolve it)
+  // never collapse into a single grid row or get deleted together.
+  const bundleEntryIdsRef = useRef(new WeakMap<UmtBundleInfoChange, string>());
+  const nextBundleEntryId = useRef(0);
+  function bundleEntryId(row: UmtBundleInfoChange): string {
+    const cache = bundleEntryIdsRef.current;
+    let id = cache.get(row);
+    if (!id) {
+      id = `bundle-${nextBundleEntryId.current++}`;
+      cache.set(row, id);
+    }
+    return id;
+  }
   // Spans the whole Add operation, including every sequential upload inside
   // a zip's entry loop — unlike `upload.isPending`, which flips true/false
   // once per individual mutateAsync call and made the button (and its
@@ -117,10 +135,15 @@ export default function UmtAddManualFilesSection({
     setJarName("");
     setJarVersion("");
     setRelativeJarPath("");
+    setEntryType("New");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    // Clear whatever was previously selected up front — otherwise a rejected
+    // replacement (too large, wrong extension, name mismatch) would leave the
+    // *previous* file both showing in the dialog and attached to Add.
+    setSelectedFile(null);
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -178,6 +201,10 @@ export default function UmtAddManualFilesSection({
         setFormError(errors[0] ?? "Bundle info fields are required for plugin JAR changes.");
         return;
       }
+      if (bundlesInfoChanges.some((row) => row.bundlesInfoPath === bundlesInfoPath.trim())) {
+        setFormError("This Bundle Info has already been added.");
+        return;
+      }
     }
 
     // The externally-sourced path (SVN location or GitHub raw URL) that the
@@ -203,7 +230,7 @@ export default function UmtAddManualFilesSection({
       if (needsBundleInfo) {
         onBundlesInfoChanged([
           ...bundlesInfoChanges,
-          { bundlesInfoPath, jarName, jarVersion, relativeJarPath, changeType: "New" },
+          { bundlesInfoPath, jarName, jarVersion, relativeJarPath, entryType },
         ]);
       }
       onDirty();
@@ -228,7 +255,7 @@ export default function UmtAddManualFilesSection({
       sourceFilePath,
       file: file ?? new Blob([], { type: "application/octet-stream" }),
     });
-    return [{ file: `${path}/${fileName}`, operation: op }];
+    return [{ file: `${path}/${fileName}`, operation: op, sourceFilePath }];
   }
 
   async function addZipEntries(
@@ -245,7 +272,7 @@ export default function UmtAddManualFilesSection({
       const blob = await entry.async("blob");
       const extractedFile = new File([blob], entry.name);
       await upload.mutateAsync({ relativePath: path, sourceFilePath, file: extractedFile });
-      rows.push({ file: `${path}/${entry.name}`, operation: op });
+      rows.push({ file: `${path}/${entry.name}`, operation: op, sourceFilePath });
     }
 
     return rows;
@@ -260,7 +287,7 @@ export default function UmtAddManualFilesSection({
 
   function confirmDeleteBundleInfo() {
     if (!deleteBundleTarget) return;
-    onBundlesInfoChanged(bundlesInfoChanges.filter((row) => row.bundlesInfoPath !== deleteBundleTarget));
+    onBundlesInfoChanged(bundlesInfoChanges.filter((row) => bundleEntryId(row) !== deleteBundleTarget));
     onDirty();
     setDeleteBundleTarget(null);
   }
@@ -279,12 +306,13 @@ export default function UmtAddManualFilesSection({
           autoHeight
           columnHeaderHeight={40}
           disableColumnMenu
+          disableColumnResize
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           getRowId={(row: UmtFileOperation) => row.file ?? ""}
           hideFooter
           rows={files}
-          sx={{ mt: 2 }}
+          sx={{ mt: 2, ...denseDataGridSx }}
           columns={[
             {
               field: "file",
@@ -307,6 +335,23 @@ export default function UmtAddManualFilesSection({
                   {params.row.operation}
                 </Stack>
               ),
+            },
+            {
+              field: "sourceFilePath",
+              headerName: "Source",
+              flex: 2,
+              sortable: false,
+              renderCell: (params: { row: UmtFileOperation }) => {
+                const source = params.row.sourceFilePath;
+                if (!source) return <Stack sx={{ justifyContent: "center", minHeight: "100%", py: 0.75 }}>N/A</Stack>;
+                return (
+                  <Stack sx={{ justifyContent: "center", minHeight: "100%", py: 0.75, width: "100%" }}>
+                    <Link href={source} target="_blank" rel="noopener noreferrer" underline="hover">
+                      {source}
+                    </Link>
+                  </Stack>
+                );
+              },
             },
             {
               field: "delete",
@@ -338,9 +383,10 @@ export default function UmtAddManualFilesSection({
           autoHeight
           columnHeaderHeight={40}
           disableColumnMenu
+          disableColumnResize
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
-          getRowId={(row: UmtBundleInfoChange) => row.bundlesInfoPath ?? ""}
+          getRowId={(row: UmtBundleInfoChange) => bundleEntryId(row)}
           hideFooter
           rows={bundlesInfoChanges}
           sx={{ mt: 2 }}
@@ -379,6 +425,17 @@ export default function UmtAddManualFilesSection({
               ),
             },
             {
+              field: "entryType",
+              headerName: "Change Type",
+              flex: 1,
+              sortable: false,
+              renderCell: (params: { row: UmtBundleInfoChange }) => (
+                <Stack sx={{ justifyContent: "center", minHeight: "100%", py: 0.75, width: "100%" }}>
+                  {params.row.entryType}
+                </Stack>
+              ),
+            },
+            {
               field: "delete",
               headerName: "",
               width: 52,
@@ -388,7 +445,7 @@ export default function UmtAddManualFilesSection({
                   <IconButton
                     aria-label="Delete bundle info entry"
                     size="small"
-                    onClick={() => setDeleteBundleTarget(params.row.bundlesInfoPath ?? null)}
+                    onClick={() => setDeleteBundleTarget(bundleEntryId(params.row))}
                   >
                     <TrashIcon size={16} />
                   </IconButton>
@@ -503,6 +560,11 @@ export default function UmtAddManualFilesSection({
                   error={Boolean(relativeJarPath) && Boolean(relativeJarPathError(relativeJarPath))}
                   helperText={relativeJarPath ? relativeJarPathError(relativeJarPath) : undefined}
                 />
+                <Select value={entryType} onChange={(e) => setEntryType(e.target.value as UmtBundleEntryType)}>
+                  <MenuItem value="New">New</MenuItem>
+                  <MenuItem value="Update">Update</MenuItem>
+                  <MenuItem value="Delete">Delete</MenuItem>
+                </Select>
               </>
             )}
 
@@ -545,6 +607,20 @@ export default function UmtAddManualFilesSection({
     </Box>
   );
 }
+
+// getRowHeight="auto" above only lets the ROW grow to fit its content — MUI
+// DataGrid's own cell CSS still clips text with nowrap/ellipsis unless
+// explicitly told to wrap. Long File/Source values (paths, URLs) were
+// getting cut off with no way to read them; this lets them wrap and the auto
+// row height then grows to fit the wrapped lines.
+const denseDataGridSx = {
+  border: 0,
+  "& .MuiDataGrid-cell": {
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    overflowWrap: "anywhere",
+  },
+} as const;
 
 function lastPathSegment(url: string): string {
   const withoutQuery = url.split("?")[0] ?? url;

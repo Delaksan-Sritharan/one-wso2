@@ -19,6 +19,7 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
+  Alert,
   Autocomplete,
   Box,
   Button,
@@ -108,7 +109,12 @@ export default function UmtProductAnalysisStep({ id, update }: { id: string; upd
   // same as UmtPrAnalysisStep.tsx: pops this dialog once whenever a fresh
   // analysis result newly explains why the automated partial-applicability
   // check was skipped, without an extra effect-triggered render pass.
-  const [lastHasIgnoredReason, setLastHasIgnoredReason] = useState(hasIgnoredReason);
+  // `lastHasIgnoredReason` starts `false` (not seeded from the current
+  // value) so that a query resolving from cache with the flag already true
+  // on this component's very first render still counts as "newly explained"
+  // and opens the dialog — seeding it from `hasIgnoredReason` would make a
+  // cache-hit's already-true flag look unchanged and never surface it.
+  const [lastHasIgnoredReason, setLastHasIgnoredReason] = useState(false);
   if (hasIgnoredReason !== lastHasIgnoredReason) {
     setLastHasIgnoredReason(hasIgnoredReason);
     if (hasIgnoredReason) setIgnoredReasonDialogOpen(true);
@@ -135,18 +141,26 @@ export default function UmtProductAnalysisStep({ id, update }: { id: string; upd
       );
   }, [selectedProductName, meta.data, existingProductVersions]);
 
-  const applicableFileSet = useMemo(() => {
-    const fromResults = applicableProducts.flatMap((p) => (p.identifiedFiles ?? []).map((f) => f.file));
-    const fromLocal = Object.values(applicableProductRows).flatMap((rows) => rows.map((f) => f.file));
-    return new Set([...fromResults, ...fromLocal]);
-  }, [applicableProducts, applicableProductRows]);
+  // Scoped to the product currently targeted by "Add File to Product" —
+  // matching legacy, which only excludes files already added *to that
+  // product*. A global exclusion (every applicable product's files, plus
+  // every local addition) would wrongly stop the same file from being added
+  // to a second partially-applicable product, which is the normal case when
+  // one file belongs in several product packs.
+  const targetProductFileSet = useMemo(() => {
+    if (!addFileTarget) return new Set<string | null | undefined>();
+    const key = productKey(addFileTarget.productName, addFileTarget.baseVersion);
+    const fromResult = (addFileTarget.identifiedFiles ?? []).map((f) => f.file);
+    const fromLocal = (applicableProductRows[key] ?? []).map((f) => f.file);
+    return new Set([...fromResult, ...fromLocal]);
+  }, [addFileTarget, applicableProductRows]);
 
   const compatibleFiles = useMemo(
     () =>
       compatibleProducts
         .flatMap((p) => p.identifiedFiles ?? [])
-        .filter((f) => !applicableFileSet.has(f.file)),
-    [compatibleProducts, applicableFileSet],
+        .filter((f) => !targetProductFileSet.has(f.file)),
+    [compatibleProducts, targetProductFileSet],
   );
 
   function resetAddProductForm() {
@@ -226,7 +240,28 @@ export default function UmtProductAnalysisStep({ id, update }: { id: string; upd
     setApplicableProductRows({});
   }
 
-  if (productAnalysis.isPending) return null;
+  if (productAnalysis.isPending) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        Loading product analysis…
+      </Typography>
+    );
+  }
+
+  if (productAnalysis.isError) {
+    return (
+      <Alert
+        severity="error"
+        action={
+          <Button color="inherit" size="small" onClick={() => void productAnalysis.refetch()}>
+            Retry
+          </Button>
+        }
+      >
+        Failed to load product analysis results.
+      </Alert>
+    );
+  }
 
   return (
     <Stack spacing={3}>
@@ -321,6 +356,7 @@ export default function UmtProductAnalysisStep({ id, update }: { id: string; upd
             autoHeight
             columnHeaderHeight={40}
             disableColumnMenu
+            disableColumnResize
             disableRowSelectionOnClick
             getRowHeight={() => "auto"}
             getRowId={(row: UmtUpdateProduct) => productKey(row.product?.name, row.product?.version)}
@@ -573,6 +609,7 @@ function FileTable({ rows }: { rows: UmtFileOperation[] }) {
         columnHeaderHeight={40}
         columns={gridColumns}
         disableColumnMenu
+        disableColumnResize
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter

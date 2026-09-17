@@ -60,15 +60,14 @@ export default function UmtCompleteUpdateDialog({
     onClose();
   }
 
-  const isValid = isCompleteUpdateValid({
-    publicPullRequests: [...existingPullRequests, ...newPullRequests],
-    reason,
-  });
+  const allPullRequests = [...existingPullRequests, ...newPullRequests];
+  const trimmedPullRequests = allPullRequests.map((pr) => pr.trim()).filter((pr) => pr !== "");
+  const isValid = isCompleteUpdateValid({ publicPullRequests: allPullRequests, reason });
 
   async function handleSubmit() {
     try {
       await completeUpdate.mutateAsync({
-        publicPullRequests: [...existingPullRequests, ...newPullRequests].filter((pr) => pr.trim() !== ""),
+        publicPullRequests: trimmedPullRequests,
         reason: reason.trim(),
       });
       showSuccess(`Update ${id} completed.`);

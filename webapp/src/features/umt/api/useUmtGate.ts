@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import { useEffect } from "react";
+import { useAsgardeo } from "@asgardeo/react";
 import { describeError } from "@api/errors";
 import { UMT_ROLE_ID, type UmtRole } from "./umtTypes";
 import { useUmtUserInfo } from "./useUmtUserInfo";
@@ -47,6 +49,22 @@ function umtRolesFromIds(roleIds: readonly number[] | undefined): Set<UmtRole> {
   return roles;
 }
 
+// Module-level, not React state: every top-level UMT page renders its own
+// UmtShell, so navigating between them (e.g. /umt -> /umt/updates) unmounts
+// and remounts the whole useUmtGate -> useUmtUserInfo -> useAsgardeoSub
+// chain. useAsgardeoSub resolves the Asgardeo subject via local component
+// state, so a fresh mount briefly has no `sub`, which briefly changes
+// useUmtUserInfo's query key and makes it look unresolved again even though
+// the real answer was already known a moment ago on the page just left.
+// Remembering the last real role set here — surviving the remount — avoids
+// re-flashing "Checking your UMT access..." on every navigation. Cleared on
+// sign-out so a different account in the same tab can never see it.
+let lastKnownRoles: Set<UmtRole> | null = null;
+
+export function __resetUmtGateCacheForTests(): void {
+  lastKnownRoles = null;
+}
+
 // Translates UMT's numeric service roles into the named decisions consumed by
 // the shell and dashboard. Any recognised role grants entry to the perspective;
 // `isAdmin` additionally gates product management and release-chunk creation.
@@ -54,8 +72,23 @@ function umtRolesFromIds(roleIds: readonly number[] | undefined): Set<UmtRole> {
 // This deliberately does not read People capabilities. UMT owns a separate
 // role vocabulary, returned by its own /update/user-info endpoint.
 export function useUmtGate(enabled = true): UmtGate {
+  const { isSignedIn } = useAsgardeo();
   const userInfo = useUmtUserInfo(enabled);
-  const roles = umtRolesFromIds(userInfo.data?.roles);
+  const resolvedNow = !userInfo.isPending && !userInfo.isError;
+  const roleIds = userInfo.data?.roles;
+
+  // Mutating module state must happen as an effect, not during render (React
+  // may render this hook more than once per commit) — the read below is
+  // still a plain, pure read of whatever a *previous* commit last wrote.
+  useEffect(() => {
+    if (!isSignedIn) {
+      lastKnownRoles = null;
+    } else if (resolvedNow) {
+      lastKnownRoles = umtRolesFromIds(roleIds);
+    }
+  }, [isSignedIn, resolvedNow, roleIds]);
+
+  const roles = resolvedNow ? umtRolesFromIds(roleIds) : (lastKnownRoles ?? new Set<UmtRole>());
   const hasRole = (role: UmtRole): boolean => roles.has(role);
 
   return {
@@ -66,7 +99,9 @@ export function useUmtGate(enabled = true): UmtGate {
     hasRole,
     // `isPending`, not `isLoading`: the query is disabled while the Asgardeo
     // subject resolves, but the authorization decision is still outstanding.
-    isResolving: enabled && userInfo.isPending,
+    // Only shown when there's truly no prior decision to fall back on — i.e.
+    // the session's actual first load, not a remount of an already-known one.
+    isResolving: enabled && userInfo.isPending && !lastKnownRoles,
     isError: userInfo.isError,
     errorMessage: userInfo.isError ? describeError(userInfo.error) : undefined,
     retry: () => void userInfo.refetch(),

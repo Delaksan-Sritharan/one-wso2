@@ -32,7 +32,13 @@ export default function UmtFileApprovalStep({ id, update }: { id: string; update
   const gate = useUmtGate();
   const pullRequestAnalysis = useUmtPullRequestAnalysis(id, update.lifecycleState);
 
-  if (pullRequestAnalysis.isPending) return null;
+  if (pullRequestAnalysis.isPending) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        Loading files awaiting approval…
+      </Typography>
+    );
+  }
 
   if (pullRequestAnalysis.isError) {
     return (
@@ -69,12 +75,13 @@ export default function UmtFileApprovalStep({ id, update }: { id: string; update
           autoHeight
           columnHeaderHeight={40}
           disableColumnMenu
+          disableColumnResize
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           hideFooter
           rows={rows}
           aria-label="Files awaiting approval"
-          sx={{ border: 0 }}
+          sx={denseDataGridSx}
           columns={[
             {
               field: "file",
@@ -110,6 +117,20 @@ export default function UmtFileApprovalStep({ id, update }: { id: string; update
     </Stack>
   );
 }
+
+// getRowHeight="auto" above only lets the ROW grow to fit its content — MUI
+// DataGrid's own cell CSS still clips text with nowrap/ellipsis unless
+// explicitly told to wrap. Long Files/Source values (paths, URLs) were
+// getting cut off with no way to read them; this lets them wrap and the
+// auto row height then grows to fit the wrapped lines.
+const denseDataGridSx = {
+  border: 0,
+  "& .MuiDataGrid-cell": {
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    overflowWrap: "anywhere",
+  },
+} as const;
 
 function CellCenter({ children }: { children: ReactNode }) {
   return <Stack sx={{ justifyContent: "center", minHeight: "100%", py: 0.75, width: "100%" }}>{children}</Stack>;

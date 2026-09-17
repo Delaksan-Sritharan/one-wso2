@@ -28,14 +28,17 @@ export function umtProductHasIntegrationTestInfo(product: UmtUpdateProduct): boo
 // containerized update, a non-blank Helm Chart Tag (read from the first
 // product, since the backend repeats one shared value across every row);
 // otherwise every product must satisfy umtProductHasIntegrationTestInfo.
-// Vacuously true for an empty/absent product list in the non-containerized
-// case, mirroring isDescriptionInstructionComplete.
+// Vacuously true for an empty/absent product list in both branches — mirrors
+// legacy's isProceedValid callers (products.every/products.some), which
+// never evaluate the Helm Chart Tag at all when there are no products yet,
+// and mirrors isDescriptionInstructionComplete's same convention.
 export function isIntegrationTestsComplete(
   products: UmtUpdateProduct[] | null | undefined,
   isContainerizedUpdate: boolean,
 ): boolean {
-  if (isContainerizedUpdate) return Boolean(products?.[0]?.helmChartTag?.trim());
-  return (products ?? []).every(umtProductHasIntegrationTestInfo);
+  if (!products || products.length === 0) return true;
+  if (isContainerizedUpdate) return Boolean(products[0]?.helmChartTag?.trim());
+  return products.every(umtProductHasIntegrationTestInfo);
 }
 
 export interface UmtIntegrationTestDraftRow {

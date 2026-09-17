@@ -101,6 +101,11 @@ export interface UmtFileOperation {
   file?: string | null;
   operation?: string | null;
   downloadURL?: string | null;
+  // Populated client-side only, for manually-added rows: the SVN location or
+  // GitHub raw URL the file came from (or blank for a direct upload). Legacy
+  // tracked this per row in local component state purely for display — it's
+  // not part of what the backend echoes back on `identifiedFileOperations`.
+  sourceFilePath?: string | null;
 }
 
 export interface UmtPullRequestAnalysisItem {
@@ -113,7 +118,10 @@ export interface UmtBundleInfoChange {
   jarName?: string | null;
   jarVersion?: string | null;
   relativeJarPath?: string | null;
-  changeType?: string | null;
+  // Named `entryType` on the wire (legacy's field name, verified against the
+  // backend contract) — not `changeType`. Sending the wrong key means the
+  // backend never receives the change type at all.
+  entryType?: string | null;
 }
 
 export interface UmtDiffResponse {
@@ -212,6 +220,11 @@ export interface UmtStagingTestResultRecord {
   baseVersion?: string | null;
   manualTestResult?: string | null;
   manualTestComment?: string | null;
+  // The Jenkins-driven result, distinct from the manualTestResult the user
+  // enters below it — legacy shows this as a colour-coded dot so the
+  // reviewer can see what the automated run concluded before entering their
+  // own verdict.
+  automatedTestResult?: string | null;
 }
 
 // Body for one PUT /update/{id}/integrationTest/staging call — the endpoint
@@ -274,7 +287,9 @@ export interface UmtUpdateBranch {
 // POST /update. Confirmed against the real backend's UpdateCreationRequest:
 // caseId/securityInternalGitIssue/publicGitIssue each accept the sentinel
 // "N/A" for whichever doesn't apply, but internalGitIssue is always a real
-// required URL. Dates are ISO strings on the wire.
+// required URL. The three estimate fields are local YYYY-MM-DD calendar-date
+// strings (via localIsoDate), not full ISO instants — matching how
+// worstCaseEstimate is already patched elsewhere in this feature.
 export interface UmtCreateUpdateRequest {
   caseId: string;
   internalGitIssue: string;

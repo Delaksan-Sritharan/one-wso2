@@ -15,12 +15,17 @@
 // under the License.
 
 import { useState } from "react";
-import { Alert, Button, Divider, FormControlLabel, Paper, Radio, RadioGroup, Stack, TextField, Typography } from "@wso2/oxygen-ui";
+import { Alert, Box, Button, Divider, FormControlLabel, Paper, Radio, RadioGroup, Stack, TextField, Typography } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import type { UmtStagingTestResultRecord, UmtStagingTestResultRequest, UmtUpdateSummary } from "../../../api/umtUpdates";
 import { useUmtSaveTestingResults, useUmtStagingTestResults } from "../../../api/useUmtTesting";
-import { UMT_TESTING_RESULT_OPTIONS, umtTestingResultRequiresComment } from "../../../lib/umtTesting";
+import {
+  UMT_TESTING_RESULT_OPTIONS,
+  umtAutomatedTestResultColor,
+  umtAutomatedTestResultLabel,
+  umtTestingResultRequiresComment,
+} from "../../../lib/umtTesting";
 
 interface Draft {
   result: string;
@@ -48,7 +53,13 @@ export default function UmtTestingStep({ id, update }: { id: string; update: Umt
   const saveMutation = useUmtSaveTestingResults(id);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
 
-  if (stagingTestResults.isPending) return null;
+  if (stagingTestResults.isPending) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        Loading testing results…
+      </Typography>
+    );
+  }
 
   if (stagingTestResults.isError) {
     return (
@@ -93,17 +104,22 @@ export default function UmtTestingStep({ id, update }: { id: string; update: Umt
     });
 
   async function handleSave() {
-    const payload: UmtStagingTestResultRequest[] = touchedProductIds.map((productId) => {
-      const row = rows.find((r) => String(r.productId) === productId)!;
+    // A background refetch can drop a row (e.g. the staging results poll)
+    // while its draft is still held locally; skip it instead of crashing.
+    const payload: UmtStagingTestResultRequest[] = touchedProductIds.flatMap((productId) => {
+      const row = rows.find((r) => String(r.productId) === productId);
+      if (!row) return [];
       const draft = drafts[productId];
-      return {
-        productId: row.productId,
-        productName: row.productName ?? "",
-        baseVersion: row.baseVersion ?? "",
-        manualTestResult: draft.result,
-        manualTestComment: draft.comment,
-        channel: "full",
-      };
+      return [
+        {
+          productId: row.productId,
+          productName: row.productName ?? "",
+          baseVersion: row.baseVersion ?? "",
+          manualTestResult: draft.result,
+          manualTestComment: draft.comment,
+          channel: "full",
+        },
+      ];
     });
     try {
       await saveMutation.mutateAsync(payload);
@@ -129,6 +145,20 @@ export default function UmtTestingStep({ id, update }: { id: string; update: Umt
                 <Typography variant="h6">
                   {row.productName ?? "N/A"} - {row.baseVersion ?? "N/A"}
                 </Typography>
+                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Automated Test Result:
+                  </Typography>
+                  <Box
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      bgcolor: umtAutomatedTestResultColor(row.automatedTestResult),
+                    }}
+                  />
+                  <Typography variant="body2">{umtAutomatedTestResultLabel(row.automatedTestResult)}</Typography>
+                </Stack>
                 <RadioGroup row value={currentResult} onChange={(event) => updateDraft(row, { result: event.target.value })}>
                   {UMT_TESTING_RESULT_OPTIONS.map((option) => (
                     <FormControlLabel

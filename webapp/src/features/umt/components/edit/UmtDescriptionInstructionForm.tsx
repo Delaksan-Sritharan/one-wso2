@@ -135,6 +135,8 @@ export default function UmtDescriptionInstructionForm({
   function closeAddModal() {
     setIsAddModalOpen(false);
     setIsProductSpecific(false);
+    setCommonDescription("");
+    setCommonInstruction("");
     setSelectedProductId(null);
     setProductDescription("");
     setProductInstruction("");
@@ -198,6 +200,7 @@ export default function UmtDescriptionInstructionForm({
   }
 
   const isSaveDisabled =
+    rows.length === 0 ||
     !isGeneralDescriptionChecked ||
     !isImplementationDetailsChecked ||
     !isImpactChecked ||
@@ -325,6 +328,7 @@ export default function UmtDescriptionInstructionForm({
           columnHeaderHeight={40}
           columns={columns}
           disableColumnMenu
+          disableColumnResize
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           getRowId={(row: DescriptionInstructionRow) => row.productId}

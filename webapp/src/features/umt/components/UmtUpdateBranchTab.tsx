@@ -343,17 +343,31 @@ function BranchGrid({
         columnHeaderHeight={40}
         columns={columns}
         columnVisibilityModel={columnVisibilityModel}
+        disableColumnResize
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter
         loading={loading}
         onColumnVisibilityModelChange={onColumnVisibilityModelChange}
         rows={rows}
-        sx={{ border: 0, minHeight: 100 }}
+        sx={branchGridSx}
       />
     </Paper>
   );
 }
+
+// See UmtUpdateViewSections.tsx's denseDataGridSx: MUI DataGrid clips long
+// cell text (repository URLs, branch/job URLs) with nowrap/ellipsis unless
+// told to wrap.
+const branchGridSx = {
+  border: 0,
+  minHeight: 100,
+  "& .MuiDataGrid-cell": {
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    overflowWrap: "anywhere",
+  },
+} as const;
 
 function branchColumns(
   includeAction: boolean,

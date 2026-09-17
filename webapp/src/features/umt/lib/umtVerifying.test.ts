@@ -52,8 +52,17 @@ describe("isCompleteUpdateValid", () => {
     ).toBe(false);
   });
 
-  it("does not count a non-blank but invalid-URL entry as a provided pull request", () => {
+  it("rejects a non-blank but invalid-URL entry outright, even alongside a reason", () => {
     expect(isCompleteUpdateValid({ publicPullRequests: ["not a url"], reason: "" })).toBe(false);
-    expect(isCompleteUpdateValid({ publicPullRequests: ["not a url"], reason: "Reason given." })).toBe(true);
+    expect(isCompleteUpdateValid({ publicPullRequests: ["not a url"], reason: "Reason given." })).toBe(false);
+  });
+
+  it("rejects a mix of one valid and one invalid pull request", () => {
+    expect(
+      isCompleteUpdateValid({
+        publicPullRequests: ["https://github.com/wso2/carbon-kernel/pull/123", "not a url"],
+        reason: "",
+      }),
+    ).toBe(false);
   });
 });

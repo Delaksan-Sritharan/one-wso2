@@ -47,7 +47,7 @@ import {
   type UmtUpdateSummary,
 } from "../api/umtUpdates";
 import { useUmtUpdates } from "../api/useUmtUpdates";
-import MaintenanceDialog from "../components/MaintenanceDialog";
+import { writePersistedSelectedTab } from "../lib/umtLocalState";
 import UmtCreateUpdateDialog from "../components/UmtCreateUpdateDialog";
 import UmtShell from "../components/UmtShell";
 import UmtUpdateFiltersDrawer from "../components/UmtUpdateFiltersDrawer";
@@ -133,7 +133,6 @@ function UmtUpdatesBody() {
   const [filters, setFilters] = useState<UmtUpdateFilters>(EMPTY_UMT_UPDATE_FILTERS);
   const [filterOpen, setFilterOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [maintenanceOpen, setMaintenanceOpen] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS);
   const [columnAnchor, setColumnAnchor] = useState<HTMLElement | null>(null);
   const [actionAnchor, setActionAnchor] = useState<HTMLElement | null>(null);
@@ -166,13 +165,18 @@ function UmtUpdatesBody() {
     setActionRow(null);
   };
 
-  const runUnavailableAction = () => {
-    closeActions();
-    setMaintenanceOpen(true);
-  };
-
   const viewUpdate = (id: number) => {
     closeActions();
+    navigate(`/umt/updates/${id}`);
+  };
+
+  // "View"/"Edit"/"Branch" are one detail page with three tabs, not three
+  // routes — the detail page reads a per-update persisted tab on mount
+  // (readPersistedSelectedTab), so writing it here before navigating opens
+  // the right tab, the same way the tab strip itself persists a switch.
+  const openUpdateOnTab = (id: number, tab: string) => {
+    closeActions();
+    writePersistedSelectedTab(String(id), tab);
     navigate(`/umt/updates/${id}`);
   };
 
@@ -190,10 +194,12 @@ function UmtUpdatesBody() {
       field: "actions",
       filterable: false,
       headerName: "Actions",
-      minWidth: 52,
+      headerAlign: "center",
+      align: "center",
+      minWidth: 80,
       resizable: false,
       sortable: false,
-      width: 52,
+      width: 80,
       renderCell: (params: DataGrid.GridRenderCellParams<UmtUpdateSummary>) => (
         <Box sx={{ ...gridCellContentSx, justifyContent: "center" }}>
           <Tooltip title={`Actions for update ${params.row.id}`}>
@@ -269,6 +275,7 @@ function UmtUpdatesBody() {
           <DataGridComponent
             columnHeaderHeight={40}
             columns={gridColumns}
+            disableColumnResize
             disableRowSelectionOnClick
             getRowHeight={() => "auto"}
             hideFooter
@@ -321,13 +328,12 @@ function UmtUpdatesBody() {
 
       <Menu anchorEl={actionAnchor} id="umt-update-actions" open={Boolean(actionAnchor)} onClose={closeActions}>
         <MenuItem onClick={() => actionRow && viewUpdate(actionRow.id)}><EyeIcon size={16} />&nbsp; View</MenuItem>
-        <MenuItem onClick={runUnavailableAction}><PencilIcon size={16} />&nbsp; Edit</MenuItem>
-        <MenuItem onClick={runUnavailableAction}><GitBranchIcon size={16} />&nbsp; Branch</MenuItem>
+        <MenuItem onClick={() => actionRow && openUpdateOnTab(actionRow.id, "edit")}><PencilIcon size={16} />&nbsp; Edit</MenuItem>
+        <MenuItem onClick={() => actionRow && openUpdateOnTab(actionRow.id, "branch")}><GitBranchIcon size={16} />&nbsp; Branch</MenuItem>
       </Menu>
 
       <UmtUpdateFiltersDrawer open={filterOpen} filters={filters} onApply={applyFilters} onClose={() => setFilterOpen(false)} />
       <UmtCreateUpdateDialog open={createOpen} onClose={() => setCreateOpen(false)} />
-      <MaintenanceDialog open={maintenanceOpen} onClose={() => setMaintenanceOpen(false)} />
     </Stack>
   );
 }
@@ -341,7 +347,28 @@ function UpdatesEmptyState() {
   );
 }
 
-const updatesGridSx = { border: 0 } as const;
+// Community DataGrid has no real column-pinning prop (confirmed against
+// legacy's own UpdatesList.tsx, which achieves this the same way — sticky
+// positioning on the actions cell/header, not a DataGrid pinning API).
+// Unlike legacy's hardcoded white, this uses theme-aware colors so it still
+// looks right in dark mode.
+const updatesGridSx = {
+  border: 0,
+  '& .MuiDataGrid-cell[data-field="actions"]': {
+    position: "sticky",
+    right: 0,
+    backgroundColor: "background.paper",
+    zIndex: 2,
+    boxShadow: "-2px 0 4px rgba(0, 0, 0, 0.15)",
+  },
+  '& .MuiDataGrid-columnHeader[data-field="actions"]': {
+    position: "sticky",
+    right: 0,
+    backgroundColor: "background.paper",
+    zIndex: 2,
+    boxShadow: "-2px 0 4px rgba(0, 0, 0, 0.15)",
+  },
+} as const;
 const gridCellContentSx = {
   alignItems: "center",
   display: "flex",

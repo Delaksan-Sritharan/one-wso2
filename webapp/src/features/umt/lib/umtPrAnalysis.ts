@@ -115,6 +115,25 @@ export function bundleInfoApplies(relativePath: string, operation: string | null
   return relativePath.includes("/plugins/") && (operation === "Added" || operation === "Removed");
 }
 
+// True when a manual file requiring a bundle-info entry (bundleInfoApplies)
+// has one — matched by file basename. Legacy's own pre-Analyze check
+// compares `bundle.relativeJarPath === file.file` directly, but those are two
+// different coordinate systems (a product-pack-relative upload path vs a
+// "../"-prefixed JAR-relative path), so that equality can in practice never
+// hold; this restores the check's intent — "did you add a bundle entry for
+// this JAR" — without inheriting legacy's always-false comparison.
+export function pluginsFileHasMatchingBundleInfo(
+  filePath: string,
+  bundlesInfoChanges: { relativeJarPath?: string | null }[],
+): boolean {
+  const fileBaseName = filePath.split("/").filter(Boolean).pop();
+  if (!fileBaseName) return false;
+  return bundlesInfoChanges.some((change) => {
+    const jarBaseName = (change.relativeJarPath ?? "").split("/").filter(Boolean).pop();
+    return Boolean(jarBaseName) && jarBaseName === fileBaseName;
+  });
+}
+
 export function bundlesInfoPathError(value: string): string | undefined {
   if (!value.endsWith("bundle.info") && !value.endsWith("bundles.info")) {
     return "The path should end with 'bundle.info' or 'bundles.info'.";

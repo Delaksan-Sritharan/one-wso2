@@ -14,20 +14,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Alert,
   Button,
   Chip,
   DataGrid,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   Grid,
+  IconButton,
   Link,
   Paper,
   Skeleton,
   Stack,
+  TextField,
+  Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
+import { PlusIcon, TrashIcon } from "@wso2/oxygen-ui-icons-react";
+import { describeError } from "@api/errors";
+import { useNotifications } from "@context/notifications/NotificationsContext";
 import type {
   UmtFileOperation,
   UmtHotfixInfo,
@@ -39,6 +50,13 @@ import type {
   UmtUpdateProduct,
   UmtUpdateSummary,
 } from "../api/umtUpdates";
+import { useUmtGate } from "../api/useUmtGate";
+import {
+  useUmtSaveIssues,
+  useUmtSavePublicPullRequests,
+  useUmtSaveTestPullRequests,
+} from "../api/useUmtUpdateActions";
+import { isValidGithubIssueUrl } from "../lib/umtCreateUpdate";
 import { useUmtUpdateViewData } from "../api/useUmtUpdateViewData";
 
 interface DenseColumn<Row> {
@@ -58,61 +76,67 @@ export default function UmtUpdateViewSections({
 }) {
   const viewData = useUmtUpdateViewData(id, update.lifecycleState, Boolean(update.isHotfix));
   const publicPullRequests = update.publicPullRequests ?? [];
+  const gate = useUmtGate();
+  const saveIssues = useUmtSaveIssues(id);
+  const savePublicPrs = useUmtSavePublicPullRequests(id);
+  const saveTestPrs = useUmtSaveTestPullRequests(id);
+  // Legacy hides the add action once an update is Released; the admin-only
+  // delete column follows the same rule this codebase already applies
+  // elsewhere (e.g. File Approval's promote gate).
+  const canAddLinks = update.lifecycleState !== "Released";
 
   return (
     <Stack spacing={3} sx={{ mt: 3 }}>
       <Grid container spacing={{ xs: 3, lg: 4 }}>
         <Grid size={{ xs: 12, lg: 6 }}>
-          <TableSection title="Public GitHub Issues">
-            {(update.issues?.length ?? 0) > 0 ? (
-              <DenseTable
-                ariaLabel="Public GitHub issues"
-                columns={[{ key: "issue", label: "Public Git Issues", render: renderLinkValue }]}
-                rows={update.issues ?? []}
-                rowKey={(row, index) => `${row}-${index}`}
-              />
-            ) : (
-              <EmptySectionText>No Public GitHub Issues Available</EmptySectionText>
-            )}
-          </TableSection>
+          <EditableLinkSection
+            title="Public GitHub Issues"
+            ariaLabel="Public GitHub issues"
+            columnLabel="Public Git Issues"
+            emptyText="No Public GitHub Issues Available"
+            items={update.issues ?? []}
+            canAdd={canAddLinks}
+            canDelete={gate.isAdmin}
+            requireAtLeastOne
+            addDialogTitle="Add Public GitHub Issues"
+            addFieldLabel="Public GitHub Issue"
+            validate={(value) => (isValidGithubIssueUrl(value) ? undefined : "Invalid Public GitHub Issue")}
+            isSaving={saveIssues.isPending}
+            onSave={(next) => saveIssues.mutateAsync(next)}
+          />
         </Grid>
         <Grid size={{ xs: 12, lg: 6 }}>
-          <TableSection title="Public Pull Requests">
-            {publicPullRequests.length > 0 ? (
-              <DenseTable
-                ariaLabel="Public pull requests"
-                columns={[
-                  { key: "pull-request", label: "Public Pull Requests", render: renderLinkValue },
-                ]}
-                rows={publicPullRequests}
-                rowKey={(row, index) => `${row}-${index}`}
-              />
-            ) : (
-              <EmptySectionText>No Public Pull Requests Available</EmptySectionText>
-            )}
-          </TableSection>
+          <EditableLinkSection
+            title="Public Pull Requests"
+            ariaLabel="Public pull requests"
+            columnLabel="Public Pull Requests"
+            emptyText="No Public Pull Requests Available"
+            items={publicPullRequests}
+            canAdd={canAddLinks}
+            canDelete={gate.isAdmin}
+            addDialogTitle="Add Public Pull Requests"
+            addFieldLabel="Public Pull Request"
+            isSaving={savePublicPrs.isPending}
+            onSave={(next) => savePublicPrs.mutateAsync(next)}
+          />
         </Grid>
       </Grid>
 
-      <DividedTableSection title="Integration Pull Requests">
-        {(update.testPullRequests?.length ?? 0) > 0 ? (
-          <DenseTable
-            ariaLabel="Integration pull requests"
-            columns={[
-              {
-                key: "pull-request",
-                label: "Integration Test Pull Requests",
-                render: renderLinkValue,
-              },
-            ]}
-            hideHeader
-            rows={update.testPullRequests ?? []}
-            rowKey={(row, index) => `${row}-${index}`}
-          />
-        ) : (
-          <EmptySectionText>No Integration Test Pull Requests Available</EmptySectionText>
-        )}
-      </DividedTableSection>
+      <Divider flexItem />
+      <EditableLinkSection
+        title="Integration Pull Requests"
+        ariaLabel="Integration pull requests"
+        columnLabel="Integration Test Pull Requests"
+        hideColumnHeader
+        emptyText="No Integration Test Pull Requests Available"
+        items={update.testPullRequests ?? []}
+        canAdd={canAddLinks}
+        canDelete={gate.isAdmin}
+        addDialogTitle="Add Integration Test Pull Requests"
+        addFieldLabel="Integration Test Pull Request"
+        isSaving={saveTestPrs.isPending}
+        onSave={(next) => saveTestPrs.mutateAsync(next)}
+      />
 
       <DividedTableSection title="Products">
         <DenseTable
@@ -368,6 +392,168 @@ function HotfixSection({ query }: { query: ViewQueryState<UmtHotfixInfo> }) {
   );
 }
 
+// Shared by the View tab's three editable link-list sections (Public GitHub
+// Issues, Public Pull Requests, Integration Test Pull Requests). Legacy adds
+// via an inline field list inside the modal; this port instead adds one item
+// per dialog open, matching every other "Add X" dialog already in this
+// feature (Manual Files, Bundle Info, Pull Requests, Security Advisories).
+function EditableLinkSection({
+  title,
+  ariaLabel,
+  columnLabel,
+  hideColumnHeader = false,
+  emptyText,
+  items,
+  canAdd,
+  canDelete,
+  requireAtLeastOne = false,
+  addDialogTitle,
+  addFieldLabel,
+  validate,
+  isSaving,
+  onSave,
+}: {
+  title?: string;
+  ariaLabel: string;
+  columnLabel: string;
+  hideColumnHeader?: boolean;
+  emptyText: string;
+  items: string[];
+  canAdd: boolean;
+  canDelete: boolean;
+  requireAtLeastOne?: boolean;
+  addDialogTitle: string;
+  addFieldLabel: string;
+  validate?: (value: string) => string | undefined;
+  isSaving: boolean;
+  onSave: (nextItems: string[]) => Promise<unknown>;
+}) {
+  const { showSuccess, showError } = useNotifications();
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const trimmed = value.trim();
+  const validationError = trimmed ? validate?.(trimmed) : undefined;
+
+  async function handleAdd() {
+    if (!trimmed || validationError) return;
+    try {
+      await onSave([...items, trimmed]);
+      showSuccess(`${addFieldLabel} added.`);
+      setIsAddOpen(false);
+      setValue("");
+    } catch (error) {
+      showError(`Failed to add ${addFieldLabel.toLowerCase()}. ${describeError(error)}`);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await onSave(items.filter((item) => item !== deleteTarget));
+      showSuccess(`${addFieldLabel} deleted.`);
+    } catch (error) {
+      showError(`Failed to delete ${addFieldLabel.toLowerCase()}. ${describeError(error)}`);
+    } finally {
+      setDeleteTarget(null);
+    }
+  }
+
+  const deleteDisabled = requireAtLeastOne && items.length <= 1;
+
+  const columns: DenseColumn<string>[] = [
+    { key: "value", label: columnLabel, render: renderLinkValue },
+    ...(canDelete
+      ? [
+          {
+            key: "delete",
+            label: "",
+            render: (row: string) =>
+              deleteDisabled ? (
+                <Tooltip title={`At least one ${addFieldLabel} is required`}>
+                  <span>
+                    <IconButton size="small" disabled aria-label={`Delete ${addFieldLabel.toLowerCase()}`}>
+                      <TrashIcon size={16} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              ) : (
+                <IconButton
+                  size="small"
+                  aria-label={`Delete ${addFieldLabel.toLowerCase()}`}
+                  onClick={() => setDeleteTarget(row)}
+                >
+                  <TrashIcon size={16} />
+                </IconButton>
+              ),
+          },
+        ]
+      : []),
+  ];
+
+  const content = (
+    <>
+      {items.length > 0 ? (
+        <DenseTable ariaLabel={ariaLabel} columns={columns} rows={items} rowKey={(row, index) => `${row}-${index}`} hideHeader={hideColumnHeader} />
+      ) : (
+        <EmptySectionText>{emptyText}</EmptySectionText>
+      )}
+
+      <Dialog open={isAddOpen} onClose={() => setIsAddOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{addDialogTitle}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label={addFieldLabel}
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            error={Boolean(validationError)}
+            helperText={validationError}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsAddOpen(false)}>Cancel</Button>
+          <Button variant="contained" disabled={!trimmed || Boolean(validationError)} loading={isSaving} onClick={() => void handleAdd()}>
+            Add
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogContentText>Are you sure you want to delete this {addFieldLabel.toLowerCase()}?</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button variant="contained" loading={isSaving} onClick={() => void handleConfirmDelete()}>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+
+  if (!title) return content;
+
+  return (
+    <Stack spacing={1.5}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+        <Typography component="h5" variant="h5" sx={{ fontWeight: 700 }}>
+          {title}
+        </Typography>
+        {canAdd && (
+          <IconButton aria-label={`Add ${addFieldLabel.toLowerCase()}`} size="small" onClick={() => setIsAddOpen(true)}>
+            <PlusIcon size={18} />
+          </IconButton>
+        )}
+      </Stack>
+      {content}
+    </Stack>
+  );
+}
+
 function TableSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Stack spacing={1.5}>
@@ -415,6 +601,9 @@ function DenseTable<Row>({
     flex: 1,
     headerName: hideHeader ? "" : column.label,
     minWidth: 160,
+    // A single-column table has nothing to resize against, so its header
+    // resize handle only misleads.
+    resizable: columns.length > 1,
     sortable: false,
     renderCell: (params) => (
       <GridCellContent>{column.render(params.row.value as Row)}</GridCellContent>
@@ -428,6 +617,7 @@ function DenseTable<Row>({
         columnHeaderHeight={hideHeader ? 0 : 40}
         columns={gridColumns}
         disableColumnMenu
+        disableColumnResize
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter
@@ -439,7 +629,19 @@ function DenseTable<Row>({
   );
 }
 
-const denseDataGridSx = { border: 0 } as const;
+// getRowHeight="auto" above only lets the ROW grow to fit its content — MUI
+// DataGrid's own cell CSS still clips text with nowrap/ellipsis unless
+// explicitly told to wrap. Long values (paths, URLs) were getting cut off
+// with no way to read them; this lets them wrap and the auto row height
+// then grows to fit the wrapped lines.
+const denseDataGridSx = {
+  border: 0,
+  "& .MuiDataGrid-cell": {
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    overflowWrap: "anywhere",
+  },
+} as const;
 
 function GridCellContent({ children }: { children: ReactNode }) {
   return (

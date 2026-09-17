@@ -62,16 +62,33 @@ export function useUmtPrAnalysisStatus(
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
   const { state: subState } = useAsgardeoSub();
+  const queryClient = useQueryClient();
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const baseEnabled =
     /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
+  const queryKey = ["umt-update-pr-analysis-status", userSub, id];
 
   return useQuery<string>({
-    queryKey: ["umt-update-pr-analysis-status", userSub, id],
+    queryKey,
     enabled: baseEnabled && enabled,
     initialData: initialStatus ?? undefined,
-    queryFn: async () =>
-      fetchPrAnalysisStatus(umtServiceUrls.updatePullRequestAnalysisStatus(id), await getAccessToken()),
+    queryFn: async () => {
+      // Read the cached status *before* this fetch overwrites it, so we can
+      // tell a fresh QUEUED/PROCESSING -> COMPLETED transition (which needs a
+      // results refetch, mirroring legacy's one-shot getPrAnalysisInformation
+      // once PullRequestAnalysisStatus reaches COMPLETED) apart from a mount
+      // that already finds the status COMPLETED (nothing changed, no need to
+      // refetch results again).
+      const previousStatus = queryClient.getQueryData<string>(queryKey);
+      const status = await fetchPrAnalysisStatus(
+        umtServiceUrls.updatePullRequestAnalysisStatus(id),
+        await getAccessToken(),
+      );
+      if (status === UMT_PR_ANALYSIS_STATUS.COMPLETED && previousStatus !== UMT_PR_ANALYSIS_STATUS.COMPLETED) {
+        void queryClient.invalidateQueries({ queryKey: ["umt-update-pull-request-analysis"] });
+      }
+      return status;
+    },
     refetchInterval: (query) => {
       const status = query.state.data;
       const inFlight = status === UMT_PR_ANALYSIS_STATUS.QUEUED || status === UMT_PR_ANALYSIS_STATUS.PROCESSING;

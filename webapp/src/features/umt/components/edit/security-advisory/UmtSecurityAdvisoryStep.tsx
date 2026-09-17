@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   Button,
   CircularProgress,
@@ -45,7 +45,7 @@ export default function UmtSecurityAdvisoryStep({ id, update }: { id: string; up
   const saveMutation = useUmtSaveSecurityAdvisories(id);
 
   // ---- Draft rows, reset whenever the backend list itself changes ----
-  const initialRows = update.securityAdvisories ?? [];
+  const initialRows = useMemo(() => update.securityAdvisories ?? [], [update.securityAdvisories]);
   const [rows, setRows] = useState<UmtSecurityAdvisory[]>(initialRows);
   const [isDirty, setIsDirty] = useState(false);
   const [lastInitialRows, setLastInitialRows] = useState(initialRows);
@@ -58,10 +58,15 @@ export default function UmtSecurityAdvisoryStep({ id, update }: { id: string; up
   // ---- Add modal state ----
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [advisoryName, setAdvisoryName] = useState("");
-  const debouncedName = useDebouncedValue(advisoryName.trim(), 500);
+  const trimmedName = advisoryName.trim();
+  const debouncedName = useDebouncedValue(trimmedName, 500);
   const formatValid = umtSecurityAdvisoryFormatValid(debouncedName);
   const validation = useUmtValidateSecurityAdvisory(debouncedName, formatValid);
-  const isAdvisoryValid = formatValid && validation.data?.valid === true;
+  // Require the live input to still match what was validated — otherwise,
+  // during the debounce window after further typing, Add stays enabled on a
+  // stale validation and would insert the old debouncedName instead of what
+  // the field currently shows.
+  const isAdvisoryValid = formatValid && validation.data?.valid === true && trimmedName === debouncedName;
 
   function closeAddModal() {
     setIsAddModalOpen(false);
@@ -129,6 +134,7 @@ export default function UmtSecurityAdvisoryStep({ id, update }: { id: string; up
           columnHeaderHeight={40}
           columns={columns}
           disableColumnMenu
+          disableColumnResize
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           getRowId={(row: UmtSecurityAdvisory) => row.securityAdvisoryName ?? ""}

@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 import type { UmtStagingTestResultRecord } from "../api/umtUpdates";
 import {
   isTestingComplete,
+  umtAutomatedTestResultColor,
+  umtAutomatedTestResultLabel,
   umtShouldPollStagingTestResults,
   umtStagingRowIsComplete,
   umtTestingResultRequiresComment,
@@ -88,5 +90,32 @@ describe("umtShouldPollStagingTestResults", () => {
     expect(umtShouldPollStagingTestResults("Staging")).toBe(false);
     expect(umtShouldPollStagingTestResults("TestingEnvironmentFailed")).toBe(false);
     expect(umtShouldPollStagingTestResults(null)).toBe(false);
+  });
+});
+
+describe("umtAutomatedTestResultColor", () => {
+  it("maps each known backend value to legacy's dot color", () => {
+    expect(umtAutomatedTestResultColor("success")).toBe("success.main");
+    expect(umtAutomatedTestResultColor("failure")).toBe("error.main");
+    expect(umtAutomatedTestResultColor("building")).toBe("info.main");
+  });
+
+  it("falls back to grey for an unknown or missing value", () => {
+    expect(umtAutomatedTestResultColor("something-else")).toBe("grey.400");
+    expect(umtAutomatedTestResultColor(null)).toBe("grey.400");
+    expect(umtAutomatedTestResultColor(undefined)).toBe("grey.400");
+  });
+});
+
+describe("umtAutomatedTestResultLabel", () => {
+  it("title-cases a lower_snake_case backend value", () => {
+    expect(umtAutomatedTestResultLabel("success")).toBe("Success");
+    expect(umtAutomatedTestResultLabel("not_built")).toBe("Not Built");
+  });
+
+  it("falls back to Unknown for a missing value", () => {
+    expect(umtAutomatedTestResultLabel(null)).toBe("Unknown");
+    expect(umtAutomatedTestResultLabel(undefined)).toBe("Unknown");
+    expect(umtAutomatedTestResultLabel("")).toBe("Unknown");
   });
 });

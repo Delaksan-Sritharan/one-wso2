@@ -48,10 +48,20 @@ import {
   useUmtStartPullRequestAnalysis,
 } from "../../../api/useUmtPrAnalysis";
 import {
+  bundleInfoApplies,
   GITHUB_PR_REGEX,
   isPrAnalyzeDisabled,
+  pluginsFileHasMatchingBundleInfo,
   prAnalysisStatusMessage,
 } from "../../../lib/umtPrAnalysis";
+import {
+  readPersistedBundleInfoChanges,
+  readPersistedManualFiles,
+  readPersistedPullRequests,
+  writePersistedBundleInfoChanges,
+  writePersistedManualFiles,
+  writePersistedPullRequests,
+} from "../../../lib/umtLocalState";
 import UmtAddManualFilesSection from "./UmtAddManualFilesSection";
 import UmtPrAnalysisResults from "./UmtPrAnalysisResults";
 
@@ -67,9 +77,29 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
   const [isProceedWarningOpen, setIsProceedWarningOpen] = useState(false);
 
   const [updateType, setUpdateType] = useState<UmtUpdateType>("generalUpdate");
-  const [pullRequests, setPullRequests] = useState<UmtPullRequestAnalysisItem[]>([]);
-  const [manualFiles, setManualFiles] = useState<UmtFileOperation[]>([]);
-  const [bundlesInfoChanges, setBundlesInfoChanges] = useState<UmtBundleInfoChange[]>([]);
+  // Drafts persisted per update id (mirroring legacy's pullRequests/files/
+  // bundleInfo localStorage keys, but id-scoped - legacy's own versions are
+  // flat/global and leak stale rows across different updates' PR Analysis
+  // steps, which this fixes rather than reproduces).
+  const [pullRequests, setPullRequestsState] = useState<UmtPullRequestAnalysisItem[]>(() =>
+    readPersistedPullRequests(id),
+  );
+  const [manualFiles, setManualFilesState] = useState<UmtFileOperation[]>(() => readPersistedManualFiles(id));
+  const [bundlesInfoChanges, setBundlesInfoChangesState] = useState<UmtBundleInfoChange[]>(() =>
+    readPersistedBundleInfoChanges(id),
+  );
+  const setPullRequests = (rows: UmtPullRequestAnalysisItem[]) => {
+    setPullRequestsState(rows);
+    writePersistedPullRequests(id, rows);
+  };
+  const setManualFiles = (rows: UmtFileOperation[]) => {
+    setManualFilesState(rows);
+    writePersistedManualFiles(id, rows);
+  };
+  const setBundlesInfoChanges = (rows: UmtBundleInfoChange[]) => {
+    setBundlesInfoChangesState(rows);
+    writePersistedBundleInfoChanges(id, rows);
+  };
   const [hasNewInputs, setHasNewInputs] = useState(true);
 
   const [isPrDialogOpen, setIsPrDialogOpen] = useState(false);
@@ -77,6 +107,7 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
   const [preferredVersion, setPreferredVersion] = useState("");
   const [prError, setPrError] = useState<string | undefined>();
   const [deletePr, setDeletePr] = useState<string | null>(null);
+  const [missingBundleInfoFiles, setMissingBundleInfoFiles] = useState<UmtFileOperation[]>([]);
 
   const markDirty = () => setHasNewInputs(true);
 
@@ -121,6 +152,27 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
     setPullRequests(pullRequests.filter((row) => row.pr !== deletePr));
     markDirty();
     setDeletePr(null);
+  }
+
+  // Legacy blocks Analyze (with a "Missing Bundle Info Paths" dialog) when a
+  // /plugins/ Added or Removed file has no corresponding bundle-info entry —
+  // this port previously only validated bundle info at add time, leaving a
+  // file added *before* its bundle info (or one whose entry was later
+  // deleted) to reach the backend unguarded. Only General Update collects
+  // manual files/bundle info at all.
+  function handleAnalyzeClick() {
+    if (updateType === "generalUpdate") {
+      const missing = manualFiles.filter(
+        (file) =>
+          bundleInfoApplies(file.file ?? "", file.operation) &&
+          !pluginsFileHasMatchingBundleInfo(file.file ?? "", bundlesInfoChanges),
+      );
+      if (missing.length > 0) {
+        setMissingBundleInfoFiles(missing);
+        return;
+      }
+    }
+    void handleAnalyze();
   }
 
   async function handleAnalyze() {
@@ -218,6 +270,7 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
                   autoHeight
                   columnHeaderHeight={40}
                   disableColumnMenu
+                  disableColumnResize
                   disableRowSelectionOnClick
                   getRowHeight={() => "auto"}
                   getRowId={(row: UmtPullRequestAnalysisItem) => row.pr ?? ""}
@@ -314,7 +367,7 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
               variant="contained"
               disabled={analyzeDisabled}
               loading={startAnalysis.isPending}
-              onClick={() => void handleAnalyze()}
+              onClick={handleAnalyzeClick}
             >
               Analyze
             </Button>
@@ -395,6 +448,28 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
         <DialogActions>
           <Button onClick={() => void handleProceed()}>Yes Proceed</Button>
           <Button onClick={() => setIsProceedWarningOpen(false)}>No</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={missingBundleInfoFiles.length > 0} onClose={() => setMissingBundleInfoFiles([])}>
+        <DialogTitle>Missing Bundle Info Paths</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 1.5 }}>
+            The following /plugins/ files need a corresponding Bundle Info Changes entry before this update can
+            be analyzed:
+          </DialogContentText>
+          <Stack spacing={0.5}>
+            {missingBundleInfoFiles.map((file, index) => (
+              <Typography key={index} variant="body2" sx={{ fontFamily: "monospace" }}>
+                {file.operation}: {file.file}
+              </Typography>
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={() => setMissingBundleInfoFiles([])}>
+            OK
+          </Button>
         </DialogActions>
       </Dialog>
     </Stack>

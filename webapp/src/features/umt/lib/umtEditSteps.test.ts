@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeUmtEditSteps,
+  resolveUmtEditActiveIndex,
   umtActiveStepId,
   umtActiveStepIndex,
   umtHasAdditionalFileOperations,
@@ -258,5 +259,35 @@ describe("umtActiveStepId / umtActiveStepIndex", () => {
     expect(umtActiveStepId("Released", cloudSteps)).toBe("cloud-released");
     expect(umtActiveStepIndex("Released", cloudSteps)).toBe(1);
     expect(umtActiveStepId(null, cloudSteps)).toBe("cloud-development");
+  });
+});
+
+describe("resolveUmtEditActiveIndex", () => {
+  const steps = computeUmtEditSteps("UpdateLifecycle", false);
+  const validateIndex = steps.findIndex((step) => step.id === "validate");
+  const verifyingIndex = steps.findIndex((step) => step.id === "verifying");
+  const descriptionIndex = steps.findIndex((step) => step.id === "description-instruction");
+
+  it("has no override: uses the backend-derived index", () => {
+    expect(resolveUmtEditActiveIndex(steps, verifyingIndex, null)).toBe(verifyingIndex);
+  });
+
+  it("honours an override that is ahead of the backend-derived step", () => {
+    // e.g. Testing's advancesLocallyToNextStep moved the user on to Validate
+    // while the backend still reports the shared lifecycleState behind it.
+    expect(resolveUmtEditActiveIndex(steps, descriptionIndex, "validate")).toBe(validateIndex);
+  });
+
+  it("discards a persisted override that sits BEHIND a newer backend lifecycle state", () => {
+    // The scenario this fixes: the user left the tab on Validate, the update
+    // was promoted elsewhere (or by someone else) all the way to Released,
+    // and reopening it must land on Verifying, not the stale Validate.
+    expect(resolveUmtEditActiveIndex(steps, verifyingIndex, "validate")).toBe(verifyingIndex);
+  });
+
+  it("discards an override whose step id no longer exists in the current step list", () => {
+    expect(resolveUmtEditActiveIndex(steps, descriptionIndex, "cloud-development" as UmtEditStepId)).toBe(
+      descriptionIndex,
+    );
   });
 });

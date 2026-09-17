@@ -122,7 +122,7 @@ export default function UmtPrAnalysisResults({ result }: { result: UmtPullReques
                 label: "Relative JAR Path",
                 render: (row) => displayValue(row.relativeJarPath),
               },
-              { key: "changeType", label: "Change Type", render: (row) => displayValue(row.changeType) },
+              { key: "entryType", label: "Change Type", render: (row) => displayValue(row.entryType) },
             ]}
           />
         </ResultSection>
@@ -226,6 +226,7 @@ function DenseTable<Row>({
         columnHeaderHeight={40}
         columns={gridColumns}
         disableColumnMenu
+        disableColumnResize
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter

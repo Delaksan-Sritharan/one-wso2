@@ -17,6 +17,7 @@ import {
   isZipDisallowedForPath,
   jarNameError,
   manualFileNameMatchesPath,
+  pluginsFileHasMatchingBundleInfo,
   prAnalysisStatusMessage,
   relativeJarPathError,
   umtSvnLocationRegex,
@@ -185,6 +186,28 @@ describe("bundleInfoApplies", () => {
     expect(bundleInfoApplies("/repository/components/plugins/bundle.jar", "Removed")).toBe(true);
     expect(bundleInfoApplies("/repository/components/plugins/bundle.jar", "Modified")).toBe(false);
     expect(bundleInfoApplies("/repository/components/lib/bundle.jar", "Added")).toBe(false);
+  });
+});
+
+describe("pluginsFileHasMatchingBundleInfo", () => {
+  it("matches when a bundle-info entry's relativeJarPath shares the file's basename", () => {
+    expect(
+      pluginsFileHasMatchingBundleInfo("/repository/components/plugins/foo.jar", [
+        { relativeJarPath: "../plugins/foo.jar" },
+      ]),
+    ).toBe(true);
+  });
+
+  it("does not match on a different basename", () => {
+    expect(
+      pluginsFileHasMatchingBundleInfo("/repository/components/plugins/foo.jar", [
+        { relativeJarPath: "../plugins/bar.jar" },
+      ]),
+    ).toBe(false);
+  });
+
+  it("is false with no bundle-info entries", () => {
+    expect(pluginsFileHasMatchingBundleInfo("/repository/components/plugins/foo.jar", [])).toBe(false);
   });
 });
 

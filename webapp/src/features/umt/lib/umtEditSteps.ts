@@ -207,3 +207,22 @@ export function umtActiveStepIndex(
   const index = steps.findIndex((step) => step.id === activeId);
   return index === -1 ? 0 : index;
 }
+
+// Resolves the Edit tab's displayed step: a persisted `localStepOverride`
+// (see UmtUpdateEditTab.tsx) only ever means "further along than the backend
+// knows about" — an advancesLocallyToNextStep step moving the pointer ahead
+// of a shared lifecycleState. If the persisted override is *behind* the
+// backend-derived step instead (the update was promoted elsewhere, or by
+// someone else, while this browser still had an older step persisted for
+// it), the backend position must win, exactly as legacy re-derives its own
+// persisted activeStep from lifecycleState on every mount.
+export function resolveUmtEditActiveIndex(
+  steps: UmtEditStepDefinition[],
+  backendActiveIndex: number,
+  overrideId: UmtEditStepId | null,
+): number {
+  if (!overrideId) return backendActiveIndex;
+  const overrideIndex = steps.findIndex((step) => step.id === overrideId);
+  if (overrideIndex === -1 || overrideIndex < backendActiveIndex) return backendActiveIndex;
+  return overrideIndex;
+}

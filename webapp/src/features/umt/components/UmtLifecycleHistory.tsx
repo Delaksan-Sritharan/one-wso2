@@ -57,6 +57,7 @@ export default function UmtLifecycleHistory({ id }: { id: string }) {
         autoHeight
         columnHeaderHeight={40}
         columns={lifecycleColumns}
+        disableColumnResize
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter
@@ -98,7 +99,18 @@ function LifecycleHistoryEmptyState() {
   );
 }
 
-const lifecycleGridSx = { border: 0, minHeight: 100 } as const;
+// See UmtUpdateViewSections.tsx's denseDataGridSx: MUI DataGrid clips long
+// cell text (e.g. long "From"/"To" state names) with nowrap/ellipsis unless
+// told to wrap.
+const lifecycleGridSx = {
+  border: 0,
+  minHeight: 100,
+  "& .MuiDataGrid-cell": {
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    overflowWrap: "anywhere",
+  },
+} as const;
 
 function compareNewestFirst(a: UmtLifecycleHistoryEntry, b: UmtLifecycleHistoryEntry): number {
   return timestampValue(b.timestamp) - timestampValue(a.timestamp);

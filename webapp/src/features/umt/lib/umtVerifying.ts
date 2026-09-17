@@ -19,15 +19,19 @@ export function isValidHttpUrl(value: string): boolean {
 
 // Mirrors CompleteUpdateForm.tsx's exact exclusive-or rule: at least one
 // non-blank, valid-URL public pull request, or a non-blank reason to skip
-// one — never both, and never neither.
+// one — never both, and never neither. A malformed non-blank entry fails
+// validation outright rather than being silently excluded from the count:
+// folding it into "no pull request provided" would let it slip through
+// alongside a reason, which the exclusive-or rule is meant to forbid, and
+// would let it ride along in the submitted list unvalidated.
 export function isCompleteUpdateValid(input: {
   publicPullRequests: string[];
   reason: string;
 }): boolean {
-  const validPullRequests = input.publicPullRequests.filter(
-    (pr) => pr.trim() !== "" && isValidHttpUrl(pr.trim()),
-  );
-  const hasPullRequest = validPullRequests.length > 0;
+  const nonBlankPullRequests = input.publicPullRequests.map((pr) => pr.trim()).filter((pr) => pr !== "");
+  if (nonBlankPullRequests.some((pr) => !isValidHttpUrl(pr))) return false;
+
+  const hasPullRequest = nonBlankPullRequests.length > 0;
   const hasReason = input.reason.trim() !== "";
 
   return hasPullRequest !== hasReason;

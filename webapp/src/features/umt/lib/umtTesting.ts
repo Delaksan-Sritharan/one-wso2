@@ -59,6 +59,35 @@ export function isTestingComplete(
   return (records ?? []).every(umtStagingRowIsComplete);
 }
 
+// Legacy's getDotStyles palette for the Automated Test Result indicator:
+// green while success, red on failure, blue while the Jenkins build is still
+// running, grey otherwise/unknown. Returned as an MUI theme color path
+// (ready for an sx `bgcolor`), not a bare palette key.
+export function umtAutomatedTestResultColor(value: string | null | undefined): string {
+  switch ((value ?? "").toLowerCase()) {
+    case "success":
+      return "success.main";
+    case "failure":
+      return "error.main";
+    case "building":
+      return "info.main";
+    default:
+      return "grey.400";
+  }
+}
+
+// Legacy renders the raw backend value "toCamelCase" (e.g. "not_built" ->
+// "Not Built"). Values here are already lower_snake_case from the backend.
+export function umtAutomatedTestResultLabel(value: string | null | undefined): string {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return "Unknown";
+  return trimmed
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 // Whether polling for staging test results should keep running: true while
 // lifecycleState is one of the transient in-between states, false once it's
 // reached a terminal state (Staging or Failed) — stops polling on failure

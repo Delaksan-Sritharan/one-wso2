@@ -34,10 +34,16 @@ describe("umtProductHasDescriptionInstruction", () => {
 });
 
 describe("isDescriptionInstructionComplete", () => {
-  it("is vacuously true for an empty, null, or undefined product list", () => {
-    expect(isDescriptionInstructionComplete([])).toBe(true);
-    expect(isDescriptionInstructionComplete(null)).toBe(true);
-    expect(isDescriptionInstructionComplete(undefined)).toBe(true);
+  // Deliberately the OPPOSITE convention from isIntegrationTestsComplete's
+  // empty-list handling: legacy's own DESCRIPTION_STATE gate
+  // (isButtonDisabled) explicitly disables Proceed when the update has no
+  // products at all, rather than treating an empty list as vacuously
+  // complete. Do not "harmonise" this with Integration Tests' vacuous-true
+  // rule — they mirror two different, deliberately different legacy checks.
+  it("is false (not vacuously true) for an empty, null, or undefined product list", () => {
+    expect(isDescriptionInstructionComplete([])).toBe(false);
+    expect(isDescriptionInstructionComplete(null)).toBe(false);
+    expect(isDescriptionInstructionComplete(undefined)).toBe(false);
   });
 
   it("is true when every product is complete", () => {

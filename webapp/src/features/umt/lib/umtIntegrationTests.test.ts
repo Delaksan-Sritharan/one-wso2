@@ -33,6 +33,12 @@ describe("umtProductHasIntegrationTestInfo", () => {
 });
 
 describe("isIntegrationTestsComplete", () => {
+  // Deliberately the OPPOSITE convention from isDescriptionInstructionComplete's
+  // empty-list handling: legacy's own Integration Tests gates
+  // (products.every/products.some) never evaluate anything with no products,
+  // so vacuous-true is faithful here — but legacy's DESCRIPTION_STATE gate
+  // explicitly disables Proceed for an empty product list. Do not
+  // "harmonise" these two — they mirror two different legacy checks.
   it("is vacuously true for an empty, null, or undefined product list (non-containerized)", () => {
     expect(isIntegrationTestsComplete([], false)).toBe(true);
     expect(isIntegrationTestsComplete(null, false)).toBe(true);
@@ -58,7 +64,12 @@ describe("isIntegrationTestsComplete", () => {
     expect(isIntegrationTestsComplete([{ productId: 1, helmChartTag: "v1.0.0" }], true)).toBe(true);
     expect(isIntegrationTestsComplete([{ productId: 1, helmChartTag: "  " }], true)).toBe(false);
     expect(isIntegrationTestsComplete([{ productId: 1 }], true)).toBe(false);
-    expect(isIntegrationTestsComplete([], true)).toBe(false);
+  });
+
+  it("containerized: is vacuously true for an empty, null, or undefined product list, mirroring legacy's products.every/products.some callers which never evaluate the Helm Chart Tag with no products", () => {
+    expect(isIntegrationTestsComplete([], true)).toBe(true);
+    expect(isIntegrationTestsComplete(null, true)).toBe(true);
+    expect(isIntegrationTestsComplete(undefined, true)).toBe(true);
   });
 });
 

@@ -33,6 +33,7 @@ export function useUmtStagingTestResults(id: string, lifecycleState: string | nu
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
   const { state: subState } = useAsgardeoSub();
+  const queryClient = useQueryClient();
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const baseEnabled =
     /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
@@ -42,11 +43,20 @@ export function useUmtStagingTestResults(id: string, lifecycleState: string | nu
   return useQuery<UmtStagingTestResultRecord[]>({
     queryKey: ["umt-update-staging-test-results", userSub, id],
     enabled,
-    queryFn: async () =>
-      authedGet<UmtStagingTestResultRecord[]>(
+    queryFn: async () => {
+      const result = await authedGet<UmtStagingTestResultRecord[]>(
         umtServiceUrls.updateIntegrationTestStaging(id),
         await getAccessToken(),
-      ),
+      );
+      // While actively polling, also refresh the update resource itself —
+      // otherwise a backend lifecycle transition (e.g. into Staging or
+      // TestingEnvironmentFailed) goes unnoticed until something unrelated
+      // happens to refetch it, leaving Next disabled/enabled on stale state.
+      if (umtShouldPollStagingTestResults(lifecycleState)) {
+        void queryClient.invalidateQueries({ queryKey: ["umt-update"] });
+      }
+      return result;
+    },
     refetchInterval: () => (umtShouldPollStagingTestResults(lifecycleState) ? 3000 : false),
     retry: httpRetry,
   });
