@@ -85,6 +85,10 @@ declare global {
       // screens are lifted rather than rewritten and a GRC deployment already
       // publishes this exact key. See apiConfig.ts.
       ONE_WSO2_GRC_PLATFORM_BACKEND_URL?: string;
+      // Base URL for the standalone Updates Manager service. Optional — when
+      // absent, UmtShell shows a not-connected state and makes no UMT requests.
+      // Its /update/user-info roles are local to UMT, not People capabilities.
+      ONE_WSO2_UMT_BACKEND_URL?: string;
       // Base URL of the leave-app frontend itself (not its backend) —
       // used to deep-link into flows this webapp doesn't replicate, like
       // sabbatical requests. Optional — when absent, that link is hidden.
