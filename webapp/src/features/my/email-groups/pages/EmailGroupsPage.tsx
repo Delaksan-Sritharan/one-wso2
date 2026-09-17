@@ -17,7 +17,6 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Box, Card, Skeleton, Stack } from "@wso2/oxygen-ui";
-import { MailsIcon } from "@wso2/oxygen-ui-icons-react";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { useNotifications } from "@context/notifications/NotificationsContext";
@@ -194,7 +193,6 @@ export default function EmailGroupsPage() {
 
   return (
     <EmailGroupsShell
-      eyebrow={{ icon: MailsIcon, label: "Email Groups" }}
       title="Email Groups"
       configured={configured}
       configKey="ONE_WSO2_EMAIL_GROUPS_BACKEND_URL"
