@@ -20,7 +20,7 @@ import PerspectiveHeader from "@components/perspective-header/PerspectiveHeader"
 import { PEOPLE_OPS_SECTIONS, type PerspectiveSection } from "@constants/perspectives";
 import { useUserInfo } from "@api/useUserInfo";
 import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
-import { isSriLankaWorkLocation } from "@features/subscriptions/util/locationGate";
+import { isSriLankaWorkLocation } from "@utils/locationGate";
 import SectionHeader from "../components/SectionHeader";
 
 // This perspective's prior content (People/Visitor/Careers app menus, the

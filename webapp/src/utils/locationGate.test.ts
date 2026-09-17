@@ -15,7 +15,7 @@
 // under the License.
 
 import { describe, expect, it } from "vitest";
-import { isSriLankaWorkLocation } from "@features/subscriptions/util/locationGate";
+import { isSriLankaWorkLocation } from "@utils/locationGate";
 
 describe("isSriLankaWorkLocation", () => {
   it("matches the expected value", () => {

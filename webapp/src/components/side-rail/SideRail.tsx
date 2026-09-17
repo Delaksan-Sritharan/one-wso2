@@ -19,7 +19,8 @@ import { Box, Link, Sidebar, Typography } from "@wso2/oxygen-ui";
 import { ExternalLinkIcon, SettingsIcon } from "@wso2/oxygen-ui-icons-react";
 import { Link as RouterLink, matchPath, useLocation, useNavigate } from "react-router";
 import { useActivePerspective } from "@context/perspective/PerspectiveContext";
-import { PAR_LEAD_PORTAL_ITEM_ID, SUBSCRIPTION_ITEM_IDS, type PerspectiveSection } from "@constants/perspectives";
+import { PAR_LEAD_PORTAL_ITEM_ID, SRI_LANKA_ONLY_ITEM_IDS,
+  SUBSCRIPTION_ITEM_IDS, type PerspectiveSection } from "@constants/perspectives";
 import { capabilitiesFromPrivileges, type Capability } from "@constants/appMenu";
 import { FINANCE_ITEM_IDS } from "@constants/financeApps";
 import { LEAVE_ITEM_IDS } from "@constants/meApps";
@@ -37,7 +38,7 @@ import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligence
 import { useSecurityGate } from "@features/security/api/useSecurityGate";
 import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
 import { useParIsTeamLead } from "@features/par/api/useParData";
-import { isSriLankaWorkLocation } from "@features/subscriptions/util/locationGate";
+import { isSriLankaWorkLocation } from "@utils/locationGate";
 
 // Context-sensitive left rail, built on Oxygen's compound `Sidebar`.
 //
@@ -184,14 +185,19 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   // it a moment later reads as the rail flickering, and failing CLOSED is the
   // right default for an admin entry point either way.
   const isSriLankaEmployee = isSriLankaWorkLocation(userInfo.data?.workLocation);
+  // Location is handled once, for every id, in resolveVisible below — so this
+  // is only the admin-group question.
   const subscriptionCanSee = (id: string): boolean => {
-    if (!isSriLankaEmployee) return false;
     return id === "people-subscriptions-manage"
       ? subscriptionGate.isAdmin && !subscriptionGate.isResolving
       : true;
   };
 
   const resolveVisible = (s: PerspectiveSection): boolean => {
+    // Location first, and as an AND rather than a branch: a Colombo-office perk
+    // is hidden from everyone else no matter which backend's gate would
+    // otherwise answer for the id.
+    if (SRI_LANKA_ONLY_ITEM_IDS.has(s.id) && !isSriLankaEmployee) return false;
     if (DUE_DILIGENCE_ITEM_IDS.has(s.id)) return dueDiligenceGate.canSee(s.id);
     if (SECURITY_ITEM_IDS.has(s.id)) return securityGate.canSee(s.id);
     if (FINANCE_ITEM_IDS.has(s.id)) return financeGate.canSee(s.id);

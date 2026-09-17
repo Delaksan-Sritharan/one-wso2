@@ -16,14 +16,22 @@
  * under the License.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// Stubbed rather than provided: importing the real hook pulls @asgardeo/browser
+// into this file's module graph, and that package's `buffer` directory import
+// does not resolve under vitest's ESM loader — the same failure
+// features/tour/tourTargets.test.tsx hits. The page only reads workLocation.
+vi.mock("@api/useUserInfo", () => ({
+  useUserInfo: () => ({ data: { workLocation: "Sri Lanka" } }),
+}));
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import ClaimsPage, { ClaimsIndex } from "./ClaimsPage";
 
 // Four menu entries became one screen with a tab each. What is new here is the
-// Add claim button: there is no single form that could take both types, so the
+// New claim button: there is no single form that could take both types, so the
 // type is chosen before the form opens.
 
 function Where({ what }: { what: string }) {
@@ -96,13 +104,13 @@ describe("landing on Claims", () => {
 // you as you move between tabs.
 describe("adding a claim", () => {
   const open = async () => {
-    await screen.findByRole("button", { name: "Add claim" });
-    await userEvent.click(screen.getByRole("button", { name: "Add claim" }));
+    await screen.findByRole("button", { name: "New claim" });
+    await userEvent.click(screen.getByRole("button", { name: "New claim" }));
   };
 
   it("reads the same on both tabs", async () => {
     show("/me/claims/opd");
-    expect(await screen.findByRole("button", { name: "Add claim" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "New claim" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Add OPD claim/ })).not.toBeInTheDocument();
   });
 

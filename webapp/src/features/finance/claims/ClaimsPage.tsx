@@ -28,7 +28,21 @@ import {
 } from "@wso2/oxygen-ui";
 import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import RoutedTabs from "@components/routed-tabs/RoutedTabs";
-import { CLAIM_TYPES, CLAIMS_PATH, DEFAULT_CLAIM_TAB } from "./claimsTabs";
+import { CLAIMS_PATH, defaultClaimTab, visibleClaimTypes } from "./claimsTabs";
+import { useUserInfo } from "@api/useUserInfo";
+import { isSriLankaWorkLocation } from "@utils/locationGate";
+
+/**
+ * Whether this employee is offered the OPD tab.
+ *
+ * Reads the SAME /user-info the rest of the app already fetches, so this costs
+ * no extra request. Unresolved reads as false, which fails closed — the tab
+ * appears a moment later rather than flashing and being withdrawn.
+ */
+function useIsSriLanka(): boolean {
+  const userInfo = useUserInfo();
+  return isSriLankaWorkLocation(userInfo.data?.workLocation);
+}
 
 // One screen for both kinds of claim you file for yourself.
 //
@@ -39,10 +53,11 @@ import { CLAIM_TYPES, CLAIMS_PATH, DEFAULT_CLAIM_TAB } from "./claimsTabs";
 // every bill in a claim must fall in one year. So there is no single form to
 // send people to, and the type has to be chosen before the form opens.
 //
-// That choice sits on the Add claim button rather than in a dialog of its own:
+// That choice sits on the New claim button rather than in a dialog of its own:
 // one button, in the same place on both tabs, whose menu explains the two
 // options where the choice is actually made.
 export default function ClaimsPage() {
+  const types = visibleClaimTypes(useIsSriLanka());
   return (
     <Box>
       {/* Centred against the title block, not level with the eyebrow: the
@@ -67,14 +82,14 @@ export default function ClaimsPage() {
         <AddClaimButton />
       </Box>
 
-      <RoutedTabs basePath={CLAIMS_PATH} tabs={CLAIM_TYPES} ariaLabel="Claim types" />
+      <RoutedTabs basePath={CLAIMS_PATH} tabs={types} ariaLabel="Claim types" />
       <Outlet />
     </Box>
   );
 }
 
 /**
- * Add claim, and the choice of what kind.
+ * New claim, and the choice of what kind.
  *
  * A menu rather than a split button whose primary action follows the open tab:
  * that would save a click, but the button's label and meaning would shift as
@@ -83,6 +98,7 @@ export default function ClaimsPage() {
  */
 function AddClaimButton() {
   const navigate = useNavigate();
+  const types = visibleClaimTypes(useIsSriLanka());
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
   return (
@@ -96,7 +112,7 @@ function AddClaimButton() {
         aria-expanded={anchor ? true : undefined}
         sx={{ textTransform: "none", flexShrink: 0 }}
       >
-        Add claim
+        New claim
       </Button>
       <Menu
         anchorEl={anchor}
@@ -106,7 +122,7 @@ function AddClaimButton() {
         transformOrigin={{ vertical: "top", horizontal: "right" }}
         slotProps={{ paper: { sx: { maxWidth: 320 } } }}
       >
-        {CLAIM_TYPES.map((type) => (
+        {types.map((type) => (
           <MenuItem
             key={type.segment}
             onClick={() => {
@@ -132,7 +148,11 @@ function AddClaimButton() {
   );
 }
 
-/** `/me/claims` itself opens on the type people file most often. */
+/**
+ * `/me/claims` itself opens on the type people file most often — of the ones
+ * they are offered. OPD is first and is Sri-Lanka-only, so a fixed default
+ * would have landed everyone else on a tab that is not there.
+ */
 export function ClaimsIndex() {
-  return <Navigate to={`${CLAIMS_PATH}/${DEFAULT_CLAIM_TAB.segment}`} replace />;
+  return <Navigate to={`${CLAIMS_PATH}/${defaultClaimTab(useIsSriLanka()).segment}`} replace />;
 }

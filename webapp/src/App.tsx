@@ -252,7 +252,7 @@ export default function App() {
           {/* Me → Claims: the two things you file for yourself, one entry with
               a tab each. The forms keep routes of their own — both are long,
               both hold a draft, and both are worth linking to directly — and
-              are reached through the Add claim menu, because no single form
+              are reached through the New claim menu, because no single form
               could take both types. See features/finance/claims. */}
           <Route path="me/claims" element={<ClaimsPage />}>
             <Route index element={<ClaimsIndex />} />

@@ -239,6 +239,31 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
  *
  * Add an id here when a subscription screen is added.
  */
+/**
+ * Rail ids for screens behind a Colombo-office perk, hidden from everyone else.
+ *
+ * Location is ORTHOGONAL to role: it is not "which backend decides this", it is
+ * "does this benefit exist where you work". So the rail applies it as an AND on
+ * top of whichever gate otherwise owns the id, rather than as another branch in
+ * that chain — a commute admin outside Sri Lanka still sees nothing.
+ *
+ * Both a section id and its child ids can appear here. `resolveVisible` runs
+ * over sections and children alike, so listing only the parent would leave the
+ * child reachable once the parent is expanded.
+ *
+ * This is the rail only. The backends refuse the calls regardless, and someone
+ * who types a URL gets the page's own empty state — same treatment every other
+ * rail gate in this file gets.
+ */
+export const SRI_LANKA_ONLY_ITEM_IDS: ReadonlySet<string> = new Set([
+  // Cafeteria — the WSO2 Colombo canteen. Section and its single child.
+  "sec-app-menu",
+  "menu-home",
+  // PickMe Commute and LaaS.
+  "people-subscriptions-mine",
+  "people-subscriptions-manage",
+]);
+
 export const SUBSCRIPTION_ITEM_IDS: ReadonlySet<string> = new Set([
   "people-subscriptions-mine",
   "people-subscriptions-manage",
