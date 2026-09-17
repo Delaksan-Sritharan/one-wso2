@@ -55,6 +55,7 @@ import { useUmtUserInfo } from "../api/useUmtUserInfo";
 import { useUmtWorstCaseEstimateLog } from "../api/useUmtWorstCaseEstimateLog";
 import { UMT_ROLE_ID } from "../api/umtTypes";
 import UmtShell from "../components/UmtShell";
+import UmtUpdateEditTab from "../components/edit/UmtUpdateEditTab";
 import UmtLifecycleHistory from "../components/UmtLifecycleHistory";
 import UmtUpdateBranchTab from "../components/UmtUpdateBranchTab";
 import UmtUpdateViewSections from "../components/UmtUpdateViewSections";
@@ -220,6 +221,11 @@ function UmtUpdateBody({ id }: { id: string | undefined }) {
               products={meta.data?.products ?? {}}
               update={update.data}
             />
+          </Box>
+        )}
+        {selectedTab === "edit" && update.data && (
+          <Box role="tabpanel" aria-label="Edit" sx={{ pt: 3 }}>
+            <UmtUpdateEditTab id={id} update={update.data} />
           </Box>
         )}
         {selectedTab === "lifecycle-history" && (

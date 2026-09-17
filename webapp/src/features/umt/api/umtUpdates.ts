@@ -63,6 +63,14 @@ export interface UmtUpdateSummary {
   qaArtifactsLocation?: string | null;
   watcherList?: string[] | null;
   reason?: string | null;
+  // The backend's authoritative "next lifecycle state" for whichever step is
+  // currently active. The Edit tab's stepper sends promoteStages[0] as the
+  // PUT body for any pure state promotion rather than hardcoding a target,
+  // since the same lifecycleState can have different valid next states.
+  promoteStages?: string[] | null;
+  // PR-analysis progress for the current Development cycle: QUEUED,
+  // PROCESSING, COMPLETED, or a failed/failure value with a trailing detail.
+  praStatus?: string | null;
 }
 
 export interface UmtFileOperation {
@@ -76,10 +84,35 @@ export interface UmtPullRequestAnalysisItem {
   preferredVersion?: string | null;
 }
 
+export interface UmtBundleInfoChange {
+  bundlesInfoPath?: string | null;
+  jarName?: string | null;
+  jarVersion?: string | null;
+  relativeJarPath?: string | null;
+  changeType?: string | null;
+}
+
+export interface UmtDiffResponse {
+  distributionPath?: string | null;
+  diffOutputList?: string[] | null;
+}
+
 export interface UmtPullRequestAnalysis {
   pullRequests?: UmtPullRequestAnalysisItem[] | null;
   identifiedFileOperations?: UmtFileOperation[] | null;
   additionalFileOperations?: UmtFileOperation[] | null;
+  unIdentifiedFileOperations?: UmtFileOperation[] | null;
+  bundlesInfoChanges?: UmtBundleInfoChange[] | null;
+  diffResponses?: UmtDiffResponse[] | null;
+}
+
+export interface UmtPullRequestAnalysisRequest {
+  updateId: string;
+  pullRequests: UmtPullRequestAnalysisItem[];
+  additionalFileOperations: UmtFileOperation[];
+  bundlesInfoChanges: UmtBundleInfoChange[];
+  isInstructionsOnly: boolean;
+  isContainerizedUpdate: boolean;
 }
 
 export interface UmtProductAnalysisItem {
@@ -92,6 +125,30 @@ export interface UmtProductAnalysisItem {
 export interface UmtProductAnalysis {
   compatibleProducts?: UmtProductAnalysisItem[] | null;
   applicableProducts?: UmtProductAnalysisItem[] | null;
+  // Explains why the automated partial-applicability check was skipped for
+  // this analysis, if it was.
+  ignoredFilePathsDuringPartialProductAnalysis?: string[] | null;
+  ignoredPartiallyApplicableProducts?: (string | { productName?: string | null; baseVersion?: string | null })[] | null;
+  partiallyApplicableProductIgnoredReason?: {
+    isRemoveOnly?: boolean | null;
+    isTomcatUpgrade?: boolean | null;
+    isJreUpgrade?: boolean | null;
+    isBundleInfoChange?: boolean | null;
+  } | null;
+}
+
+export interface UmtProductAnalysisRequest {
+  updateNo: string;
+  compatibleProducts: UmtProductAnalysisItem[];
+  applicableProducts: UmtProductAnalysisItem[];
+  ignoredFilePathsDuringPartialProductAnalysis: string[];
+  ignoredPartiallyApplicableProducts: string[];
+  partiallyApplicableProductIgnoredReason: {
+    isRemoveOnly: boolean;
+    isTomcatUpgrade: boolean;
+    isJreUpgrade: boolean;
+    isBundleInfoChange: boolean;
+  };
 }
 
 export interface UmtUpdateDependency {

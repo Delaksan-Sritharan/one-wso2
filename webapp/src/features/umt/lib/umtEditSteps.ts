@@ -1,0 +1,165 @@
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+import type { UmtPullRequestAnalysis } from "../api/umtUpdates";
+
+export type UmtEditStepId =
+  | "pr-analysis"
+  | "product-analysis"
+  | "description-instruction"
+  | "security-advisory"
+  | "integration-tests"
+  | "testing"
+  | "validate"
+  | "file-approval"
+  | "verifying"
+  | "completed"
+  | "cloud-development"
+  | "cloud-released";
+
+export interface UmtEditStepDefinition {
+  id: UmtEditStepId;
+  label: string;
+  // True only for the steps whose Proceed action is a real, wired backend
+  // call in this pass (File Approval and Cloud Support's Development step).
+  // Every other step is a placeholder pending its own future implementation.
+  proceedWired: boolean;
+}
+
+const NORMAL_STEPS_BASE: UmtEditStepDefinition[] = [
+  { id: "pr-analysis", label: "PR Analysis", proceedWired: false },
+  { id: "product-analysis", label: "Product Analysis", proceedWired: true },
+  { id: "description-instruction", label: "Description and Instruction", proceedWired: false },
+  { id: "integration-tests", label: "Integration Tests", proceedWired: false },
+  { id: "testing", label: "Testing", proceedWired: false },
+  { id: "validate", label: "Validate", proceedWired: false },
+  { id: "verifying", label: "Verifying", proceedWired: false },
+  { id: "completed", label: "Completed", proceedWired: false },
+];
+
+const SECURITY_ADVISORY_STEP: UmtEditStepDefinition = {
+  id: "security-advisory",
+  label: "Security Advisory",
+  proceedWired: false,
+};
+
+const FILE_APPROVAL_STEP: UmtEditStepDefinition = {
+  id: "file-approval",
+  label: "File Approval",
+  proceedWired: true,
+};
+
+const CLOUD_SUPPORT_STEPS: UmtEditStepDefinition[] = [
+  { id: "cloud-development", label: "Development", proceedWired: true },
+  { id: "cloud-released", label: "Released", proceedWired: false },
+];
+
+// Mirrors the legacy standalone UI's `handleSteps` (update-edit-view/index.tsx).
+// Cloud Support replaces the whole stepper with its own 2-step flow. A
+// security update inserts Security Advisory right after Description and
+// Instruction; an update with unreviewed additional files (from PR analysis,
+// or already `WaitingFileApproval`) inserts File Approval right before
+// Verifying. Both insertions can apply independently of each other.
+export function computeUmtEditSteps(
+  lifecycle: string | null | undefined,
+  hasAdditionalFileOperations: boolean,
+): UmtEditStepDefinition[] {
+  if (lifecycle === "CloudSupportLifecycle") {
+    return CLOUD_SUPPORT_STEPS.map((step) => ({ ...step }));
+  }
+
+  const steps = NORMAL_STEPS_BASE.map((step) => ({ ...step }));
+
+  if (lifecycle === "SecurityUpdateLifecycle") {
+    const descriptionIndex = steps.findIndex((step) => step.id === "description-instruction");
+    steps.splice(descriptionIndex + 1, 0, { ...SECURITY_ADVISORY_STEP });
+  }
+
+  if (hasAdditionalFileOperations) {
+    const verifyingIndex = steps.findIndex((step) => step.id === "verifying");
+    steps.splice(verifyingIndex, 0, { ...FILE_APPROVAL_STEP });
+  }
+
+  return steps;
+}
+
+// (additionalFileOperations?.length ?? 0) > 0 OR lifecycleState is already
+// WaitingFileApproval — the latter forces the File Approval step into the
+// list even before/without a fresh PR-analysis result, matching legacy.
+export function umtHasAdditionalFileOperations(
+  pullRequestAnalysis: UmtPullRequestAnalysis | null | undefined,
+  lifecycleState: string | null | undefined,
+): boolean {
+  return (
+    (pullRequestAnalysis?.additionalFileOperations?.length ?? 0) > 0 ||
+    lifecycleState === "WaitingFileApproval"
+  );
+}
+
+// Backend lifecycleState -> step id, for the normal/security workflows.
+// ProductAnalyzed and Staging each cover two legacy steps that share one
+// backend state (Description-and-Instruction/Integration-Tests, and
+// Testing/Validate respectively); this port defaults both ambiguous states to
+// the first step of their pair rather than reproducing legacy's client-only
+// `activeStep` memory, since every step that would need to move past that
+// first step is a stub in this pass anyway (see plan notes).
+// TestingEnvironmentRequested/Created/Failed have no mapping in legacy at all
+// (a latent bug there); this port deliberately maps all three to "testing"
+// instead of leaving the step stuck at its default.
+const LIFECYCLE_STATE_TO_STEP: Record<string, UmtEditStepId> = {
+  Development: "pr-analysis",
+  PRAnalyzed: "product-analysis",
+  ProductAnalyzed: "description-instruction",
+  TestingEnvironmentRequested: "testing",
+  TestingEnvironmentCreated: "testing",
+  TestingEnvironmentFailed: "testing",
+  StagingRequested: "testing",
+  Staging: "testing",
+  WaitingFileApproval: "file-approval",
+  Released: "verifying",
+  UATStaging: "verifying",
+  UAT: "verifying",
+  UATRequested: "verifying",
+  OnHold: "verifying",
+  Completed: "completed",
+};
+
+const CLOUD_SUPPORT_STATE_TO_STEP: Record<string, UmtEditStepId> = {
+  Development: "cloud-development",
+  Released: "cloud-released",
+};
+
+export function umtActiveStepId(
+  lifecycleState: string | null | undefined,
+  steps: UmtEditStepDefinition[],
+): UmtEditStepId {
+  const isCloudSupport = steps.some((step) => step.id === "cloud-development");
+  const table = isCloudSupport ? CLOUD_SUPPORT_STATE_TO_STEP : LIFECYCLE_STATE_TO_STEP;
+  const fallback: UmtEditStepId = isCloudSupport ? "cloud-development" : "pr-analysis";
+
+  const mapped = lifecycleState ? table[lifecycleState] : undefined;
+  if (mapped && steps.some((step) => step.id === mapped)) return mapped;
+  return fallback;
+}
+
+export function umtActiveStepIndex(
+  lifecycleState: string | null | undefined,
+  steps: UmtEditStepDefinition[],
+): number {
+  const activeId = umtActiveStepId(lifecycleState, steps);
+  const index = steps.findIndex((step) => step.id === activeId);
+  return index === -1 ? 0 : index;
+}

@@ -1,0 +1,155 @@
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+import { useAsgardeo } from "@asgardeo/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { httpRetry } from "@api/errors";
+import { authedPost, authedPut, fetchWithReauth, HttpError } from "@api/http";
+import { isUmtBackendConfigured, umtServiceUrls } from "@config/apiConfig";
+import { useAccessToken } from "@hooks/useAccessToken";
+import { useAsgardeoSub } from "@hooks/useAsgardeoSub";
+import { UMT_PR_ANALYSIS_STATUS } from "./umtTypes";
+import type { UmtPullRequestAnalysisRequest } from "./umtUpdates";
+
+// Despite an `application/json` content-type, this endpoint's body is a bare,
+// unquoted status word (e.g. `COMPLETED`, not `"COMPLETED"`) — not valid
+// JSON. authedGet's JSON.parse would throw on every single call, silently
+// failing every poll and leaving the query stuck on its seeded initialData.
+// Read the body as plain text instead, mirroring authedPostText's approach
+// for a non-JSON response body.
+async function fetchPrAnalysisStatusText(url: string, accessToken: string): Promise<string> {
+  const res = await fetchWithReauth(url, {}, accessToken);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new HttpError(url, res.status, body);
+  }
+  return (await res.text()).trim();
+}
+
+// First refetchInterval (polling) usage in this app. Seeded with the status
+// already known from GET /update/{id} (`praStatus`) so the step shows it
+// immediately on mount, then polls every 3s while in flight, stopping itself
+// once the status is terminal.
+//
+// `awaitingConfirmation` keeps the 3s loop running even when the *last
+// observed* status isn't QUEUED/PROCESSING yet: right after the start-analysis
+// POST succeeds, a refetch can still race the backend and read back the old
+// pre-analysis value (start and the status flipping to QUEUED aren't
+// atomic). Without this, that one unlucky read makes refetchInterval return
+// false and the loop never restarts on its own. This never fabricates a
+// status — the caller shows a neutral "starting" state, not a claimed
+// QUEUED — it only keeps checking back until a real terminal/in-flight
+// status is actually observed from the server.
+export function useUmtPrAnalysisStatus(
+  id: string,
+  initialStatus: string | null | undefined,
+  enabled: boolean,
+  awaitingConfirmation: boolean,
+) {
+  const { isSignedIn } = useAsgardeo();
+  const getAccessToken = useAccessToken();
+  const { state: subState } = useAsgardeoSub();
+  const userSub = subState.status === "ready" ? subState.sub : undefined;
+  const baseEnabled =
+    /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
+
+  return useQuery<string>({
+    queryKey: ["umt-update-pr-analysis-status", userSub, id],
+    enabled: baseEnabled && enabled,
+    initialData: initialStatus ?? undefined,
+    queryFn: async () =>
+      fetchPrAnalysisStatusText(umtServiceUrls.updatePullRequestAnalysisStatus(id), await getAccessToken()),
+    refetchInterval: (query) => {
+      const status = query.state.data;
+      const inFlight = status === UMT_PR_ANALYSIS_STATUS.QUEUED || status === UMT_PR_ANALYSIS_STATUS.PROCESSING;
+      return inFlight || awaitingConfirmation ? 3000 : false;
+    },
+    retry: httpRetry,
+  });
+}
+
+export function useUmtStartPullRequestAnalysis(id: string) {
+  const getAccessToken = useAccessToken();
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, UmtPullRequestAnalysisRequest>({
+    mutationFn: async (payload) => {
+      const accessToken = await getAccessToken();
+      await authedPost(umtServiceUrls.updatePullRequestAnalysis(id), accessToken, payload);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["umt-update-pr-analysis-status"] }),
+        queryClient.invalidateQueries({ queryKey: ["umt-update-pull-request-analysis"] }),
+      ]);
+    },
+  });
+}
+
+// PR Analysis's Proceed: legacy sends this as two calls together — promote
+// to PRAnalyzed, then start product analysis — and reloads the page 5s
+// later to pick up results. This port invalidates the relevant queries
+// instead of reloading. `lifecycleState: "PRAnalyzed"` is hardcoded here
+// deliberately, matching legacy exactly: unlike most later transitions,
+// which send the backend's own promoteStages[0], this one legacy also
+// hardcodes, since it's the fixed first step out of Development.
+export function useUmtProceedFromPrAnalysis(id: string) {
+  const getAccessToken = useAccessToken();
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, void>({
+    mutationFn: async () => {
+      const accessToken = await getAccessToken();
+      await authedPut(umtServiceUrls.update(id), accessToken, { lifecycleState: "PRAnalyzed" });
+      await authedPost(umtServiceUrls.updateProductAnalysis(id), accessToken, {});
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["umt-update"] }),
+        queryClient.invalidateQueries({ queryKey: ["umt-updates"] }),
+        queryClient.invalidateQueries({ queryKey: ["umt-update-lifecycle-history"] }),
+        queryClient.invalidateQueries({ queryKey: ["umt-update-product-analysis"] }),
+      ]);
+    },
+  });
+}
+
+// Mirrors financeReceipts.ts's uploadReceipt: calls fetchWithReauth directly
+// with a non-JSON body instead of going through the shared JSON helpers.
+// When there's no local file (an SVN-location- or GitHub-raw-URL-only
+// source), the caller passes a small placeholder blob — the backend already
+// expects a `file` part on every call regardless of source.
+export function useUmtUploadPullRequestAnalysisFile(id: string) {
+  const getAccessToken = useAccessToken();
+
+  return useMutation<void, Error, { relativePath: string; sourceFilePath: string; file: File | Blob }>({
+    mutationFn: async ({ relativePath, sourceFilePath, file }) => {
+      const accessToken = await getAccessToken();
+      const url = umtServiceUrls.updatePullRequestAnalysisFile(id);
+      const formData = new FormData();
+      formData.append("relativePath", relativePath);
+      formData.append("id", id);
+      formData.append("sourceFilePath", sourceFilePath);
+      formData.append("file", file);
+
+      const res = await fetchWithReauth(url, { method: "POST", body: formData }, accessToken);
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new HttpError(url, res.status, body);
+      }
+    },
+  });
+}

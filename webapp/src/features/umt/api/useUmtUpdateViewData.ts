@@ -28,6 +28,73 @@ import type {
   UmtUpdateDependency,
 } from "./umtUpdates";
 
+// Extracted so the Edit tab's stepper can depend on just this one query
+// (needed to compute whether File Approval belongs in the step list) without
+// also fetching dependencies/hotfix-info/product-analysis, which belong to
+// sections it does not port. Query key is unchanged, so this is a pure
+// refactor: TanStack dedupes the fetch if the View tab already cached it.
+export function useUmtPullRequestAnalysis(
+  id: string,
+  lifecycleState: string | null | undefined,
+  options?: { alwaysEnabled?: boolean },
+) {
+  const { isSignedIn } = useAsgardeo();
+  const getAccessToken = useAccessToken();
+  const { state: subState } = useAsgardeoSub();
+  const userSub = subState.status === "ready" ? subState.sub : undefined;
+  const enabled =
+    /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
+  // The legacy View page fetches this for every lifecycle state except
+  // Development. In particular, a missing lifecycle state must not suppress
+  // the request: the older UI still fetched and displayed its existing
+  // analysis rows in that case. The Edit tab's PR Analysis step is the
+  // exception: it's only ever active during Development, so it passes
+  // `alwaysEnabled` to fetch there too.
+  const analysisEnabled = enabled && (options?.alwaysEnabled || lifecycleState !== "Development");
+
+  return useQuery<UmtPullRequestAnalysis>({
+    queryKey: ["umt-update-pull-request-analysis", userSub, id],
+    enabled: analysisEnabled,
+    queryFn: async () =>
+      authedGet<UmtPullRequestAnalysis>(
+        umtServiceUrls.updatePullRequestAnalysis(id),
+        await getAccessToken(),
+      ),
+    retry: httpRetry,
+  });
+}
+
+// Extracted for the same reason as useUmtPullRequestAnalysis above: the Edit
+// tab's Product Analysis step needs just this one query, with different
+// enablement than the View tab (which gates it off during Development).
+// Query key is unchanged, so this is a pure refactor.
+export function useUmtProductAnalysis(
+  id: string,
+  lifecycleState: string | null | undefined,
+  options?: { alwaysEnabled?: boolean },
+) {
+  const { isSignedIn } = useAsgardeo();
+  const getAccessToken = useAccessToken();
+  const { state: subState } = useAsgardeoSub();
+  const userSub = subState.status === "ready" ? subState.sub : undefined;
+  const enabled =
+    /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
+  // The legacy View page fetches product analysis for every lifecycle state
+  // except Development, same as pull-request analysis above.
+  const analysisEnabled = enabled && (options?.alwaysEnabled || lifecycleState !== "Development");
+
+  return useQuery<UmtProductAnalysis>({
+    queryKey: ["umt-update-product-analysis", userSub, id],
+    enabled: analysisEnabled,
+    queryFn: async () =>
+      authedGet<UmtProductAnalysis>(
+        umtServiceUrls.updateProductAnalysis(id),
+        await getAccessToken(),
+      ),
+    retry: httpRetry,
+  });
+}
+
 export function useUmtUpdateViewData(
   id: string,
   lifecycleState: string | null | undefined,
@@ -39,11 +106,6 @@ export function useUmtUpdateViewData(
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const enabled =
     /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
-  // The legacy View page fetches both analysis resources for every lifecycle
-  // state except Development. In particular, a missing lifecycle state must
-  // not suppress the request: the older UI still fetched and displayed its
-  // existing analysis rows in that case.
-  const analysisEnabled = enabled && lifecycleState !== "Development";
 
   const dependencies = useQuery<UmtUpdateDependency[]>({
     queryKey: ["umt-update-dependencies", userSub, id],
@@ -56,27 +118,8 @@ export function useUmtUpdateViewData(
     retry: httpRetry,
   });
 
-  const pullRequestAnalysis = useQuery<UmtPullRequestAnalysis>({
-    queryKey: ["umt-update-pull-request-analysis", userSub, id],
-    enabled: analysisEnabled,
-    queryFn: async () =>
-      authedGet<UmtPullRequestAnalysis>(
-        umtServiceUrls.updatePullRequestAnalysis(id),
-        await getAccessToken(),
-      ),
-    retry: httpRetry,
-  });
-
-  const productAnalysis = useQuery<UmtProductAnalysis>({
-    queryKey: ["umt-update-product-analysis", userSub, id],
-    enabled: analysisEnabled,
-    queryFn: async () =>
-      authedGet<UmtProductAnalysis>(
-        umtServiceUrls.updateProductAnalysis(id),
-        await getAccessToken(),
-      ),
-    retry: httpRetry,
-  });
+  const pullRequestAnalysis = useUmtPullRequestAnalysis(id, lifecycleState);
+  const productAnalysis = useUmtProductAnalysis(id, lifecycleState);
 
   const hotfixInfo = useQuery<UmtHotfixInfo>({
     queryKey: ["umt-update-hotfix-info", userSub, id],
