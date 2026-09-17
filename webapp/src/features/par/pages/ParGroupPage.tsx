@@ -66,7 +66,7 @@ export default function ParGroupPage() {
       ) : (
         <>
           <RoutedTabs
-            basePath="/people-ops/performance"
+            basePath="/me/performance"
             tabs={hasLead ? FULL_TABS : LEADLESS_TABS}
             ariaLabel="Performance sections"
           />
@@ -85,7 +85,7 @@ export function ParGroupIndex() {
   const profile = useMeProfile();
   const { hasLead, isLoading } = useParHasLead(profile.data?.userInfo.workEmail, profile.isLoading);
   if (isLoading) return null; // ParGroupPage already holds the Outlet behind its own gate
-  return <Navigate to={`/people-ops/performance/${hasLead ? "employee-feedback" : "provide-360"}`} replace />;
+  return <Navigate to={`/me/performance/${hasLead ? "employee-feedback" : "provide-360"}`} replace />;
 }
 
 /** Guards a route only a leadless employee should never reach by typing its
@@ -95,6 +95,6 @@ export function ParRequiresLeadRoute({ children }: { children: ReactNode }) {
   const profile = useMeProfile();
   const { hasLead, isLoading } = useParHasLead(profile.data?.userInfo.workEmail, profile.isLoading);
   if (isLoading) return null;
-  if (!hasLead) return <Navigate to="/people-ops/performance/provide-360" replace />;
+  if (!hasLead) return <Navigate to="/me/performance/provide-360" replace />;
   return <>{children}</>;
 }

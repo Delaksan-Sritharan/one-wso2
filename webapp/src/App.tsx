@@ -36,7 +36,7 @@ import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par
 import ParLeadGroupPage, { ParLeadGroupIndex, ParRequiresTeamLeadRoute } from "@features/par/pages/ParLeadGroupPage";
 // Lazy on purpose, same reasoning as the leave report tabs below —
 // react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
-// transitively, and only someone who opens /people-ops/performance needs them.
+// transitively, and only someone who opens /me/performance needs them.
 const ParEmployeeFeedbackTab = lazy(() => import("@features/par/pages/ParEmployeeFeedbackTab"));
 const ParRequestFeedbackTab = lazy(() => import("@features/par/pages/ParRequestFeedbackTab"));
 const ParProvideFeedbackTab = lazy(() => import("@features/par/pages/ParProvideFeedbackTab"));
@@ -45,6 +45,7 @@ const ParHistoryTab = lazy(() => import("@features/par/pages/ParHistoryTab"));
 const ParLeadDirectReportsTab = lazy(() => import("@features/par/pages/ParLeadDirectReportsTab"));
 const ParLeadAdditionalReportsTab = lazy(() => import("@features/par/pages/ParLeadAdditionalReportsTab"));
 const ParLeadReportChainTab = lazy(() => import("@features/par/pages/ParLeadReportChainTab"));
+const ParLeadHistoryChainTab = lazy(() => import("@features/par/pages/ParLeadHistoryChainTab"));
 const ParLeadEmployeeHistoryTab = lazy(() => import("@features/par/pages/ParLeadEmployeeHistoryTab"));
 const ParLeadAllocationTab = lazy(() => import("@features/par/pages/ParLeadAllocationTab"));
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
@@ -259,68 +260,16 @@ export default function App() {
           </Route>
           <Route path="me/claims/expense/new" element={<ExpenseNewClaimPage />} />
           <Route path="me/claims/opd/new" element={<OpdNewClaimPage />} />
-          {/* Behind the same preview flag as its menu entry. Hiding only the
-              entry would leave the page reachable by anyone with the URL, which
-              is not what "not released yet" means. */}
-          {isPreviewEnabled("expenseSubmitter") && (
-            <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
-          )}
-          {/* Not behind that flag. The preview holds back a SECOND way to file
-              a claim until it is reconciled with Me → Claims; reading what you
-              have already filed has no such duplicate to reconcile. */}
-          <Route path="finance/expense-claims/history" element={<ExpenseClaimHistoryPage />} />
-          {/* Approving sits beside filing, where the source app's sidebar keeps
-              it — one entry per stage, on the source's own two URLs. Each screen
-              gates itself on its own flag, so a typed URL is no more revealing
-              than the menu entry it belongs to. */}
-          <Route
-            path="finance/expense-claims/lead-approvals"
-            element={<ExpenseLeadApprovalsScreen />}
-          />
-          <Route
-            path="finance/expense-claims/finance-approvals"
-            element={<ExpenseApprovalsScreen stage="FINANCE" />}
-          />
-          <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
-          <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
-          <Route path="finance/cc/pending" element={<CcPendingPage />} />
-          <Route path="finance/cc/approve" element={<CcApprovePage />} />
-          <Route path="finance/cc/history" element={<CcHistoryPage />} />
-          <Route path="finance/cc/settings" element={<CcSettingsPage />} />
-          <Route path="people-ops" element={<PeopleOpsPage />} />
-          {/* People Ops → Org Chart: the company's reporting hierarchy, ported
-              from the standalone org-chart app. Unlike every other People Ops
-              screen, this is NOT admin-gated — it has its own access model.
-              The UI is deliberately redesigned (outline instead of pan/zoom
-              canvas) — the functional spec and the deviation list live in
-              docs/ported-apps/org-chart.md. */}
-          <Route path="people-ops/org-chart" element={<OrgChartPage />} />
-          {/* People Ops → Subscriptions: PickMe Commute and LaaS, ported from
-              the digiops-hr subscription-app — until now a mobile microapp
-              with no web view at all. Spec and deviations in
-              docs/ported-apps/subscription-app.md.
-
-              Neither route is guarded here, and the manage route's absence of
-              a guard is deliberate rather than an oversight: the service's own
-              admin groups decide it, and SubscriptionsShell turns a refusal
-              into an explanation. Someone who types the URL gets a sentence
-              telling them who to ask, not a blank page — and the backend
-              refuses the calls regardless. */}
-          <Route path="people-ops/subscriptions" element={<MySubscriptionsPage />} />
-          <Route
-            path="people-ops/subscriptions/manage"
-            element={<ManageSubscriptionsPage />}
-          />
-          {/* People Ops → PAR: the employee half of par-app, ported one screen
-              at a time. Tab names match par-app's own OngoingCycleView tab bar
+          {/* Me → PAR: the employee half of par-app, ported one screen at a
+              time. Tab names match par-app's own OngoingCycleView tab bar
               (Employee Feedback / Request 360° Feedback / Provide 360°
-              Feedback / F2F) rather than invented ones.
-              See docs/ported-apps/par-app.md. Not admin-gated — every employee
-              has their own PAR, same as Org Chart and Subscriptions above.
-              Behind the same preview flag as its rail entry — hiding only the
-              entry would leave every tab reachable by URL. */}
+              Feedback / F2F) rather than invented ones. See
+              docs/ported-apps/par-app.md. Not gated beyond signing in —
+              every employee has their own PAR. Behind the same preview flag
+              as its rail entry — hiding only the entry would leave every tab
+              reachable by URL. */}
           {isPreviewEnabled("par") && (
-            <Route path="people-ops/performance" element={<ParGroupPage />}>
+            <Route path="me/performance" element={<ParGroupPage />}>
               <Route index element={<ParGroupIndex />} />
               {/* Employee Feedback and Request 360° are hidden from a leadless
                   employee entirely in the source (OngoingCycleView.tsx), not
@@ -377,11 +326,65 @@ export default function App() {
               />
             </Route>
           )}
+          {/* Behind the same preview flag as its menu entry. Hiding only the
+              entry would leave the page reachable by anyone with the URL, which
+              is not what "not released yet" means. */}
+          {isPreviewEnabled("expenseSubmitter") && (
+            <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
+          )}
+          {/* Not behind that flag. The preview holds back a SECOND way to file
+              a claim until it is reconciled with Me → Claims; reading what you
+              have already filed has no such duplicate to reconcile. */}
+          <Route path="finance/expense-claims/history" element={<ExpenseClaimHistoryPage />} />
+          {/* Approving sits beside filing, where the source app's sidebar keeps
+              it — one entry per stage, on the source's own two URLs. Each screen
+              gates itself on its own flag, so a typed URL is no more revealing
+              than the menu entry it belongs to. */}
+          <Route
+            path="finance/expense-claims/lead-approvals"
+            element={<ExpenseLeadApprovalsScreen />}
+          />
+          <Route
+            path="finance/expense-claims/finance-approvals"
+            element={<ExpenseApprovalsScreen stage="FINANCE" />}
+          />
+          <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
+          <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
+          <Route path="finance/cc/pending" element={<CcPendingPage />} />
+          <Route path="finance/cc/approve" element={<CcApprovePage />} />
+          <Route path="finance/cc/history" element={<CcHistoryPage />} />
+          <Route path="finance/cc/settings" element={<CcSettingsPage />} />
+          <Route path="people-ops" element={<PeopleOpsPage />} />
+          {/* People Ops → Org Chart: the company's reporting hierarchy, ported
+              from the standalone org-chart app. Unlike every other People Ops
+              screen, this is NOT admin-gated — it has its own access model.
+              The UI is deliberately redesigned (outline instead of pan/zoom
+              canvas) — the functional spec and the deviation list live in
+              docs/ported-apps/org-chart.md. */}
+          <Route path="people-ops/org-chart" element={<OrgChartPage />} />
+          {/* People Ops → Subscriptions: PickMe Commute and LaaS, ported from
+              the digiops-hr subscription-app — until now a mobile microapp
+              with no web view at all. Spec and deviations in
+              docs/ported-apps/subscription-app.md.
+
+              Neither route is guarded here, and the manage route's absence of
+              a guard is deliberate rather than an oversight: the service's own
+              admin groups decide it, and SubscriptionsShell turns a refusal
+              into an explanation. Someone who types the URL gets a sentence
+              telling them who to ask, not a blank page — and the backend
+              refuses the calls regardless. */}
+          <Route path="people-ops/subscriptions" element={<MySubscriptionsPage />} />
+          <Route
+            path="people-ops/subscriptions/manage"
+            element={<ManageSubscriptionsPage />}
+          />
           {/* People Ops → PAR → Lead Portal: par-app's LeadPortal.tsx, ported
-              one tab at a time. Only Direct Reports exists so far — see
-              docs/ported-apps/par-app.md. Gated on the same preview flag as
-              the Employee Portal, plus ParRequiresTeamLeadRoute (par-app's
-              own Role.TEAM_LEAD gate on /lead-portal). */}
+              one tab at a time — all six tabs are now live. Reviewing and
+              rating your reports' PAR is People-Ops-team work, unlike the
+              employee half (now under Me — see docs/ported-apps/par-app.md).
+              Gated on the same preview flag as the employee portal, plus
+              ParRequiresTeamLeadRoute (par-app's own Role.TEAM_LEAD gate on
+              /lead-portal). */}
           {isPreviewEnabled("par") && (
             <Route
               path="people-ops/performance/lead"
@@ -429,6 +432,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
                     <ParLeadAllocationTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="history-chain"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadHistoryChainTab />
                   </Suspense>
                 }
               />
