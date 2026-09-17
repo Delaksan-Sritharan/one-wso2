@@ -21,6 +21,7 @@ import {
   CsmMark,
   FinanceMark,
   LegalMark,
+  SecurityMark,
   MarketingMark,
   MeMark,
   PeopleMark,
@@ -39,6 +40,7 @@ const APP_MARKS: Record<string, (p: MarkProps) => ReactElement> = {
   marketing: MarketingMark,
   csm: CsmMark,
   legal: LegalMark,
+  security: SecurityMark,
   umt: UmtMark,
 };
 

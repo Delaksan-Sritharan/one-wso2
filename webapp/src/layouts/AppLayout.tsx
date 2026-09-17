@@ -118,6 +118,14 @@ export default function AppLayout(): JSX.Element {
               Moving it inside would make it scroll away with the page. */}
           <Box
             ref={mainRef}
+            // The id is for the lifted GRC screens under /security, which scroll
+            // their own step wizard back to the top by looking this element up
+            // by name (their shell names it the same). Ours is the scrolling
+            // element too, so naming it here makes their assumption true rather
+            // than editing ~16,000 lines of copied source to use a ref they
+            // cannot reach. Without it the lookup silently finds nothing and the
+            // Add Risk wizard stops scrolling between steps.
+            id="main-scroll-container"
             sx={{
               flex: 1,
               minHeight: 0,

@@ -39,6 +39,7 @@ import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par
 const ParEmployeeFeedbackTab = lazy(() => import("@features/par/pages/ParEmployeeFeedbackTab"));
 const ParRequestFeedbackTab = lazy(() => import("@features/par/pages/ParRequestFeedbackTab"));
 const ParProvideFeedbackTab = lazy(() => import("@features/par/pages/ParProvideFeedbackTab"));
+const ParF2fTab = lazy(() => import("@features/par/pages/ParF2fTab"));
 const ParHistoryTab = lazy(() => import("@features/par/pages/ParHistoryTab"));
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
@@ -111,6 +112,10 @@ import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
 import LegalPage from "@features/legal/pages/LegalPage";
+import SecurityPage from "@features/security/pages/SecurityPage";
+import { riskRoutes } from "@features/security/grc/modules/risk/routes";
+import { auditRoutes } from "@features/security/grc/modules/audit/routes";
+import { adminRoutes } from "@features/security/grc/modules/admin/routes";
 import PartnersListPage from "@features/due-diligence/partners/pages/PartnersListPage";
 import PartnerPendingPage from "@features/due-diligence/partners/pages/PartnerPendingPage";
 import PartnerDashboardPage from "@features/due-diligence/partners/pages/PartnerDashboardPage";
@@ -303,7 +308,7 @@ export default function App() {
           {/* People Ops → PAR: the employee half of par-app, ported one screen
               at a time. Tab names match par-app's own OngoingCycleView tab bar
               (Employee Feedback / Request 360° Feedback / Provide 360°
-              Feedback / F2F) rather than invented ones; F2F isn't ported yet.
+              Feedback / F2F) rather than invented ones.
               See docs/ported-apps/par-app.md. Not admin-gated — every employee
               has their own PAR, same as Org Chart and Subscriptions above.
               Behind the same preview flag as its rail entry — hiding only the
@@ -341,6 +346,19 @@ export default function App() {
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
                     <ParProvideFeedbackTab />
                   </Suspense>
+                }
+              />
+              {/* F2F is leadless-gated too — OngoingCycleView.tsx's leadless
+                  branch has no F2F tab at all, same as Employee Feedback and
+                  Request 360°. */}
+              <Route
+                path="f2f"
+                element={
+                  <ParRequiresLeadRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParF2fTab />
+                    </Suspense>
+                  </ParRequiresLeadRoute>
                 }
               />
               <Route
@@ -495,6 +513,21 @@ export default function App() {
               Diligence, alongside Finance (see the finance/ routes below and
               DUE_DILIGENCE_APPS). */}
           <Route path="legal" element={<LegalPage />} />
+          {/* Security — the GRC platform's Risk Hub and Admin Console, lifted
+              from grc-tools rather than rewritten. The two route fragments are
+              the SOURCE's own (modules/{risk,audit,admin}/routes.tsx), spread
+              unedited; nesting them here is what turns the source's /risk/* and
+              /audit/* into this app's /security/risk/*, /security/audit/* and
+              /security/admin/*
+              without touching either file. Their per-route PrivilegeGuards come
+              along with them, including the deliberate absence of one on
+              Risk Registers. */}
+          <Route path="security">
+            <Route index element={<SecurityPage />} />
+            {auditRoutes}
+            {riskRoutes}
+            {adminRoutes}
+          </Route>
           {/* Due Diligence — ported from digiops-finance/apps/due_diligence's
               admin-app. Routes live OUTSIDE both the Finance and Legal path
               prefixes (same reason /settings does): a screen reachable from

@@ -17,7 +17,7 @@
  */
 
 /**
- * Filled, two-tone marks for the seven perspectives, used ONLY by the app
+ * Filled, two-tone marks for the eight perspectives, used ONLY by the app
  * launcher.
  *
  * Why these exist at all: Lucide ships no filled icons, so the launcher tile got
@@ -80,6 +80,30 @@ export function MeMark({ size }: MarkProps) {
         fill={t.lead}
       />
       <path d="M30 42v-16a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v16z" fill={t.detail} />
+    </Svg>
+  );
+}
+
+/**
+ * Security — a shield, echoing the perspective's own rail glyph.
+ *
+ * Built the way the rest of this set is: the silhouette carries `field`, the
+ * identifying form carries `lead`, and a small accent carries `detail`. The
+ * band is the shield's own upper section closed at the waist rather than a
+ * second drawn shape, so there is no near-duplicate outline to keep in sync if
+ * the silhouette ever moves.
+ *
+ * Measures L* 68.5 at 49% coverage — beside People (66.4) and Me (66.7), which
+ * is the point: before this existed the launcher fell back to the outline glyph
+ * on a wash, and Security was the one tile that did not look like a tile.
+ */
+export function SecurityMark({ size }: MarkProps) {
+  const t = appMarkTones("security")!;
+  return (
+    <Svg size={size}>
+      <path d="M24 4 6 10v14c0 9.6 7.4 16.8 18 20 10.6-3.2 18-10.4 18-20V10z" fill={t.field} />
+      <path d="M24 4 6 10v12h36V10z" fill={t.lead} />
+      <path d="M21.6 33.4l-7.9-7.9 3.3-3.3 4.6 4.6 10.4-10.4 3.3 3.3z" fill={t.detail} />
     </Svg>
   );
 }
