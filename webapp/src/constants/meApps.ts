@@ -49,7 +49,11 @@ export const ME_APPS: readonly MenuApp[] = [
   // in it; reinstating it is the same size of change as removing it was.
   {
     key: "menu",
-    name: "Menu",
+    // "Cafeteria", not "Menu": the screen has always called itself Cafeteria
+    // while the registry called it Menu, so the rail and the page disagreed on
+    // the app's name. `key` stays "menu" — it is the id in paths, gates and
+    // favourites, and renaming it would migrate stored favourites for a label.
+    name: "Cafeteria",
     icon: UtensilsIcon,
     purpose: "Cafeteria menu, feedback, and dinner orders.",
     items: [

@@ -21,13 +21,12 @@ import { Navigate, Outlet, useNavigate } from "react-router";
 import {
   Box,
   Button,
-  Chip,
   ListItemText,
   Menu,
   MenuItem,
   Typography,
 } from "@wso2/oxygen-ui";
-import { ChevronDownIcon, ReceiptTextIcon } from "@wso2/oxygen-ui-icons-react";
+import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import RoutedTabs from "@components/routed-tabs/RoutedTabs";
 import { CLAIM_TYPES, CLAIMS_PATH, DEFAULT_CLAIM_TAB } from "./claimsTabs";
 
@@ -52,14 +51,11 @@ export default function ClaimsPage() {
           app lives, so the page still reads title → tabs → list. */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chip
-            icon={<ReceiptTextIcon size={14} />}
-            label="Me"
-            color="primary"
-            size="small"
-            variant="outlined"
-            sx={{ mb: 0.5 }}
-          />
+          {/* No parent chip: "Claims" already names the app, so a chip above
+              it said the same thing twice — and said "Me", the perspective,
+              where every other chip in this app names the app. A chip earns its
+              place only above a title that would not identify the screen alone
+              ("Dashboard", "History", "Settings"). */}
           <Typography variant="h5" sx={{ mb: 0.5 }}>
             Claims
           </Typography>
