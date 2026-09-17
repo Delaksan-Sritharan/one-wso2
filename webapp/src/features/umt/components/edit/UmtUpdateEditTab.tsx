@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import { useState } from "react";
 import { Box, Stack, Typography } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
@@ -21,12 +22,30 @@ import type { UmtUpdateSummary } from "../../api/umtUpdates";
 import { useUmtGate } from "../../api/useUmtGate";
 import { useUmtLifecycleTransition } from "../../api/useUmtLifecycleTransition";
 import { useUmtProductAnalysis, useUmtPullRequestAnalysis } from "../../api/useUmtUpdateViewData";
-import { computeUmtEditSteps, umtActiveStepIndex, umtHasAdditionalFileOperations } from "../../lib/umtEditSteps";
+import {
+  computeUmtEditSteps,
+  umtActiveStepIndex,
+  umtHasAdditionalFileOperations,
+  type UmtEditStepId,
+} from "../../lib/umtEditSteps";
+import { computeUmtDemoteActions } from "../../lib/umtDemoteActions";
+import { isDescriptionInstructionComplete } from "../../lib/umtDescriptionInstruction";
+import { isIntegrationTestsComplete } from "../../lib/umtIntegrationTests";
+import { isTestingComplete } from "../../lib/umtTesting";
+import { useUmtStagingTestResults } from "../../api/useUmtTesting";
 import UmtEditStepActions from "./UmtEditStepActions";
 import UmtEditStepPlaceholder from "./UmtEditStepPlaceholder";
 import UmtEditStepper from "./UmtEditStepper";
+import UmtDescriptionInstructionStep from "./description-instruction/UmtDescriptionInstructionStep";
+import UmtFileApprovalStep from "./file-approval/UmtFileApprovalStep";
+import UmtIntegrationTestsStep from "./integration-tests/UmtIntegrationTestsStep";
 import UmtPrAnalysisStep from "./pr-analysis/UmtPrAnalysisStep";
 import UmtProductAnalysisStep from "./product-analysis/UmtProductAnalysisStep";
+import UmtSecurityAdvisoryStep from "./security-advisory/UmtSecurityAdvisoryStep";
+import UmtTestingStep from "./testing/UmtTestingStep";
+import UmtValidateStep from "./validate/UmtValidateStep";
+import UmtCompleteUpdateDialog from "./verifying/UmtCompleteUpdateDialog";
+import UmtVerifyingStep from "./verifying/UmtVerifyingStep";
 
 export default function UmtUpdateEditTab({
   id,
@@ -37,33 +56,117 @@ export default function UmtUpdateEditTab({
 }) {
   const pullRequestAnalysis = useUmtPullRequestAnalysis(id, update.lifecycleState);
   const productAnalysis = useUmtProductAnalysis(id, update.lifecycleState, { alwaysEnabled: true });
+  const stagingTestResults = useUmtStagingTestResults(id, update.lifecycleState);
   const gate = useUmtGate();
   const transition = useUmtLifecycleTransition(id);
   const { showSuccess, showError } = useNotifications();
 
   const hasFileOps = umtHasAdditionalFileOperations(pullRequestAnalysis.data, update.lifecycleState);
   const steps = computeUmtEditSteps(update.lifecycle, hasFileOps);
-  const activeIndex = umtActiveStepIndex(update.lifecycleState, steps);
+  const backendActiveIndex = umtActiveStepIndex(update.lifecycleState, steps);
+  const backendActiveId = steps[backendActiveIndex]?.id;
+
+  // A small, session-only (non-persisted) step-position override: some
+  // adjacent steps share one backend lifecycleState value (see
+  // umtEditSteps.ts), so a step whose Proceed only advances locally
+  // (advancesLocallyToNextStep) moves this pointer instead of calling the
+  // real transition. Reset whenever the backend-derived step id itself
+  // changes — that only happens after a real transition actually fires.
+  const [localStepOverride, setLocalStepOverride] = useState<UmtEditStepId | null>(null);
+  const [lastBackendActiveId, setLastBackendActiveId] = useState(backendActiveId);
+  if (backendActiveId !== lastBackendActiveId) {
+    setLastBackendActiveId(backendActiveId);
+    setLocalStepOverride(null);
+  }
+  const overrideIndex = localStepOverride ? steps.findIndex((step) => step.id === localStepOverride) : -1;
+  const activeIndex = overrideIndex !== -1 ? overrideIndex : backendActiveIndex;
   const currentStep = steps[activeIndex];
+
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
 
   const isFileApproval = currentStep.id === "file-approval";
   const isCloudDevelopment = currentStep.id === "cloud-development";
   const isProductAnalysis = currentStep.id === "product-analysis";
+  const isDescriptionInstruction = currentStep.id === "description-instruction";
+  const isIntegrationTests = currentStep.id === "integration-tests";
+  const isSecurityAdvisory = currentStep.id === "security-advisory";
+  const isTesting = currentStep.id === "testing";
+  const isVerifying = currentStep.id === "verifying";
+  const isReleasedVerifying = isVerifying && update.lifecycleState === "Released";
   const isTerminal = currentStep.id === "completed" || currentStep.id === "cloud-released";
   const roleAllowed = !isFileApproval || gate.isAdmin || gate.isProductLead;
   // Mirrors legacy's productAnalysisState === success gate: Proceed here
   // promotes lifecycle state, so it shouldn't be available until the
   // product-analysis results this step promises have actually loaded.
   const productAnalysisReady = !isProductAnalysis || productAnalysis.isSuccess;
-  // Only File Approval, Cloud Support's Development step, and now Product
-  // Analysis are wired (currentStep.proceedWired); every other step's
-  // Proceed is a stub. Cloud Support's single transition is hardcoded to
-  // "Released" per legacy; every other wired step sends the backend's own
-  // promoteStages[0] rather than a value this shell invents.
+  // Mirrors legacy's own container-level Proceed-disable rule: every product
+  // must already have a non-blank description and instruction.
+  const descriptionInstructionReady =
+    !isDescriptionInstruction || isDescriptionInstructionComplete(update.products);
+  // Mirrors legacy's own container-level Proceed-disable rule: every product
+  // must already have a Test PR or an ignore reason (or, for a containerized
+  // update, a non-blank Helm Chart Tag). Checks only persisted state, not a
+  // sibling component's in-progress local edits — the same simplification
+  // productAnalysisReady above already makes.
+  const integrationTestsReady =
+    !isIntegrationTests || isIntegrationTestsComplete(update.products, update.isContainerizedUpdate ?? false);
+  // Mirrors legacy's own two-part real Proceed gate: the environment/backend
+  // side must have reached Staging, AND every product's manual test result
+  // must already be submitted.
+  const testingReady = !isTesting || isTestingComplete(update.lifecycleState, stagingTestResults.data);
+  // Only Released has a real forward action (the Complete Update dialog);
+  // every other verifying-family state (UATStaging/UAT/UATRequested/OnHold)
+  // has no working transition in this pass, so Proceed stays disabled rather
+  // than reproducing legacy's global UATStaging disable plus its silent
+  // dead-click behavior for UAT/UATRequested/OnHold as two different things.
+  const verifyingReady = !isVerifying || update.lifecycleState === "Released";
+  const stepReady =
+    productAnalysisReady && descriptionInstructionReady && integrationTestsReady && testingReady && verifyingReady;
+  // File Approval, Cloud Support's Development step, Product Analysis,
+  // Description and Instruction, and Integration Tests are wired
+  // (currentStep.proceedWired); every other step's Proceed is a stub. Cloud
+  // Support's single transition is hardcoded to "Released" per legacy; every
+  // other wired step sends the backend's own promoteStages[0] rather than a
+  // value this shell invents.
   const nextLifecycleState = isCloudDevelopment ? "Released" : update.promoteStages?.[0];
 
+  // Legacy shows a plain, backend-call-free "Back" only on these two steps —
+  // not a general go-back-a-step control. Reuses the same session-only
+  // localStepOverride pointer every advancesLocallyToNextStep step already
+  // moves forward with, just one step earlier instead.
+  const canGoBack = isIntegrationTests || isSecurityAdvisory;
+  const handleBack = () => {
+    const prevStep = steps[activeIndex - 1];
+    if (prevStep) setLocalStepOverride(prevStep.id);
+  };
+
+  const demoteActions = computeUmtDemoteActions(
+    currentStep.id,
+    update.lifecycleState,
+    update.isHotfix ?? false,
+    gate.isAdmin,
+  );
+  const handleDemote = async (target: string) => {
+    try {
+      await transition.mutateAsync(target);
+      showSuccess(`Update ${id} demoted to ${target}`);
+    } catch (error) {
+      showError(`Demote failed. ${describeError(error)}`);
+    }
+  };
+
   const handleProceed = async () => {
-    if (!currentStep.proceedWired || !nextLifecycleState || !productAnalysisReady) return;
+    if (!currentStep.proceedWired || !roleAllowed || !stepReady) return;
+    if (currentStep.advancesLocallyToNextStep) {
+      const nextStep = steps[activeIndex + 1];
+      if (nextStep) setLocalStepOverride(nextStep.id);
+      return;
+    }
+    if (isReleasedVerifying) {
+      setCompleteDialogOpen(true);
+      return;
+    }
+    if (!nextLifecycleState) return;
     try {
       await transition.mutateAsync(nextLifecycleState);
       showSuccess(`Update ${id} advanced to ${nextLifecycleState}`);
@@ -77,19 +180,48 @@ export default function UmtUpdateEditTab({
       <UmtEditStepper steps={steps} activeIndex={activeIndex} />
       <Box sx={{ pt: 2 }}>
         {isTerminal ? (
-          <Typography>All states completed.</Typography>
+          <Typography variant="h6" sx={{ color: "info.main", fontWeight: 700, textAlign: "center", py: 4 }}>
+            All states completed.
+          </Typography>
         ) : currentStep.id === "pr-analysis" ? (
           <UmtPrAnalysisStep id={id} update={update} />
         ) : currentStep.id === "product-analysis" ? (
           <UmtProductAnalysisStep id={id} update={update} />
+        ) : currentStep.id === "description-instruction" ? (
+          <UmtDescriptionInstructionStep id={id} update={update} />
+        ) : currentStep.id === "security-advisory" ? (
+          <UmtSecurityAdvisoryStep id={id} update={update} />
+        ) : currentStep.id === "integration-tests" ? (
+          <UmtIntegrationTestsStep id={id} update={update} />
+        ) : currentStep.id === "testing" ? (
+          <UmtTestingStep id={id} update={update} />
+        ) : currentStep.id === "validate" ? (
+          <UmtValidateStep id={id} update={update} />
+        ) : currentStep.id === "file-approval" ? (
+          <UmtFileApprovalStep id={id} update={update} />
+        ) : currentStep.id === "verifying" ? (
+          <UmtVerifyingStep id={id} update={update} />
         ) : (
           <UmtEditStepPlaceholder stepLabel={currentStep.label} />
         )}
       </Box>
       {!isTerminal && currentStep.id !== "pr-analysis" && (
         <UmtEditStepActions
-          proceedLabel={isFileApproval ? "Approve and Proceed" : "Proceed"}
-          proceedDisabled={!currentStep.proceedWired || !roleAllowed || !nextLifecycleState || !productAnalysisReady}
+          proceedLabel={
+            isFileApproval
+              ? "Approve and Proceed"
+              : isReleasedVerifying
+                ? "Complete Update"
+                : currentStep.advancesLocallyToNextStep
+                  ? "Next"
+                  : "Proceed"
+          }
+          proceedDisabled={
+            !currentStep.proceedWired ||
+            !roleAllowed ||
+            !stepReady ||
+            (!currentStep.advancesLocallyToNextStep && !isReleasedVerifying && !nextLifecycleState)
+          }
           proceedLoading={transition.isPending}
           explanation={
             !currentStep.proceedWired
@@ -98,9 +230,34 @@ export default function UmtUpdateEditTab({
                 ? "Only UMT Admins or Product Leads can approve this step."
                 : !productAnalysisReady
                   ? "Waiting for product analysis results."
-                  : undefined
+                  : !descriptionInstructionReady
+                    ? "Every product needs a description and instruction before proceeding."
+                    : !integrationTestsReady
+                      ? "Every product needs a Test PR or an ignore reason before proceeding (or a Helm Chart Tag for a containerized update)."
+                      : !testingReady
+                        ? update.lifecycleState !== "Staging"
+                          ? "Waiting for the testing environment to reach Staging before proceeding."
+                          : "Every product needs a submitted test result before proceeding."
+                        : !verifyingReady
+                          ? "This state has no further action available yet."
+                          : undefined
           }
           onProceed={() => void handleProceed()}
+          onBack={canGoBack ? handleBack : undefined}
+          demoteActions={demoteActions.map((action) => ({
+            label: action.label,
+            color: action.color,
+            onClick: () => void handleDemote(action.targetLifecycleState),
+          }))}
+          demoteLoading={transition.isPending}
+        />
+      )}
+      {isVerifying && (
+        <UmtCompleteUpdateDialog
+          id={id}
+          update={update}
+          open={completeDialogOpen}
+          onClose={() => setCompleteDialogOpen(false)}
         />
       )}
     </Stack>

@@ -40,7 +40,7 @@ import { PlusIcon, TrashIcon } from "@wso2/oxygen-ui-icons-react";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import type { UmtBundleInfoChange, UmtFileOperation, UmtPullRequestAnalysisItem, UmtUpdateSummary } from "../../../api/umtUpdates";
-import { isUmtPrAnalysisFailed, type UmtUpdateType } from "../../../api/umtTypes";
+import type { UmtUpdateType } from "../../../api/umtTypes";
 import { useUmtPullRequestAnalysis } from "../../../api/useUmtUpdateViewData";
 import {
   useUmtPrAnalysisStatus,
@@ -61,13 +61,7 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
   const { showSuccess, showError } = useNotifications();
   const pullRequestAnalysis = useUmtPullRequestAnalysis(id, update.lifecycleState, { alwaysEnabled: true });
   const isDevelopment = update.lifecycleState === "Development";
-  // Set the instant the start-analysis submission succeeds; cleared once a
-  // real status is actually observed from the server (see
-  // hasConfirmedSignal below). Never used to fabricate or display a
-  // specific status — see isAwaitingConfirmation below, which only reflects
-  // "we don't have a real answer yet."
-  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
-  const status = useUmtPrAnalysisStatus(id, update.praStatus, isDevelopment, awaitingConfirmation);
+  const status = useUmtPrAnalysisStatus(id, update.praStatus, isDevelopment);
   const startAnalysis = useUmtStartPullRequestAnalysis(id);
   const proceed = useUmtProceedFromPrAnalysis(id);
   const [isProceedWarningOpen, setIsProceedWarningOpen] = useState(false);
@@ -88,22 +82,16 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
 
   const isInFlight = status.data === "QUEUED" || status.data === "PROCESSING";
   const isCompleted = status.data === "COMPLETED";
-  const isFailed = isUmtPrAnalysisFailed(status.data);
-  const hasConfirmedSignal = isInFlight || isCompleted || isFailed;
 
-  // React's endorsed "adjust state during render" pattern (not an effect —
-  // see react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes):
-  // clears awaitingConfirmation the instant a real signal arrives, without
-  // an extra effect-triggered render pass.
-  const [lastConfirmedSignal, setLastConfirmedSignal] = useState(hasConfirmedSignal);
-  if (hasConfirmedSignal !== lastConfirmedSignal) {
-    setLastConfirmedSignal(hasConfirmedSignal);
-    if (hasConfirmedSignal) setAwaitingConfirmation(false);
-  }
-  const isAwaitingConfirmation = awaitingConfirmation && !hasConfirmedSignal;
-  // Disable inputs from the moment Analyze is clicked, not just once the
-  // server has confirmed QUEUED — matches legacy's immediate setIsDisabled.
-  const isBusy = isInFlight || isAwaitingConfirmation;
+  // Disable inputs from the moment Analyze is clicked (the mutation's own
+  // isPending), not just once the server confirms QUEUED — matches legacy's
+  // immediate setIsDisabled. No separate "awaiting confirmation" grace flag
+  // is needed once the mutation resolves: the backend commits praStatus to
+  // QUEUED synchronously before the start-analysis POST even returns
+  // (verified against the backend source), so the query invalidation the
+  // mutation fires on success is guaranteed to refetch an already-QUEUED
+  // status — isInFlight picks it up immediately, no race to bridge.
+  const isBusy = isInFlight || startAnalysis.isPending;
 
   if (!isDevelopment && !isCompleted) {
     return <Alert severity="info">PR Analysis can only be done in Development.</Alert>;
@@ -149,7 +137,6 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
         isContainerizedUpdate: updateType === "containerizedProductUpdate",
       });
       setHasNewInputs(false);
-      setAwaitingConfirmation(true);
       showSuccess("PR analysis started.");
     } catch (error) {
       showError(`Failed to start PR analysis. ${describeError(error)}`);
@@ -310,7 +297,7 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
             {isBusy && <CircularProgress size={22} />}
             {updateType !== "instructionsOnlyUpdate" && (
               <Stack sx={{ flex: 1, minWidth: 0 }}>
-                {isAwaitingConfirmation ? (
+                {startAnalysis.isPending ? (
                   <Typography variant="body2" color="text.primary">
                     Starting analysis…
                   </Typography>
@@ -332,6 +319,7 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
               Analyze
             </Button>
           </Stack>
+          <Divider sx={{ mt: 3 }} />
         </Box>
       )}
 

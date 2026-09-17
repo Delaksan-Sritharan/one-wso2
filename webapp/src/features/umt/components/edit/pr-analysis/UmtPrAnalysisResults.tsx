@@ -96,10 +96,10 @@ export default function UmtPrAnalysisResults({ result }: { result: UmtPullReques
         </Alert>
       )}
 
-      <FileGroupAccordion title="Added Files" rows={added} />
-      <FileGroupAccordion title="Modified Files" rows={modified} />
-      <FileGroupAccordion title="Removed Files" rows={removed} />
-      <FileGroupAccordion title="Other Files" rows={other} />
+      {added.length > 0 && <FileGroupAccordion title="Added Files" rows={added} />}
+      {modified.length > 0 && <FileGroupAccordion title="Modified Files" rows={modified} />}
+      {removed.length > 0 && <FileGroupAccordion title="Removed Files" rows={removed} />}
+      {other.length > 0 && <FileGroupAccordion title="Other Files" rows={other} />}
 
       {additionalFiles.length > 0 && (
         <ResultSection title="Additional Files">
@@ -154,12 +154,10 @@ export default function UmtPrAnalysisResults({ result }: { result: UmtPullReques
 }
 
 function FileGroupAccordion({ title, rows }: { title: string; rows: UmtFileOperation[] }) {
-  if (rows.length === 0) return null;
-
   return (
     <Accordion defaultExpanded disableGutters>
       <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>
-        <Typography variant="subtitle1">
+        <Typography variant="h6">
           {title} ({rows.length})
         </Typography>
       </AccordionSummary>
@@ -227,16 +225,31 @@ function DenseTable<Row>({
         autoHeight
         columnHeaderHeight={40}
         columns={gridColumns}
+        disableColumnMenu
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter
         rows={gridRows}
         aria-label={ariaLabel}
-        sx={{ border: 0 }}
+        sx={denseDataGridSx}
       />
     </Paper>
   );
 }
+
+// getRowHeight="auto" above only lets the ROW grow to fit its content — MUI
+// DataGrid's own cell CSS still clips text with nowrap/ellipsis unless
+// explicitly told to wrap. Long Files/Source values (paths, URLs) were
+// getting cut off with no way to read them; this lets them wrap and the
+// auto row height then grows to fit the wrapped lines.
+const denseDataGridSx = {
+  border: 0,
+  "& .MuiDataGrid-cell": {
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    overflowWrap: "anywhere",
+  },
+} as const;
 
 function renderLinkValue(value: string | null | undefined): ReactNode {
   const normalizedValue = displayValue(value);

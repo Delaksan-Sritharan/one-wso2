@@ -123,6 +123,77 @@ describe("umtHasAdditionalFileOperations", () => {
   });
 });
 
+describe("proceedWired", () => {
+  const WIRED: UmtEditStepId[] = [
+    "product-analysis",
+    "description-instruction",
+    "security-advisory",
+    "integration-tests",
+    "testing",
+    "validate",
+    "file-approval",
+    "verifying",
+    "cloud-development",
+  ];
+
+  it("is true only for the steps with real, wired-up Proceed behavior", () => {
+    for (const steps of [
+      computeUmtEditSteps("UpdateLifecycle", true),
+      computeUmtEditSteps("SecurityUpdateLifecycle", true),
+      computeUmtEditSteps("CloudSupportLifecycle", false),
+    ]) {
+      for (const step of steps) {
+        expect(step.proceedWired).toBe(WIRED.includes(step.id));
+      }
+    }
+  });
+});
+
+describe("advancesLocallyToNextStep", () => {
+  // description-instruction, security-advisory, and testing are always
+  // local-advance, regardless of lifecycle or additional files. validate is
+  // the one conditional case: local-advance only when File Approval is also
+  // in the list (it isn't then the last step of the shared Staging run),
+  // otherwise it performs the real transition itself.
+  const ALWAYS_LOCAL_ADVANCE: UmtEditStepId[] = ["description-instruction", "security-advisory", "testing"];
+
+  it("is true for description-instruction, security-advisory, and testing regardless of additional files", () => {
+    for (const steps of [
+      computeUmtEditSteps("UpdateLifecycle", false),
+      computeUmtEditSteps("UpdateLifecycle", true),
+      computeUmtEditSteps("SecurityUpdateLifecycle", false),
+      computeUmtEditSteps("SecurityUpdateLifecycle", true),
+      computeUmtEditSteps("CloudSupportLifecycle", false),
+    ]) {
+      for (const step of steps) {
+        if (step.id === "validate") continue;
+        const expected = ALWAYS_LOCAL_ADVANCE.includes(step.id);
+        expect(Boolean(step.advancesLocallyToNextStep)).toBe(expected);
+      }
+    }
+  });
+
+  it("is false for validate when File Approval isn't in the list (validate fires the real transition)", () => {
+    expect(
+      computeUmtEditSteps("UpdateLifecycle", false).find((step) => step.id === "validate")?.advancesLocallyToNextStep,
+    ).toBe(false);
+    expect(
+      computeUmtEditSteps("SecurityUpdateLifecycle", false).find((step) => step.id === "validate")
+        ?.advancesLocallyToNextStep,
+    ).toBe(false);
+  });
+
+  it("is true for validate when File Approval is in the list (File Approval fires the real transition instead)", () => {
+    expect(
+      computeUmtEditSteps("UpdateLifecycle", true).find((step) => step.id === "validate")?.advancesLocallyToNextStep,
+    ).toBe(true);
+    expect(
+      computeUmtEditSteps("SecurityUpdateLifecycle", true).find((step) => step.id === "validate")
+        ?.advancesLocallyToNextStep,
+    ).toBe(true);
+  });
+});
+
 describe("umtActiveStepId / umtActiveStepIndex", () => {
   const normalSteps = computeUmtEditSteps("UpdateLifecycle", false);
   const normalWithFilesSteps = computeUmtEditSteps("UpdateLifecycle", true);

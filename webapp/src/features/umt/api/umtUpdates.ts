@@ -25,11 +25,26 @@ export interface UmtUpdateProduct {
   instruction?: string | null;
   testPr?: string | null;
   ignoreTestReason?: string | null;
+  // Per-product on the wire, though the backend repeats one shared value
+  // across every row for a containerized update (only one field is shown).
+  helmChartTag?: string | null;
   type?: string | null;
 }
 
 export interface UmtSecurityAdvisory {
   securityAdvisoryName?: string | null;
+  userConsentFlag?: boolean | null;
+}
+
+// Response shape from GET /update/validate-security-advisory/{id} — loosely
+// typed on the backend itself (legacy consumes it as `any`), so every field
+// here is optional.
+export interface UmtSecurityAdvisoryValidationResult {
+  success?: boolean;
+  status?: string;
+  valid?: boolean;
+  state?: string | null;
+  message?: string | null;
 }
 
 export interface UmtUpdateSummary {
@@ -71,6 +86,15 @@ export interface UmtUpdateSummary {
   // PR-analysis progress for the current Development cycle: QUEUED,
   // PROCESSING, COMPLETED, or a failed/failure value with a trailing detail.
   praStatus?: string | null;
+  // Behavior-change attestation from the Description and Instruction step.
+  // Persisted on the backend (unlike the step's own verification checkboxes,
+  // which are not) — seeded into local state on mount/refetch so revisiting
+  // this step doesn't require re-answering an already-answered question.
+  isBehaviorChanged?: boolean | null;
+  isBehaviorChangeApproved?: boolean | null;
+  // Drives whether Integration Tests shows the per-product Test PR/Ignore
+  // Test fields or a single Helm Chart Tag field applied to every product.
+  isContainerizedUpdate?: boolean | null;
 }
 
 export interface UmtFileOperation {
@@ -151,6 +175,57 @@ export interface UmtProductAnalysisRequest {
   };
 }
 
+// Body for PUT /update/{id}/products/details — a per-product partial update
+// of just these three fields, distinct from updateProducts's whole-list
+// replace (used by Product Analysis's save).
+export interface UmtProductDetailsRequest {
+  productId: string | number;
+  description: string;
+  instruction: string;
+}
+
+export interface UmtBehaviorChangeRequest {
+  isBehaviorChanged: boolean;
+  isBehaviorChangeApproved: boolean;
+}
+
+// Body for PUT /update/{id}/products/details from Integration Tests' own
+// save — a different key set than UmtProductDetailsRequest, sent to the
+// same endpoint. Always sends every key, zeroing whichever of
+// testPr/ignoreTestReason/helmChartTag don't apply, matching legacy.
+export interface UmtProductIntegrationTestRequest {
+  productId: string | number;
+  description: string;
+  instruction: string;
+  testPr: string;
+  ignoreTestReason: string;
+  helmChartTag: string;
+}
+
+// One row of GET/PUT /update/{id}/integrationTest/staging — a different
+// resource than UmtUpdateProduct (per-product manual test review, not part
+// of the main product list), named to disambiguate from the unrelated
+// UmtProductIntegrationTestRequest (Integration Tests step's own PUT).
+export interface UmtStagingTestResultRecord {
+  productId: string | number;
+  productName?: string | null;
+  baseVersion?: string | null;
+  manualTestResult?: string | null;
+  manualTestComment?: string | null;
+}
+
+// Body for one PUT /update/{id}/integrationTest/staging call — the endpoint
+// takes exactly one product per call (unlike /products/details), so
+// multiple edited rows require multiple calls.
+export interface UmtStagingTestResultRequest {
+  productId: string | number;
+  productName: string;
+  baseVersion: string;
+  manualTestResult: string;
+  manualTestComment: string;
+  channel: "full";
+}
+
 export interface UmtUpdateDependency {
   from?: { id?: string | number | null } | null;
   to?: { id?: string | number | null } | null;
@@ -194,6 +269,24 @@ export interface UmtUpdateBranch {
   issueKey?: string | null;
   productVersion?: string | null;
   status?: string | null;
+}
+
+// POST /update. Confirmed against the real backend's UpdateCreationRequest:
+// caseId/securityInternalGitIssue/publicGitIssue each accept the sentinel
+// "N/A" for whichever doesn't apply, but internalGitIssue is always a real
+// required URL. Dates are ISO strings on the wire.
+export interface UmtCreateUpdateRequest {
+  caseId: string;
+  internalGitIssue: string;
+  securityInternalGitIssue: string;
+  publicGitIssue: string;
+  bestCaseEstimate: string;
+  mostLikelyEstimate: string;
+  worstCaseEstimate: string;
+  issueType: string;
+  lifecycle: string;
+  productId: number;
+  hotfixRequired: boolean;
 }
 
 export interface UmtBranchCreationRequest {

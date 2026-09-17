@@ -33,27 +33,48 @@ export type UmtEditStepId =
 export interface UmtEditStepDefinition {
   id: UmtEditStepId;
   label: string;
-  // True only for the steps whose Proceed action is a real, wired backend
-  // call in this pass (File Approval and Cloud Support's Development step).
-  // Every other step is a placeholder pending its own future implementation.
+  // True only for the steps whose Proceed action is real, wired-up
+  // behavior in this pass (File Approval, Cloud Support's Development step,
+  // Product Analysis, Description and Instruction, Security Advisory,
+  // Integration Tests, and Testing). Every other step is a placeholder
+  // pending its own future implementation.
   proceedWired: boolean;
+  // True only for a step whose own Proceed action is a local-only advance to
+  // the next step in the array (no backend call) rather than a real
+  // lifecycle transition — needed because some adjacent steps share one
+  // backend lifecycleState value (see LIFECYCLE_STATE_TO_STEP below).
+  // Meaningful only when proceedWired is also true; inert otherwise.
+  advancesLocallyToNextStep?: boolean;
 }
 
 const NORMAL_STEPS_BASE: UmtEditStepDefinition[] = [
   { id: "pr-analysis", label: "PR Analysis", proceedWired: false },
   { id: "product-analysis", label: "Product Analysis", proceedWired: true },
-  { id: "description-instruction", label: "Description and Instruction", proceedWired: false },
-  { id: "integration-tests", label: "Integration Tests", proceedWired: false },
-  { id: "testing", label: "Testing", proceedWired: false },
-  { id: "validate", label: "Validate", proceedWired: false },
-  { id: "verifying", label: "Verifying", proceedWired: false },
+  {
+    id: "description-instruction",
+    label: "Description and Instruction",
+    proceedWired: true,
+    advancesLocallyToNextStep: true,
+  },
+  { id: "integration-tests", label: "Integration Tests", proceedWired: true },
+  { id: "testing", label: "Testing", proceedWired: true, advancesLocallyToNextStep: true },
+  // advancesLocallyToNextStep is computed below, in computeUmtEditSteps: it
+  // depends on whether File Approval ends up in the list, not on lifecycle
+  // alone.
+  { id: "validate", label: "Validate", proceedWired: true },
+  // Never a local-advance step: Released opens the Complete Update dialog,
+  // and every other verifying-family state (UATStaging/UAT/UATRequested/
+  // OnHold) has no real forward action in this pass, so Proceed stays
+  // disabled with an explanation for them instead.
+  { id: "verifying", label: "Verifying", proceedWired: true },
   { id: "completed", label: "Completed", proceedWired: false },
 ];
 
 const SECURITY_ADVISORY_STEP: UmtEditStepDefinition = {
   id: "security-advisory",
   label: "Security Advisory",
-  proceedWired: false,
+  proceedWired: true,
+  advancesLocallyToNextStep: true,
 };
 
 const FILE_APPROVAL_STEP: UmtEditStepDefinition = {
@@ -93,6 +114,18 @@ export function computeUmtEditSteps(
     steps.splice(verifyingIndex, 0, { ...FILE_APPROVAL_STEP });
   }
 
+  // Validate is the last step of the shared Staging-state run (see
+  // LIFECYCLE_STATE_TO_STEP's comment) only when File Approval isn't ahead of
+  // it — mirroring legacy's own `!hasAdditionalFileOperations` check on
+  // Validate's real transition. Unlike every other advancesLocallyToNextStep
+  // step, this can't be a static per-lifecycle flag: whether File Approval is
+  // present depends on this specific update's PR-analysis result, not its
+  // lifecycle alone.
+  const validateStep = steps.find((step) => step.id === "validate");
+  if (validateStep) {
+    validateStep.advancesLocallyToNextStep = steps.some((step) => step.id === "file-approval");
+  }
+
   return steps;
 }
 
@@ -110,12 +143,23 @@ export function umtHasAdditionalFileOperations(
 }
 
 // Backend lifecycleState -> step id, for the normal/security workflows.
-// ProductAnalyzed and Staging each cover two legacy steps that share one
-// backend state (Description-and-Instruction/Integration-Tests, and
-// Testing/Validate respectively); this port defaults both ambiguous states to
-// the first step of their pair rather than reproducing legacy's client-only
-// `activeStep` memory, since every step that would need to move past that
-// first step is a stub in this pass anyway (see plan notes).
+// ProductAnalyzed and the Staging-state family each cover a run of legacy
+// steps that share one backend state (Description-and-Instruction, and for
+// SecurityUpdateLifecycle updates also Security Advisory, both under
+// ProductAnalyzed before Integration Tests; Testing/Validate under the
+// Staging family); this port defaults each ambiguous state to the first step
+// of its run, then lets the shell (UmtUpdateEditTab.tsx) track a local,
+// non-persisted step-position override to move within it — every step but
+// the last in the run only advances that local override
+// (advancesLocallyToNextStep), and the real backend transition fires only
+// once the LAST step in the run (Integration Tests for the ProductAnalyzed
+// run; Validate, for the Staging run — unless File Approval is also present,
+// in which case File Approval is the true last step and Validate is local-only
+// too, see computeUmtEditSteps) has its own Proceed clicked, matching
+// legacy's actual sequencing exactly. Validate has no entry in this map, same
+// as Integration Tests and Security Advisory: it's only ever reached via the
+// local override from Testing's Proceed, never restored directly from a
+// backend lifecycleState on reload.
 // TestingEnvironmentRequested/Created/Failed have no mapping in legacy at all
 // (a latent bug there); this port deliberately maps all three to "testing"
 // instead of leaving the step stuck at its default.

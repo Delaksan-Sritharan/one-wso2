@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { Button, Stack, Typography } from "@wso2/oxygen-ui";
+import { Box, Button, Stack, Typography } from "@wso2/oxygen-ui";
 
 export default function UmtEditStepActions({
   proceedLabel,
@@ -22,15 +22,38 @@ export default function UmtEditStepActions({
   proceedLoading,
   explanation,
   onProceed,
+  onBack,
+  demoteActions,
+  demoteLoading,
 }: {
   proceedLabel: string;
   proceedDisabled: boolean;
   proceedLoading: boolean;
   explanation?: string;
   onProceed: () => void;
+  onBack?: () => void;
+  demoteActions?: Array<{ label: string; onClick: () => void; color?: "error" }>;
+  demoteLoading?: boolean;
 }) {
   return (
-    <Stack direction="row" spacing={2} sx={{ alignItems: "center", justifyContent: "flex-end" }}>
+    <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
+      {onBack && (
+        <Button variant="outlined" color="inherit" onClick={onBack}>
+          Back
+        </Button>
+      )}
+      {demoteActions?.map((action) => (
+        <Button
+          key={action.label}
+          variant="outlined"
+          color={action.color ?? "inherit"}
+          loading={demoteLoading}
+          onClick={action.onClick}
+        >
+          {action.label}
+        </Button>
+      ))}
+      <Box sx={{ flex: "1 1 auto" }} />
       {explanation && (
         <Typography variant="body2" color="text.secondary">
           {explanation}

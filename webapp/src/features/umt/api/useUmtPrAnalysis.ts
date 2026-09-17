@@ -30,7 +30,7 @@ import type { UmtPullRequestAnalysisRequest } from "./umtUpdates";
 // failing every poll and leaving the query stuck on its seeded initialData.
 // Read the body as plain text instead, mirroring authedPostText's approach
 // for a non-JSON response body.
-async function fetchPrAnalysisStatusText(url: string, accessToken: string): Promise<string> {
+async function fetchPrAnalysisStatus(url: string, accessToken: string): Promise<string> {
   const res = await fetchWithReauth(url, {}, accessToken);
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -44,20 +44,20 @@ async function fetchPrAnalysisStatusText(url: string, accessToken: string): Prom
 // immediately on mount, then polls every 3s while in flight, stopping itself
 // once the status is terminal.
 //
-// `awaitingConfirmation` keeps the 3s loop running even when the *last
-// observed* status isn't QUEUED/PROCESSING yet: right after the start-analysis
-// POST succeeds, a refetch can still race the backend and read back the old
-// pre-analysis value (start and the status flipping to QUEUED aren't
-// atomic). Without this, that one unlucky read makes refetchInterval return
-// false and the loop never restarts on its own. This never fabricates a
-// status — the caller shows a neutral "starting" state, not a claimed
-// QUEUED — it only keeps checking back until a real terminal/in-flight
-// status is actually observed from the server.
+// No "awaiting confirmation" grace flag is needed here: the real backend's
+// start-analysis POST (UpdateManagerHelper#pullRequestAnalysisSubmit) sets
+// praStatus to QUEUED inside a synchronous, committed JPA transaction before
+// the POST even returns, and the status GET (UpdateManager#getPrAnalysisStatus)
+// reads that same row fresh on every call — verified directly against the
+// backend source. So the query invalidation the start-analysis mutation
+// fires on success is guaranteed to refetch an already-QUEUED status; there
+// is no race window where a stale pre-analysis read could be mistaken for
+// confirmation (an earlier version of this hook carried such a flag to
+// guard against exactly that race, which turned out not to exist).
 export function useUmtPrAnalysisStatus(
   id: string,
   initialStatus: string | null | undefined,
   enabled: boolean,
-  awaitingConfirmation: boolean,
 ) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
@@ -71,11 +71,11 @@ export function useUmtPrAnalysisStatus(
     enabled: baseEnabled && enabled,
     initialData: initialStatus ?? undefined,
     queryFn: async () =>
-      fetchPrAnalysisStatusText(umtServiceUrls.updatePullRequestAnalysisStatus(id), await getAccessToken()),
+      fetchPrAnalysisStatus(umtServiceUrls.updatePullRequestAnalysisStatus(id), await getAccessToken()),
     refetchInterval: (query) => {
       const status = query.state.data;
       const inFlight = status === UMT_PR_ANALYSIS_STATUS.QUEUED || status === UMT_PR_ANALYSIS_STATUS.PROCESSING;
-      return inFlight || awaitingConfirmation ? 3000 : false;
+      return inFlight ? 3000 : false;
     },
     retry: httpRetry,
   });

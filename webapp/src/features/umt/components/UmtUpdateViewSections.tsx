@@ -427,6 +427,7 @@ function DenseTable<Row>({
         autoHeight
         columnHeaderHeight={hideHeader ? 0 : 40}
         columns={gridColumns}
+        disableColumnMenu
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter
