@@ -109,7 +109,10 @@ export default function ParLeadReviewPanel({
   const readOnly = shared || deadlinePassed;
   const savedLeadComment = decodeParComment(parRatingData?.parLeadComment);
 
-  const submit = (status: "DRAFT" | "SHARED", opts?: { silent?: boolean; onSuccess?: () => void }) => {
+  const submit = (
+    status: "DRAFT" | "SHARED",
+    opts?: { silent?: boolean; onSuccess?: () => void; commentOnly?: boolean },
+  ) => {
     if (!parRatingData) return;
     ratingUpdate.mutate(
       {
@@ -118,8 +121,18 @@ export default function ParLeadReviewPanel({
         payload: {
           parLeadStatus: status,
           parLeadComment: encodeParComment(leadComment),
-          ...(parRatingValue ? { parRating: parRatingValue } : {}),
-          parSpecialRating: specialRating,
+          // The autosave fires purely off comment typing and must not also
+          // commit whatever the rating dropdowns currently hold — source's
+          // own updateParRatingAutoSave has this same bug (parSpecialRating
+          // sent unconditionally, clobbering a saved Top 5%/20% allocation
+          // the moment someone types a character), so this is a deliberate
+          // deviation, not a port gap.
+          ...(opts?.commentOnly
+            ? {}
+            : {
+                ...(parRatingValue ? { parRating: parRatingValue } : {}),
+                parSpecialRating: specialRating,
+              }),
         },
       },
       {
@@ -145,6 +158,7 @@ export default function ParLeadReviewPanel({
       const token = ++autoSaveTokenRef.current;
       submit("DRAFT", {
         silent: true,
+        commentOnly: true,
         onSuccess: () => {
           if (token !== autoSaveTokenRef.current) return;
           setAutoSaved(true);

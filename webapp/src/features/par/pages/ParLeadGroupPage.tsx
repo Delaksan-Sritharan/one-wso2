@@ -29,9 +29,15 @@ import { useParIsTeamLead } from "../api/useParData";
 // already applies to the Employee Portal's tabs. Only tabs with a real route
 // in App.tsx are listed here — ported one at a time, same as the Employee
 // Portal — so the bar never links to a screen that isn't built yet.
+//
+// "Top 5%/20% Allocation" carries the slash source's own tab bar omits
+// (LeadPortal.tsx's literal label is "TOP 5%20% ALLOCATION") — every other
+// occurrence in this feature (the cycle stepper, the roster column, the
+// review panel, the PDF export) uses the slash, and a live nav label read
+// daily is a weak place to preserve that one inconsistency.
 const TABS: RoutedTabDef[] = [
   { segment: "direct-reports", label: "Direct Reports" },
-  { segment: "allocation", label: "Top 5%20% Allocation" },
+  { segment: "allocation", label: "Top 5%/20% Allocation" },
 ];
 
 // One page frame for everything a lead does for their reports — mirrors
