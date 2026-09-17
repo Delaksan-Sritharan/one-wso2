@@ -1,9 +1,10 @@
 # PAR (Performance Appraisal Review) — functional specification
 
 **Status:** the employee-facing half of par-app (all five tabs, including F2F) is ported and live under
-People Ops. The Lead Portal is fully ported (all five tabs). Admin Portal is not started. Written from
-the source and cross-checked against the running staging app (screenshots) — this is the reference for
-verifying the port and for writing test cases against it, not a proposal.
+the Me perspective. The Lead Portal is fully ported (all six tabs, including History Chain) and lives
+under People Ops. Admin Portal is not started. Written from the source and cross-checked against the
+running staging app (screenshots) — this is the reference for verifying the port and for writing test
+cases against it, not a proposal.
 
 **Source of truth for behaviour:** `digiops-hr/apps/par-app/webapp/src` — `OngoingCycleView.tsx` and
 its panels/components for the five tabs below (`views/ongoingCycleView/`, `components/common/
@@ -12,13 +13,18 @@ RequestFeedbackTab.tsx`, `ProvideFeedbackTab.tsx`, `OfferFeedbackView.tsx`, `F2f
 endpoint surface, `manager.bal` for cycle lifecycle and calendar integration, `modules/types/types.bal`
 for states, roles and field-level authorization).
 
-**In One WSO2:** `/people-ops/performance`, a tab group (`features/par/`) under the People Ops
-perspective — **Employee Feedback**, **Request 360° Feedback**, **Provide 360° Feedback**, **F2F**,
-and **History**, each a real route (`employee-feedback` / `request-360` / `provide-360` / `f2f` /
-`history`). The Lead Portal lives one level down at `/people-ops/performance/lead`, gated on par-app's
-own `Role.TEAM_LEAD` (`ParRequiresTeamLeadRoute`) — **Direct Reports**, **Additional Reports**,
-**Report Chain**, **Employee History**, and **Top 5%/20% Allocation** (`direct-reports` /
-`additional-reports` / `report-chain` / `employee-history` / `allocation`). Backend is par-app's own
+**In One WSO2:** the employee half and the Lead Portal are split across two perspectives, the same
+split claim-approval already applies (`docs/ported-apps/claim-approval.md`) — completing and sharing
+your own PAR is something every employee does for themself, so it lives under **Me**; reviewing and
+rating *other people's* PAR is People-Ops-team work, so the Lead Portal stays under **People Ops**.
+
+`/me/performance`, a tab group (`features/par/`) — **Employee Feedback**, **Request 360° Feedback**,
+**Provide 360° Feedback**, **F2F**, and **History**, each a real route (`employee-feedback` /
+`request-360` / `provide-360` / `f2f` / `history`). The Lead Portal lives at
+`/people-ops/performance/lead`, gated on par-app's own `Role.TEAM_LEAD` (`ParRequiresTeamLeadRoute`) —
+**Direct Reports**, **Additional Reports**, **Report Chain**, **Employee History**,
+**Top 5%/20% Allocation**, and **History Chain** (`direct-reports` / `additional-reports` /
+`report-chain` / `employee-history` / `allocation` / `history-chain`). Backend is par-app's own
 Ballerina service, configured as `ONE_WSO2_PAR_BACKEND_URL`.
 
 ---
@@ -209,6 +215,11 @@ All requests carry the signed-in user's bearer token plus `x-user-timezone-offse
 - [ ] Report Chain: starts at the caller's own direct reports; "View Subordinates" only shows for a
       row whose `isEmployeeALead` is exactly `"True"`, and drills into that person's own reports with a
       working breadcrumb trail back up; "Show Leads Only" and search combine correctly.
+- [ ] History Chain: starts at the caller's own org chart, not any PAR cycle; "View Subordinates" only
+      shows for a row whose `isLead` is `true`, and drills into that person's own direct reports with a
+      working breadcrumb trail back up (rooted at the caller's own name); search matches name or email;
+      "View PAR History" opens the same history view as Employee History, straight to that one employee
+      with no cycle picker.
 - [ ] Employee History: the cycle picker lists real closed cycles and legacy cycles together, latest
       first; picking a cycle scopes the employee picker to whoever has a record for it; a real cycle
       shows the rating/comments/360 feedback, a legacy cycle shows the derived rating and legacy 360
@@ -266,9 +277,13 @@ out of scope for this portal).
   alerts and completed-date form `ParF2fTab.tsx` shows for the employee's own side, but for this
   employee, with "Schedule Google Meet" permanently disabled — matching source's shared component
   exactly (one `F2fPanel`, `isEmployeeView` only ever gates that one button).
-- **PAR HISTORY** (`ParLeadHistoryModal.tsx`, ports `EmployeeHistoryCard.tsx`): the same merged
-  real+legacy cycle history `ParLeadEmployeeHistoryTab.tsx` shows, for this one fixed employee, in a
-  modal instead of a full tab (no employee picker).
+- **PAR HISTORY** (`ParLeadHistoryModal.tsx`, ports `EmployeeHistoryCard.tsx` as `Review.tsx`'s own
+  "PAR HISTORY" button opens it — a real modal, `CustomModal`): the same merged real+legacy cycle history
+  `ParLeadEmployeeHistoryTab.tsx` shows, for this one fixed employee, in a modal instead of a full tab (no
+  employee picker). The shared history-rendering logic lives in `ParEmployeeHistoryView.tsx`, reused
+  as-is (no Dialog) by History Chain's own "View PAR History" action below — source itself renders the
+  identical `EmployeeHistoryCard` two different ways depending on caller: a real modal from `Review.tsx`,
+  inline (swapping the current view) from `ChainViewTab.tsx`.
 
 Not ported here: evidence attachments (`parPerformanceNoticeAck`'s Google Drive picker — a capability
 nothing else in this app has), and "Sync an Employee" (`TeamSummary.tsx`'s temporary org-chart-search
@@ -346,6 +361,37 @@ here too). A quota whose Top 5% is 1 and Top 20% is 0 is a small-team special ca
 displays "1" too (not the real 0), alongside a warning explaining the pair represents one combined
 slot, not two.
 
+### 8.6 History Chain (`ParLeadHistoryChainTab.tsx`)
+
+Ports `ChainViewTab.tsx` — source's `ParHistory.tsx` has a second, lead-only tab alongside "My History"
+(a lead's view of their reports' PAR history across cycles), ported here as a Lead Portal tab instead of
+bundled with employee History, since it's work a lead does about other people, like every other tab in
+this section — distinct from this portal's own "Report Chain" tab (§8.3, `ReportChainView.tsx`), which
+drills the PAR-cycle-scoped `report-levels` endpoint to open the review screen, not history.
+
+Starts at the caller's own org chart (`GET /employees?leadEmail=` — direct reports only, not
+cycle-scoped, the same endpoint Employee History's picker already uses, see §8.4); a row whose `isLead`
+is `true` gets a "View Subordinates" action that drills into that person's own direct reports one level
+at a time, with a breadcrumb trail back up (the caller's own name is the root label, matching source's
+own `employeeMap[userEmail]?.employeeName` — source additionally checks a manager-email set this app has
+no local equivalent of, simplified to just the row's own `isLead` flag, the same simple gate Report
+Chain's own drill-down already uses). A "Show Leads Only" toggle and a
+search box (matching name **or** email — source's own narrower, email-only search on Report Chain is
+that tab's own scope, not copied here) filter the current level. Every row's "View PAR History" action
+swaps in `ParEmployeeHistoryView` (§8.1's PAR HISTORY content, minus the Dialog `ParLeadHistoryModal.tsx`
+wraps it in) straight to that one employee — no cycle picker, and no PAR-cycle dependency for this tab at
+all, unlike Report Chain. Inline, not a modal, with a back button + name chip above it — matching
+source's own `ChainViewTab.tsx` exactly (a real modal here would be the one deviation from source, not
+the port).
+
+**Known gap, accepted deliberately:** source gates this tab on a plain `Role.LEAD` + org-chart
+`hasSubordinates` check, independent of any PAR cycle — visible any time you lead people, cycle or no
+cycle. This tab instead inherits the whole Lead Portal's own gate (`ParRequiresTeamLeadRoute` →
+`useParIsTeamLead`, scoped to the *active* cycle), so a lead loses access to browsing history whenever
+there's no active cycle, even though browsing past history doesn't itself need one. Left as-is rather
+than special-casing one tab's access rule differently from the other five — one consistent gate for the
+whole portal was judged simpler to reason about than the edge case it misses.
+
 ## 9. Not yet ported
 
 - **Lead Portal — evidence attachments and every Admin-only branch** of the employee review screen
@@ -355,9 +401,6 @@ slot, not two.
 - **Admin Portal** — source's `/admin-portal` (`views/adminPortal/`): create/configure cycles, assign
   special-rating quotas, monitor org-wide completion, generate reports, send/schedule reminders, global
   configuration.
-- **PAR History's Chain view** — source's `ParHistory.tsx` has a second, lead-only tab alongside "My
-  History" (`views/parHistory/ChainViewTab.tsx`): a lead's view of their reports' PAR history across
-  cycles. Distinct from the Lead Portal's own "Report Chain" tab (§8.3, `ReportChainView.tsx`).
 - **One unified "no cycle" state.** Source gates all Employee Portal tabs behind a single check
   (`OngoingCycleView.tsx`) that replaces the whole tab body with one notice when there's no active
   cycle; this port instead repeats a similar (but not identically worded) message independently in

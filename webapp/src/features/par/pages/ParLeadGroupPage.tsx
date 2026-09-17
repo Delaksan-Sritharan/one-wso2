@@ -41,10 +41,13 @@ const TABS: RoutedTabDef[] = [
   { segment: "report-chain", label: "Report Chain" },
   { segment: "employee-history", label: "Employee History" },
   { segment: "allocation", label: "Top 5%/20% Allocation" },
+  { segment: "history-chain", label: "History Chain" },
 ];
 
-// One page frame for everything a lead does for their reports — mirrors
-// ParGroupPage.tsx, one level down at /people-ops/performance/lead.
+// One page frame for everything a lead does for their reports — the
+// employee-facing counterpart, ParGroupPage.tsx, now lives under the Me
+// perspective (/me/performance); this page stays at
+// /people-ops/performance/lead.
 export default function ParLeadGroupPage() {
   return (
     <ParShell>
@@ -97,6 +100,6 @@ export function ParRequiresTeamLeadRoute({ children }: { children: ReactNode }) 
       </Box>
     );
   }
-  if (!employeeInfo.isTeamLead) return <Navigate to="/people-ops/performance" replace />;
+  if (!employeeInfo.isTeamLead) return <Navigate to="/me/performance" replace />;
   return <>{children}</>;
 }
