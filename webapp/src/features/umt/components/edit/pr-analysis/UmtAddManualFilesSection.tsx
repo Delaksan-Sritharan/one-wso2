@@ -101,9 +101,8 @@ export default function UmtAddManualFilesSection({
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteBundleTarget, setDeleteBundleTarget] = useState<string | null>(null);
   // Stable per-entry ids independent of `bundlesInfoPath`, so two entries
-  // sharing a path (legacy blocks this with a "Duplicate Entry" dialog; this
-  // port instead surfaces the collision inline and lets the user resolve it)
-  // never collapse into a single grid row or get deleted together.
+  // sharing a path never collapse into a single grid row or get deleted
+  // together; the collision itself is surfaced inline for the user to resolve.
   const bundleEntryIdsRef = useRef(new WeakMap<UmtBundleInfoChange, string>());
   const nextBundleEntryId = useRef(0);
   function bundleEntryId(row: UmtBundleInfoChange): string {
@@ -209,9 +208,8 @@ export default function UmtAddManualFilesSection({
 
     // The externally-sourced path (SVN location or GitHub raw URL) that the
     // backend's `sourceFilePath` field carries when there is no local file —
-    // legacy collects and validates the SVN location but never actually
-    // sends it; this port routes it through the same field GitHub-raw URLs
-    // already use, rather than silently dropping validated user input.
+    // routed through the same field GitHub-raw URLs already use, so validated
+    // user input is never silently dropped.
     const sourceFilePath = source === "svn" ? svnTrimmed : source === "github" ? githubTrimmed : "";
     // Only ever carry the locally-picked file when "Upload File" is the
     // chosen source — otherwise a file picked earlier under "Upload File"
@@ -306,7 +304,6 @@ export default function UmtAddManualFilesSection({
           autoHeight
           columnHeaderHeight={40}
           disableColumnMenu
-          disableColumnResize
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           getRowId={(row: UmtFileOperation) => row.file ?? ""}
@@ -383,7 +380,6 @@ export default function UmtAddManualFilesSection({
           autoHeight
           columnHeaderHeight={40}
           disableColumnMenu
-          disableColumnResize
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           getRowId={(row: UmtBundleInfoChange) => bundleEntryId(row)}

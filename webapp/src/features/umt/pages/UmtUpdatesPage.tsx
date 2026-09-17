@@ -275,7 +275,6 @@ function UmtUpdatesBody() {
           <DataGridComponent
             columnHeaderHeight={40}
             columns={gridColumns}
-            disableColumnResize
             disableRowSelectionOnClick
             getRowHeight={() => "auto"}
             hideFooter
@@ -347,11 +346,9 @@ function UpdatesEmptyState() {
   );
 }
 
-// Community DataGrid has no real column-pinning prop (confirmed against
-// legacy's own UpdatesList.tsx, which achieves this the same way — sticky
-// positioning on the actions cell/header, not a DataGrid pinning API).
-// Unlike legacy's hardcoded white, this uses theme-aware colors so it still
-// looks right in dark mode.
+// Community DataGrid has no real column-pinning prop, so this uses sticky
+// positioning on the actions cell/header instead. Uses theme-aware colors
+// so it still looks right in dark mode.
 const updatesGridSx = {
   border: 0,
   '& .MuiDataGrid-cell[data-field="actions"]': {

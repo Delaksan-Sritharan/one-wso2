@@ -21,10 +21,9 @@ import { useAccessToken } from "@hooks/useAccessToken";
 import type { UmtBehaviorChangeRequest, UmtProductDetailsRequest } from "./umtUpdates";
 
 // Saves the Description and Instruction step. `behaviorChange` is null for
-// the hotfix branch (which never touches those fields, matching legacy
-// exactly); otherwise both PUTs are sequenced inside this one mutation so a
-// failure in either surfaces to the caller, unlike legacy's fire-and-forget
-// second call.
+// the hotfix branch (which never touches those fields); otherwise both
+// PUTs are sequenced inside this one mutation so a failure in either
+// surfaces to the caller.
 export function useUmtSaveDescriptionInstruction(id: string) {
   const getAccessToken = useAccessToken();
   const queryClient = useQueryClient();

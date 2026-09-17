@@ -77,10 +77,8 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
   const [isProceedWarningOpen, setIsProceedWarningOpen] = useState(false);
 
   const [updateType, setUpdateType] = useState<UmtUpdateType>("generalUpdate");
-  // Drafts persisted per update id (mirroring legacy's pullRequests/files/
-  // bundleInfo localStorage keys, but id-scoped - legacy's own versions are
-  // flat/global and leak stale rows across different updates' PR Analysis
-  // steps, which this fixes rather than reproduces).
+  // Drafts are persisted to localStorage scoped by update id, so rows from
+  // one update's PR Analysis step never leak into another's.
   const [pullRequests, setPullRequestsState] = useState<UmtPullRequestAnalysisItem[]>(() =>
     readPersistedPullRequests(id),
   );
@@ -115,8 +113,7 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
   const isCompleted = status.data === "COMPLETED";
 
   // Disable inputs from the moment Analyze is clicked (the mutation's own
-  // isPending), not just once the server confirms QUEUED — matches legacy's
-  // immediate setIsDisabled. No separate "awaiting confirmation" grace flag
+  // isPending), not just once the server confirms QUEUED. No separate "awaiting confirmation" grace flag
   // is needed once the mutation resolves: the backend commits praStatus to
   // QUEUED synchronously before the start-analysis POST even returns
   // (verified against the backend source), so the query invalidation the
@@ -154,12 +151,11 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
     setDeletePr(null);
   }
 
-  // Legacy blocks Analyze (with a "Missing Bundle Info Paths" dialog) when a
-  // /plugins/ Added or Removed file has no corresponding bundle-info entry —
-  // this port previously only validated bundle info at add time, leaving a
-  // file added *before* its bundle info (or one whose entry was later
-  // deleted) to reach the backend unguarded. Only General Update collects
-  // manual files/bundle info at all.
+  // Blocks Analyze (with a "Missing Bundle Info Paths" dialog) when a
+  // /plugins/ Added or Removed file has no corresponding bundle-info entry,
+  // since validating only at add time would let a file added before its
+  // bundle info (or one whose entry was later deleted) reach the backend
+  // unguarded. Only General Update collects manual files/bundle info at all.
   function handleAnalyzeClick() {
     if (updateType === "generalUpdate") {
       const missing = manualFiles.filter(
@@ -195,8 +191,8 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
     }
   }
 
-  // Legacy warns before proceeding that added/modified files will be copied
-  // into all applicable products during the next step.
+  // Warns before proceeding that added/modified files will be copied into
+  // all applicable products during the next step.
   const hasAddedOrModifiedFiles = (pullRequestAnalysis.data?.additionalFileOperations ?? []).some(
     (op) => op.operation?.toLowerCase() === "added" || op.operation?.toLowerCase() === "modified",
   );
@@ -270,7 +266,6 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
                   autoHeight
                   columnHeaderHeight={40}
                   disableColumnMenu
-                  disableColumnResize
                   disableRowSelectionOnClick
                   getRowHeight={() => "auto"}
                   getRowId={(row: UmtPullRequestAnalysisItem) => row.pr ?? ""}

@@ -42,35 +42,32 @@ export function laterDate(date: Date, days: number): Date {
   return result;
 }
 
-// Mirrors legacy's GITHUB_ISSUE_URL_REGEX. A format check only — the backend
-// does the authoritative existence check via a real GitHub API call.
+// A format check only — the backend does the authoritative existence check
+// via a real GitHub API call.
 const GITHUB_ISSUE_URL_REGEX = /https:\/\/github\.com\/.*wso2.*\/[A-Za-z0-9-]+\/issues\/[0-9]+/;
 
 export function isValidGithubIssueUrl(value: string): boolean {
   return GITHUB_ISSUE_URL_REGEX.test(value.trim());
 }
 
-// Mirrors legacy's CASE_ID_REGEX (config/constant.ts). Legacy enforces this
-// via yup .matches() whenever a case id is present (required unless
-// proactive) — this port previously only checked for non-blank.
+// A case id must match this format whenever one is present (required
+// unless the update is proactive).
 const CASE_ID_REGEX = /^CS[0-9]+/;
 
 export function isValidCaseId(value: string): boolean {
   return CASE_ID_REGEX.test(value.trim());
 }
 
-// Mirrors legacy's thursdayOrHotfixTest: every estimate must land on a
-// Thursday unless the update is a hotfix, in which case any date is allowed.
+// Every estimate must land on a Thursday unless the update is a hotfix, in
+// which case any date is allowed.
 export function isValidEstimateDate(date: Date, isHotfix: boolean): boolean {
   return isHotfix || date.getDay() === 4;
 }
 
 // Cloud Support has no version selection (its Version field is disabled), so
 // unlike every other update type it can't resolve productId by matching a
-// version string — legacy's own resolution logic requires that match
-// unconditionally, which would make Cloud Support permanently unsubmittable.
-// This resolves it from the selected product's single/first metadata row
-// instead, fixing that rather than reproducing it.
+// version string. Instead it resolves from the selected product's
+// single/first metadata row.
 export function resolveCreateUpdateProductId(
   products: Record<string, UmtMetadataProduct[]>,
   productName: string | null,
@@ -108,9 +105,9 @@ function isValidDate(date: Date | null): boolean {
 }
 
 // Strict day-after check on calendar dates (not 24h, so it's DST-safe):
-// `after` must fall on a later calendar day than `before`, mirroring
-// legacy's yup .min(ref(...)) ordering checks. Exported so the dialog's
-// inline per-field messages use the exact same rule as the submit gate.
+// `after` must fall on a later calendar day than `before`. Exported so the
+// dialog's inline per-field messages use the exact same rule as the submit
+// gate.
 export function isAfterDay(before: Date, after: Date): boolean {
   const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   return startOfDay(after) > startOfDay(before);

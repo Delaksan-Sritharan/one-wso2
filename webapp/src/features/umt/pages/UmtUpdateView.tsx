@@ -74,9 +74,8 @@ export default function UmtUpdateView() {
 }
 
 function UmtUpdateBody({ id }: { id: string | undefined }) {
-  // Persisted per update id (mirroring legacy's selectedTab, but id-scoped -
-  // legacy's own key is flat/global and carries the last-viewed tab over
-  // between different updates, which this fixes rather than reproduces).
+  // Persisted per update id, so the last-viewed tab does not carry over
+  // between different updates.
   const [selectedTab, setSelectedTabState] = useState(() => (id ? (readPersistedSelectedTab(id) ?? "view") : "view"));
   const setSelectedTab = (tab: string) => {
     setSelectedTabState(tab);
@@ -128,8 +127,8 @@ function UmtUpdateBody({ id }: { id: string | undefined }) {
   );
   const canEditDevelopmentFields =
     hasEditRole && update.data?.lifecycleState === "Development";
-  // Mirrors legacy's own action-row visibility: Mark as Duplicate and On
-  // Hold are only offered before the update has left early triage.
+  // Mark as Duplicate and On Hold are only offered before the update has
+  // left early triage.
   const canUseEarlyActionRow = ["Development", "PRAnalyzed", "ProductAnalyzed"].includes(
     update.data?.lifecycleState ?? "",
   );
@@ -316,7 +315,8 @@ function UmtUpdateBody({ id }: { id: string | undefined }) {
             autoFocus
             fullWidth
             multiline
-            rows={3}
+            minRows={4}
+            maxRows={12}
             label="Reason"
             value={onHoldReason}
             onChange={(event) => setOnHoldReason(event.target.value)}

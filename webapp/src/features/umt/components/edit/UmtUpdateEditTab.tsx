@@ -71,9 +71,9 @@ export default function UmtUpdateEditTab({
   // A small step-position override: some adjacent steps share one backend
   // lifecycleState value (see umtEditSteps.ts), so a step whose Proceed only
   // advances locally (advancesLocallyToNextStep) moves this pointer instead
-  // of calling the real transition. Persisted per update id (mirroring
-  // legacy's activeStep_${id}), so a refresh doesn't kick the user back to
-  // the backend-derived default (the first of the ambiguous steps). Reset
+  // of calling the real transition. Persisted per update id, so a refresh
+  // doesn't kick the user back to the backend-derived default (the first of
+  // the ambiguous steps). Reset
   // whenever the backend-derived step id itself changes — that only happens
   // after a real transition actually fires.
   const [localStepOverride, setLocalStepOverride] = useState<UmtEditStepId | null>(
@@ -110,49 +110,47 @@ export default function UmtUpdateEditTab({
   const isReleasedVerifying = isVerifying && update.lifecycleState === "Released";
   const isTerminal = currentStep.id === "completed" || currentStep.id === "cloud-released";
   const roleAllowed = !isFileApproval || gate.isAdmin || gate.isProductLead;
-  // Mirrors legacy's productAnalysisState === success gate: Proceed here
-  // promotes lifecycle state, so it shouldn't be available until the
-  // product-analysis results this step promises have actually loaded.
+  // Proceed here promotes lifecycle state, so it shouldn't be available
+  // until the product-analysis results this step promises have actually
+  // loaded.
   const productAnalysisReady = !isProductAnalysis || productAnalysis.isSuccess;
-  // Mirrors legacy's own container-level Proceed-disable rule: every product
-  // must already have a non-blank description and instruction.
+  // Proceed is disabled here until every product already has a non-blank
+  // description and instruction.
   const descriptionInstructionReady =
     !isDescriptionInstruction || isDescriptionInstructionComplete(update.products);
-  // Mirrors legacy's own container-level Proceed-disable rule: every product
-  // must already have a Test PR or an ignore reason (or, for a containerized
-  // update, a non-blank Helm Chart Tag). Checks only persisted state, not a
-  // sibling component's in-progress local edits — the same simplification
-  // productAnalysisReady above already makes.
+  // Proceed is disabled here until every product already has a Test PR or
+  // an ignore reason (or, for a containerized update, a non-blank Helm
+  // Chart Tag). Checks only persisted state, not a sibling component's
+  // in-progress local edits — the same simplification productAnalysisReady
+  // above already makes.
   const integrationTestsReady =
     !isIntegrationTests || isIntegrationTestsComplete(update.products, update.isContainerizedUpdate ?? false);
-  // Mirrors legacy's own two-part real Proceed gate: the environment/backend
-  // side must have reached Staging, AND every product's manual test result
-  // must already be submitted.
+  // Proceed here requires a two-part gate: the environment/backend side
+  // must have reached Staging, AND every product's manual test result must
+  // already be submitted.
   const testingReady =
     !isTesting || (stagingTestResults.isSuccess && isTestingComplete(update.lifecycleState, stagingTestResults.data));
   // Only Released has a real forward action (the Complete Update dialog);
   // every other verifying-family state (UATStaging/UAT/UATRequested/OnHold)
-  // has no working transition in this pass, so Proceed stays disabled rather
-  // than reproducing legacy's global UATStaging disable plus its silent
-  // dead-click behavior for UAT/UATRequested/OnHold as two different things.
+  // has no working transition in this pass, so Proceed stays disabled for
+  // all of them uniformly.
   const verifyingReady = !isVerifying || update.lifecycleState === "Released";
   const stepReady =
     productAnalysisReady && descriptionInstructionReady && integrationTestsReady && testingReady && verifyingReady;
   // File Approval, Cloud Support's Development step, Product Analysis,
   // Description and Instruction, and Integration Tests are wired
   // (currentStep.proceedWired); every other step's Proceed is a stub. Cloud
-  // Support's single transition is hardcoded to "Released" per legacy; every
-  // other wired step sends the backend's own promoteStages[0] rather than a
+  // Support's single transition is hardcoded to "Released"; every other
+  // wired step sends the backend's own promoteStages[0] rather than a
   // value this shell invents.
   const nextLifecycleState = isCloudDevelopment ? "Released" : update.promoteStages?.[0];
 
   const isValidate = currentStep.id === "validate";
-  // Legacy shows a plain, backend-call-free "Back" only on Integration Tests
-  // and Security Advisory — not a general go-back-a-step control. Validate
-  // and File Approval also get one here, per product decision, as a
-  // deliberate divergence from legacy. Reuses the same localStepOverride
-  // pointer every advancesLocallyToNextStep step already moves forward with,
-  // just one step earlier instead — still a local-only move, no backend call.
+  // Back is a plain, backend-call-free control shown only on Integration
+  // Tests, Security Advisory, Validate, and File Approval — not a general
+  // go-back-a-step control. Reuses the same localStepOverride pointer every
+  // advancesLocallyToNextStep step already moves forward with, just one
+  // step earlier instead — still a local-only move, no backend call.
   const canGoBack = isIntegrationTests || isSecurityAdvisory || isValidate || isFileApproval;
   const handleBack = () => {
     const prevStep = steps[activeIndex - 1];
@@ -220,6 +218,13 @@ export default function UmtUpdateEditTab({
           <UmtFileApprovalStep id={id} update={update} />
         ) : currentStep.id === "verifying" ? (
           <UmtVerifyingStep id={id} update={update} />
+        ) : currentStep.id === "cloud-development" ? (
+          // Cloud Support Development step has no body beyond the
+          // stepper and Proceed button (update-edit-view/index.tsx:1446-1466) —
+          // there's nothing here to be "not implemented yet", so this renders
+          // nothing rather than reusing the placeholder built for genuinely
+          // unbuilt steps.
+          null
         ) : (
           <UmtEditStepPlaceholder stepLabel={currentStep.label} />
         )}

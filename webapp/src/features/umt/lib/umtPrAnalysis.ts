@@ -47,9 +47,9 @@ export interface UmtPrAnalysisStatusMessage {
   tone: "error" | "success" | "primary";
 }
 
-// The failed-status detail is split the same way legacy does: on a colon not
-// immediately followed by "//" (so it doesn't break URLs), or right before
-// the phrase "Request timed out".
+// The failed-status detail is split on a colon not immediately followed by
+// "//" (so it doesn't break URLs), or right before the phrase
+// "Request timed out".
 const PR_ANALYSIS_FAILURE_DETAIL_SPLIT = /(?::(?!\/\/)\s*)|(?=Request timed out)/g;
 
 export function prAnalysisStatusMessage(status: string | null | undefined): UmtPrAnalysisStatusMessage {
@@ -106,22 +106,20 @@ export function manualFileNameMatchesPath(fileName: string, relativePath: string
   return !expectedFileName || expectedFileName === fileName;
 }
 
-// relativePath.includes(...), not the stricter directoryPath === "/plugins/"
-// legacy's AddBundleInfoChanges.tsx checks internally — that exact-equality
-// form only matches a path with nothing after "/plugins/", inconsistent with
-// AddFilesManually.tsx's own (and the feature's documented intent) substring
-// check. This port applies one consistent rule everywhere.
+// Uses relativePath.includes(...), not a stricter directoryPath ===
+// "/plugins/" equality (which would only match a path with nothing after
+// "/plugins/"), to apply one consistent substring rule everywhere.
 export function bundleInfoApplies(relativePath: string, operation: string | null | undefined): boolean {
   return relativePath.includes("/plugins/") && (operation === "Added" || operation === "Removed");
 }
 
 // True when a manual file requiring a bundle-info entry (bundleInfoApplies)
-// has one — matched by file basename. Legacy's own pre-Analyze check
-// compares `bundle.relativeJarPath === file.file` directly, but those are two
-// different coordinate systems (a product-pack-relative upload path vs a
-// "../"-prefixed JAR-relative path), so that equality can in practice never
-// hold; this restores the check's intent — "did you add a bundle entry for
-// this JAR" — without inheriting legacy's always-false comparison.
+// has one — matched by file basename rather than a direct
+// `bundle.relativeJarPath === file.file` comparison, since those two values
+// live in different coordinate systems (a product-pack-relative upload path
+// vs a "../"-prefixed JAR-relative path) and would otherwise never match.
+// Matching by basename preserves the check's intent: "did you add a bundle
+// entry for this JAR".
 export function pluginsFileHasMatchingBundleInfo(
   filePath: string,
   bundlesInfoChanges: { relativeJarPath?: string | null }[],

@@ -80,7 +80,7 @@ export default function UmtUpdateViewSections({
   const saveIssues = useUmtSaveIssues(id);
   const savePublicPrs = useUmtSavePublicPullRequests(id);
   const saveTestPrs = useUmtSaveTestPullRequests(id);
-  // Legacy hides the add action once an update is Released; the admin-only
+  // The add action is hidden once an update is Released; the admin-only
   // delete column follows the same rule this codebase already applies
   // elsewhere (e.g. File Approval's promote gate).
   const canAddLinks = update.lifecycleState !== "Released";
@@ -393,9 +393,8 @@ function HotfixSection({ query }: { query: ViewQueryState<UmtHotfixInfo> }) {
 }
 
 // Shared by the View tab's three editable link-list sections (Public GitHub
-// Issues, Public Pull Requests, Integration Test Pull Requests). Legacy adds
-// via an inline field list inside the modal; this port instead adds one item
-// per dialog open, matching every other "Add X" dialog already in this
+// Issues, Public Pull Requests, Integration Test Pull Requests). Each dialog
+// open adds one item, matching every other "Add X" dialog already in this
 // feature (Manual Files, Bundle Info, Pull Requests, Security Advisories).
 function EditableLinkSection({
   title,
@@ -617,7 +616,6 @@ function DenseTable<Row>({
         columnHeaderHeight={hideHeader ? 0 : 40}
         columns={gridColumns}
         disableColumnMenu
-        disableColumnResize
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter

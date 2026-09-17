@@ -134,7 +134,6 @@ export default function UmtSecurityAdvisoryStep({ id, update }: { id: string; up
           columnHeaderHeight={40}
           columns={columns}
           disableColumnMenu
-          disableColumnResize
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           getRowId={(row: UmtSecurityAdvisory) => row.securityAdvisoryName ?? ""}

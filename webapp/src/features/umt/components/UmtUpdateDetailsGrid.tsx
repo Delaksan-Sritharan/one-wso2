@@ -399,7 +399,6 @@ function EtaLogDialog({
               autoHeight
               columnHeaderHeight={40}
               columns={etaLogColumns}
-              disableColumnResize
               disableRowSelectionOnClick
               getRowHeight={() => "auto"}
               hideFooter

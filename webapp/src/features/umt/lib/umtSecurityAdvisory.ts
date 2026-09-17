@@ -14,12 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Matches legacy's SECURITY_ADVISORY_REGEX (src/config/constant.ts).
 export const SECURITY_ADVISORY_REGEX = /^WSO2-\d{4}-\d{4}$/;
 
 // Client-side format check, run before ever hitting the backend existence
-// check — mirrors legacy's own two-stage validation (format, then a debounced
-// backend call only once the format already passes).
+// check — a debounced backend call only happens once the format already
+// passes.
 export function umtSecurityAdvisoryFormatValid(advisoryId: string): boolean {
   return SECURITY_ADVISORY_REGEX.test(advisoryId.trim());
 }

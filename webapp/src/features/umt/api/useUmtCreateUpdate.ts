@@ -39,10 +39,10 @@ export function useUmtCreateUpdate() {
   });
 }
 
-// Legacy's own client-side duplicate pre-check: not a dedicated backend
-// endpoint, just the same paginated search the Updates list already uses,
-// filtered by case ID. A one-shot on-submit check, so this is a mutation
-// (not useUmtUpdates' live query) even though it's a GET-shaped search POST.
+// Client-side duplicate pre-check: not a dedicated backend endpoint, just
+// the same paginated search the Updates list already uses, filtered by
+// case ID. A one-shot on-submit check, so this is a mutation (not
+// useUmtUpdates' live query) even though it's a GET-shaped search POST.
 export function useUmtCheckDuplicateUpdatesByCaseId() {
   const getAccessToken = useAccessToken();
 

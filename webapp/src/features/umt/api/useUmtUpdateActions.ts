@@ -20,13 +20,13 @@ import { umtServiceUrls } from "@config/apiConfig";
 import { useAccessToken } from "@hooks/useAccessToken";
 import type { UmtUpdateSummary } from "./umtUpdates";
 
-// View-tab action row (restores legacy's Mark as Duplicate / On Hold /
-// Reopen, shown for Development/PRAnalyzed/ProductAnalyzed — Reopen reuses
-// the existing lifecycle-transition mutation instead of a dedicated one).
+// View-tab action row (Mark as Duplicate / On Hold / Reopen, shown for
+// Development/PRAnalyzed/ProductAnalyzed — Reopen reuses the existing
+// lifecycle-transition mutation instead of a dedicated one).
 
-// Moves an update to OnHold with a reason. Legacy submits only when the
-// reason is non-blank; the caller is expected to enforce that before
-// calling mutateAsync.
+// Moves an update to OnHold with a reason. Submits only when the reason is
+// non-blank; the caller is expected to enforce that before calling
+// mutateAsync.
 export function useUmtOnHoldUpdate(id: string) {
   const getAccessToken = useAccessToken();
   const queryClient = useQueryClient();
@@ -46,9 +46,9 @@ export function useUmtOnHoldUpdate(id: string) {
   });
 }
 
-// Records a Duplicate dependency from this update to another. Legacy fetches
-// the target update first (surfacing an error if it doesn't exist) before
-// posting the dependency — this mirrors that two-step validation.
+// Records a Duplicate dependency from this update to another. Fetches the
+// target update first (surfacing an error if it doesn't exist) before
+// posting the dependency.
 export function useUmtMarkAsDuplicate(id: string) {
   const getAccessToken = useAccessToken();
   const queryClient = useQueryClient();
@@ -71,8 +71,7 @@ export function useUmtMarkAsDuplicate(id: string) {
 
 // The View tab's three editable link-list sections (Public GitHub Issues,
 // Public Pull Requests, Integration Test Pull Requests) each replace their
-// whole list in one POST, matching legacy's saveIssues/addPublicPullRequests/
-// addTestPullRequests.
+// whole list in one POST.
 function useUmtReplaceLinkList(url: string) {
   const getAccessToken = useAccessToken();
   const queryClient = useQueryClient();

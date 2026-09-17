@@ -5,9 +5,9 @@
 // in compliance with the License. You may obtain a copy at
 // http://www.apache.org/licenses/LICENSE-2.0
 
-// Legacy validates each public pull request as any valid URL (yup's .url()),
-// not specifically a GitHub PR link like PR Analysis's GITHUB_PR_REGEX, so
-// this is a plain URL check, not a reuse of that regex.
+// Each public pull request is validated as any valid URL, not specifically a
+// GitHub PR link like PR Analysis's GITHUB_PR_REGEX, so this is a plain URL
+// check, not a reuse of that regex.
 export function isValidHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);

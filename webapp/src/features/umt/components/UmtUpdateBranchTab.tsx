@@ -343,7 +343,6 @@ function BranchGrid({
         columnHeaderHeight={40}
         columns={columns}
         columnVisibilityModel={columnVisibilityModel}
-        disableColumnResize
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter

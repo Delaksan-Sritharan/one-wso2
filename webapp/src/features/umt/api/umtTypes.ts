@@ -65,8 +65,7 @@ export type UmtRole = keyof typeof UMT_ROLE_ID;
 // The update's overall workflow variant, from GET /update/{id}. Drives which
 // steps the Edit tab's stepper shows (e.g. SecurityUpdateLifecycle adds a
 // Security Advisory step; CloudSupportLifecycle replaces the whole stepper
-// with a 2-step Development/Released flow). Verified against the legacy
-// standalone UI's src/config/constant.ts.
+// with a 2-step Development/Released flow).
 export type UmtLifecycle =
   | "UpdateLifecycle"
   | "SecurityUpdateLifecycle"
@@ -74,8 +73,7 @@ export type UmtLifecycle =
   | "HotFixLifecycle";
 
 // The update's current position within its lifecycle, from GET /update/{id}.
-// Drives which Edit-tab step is active. Verified against the legacy
-// standalone UI's src/config/constant.ts.
+// Drives which Edit-tab step is active.
 export type UmtLifecycleState =
   | "Development"
   | "PRAnalyzed"

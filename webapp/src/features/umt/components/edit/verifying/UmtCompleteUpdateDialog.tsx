@@ -33,10 +33,10 @@ import type { UmtUpdateSummary } from "../../../api/umtUpdates";
 import { useUmtCompleteUpdate } from "../../../api/useUmtVerifying";
 import { isCompleteUpdateValid } from "../../../lib/umtVerifying";
 
-// Legacy's CompleteUpdateForm.tsx: existing public PRs are shown disabled,
-// new ones can be appended, and the update completes with either at least
-// one non-blank PR or a reason to skip one — never both. This is the only
-// way an update ever reaches Completed.
+// Existing public PRs are shown disabled, new ones can be appended, and the
+// update completes with either at least one non-blank PR or a reason to
+// skip one — never both. This is the only way an update ever reaches
+// Completed.
 export default function UmtCompleteUpdateDialog({
   id,
   update,

@@ -22,12 +22,11 @@ import { useUmtPullRequestAnalysis } from "../../../api/useUmtUpdateViewData";
 
 const { DataGrid: DataGridComponent } = DataGrid;
 
-// Legacy's ManualFileApproval.tsx is a read-only review of the additional
-// files PR Analysis found but couldn't confirm belong in the product pack —
-// there's no dedicated "approve" endpoint. The shell's shared Proceed bar
-// (already wired: real transition, "Approve and Proceed" label, role-gated to
-// UMT_ADMIN/PRODUCT_LEAD) is what actually promotes the update; this
-// component only needs to show what's being approved.
+// A read-only review of the additional files PR Analysis found but couldn't
+// confirm belong in the product pack — there's no dedicated "approve"
+// endpoint. The shell's shared Proceed bar (real transition, "Approve and
+// Proceed" label, role-gated to UMT_ADMIN/PRODUCT_LEAD) is what actually
+// promotes the update; this component only needs to show what's being approved.
 export default function UmtFileApprovalStep({ id, update }: { id: string; update: UmtUpdateSummary }) {
   const gate = useUmtGate();
   const pullRequestAnalysis = useUmtPullRequestAnalysis(id, update.lifecycleState);
@@ -75,7 +74,6 @@ export default function UmtFileApprovalStep({ id, update }: { id: string; update
           autoHeight
           columnHeaderHeight={40}
           disableColumnMenu
-          disableColumnResize
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           hideFooter

@@ -44,8 +44,7 @@ import { umtProductHasDescriptionInstruction } from "../../lib/umtDescriptionIns
 
 const { DataGrid: DataGridComponent } = DataGrid;
 
-// Verification/approval documentation links, from the legacy standalone UI's
-// config/constant.ts (LINK_DESCRIPTION / BEHAVIOR_CHANGE_APPROVAL_LINK).
+// Verification/approval documentation links.
 const DESCRIPTION_DOC_LINK = "https://sites.google.com/wso2.com/updatemanagertool/home#h.6kt0o1wzf1y1";
 const BEHAVIOR_CHANGE_APPROVAL_LINK = "https://sites.google.com/wso2.com/updatemanagertool/home#h.g836jj6cxa2r";
 
@@ -69,12 +68,11 @@ function toRow(product: ProductWithId): DescriptionInstructionRow {
   };
 }
 
-// Shared by the Description and Instruction step and the Validate step: legacy
-// duplicates this entire page a second time (with worse bugs) inside
-// Validate.tsx, but it's the exact same products/description/instruction/
+// Shared by the Description and Instruction step and the Validate step: both
+// steps operate on the exact same products/description/instruction/
 // behavior-change data and the exact same two backend calls
-// (PUT /products/details, PUT /update/{id}), so this port mounts one shared
-// component from both step wrappers instead of reproducing the duplicate.
+// (PUT /products/details, PUT /update/{id}), so both step wrappers mount
+// this one component instead of duplicating it.
 export default function UmtDescriptionInstructionForm({
   id,
   update,
@@ -330,7 +328,6 @@ export default function UmtDescriptionInstructionForm({
           columnHeaderHeight={40}
           columns={columns}
           disableColumnMenu
-          disableColumnResize
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           getRowId={(row: DescriptionInstructionRow) => row.productId}

@@ -47,10 +47,10 @@ export function umtStagingRowIsComplete(record: UmtStagingTestResultRecord): boo
 }
 
 // True when lifecycleState has reached Staging AND every persisted row is
-// complete — mirrors legacy's two-part real Proceed gate exactly (an
-// environment-ready signal from the backend, plus a human-reviewed-every-row
-// check). Vacuously true for an empty/null/undefined record list once
-// Staging is reached (nothing to review); false for every other state.
+// complete: an environment-ready signal from the backend, plus a
+// human-reviewed-every-row check. Vacuously true for an empty/null/undefined
+// record list once Staging is reached (nothing to review); false for every
+// other state.
 export function isTestingComplete(
   lifecycleState: string | null | undefined,
   records: UmtStagingTestResultRecord[] | null | undefined,
@@ -59,10 +59,10 @@ export function isTestingComplete(
   return (records ?? []).every(umtStagingRowIsComplete);
 }
 
-// Legacy's getDotStyles palette for the Automated Test Result indicator:
-// green while success, red on failure, blue while the Jenkins build is still
-// running, grey otherwise/unknown. Returned as an MUI theme color path
-// (ready for an sx `bgcolor`), not a bare palette key.
+// Color for the Automated Test Result indicator: green while success, red
+// on failure, blue while the Jenkins build is still running, grey
+// otherwise/unknown. Returned as an MUI theme color path (ready for an sx
+// `bgcolor`), not a bare palette key.
 export function umtAutomatedTestResultColor(value: string | null | undefined): string {
   switch ((value ?? "").toLowerCase()) {
     case "success":
@@ -76,7 +76,7 @@ export function umtAutomatedTestResultColor(value: string | null | undefined): s
   }
 }
 
-// Legacy renders the raw backend value "toCamelCase" (e.g. "not_built" ->
+// Renders the raw backend value in title case (e.g. "not_built" ->
 // "Not Built"). Values here are already lower_snake_case from the backend.
 export function umtAutomatedTestResultLabel(value: string | null | undefined): string {
   const trimmed = (value ?? "").trim();

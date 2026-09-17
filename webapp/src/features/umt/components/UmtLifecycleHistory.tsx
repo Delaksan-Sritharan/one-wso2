@@ -57,7 +57,6 @@ export default function UmtLifecycleHistory({ id }: { id: string }) {
         autoHeight
         columnHeaderHeight={40}
         columns={lifecycleColumns}
-        disableColumnResize
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter

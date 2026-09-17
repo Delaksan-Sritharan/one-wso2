@@ -64,12 +64,10 @@ import {
 
 const { DatePicker, LocalizationProvider } = DatePickers;
 
-// Full port of the source Create Update form: product/version choices are
-// live metadata, and Create now actually submits POST /update, including the
-// same client-side duplicate-case pre-check legacy runs before submitting
-// (see UmtDuplicateUpdatesDialog below). The real backend's own duplicate
-// rejection is hotfix-specific and only ever surfaces as an error from the
-// create call itself; there is no separate pre-check endpoint.
+// Create submits POST /update, and first runs a client-side duplicate-case
+// pre-check (see UmtDuplicateUpdatesDialog below). The backend's own
+// duplicate rejection is hotfix-specific and only ever surfaces as an error
+// from the create call itself; there is no separate pre-check endpoint.
 export default function UmtCreateUpdateDialog({
   open,
   onClose,
@@ -149,9 +147,9 @@ export default function UmtCreateUpdateDialog({
   };
   const isFormValid = isCreateUpdateFormValid(formValues);
 
-  // Per-field messages mirroring legacy's yup schema, surfaced only once a
-  // date is present (a blank/invalid field is already covered by the
-  // DatePicker's own required/invalid state).
+  // Per-field validation messages, surfaced only once a date is present (a
+  // blank/invalid field is already covered by the DatePicker's own
+  // required/invalid state).
   const isValidDate = (date: Date | null): date is Date => date !== null && !Number.isNaN(date.getTime());
   const bestCaseEstimateError =
     isValidDate(bestCaseEstimate) && !isValidEstimateDate(bestCaseEstimate, isHotfix)
@@ -176,9 +174,9 @@ export default function UmtCreateUpdateDialog({
   const isCreating = createUpdate.isPending;
   const isBusy = isChecking || isCreating;
 
-  // Shared by handleClose and the Hotfix toggle: legacy resets all three
-  // estimates to next-Thursday/+7/+14 whenever Hotfix turns off, so a date
-  // typed or picked while Hotfix allowed any day can't be left violating the
+  // Shared by handleClose and the Hotfix toggle: resets all three estimates
+  // to next-Thursday/+7/+14 whenever Hotfix turns off, so a date typed or
+  // picked while Hotfix allowed any day can't be left violating the
   // Thursday rule.
   function resetEstimatesToNextThursday() {
     const nextEstimate = nextThursday();
@@ -261,11 +259,6 @@ export default function UmtCreateUpdateDialog({
       </DialogTitle>
 
       <DialogContent dividers>
-        <Alert severity="info" sx={{ mb: 3 }}>
-          This form previews the Create Update workflow. Submitting isn&apos;t wired up
-          yet. Create will show an unavailable notice instead of creating an update.
-        </Alert>
-
         {meta.isError && (
           <ErrorNotice
             error={meta.error}
@@ -507,11 +500,11 @@ export default function UmtCreateUpdateDialog({
   );
 }
 
-// Mirrors legacy's own client-side duplicate pre-check: a confirm dialog
-// listing existing updates for the same case ID, letting the user proceed
-// anyway or go back and edit. Not a real backend constraint by itself — the
-// backend's own duplicate rejection (hotfix-specific) only ever surfaces as
-// an error from the create call, surfaced via submitError instead.
+// A confirm dialog listing existing updates for the same case ID, letting
+// the user proceed anyway or go back and edit. Not a real backend
+// constraint by itself — the backend's own duplicate rejection
+// (hotfix-specific) only ever surfaces as an error from the create call,
+// surfaced via submitError instead.
 function UmtDuplicateUpdatesDialog({
   open,
   updates,

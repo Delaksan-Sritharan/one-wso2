@@ -17,9 +17,8 @@
 import type { UmtUpdateProduct } from "../api/umtUpdates";
 
 // A single product's persisted Test PR / Ignore Test Reason already
-// satisfies Integration Tests' own completeness rule (mirrors legacy's
-// isProceedValid fallback-to-saved-state branch): a non-blank Test PR, OR a
-// non-blank Ignore Test Reason.
+// satisfies Integration Tests' own completeness rule: a non-blank Test PR,
+// OR a non-blank Ignore Test Reason.
 export function umtProductHasIntegrationTestInfo(product: UmtUpdateProduct): boolean {
   return Boolean(product.testPr?.trim()) || Boolean(product.ignoreTestReason?.trim());
 }
@@ -28,10 +27,8 @@ export function umtProductHasIntegrationTestInfo(product: UmtUpdateProduct): boo
 // containerized update, a non-blank Helm Chart Tag (read from the first
 // product, since the backend repeats one shared value across every row);
 // otherwise every product must satisfy umtProductHasIntegrationTestInfo.
-// Vacuously true for an empty/absent product list in both branches — mirrors
-// legacy's isProceedValid callers (products.every/products.some), which
-// never evaluate the Helm Chart Tag at all when there are no products yet,
-// and mirrors isDescriptionInstructionComplete's same convention.
+// Vacuously true for an empty/absent product list in both branches, since
+// the Helm Chart Tag is never evaluated when there are no products yet.
 export function isIntegrationTestsComplete(
   products: UmtUpdateProduct[] | null | undefined,
   isContainerizedUpdate: boolean,
@@ -47,10 +44,9 @@ export interface UmtIntegrationTestDraftRow {
   ignoreReason: string;
 }
 
-// Mirrors legacy's own Submit-button disable rule: blocked while there are
-// no unsaved edits, or (containerized) the Helm Chart Tag draft is blank, or
-// (non-containerized) any row is neither a non-blank Test PR nor an ignored
-// row with a non-blank reason.
+// Submit is blocked while there are no unsaved edits, or (containerized) the
+// Helm Chart Tag draft is blank, or (non-containerized) any row is neither a
+// non-blank Test PR nor an ignored row with a non-blank reason.
 export function isIntegrationTestsSaveDisabled(params: {
   isDirty: boolean;
   isContainerizedUpdate: boolean;

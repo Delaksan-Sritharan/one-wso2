@@ -22,12 +22,10 @@ export interface UmtDemoteAction {
   color?: "error";
 }
 
-// Mirrors legacy's 10 demote/reopen buttons (update-edit-view/index.tsx),
-// confirmed one-by-one against source rather than inferred: none of them has
-// its own disabled condition or confirmation dialog in legacy, so neither
-// does this. Legacy's numeric-activeStep conditions (further split by
-// security/non-security lifecycle) collapse onto this port's step-id model,
-// since testing/validate already cover both lifecycle variants uniformly.
+// None of these demote/reopen buttons has its own disabled condition or
+// confirmation dialog. The step-id model here covers both security and
+// non-security lifecycle variants uniformly, so testing/validate need no
+// separate branching for them.
 export function computeUmtDemoteActions(
   stepId: UmtEditStepId,
   lifecycleState: string | null | undefined,
@@ -38,8 +36,8 @@ export function computeUmtDemoteActions(
     case "product-analysis":
       return [{ label: "Demote to Development", targetLifecycleState: "Development" }];
     case "description-instruction":
-      // Legacy gates both of this step's demote buttons on !isHotfix, with no
-      // separate rule for the hotfix branch.
+      // Both of this step's demote buttons are gated on !isHotfix; there is
+      // no separate rule for the hotfix branch.
       return isHotfix
         ? []
         : [
@@ -47,9 +45,9 @@ export function computeUmtDemoteActions(
             { label: "Demote to Development", targetLifecycleState: "Development" },
           ];
     case "file-approval":
-      // Legacy gates this on isAdmin specifically (UMT_ADMIN role) - narrower
-      // than the Admin-or-Product-Lead gate on this step's own Proceed/approve
-      // action. Confirmed asymmetry in legacy, not a mistake to normalize away.
+      // Gated on isAdmin specifically (UMT_ADMIN role), narrower than the
+      // Admin-or-Product-Lead gate on this step's own Proceed/approve action.
+      // This asymmetry is intentional, not a bug.
       return isAdmin ? [{ label: "Demote to Staging", targetLifecycleState: "Staging" }] : [];
     case "testing":
     case "validate":

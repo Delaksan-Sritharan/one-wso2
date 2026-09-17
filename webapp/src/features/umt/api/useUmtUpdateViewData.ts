@@ -44,12 +44,11 @@ export function useUmtPullRequestAnalysis(
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const enabled =
     /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
-  // The legacy View page fetches this for every lifecycle state except
-  // Development. In particular, a missing lifecycle state must not suppress
-  // the request: the older UI still fetched and displayed its existing
-  // analysis rows in that case. The Edit tab's PR Analysis step is the
-  // exception: it's only ever active during Development, so it passes
-  // `alwaysEnabled` to fetch there too.
+  // The View tab fetches this for every lifecycle state except Development.
+  // A missing lifecycle state must not suppress the request: existing
+  // analysis rows should still display in that case. The Edit tab's PR
+  // Analysis step is the exception: it's only ever active during
+  // Development, so it passes `alwaysEnabled` to fetch there too.
   const analysisEnabled = enabled && (options?.alwaysEnabled || lifecycleState !== "Development");
 
   return useQuery<UmtPullRequestAnalysis>({
@@ -79,8 +78,8 @@ export function useUmtProductAnalysis(
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const enabled =
     /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
-  // The legacy View page fetches product analysis for every lifecycle state
-  // except Development, same as pull-request analysis above.
+  // The View tab fetches product analysis for every lifecycle state except
+  // Development, same as pull-request analysis above.
   const analysisEnabled = enabled && (options?.alwaysEnabled || lifecycleState !== "Development");
 
   return useQuery<UmtProductAnalysis>({

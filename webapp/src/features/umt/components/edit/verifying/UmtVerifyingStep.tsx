@@ -19,11 +19,9 @@ import type { UmtUpdateSummary } from "../../../api/umtUpdates";
 import UmtUpdateDetailsGrid from "../../UmtUpdateDetailsGrid";
 import UmtUpdateViewSections from "../../UmtUpdateViewSections";
 
-// Legacy's Verifying.tsx is, confirmed directly from source, a second
-// rendering of the View tab's own section components against the same data —
-// not a separate fetch or a separate display. This reuses the same two
-// components the View tab already mounts, always read-only, instead of
-// reproducing that duplicate.
+// Verifying is a read-only rendering of the same data shown in the View tab,
+// so this reuses the View tab's own section components instead of
+// duplicating them.
 export default function UmtVerifyingStep({ id, update }: { id: string; update: UmtUpdateSummary }) {
   return (
     <Stack spacing={3}>

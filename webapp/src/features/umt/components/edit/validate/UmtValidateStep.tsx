@@ -17,13 +17,10 @@
 import type { UmtUpdateSummary } from "../../../api/umtUpdates";
 import UmtDescriptionInstructionForm from "../UmtDescriptionInstructionForm";
 
-// Legacy's Validate.tsx duplicates the entire Description and Instruction page
-// (same products, same description/instruction/behavior-change fields, same
-// two backend calls) as a second, buggier copy — including an embedded
-// duplicate Security Advisory editor with no regex/existence validation. This
-// port reuses the shared form instead of reproducing that duplicate; the
-// dedicated Security Advisory step already covers advisories, so none is
-// rendered here.
+// Validate reuses the shared Description and Instruction form (same
+// products, same description/instruction/behavior-change fields, same two
+// backend calls); the dedicated Security Advisory step already covers
+// advisories, so none is rendered here.
 export default function UmtValidateStep({ id, update }: { id: string; update: UmtUpdateSummary }) {
   return <UmtDescriptionInstructionForm id={id} update={update} heading="Validate" />;
 }

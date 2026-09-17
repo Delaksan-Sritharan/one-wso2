@@ -37,8 +37,7 @@ export interface UmtSecurityAdvisory {
 }
 
 // Response shape from GET /update/validate-security-advisory/{id} — loosely
-// typed on the backend itself (legacy consumes it as `any`), so every field
-// here is optional.
+// typed on the backend itself, so every field here is optional.
 export interface UmtSecurityAdvisoryValidationResult {
   success?: boolean;
   status?: string;
@@ -102,9 +101,9 @@ export interface UmtFileOperation {
   operation?: string | null;
   downloadURL?: string | null;
   // Populated client-side only, for manually-added rows: the SVN location or
-  // GitHub raw URL the file came from (or blank for a direct upload). Legacy
-  // tracked this per row in local component state purely for display — it's
-  // not part of what the backend echoes back on `identifiedFileOperations`.
+  // GitHub raw URL the file came from (or blank for a direct upload). Kept
+  // in local state purely for display — it's not part of what the backend
+  // echoes back on `identifiedFileOperations`.
   sourceFilePath?: string | null;
 }
 
@@ -118,9 +117,9 @@ export interface UmtBundleInfoChange {
   jarName?: string | null;
   jarVersion?: string | null;
   relativeJarPath?: string | null;
-  // Named `entryType` on the wire (legacy's field name, verified against the
-  // backend contract) — not `changeType`. Sending the wrong key means the
-  // backend never receives the change type at all.
+  // Named `entryType` on the wire (verified against the backend contract) —
+  // not `changeType`. Sending the wrong key means the backend never
+  // receives the change type at all.
   entryType?: string | null;
 }
 
@@ -200,7 +199,7 @@ export interface UmtBehaviorChangeRequest {
 // Body for PUT /update/{id}/products/details from Integration Tests' own
 // save — a different key set than UmtProductDetailsRequest, sent to the
 // same endpoint. Always sends every key, zeroing whichever of
-// testPr/ignoreTestReason/helmChartTag don't apply, matching legacy.
+// testPr/ignoreTestReason/helmChartTag don't apply.
 export interface UmtProductIntegrationTestRequest {
   productId: string | number;
   description: string;
@@ -221,9 +220,8 @@ export interface UmtStagingTestResultRecord {
   manualTestResult?: string | null;
   manualTestComment?: string | null;
   // The Jenkins-driven result, distinct from the manualTestResult the user
-  // enters below it — legacy shows this as a colour-coded dot so the
-  // reviewer can see what the automated run concluded before entering their
-  // own verdict.
+  // enters below it — shown as a colour-coded dot so the reviewer can see
+  // what the automated run concluded before entering their own verdict.
   automatedTestResult?: string | null;
 }
 

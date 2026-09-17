@@ -88,7 +88,6 @@ const CLOUD_SUPPORT_STEPS: UmtEditStepDefinition[] = [
   { id: "cloud-released", label: "Released", proceedWired: false },
 ];
 
-// Mirrors the legacy standalone UI's `handleSteps` (update-edit-view/index.tsx).
 // Cloud Support replaces the whole stepper with its own 2-step flow. A
 // security update inserts Security Advisory right after Description and
 // Instruction; an update with unreviewed additional files (from PR analysis,
@@ -116,11 +115,10 @@ export function computeUmtEditSteps(
 
   // Validate is the last step of the shared Staging-state run (see
   // LIFECYCLE_STATE_TO_STEP's comment) only when File Approval isn't ahead of
-  // it — mirroring legacy's own `!hasAdditionalFileOperations` check on
-  // Validate's real transition. Unlike every other advancesLocallyToNextStep
-  // step, this can't be a static per-lifecycle flag: whether File Approval is
-  // present depends on this specific update's PR-analysis result, not its
-  // lifecycle alone.
+  // it, i.e. only when `!hasAdditionalFileOperations`. Unlike every other
+  // advancesLocallyToNextStep step, this can't be a static per-lifecycle
+  // flag: whether File Approval is present depends on this specific update's
+  // PR-analysis result, not its lifecycle alone.
   const validateStep = steps.find((step) => step.id === "validate");
   if (validateStep) {
     validateStep.advancesLocallyToNextStep = steps.some((step) => step.id === "file-approval");
@@ -131,7 +129,7 @@ export function computeUmtEditSteps(
 
 // (additionalFileOperations?.length ?? 0) > 0 OR lifecycleState is already
 // WaitingFileApproval — the latter forces the File Approval step into the
-// list even before/without a fresh PR-analysis result, matching legacy.
+// list even before/without a fresh PR-analysis result.
 export function umtHasAdditionalFileOperations(
   pullRequestAnalysis: UmtPullRequestAnalysis | null | undefined,
   lifecycleState: string | null | undefined,
@@ -143,26 +141,24 @@ export function umtHasAdditionalFileOperations(
 }
 
 // Backend lifecycleState -> step id, for the normal/security workflows.
-// ProductAnalyzed and the Staging-state family each cover a run of legacy
+// ProductAnalyzed and the Staging-state family each cover a run of several
 // steps that share one backend state (Description-and-Instruction, and for
 // SecurityUpdateLifecycle updates also Security Advisory, both under
 // ProductAnalyzed before Integration Tests; Testing/Validate under the
-// Staging family); this port defaults each ambiguous state to the first step
-// of its run, then lets the shell (UmtUpdateEditTab.tsx) track a local,
-// non-persisted step-position override to move within it — every step but
-// the last in the run only advances that local override
-// (advancesLocallyToNextStep), and the real backend transition fires only
-// once the LAST step in the run (Integration Tests for the ProductAnalyzed
-// run; Validate, for the Staging run — unless File Approval is also present,
-// in which case File Approval is the true last step and Validate is local-only
-// too, see computeUmtEditSteps) has its own Proceed clicked, matching
-// legacy's actual sequencing exactly. Validate has no entry in this map, same
-// as Integration Tests and Security Advisory: it's only ever reached via the
-// local override from Testing's Proceed, never restored directly from a
-// backend lifecycleState on reload.
-// TestingEnvironmentRequested/Created/Failed have no mapping in legacy at all
-// (a latent bug there); this port deliberately maps all three to "testing"
-// instead of leaving the step stuck at its default.
+// Staging family); each ambiguous state defaults to the first step of its
+// run, then the shell (UmtUpdateEditTab.tsx) tracks a local, non-persisted
+// step-position override to move within it — every step but the last in the
+// run only advances that local override (advancesLocallyToNextStep), and the
+// real backend transition fires only once the LAST step in the run
+// (Integration Tests for the ProductAnalyzed run; Validate, for the Staging
+// run — unless File Approval is also present, in which case File Approval is
+// the true last step and Validate is local-only too, see
+// computeUmtEditSteps) has its own Proceed clicked. Validate has no entry in
+// this map, same as Integration Tests and Security Advisory: it's only ever
+// reached via the local override from Testing's Proceed, never restored
+// directly from a backend lifecycleState on reload.
+// TestingEnvironmentRequested/Created/Failed all map to "testing" so the step
+// doesn't get stuck at its default.
 const LIFECYCLE_STATE_TO_STEP: Record<string, UmtEditStepId> = {
   Development: "pr-analysis",
   PRAnalyzed: "product-analysis",
@@ -214,8 +210,7 @@ export function umtActiveStepIndex(
 // of a shared lifecycleState. If the persisted override is *behind* the
 // backend-derived step instead (the update was promoted elsewhere, or by
 // someone else, while this browser still had an older step persisted for
-// it), the backend position must win, exactly as legacy re-derives its own
-// persisted activeStep from lifecycleState on every mount.
+// it), the backend position must win.
 export function resolveUmtEditActiveIndex(
   steps: UmtEditStepDefinition[],
   backendActiveIndex: number,

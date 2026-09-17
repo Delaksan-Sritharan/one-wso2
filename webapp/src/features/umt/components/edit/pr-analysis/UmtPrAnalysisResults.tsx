@@ -211,6 +211,9 @@ function DenseTable<Row>({
     flex: 1,
     headerName: column.label,
     minWidth: 160,
+    // A single-column table has nothing to resize against, so its header
+    // resize handle only misleads.
+    resizable: columns.length > 1,
     sortable: false,
     renderCell: (params) => (
       <Stack sx={{ justifyContent: "center", minHeight: "100%", py: 0.75, width: "100%" }}>
@@ -226,7 +229,6 @@ function DenseTable<Row>({
         columnHeaderHeight={40}
         columns={gridColumns}
         disableColumnMenu
-        disableColumnResize
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter

@@ -21,8 +21,8 @@ import { useAccessToken } from "@hooks/useAccessToken";
 import type { UmtProductAnalysisRequest, UmtUpdateProduct } from "./umtUpdates";
 
 // Modifies the update's product list, then resubmits the product-analysis
-// result — the two calls legacy's local "Analyze" button on this step makes
-// together (PUT .../products then PUT .../productAnalysis).
+// result — the "Analyze" action on this step makes both calls together
+// (PUT .../products then PUT .../productAnalysis).
 export function useUmtSaveProductAnalysis(id: string) {
   const getAccessToken = useAccessToken();
   const queryClient = useQueryClient();

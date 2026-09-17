@@ -75,10 +75,8 @@ export function useUmtPrAnalysisStatus(
     queryFn: async () => {
       // Read the cached status *before* this fetch overwrites it, so we can
       // tell a fresh QUEUED/PROCESSING -> COMPLETED transition (which needs a
-      // results refetch, mirroring legacy's one-shot getPrAnalysisInformation
-      // once PullRequestAnalysisStatus reaches COMPLETED) apart from a mount
-      // that already finds the status COMPLETED (nothing changed, no need to
-      // refetch results again).
+      // results refetch) apart from a mount that already finds the status
+      // COMPLETED (nothing changed, no need to refetch results again).
       const previousStatus = queryClient.getQueryData<string>(queryKey);
       const status = await fetchPrAnalysisStatus(
         umtServiceUrls.updatePullRequestAnalysisStatus(id),
@@ -116,13 +114,11 @@ export function useUmtStartPullRequestAnalysis(id: string) {
   });
 }
 
-// PR Analysis's Proceed: legacy sends this as two calls together — promote
-// to PRAnalyzed, then start product analysis — and reloads the page 5s
-// later to pick up results. This port invalidates the relevant queries
-// instead of reloading. `lifecycleState: "PRAnalyzed"` is hardcoded here
-// deliberately, matching legacy exactly: unlike most later transitions,
-// which send the backend's own promoteStages[0], this one legacy also
-// hardcodes, since it's the fixed first step out of Development.
+// PR Analysis's Proceed sends two calls together — promote to PRAnalyzed,
+// then start product analysis — then invalidates the relevant queries to
+// pick up results. `lifecycleState: "PRAnalyzed"` is hardcoded here
+// (rather than sent from the backend's promoteStages[0], as most later
+// transitions do) since it's the fixed first step out of Development.
 export function useUmtProceedFromPrAnalysis(id: string) {
   const getAccessToken = useAccessToken();
   const queryClient = useQueryClient();

@@ -141,12 +141,12 @@ export default function UmtProductAnalysisStep({ id, update }: { id: string; upd
       );
   }, [selectedProductName, meta.data, existingProductVersions]);
 
-  // Scoped to the product currently targeted by "Add File to Product" —
-  // matching legacy, which only excludes files already added *to that
-  // product*. A global exclusion (every applicable product's files, plus
-  // every local addition) would wrongly stop the same file from being added
-  // to a second partially-applicable product, which is the normal case when
-  // one file belongs in several product packs.
+  // Scoped to the product currently targeted by "Add File to Product",
+  // excluding only files already added *to that product*. A global exclusion
+  // (every applicable product's files, plus every local addition) would
+  // wrongly stop the same file from being added to a second
+  // partially-applicable product, which is the normal case when one file
+  // belongs in several product packs.
   const targetProductFileSet = useMemo(() => {
     if (!addFileTarget) return new Set<string | null | undefined>();
     const key = productKey(addFileTarget.productName, addFileTarget.baseVersion);
@@ -201,9 +201,9 @@ export default function UmtProductAnalysisStep({ id, update }: { id: string; upd
 
   async function handleAnalyze() {
     // Preserves each applicable product's existing identifiedFiles, merging
-    // in this session's newly-added rows — legacy rebuilds this list purely
-    // from the newly-added rows, silently dropping every pre-existing file
-    // for a product the moment one new file is added to it.
+    // in this session's newly-added rows rather than replacing the list, so
+    // pre-existing files for a product are never dropped when a new file is
+    // added to it.
     const mergedApplicableProducts: UmtProductAnalysisItem[] = applicableProducts.map((product) => {
       const key = productKey(product.productName, product.baseVersion);
       const added = applicableProductRows[key] ?? [];
@@ -356,7 +356,6 @@ export default function UmtProductAnalysisStep({ id, update }: { id: string; upd
             autoHeight
             columnHeaderHeight={40}
             disableColumnMenu
-            disableColumnResize
             disableRowSelectionOnClick
             getRowHeight={() => "auto"}
             getRowId={(row: UmtUpdateProduct) => productKey(row.product?.name, row.product?.version)}
@@ -609,7 +608,6 @@ function FileTable({ rows }: { rows: UmtFileOperation[] }) {
         columnHeaderHeight={40}
         columns={gridColumns}
         disableColumnMenu
-        disableColumnResize
         disableRowSelectionOnClick
         getRowHeight={() => "auto"}
         hideFooter
