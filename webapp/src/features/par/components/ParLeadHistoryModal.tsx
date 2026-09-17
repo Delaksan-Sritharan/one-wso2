@@ -126,7 +126,7 @@ export default function ParLeadHistoryModal({
   // "No record" wording stays deliberately vague: the backend can't tell "no
   // rating exists for this cycle" apart from a genuine fetch error here.
   const realCycleNotAvailable = isRealCycle && (rating.isError || reviews.isError || (rating.isSuccess && !rating.data));
-  const legacyCycleNotAvailable = isLegacyCycle && !legacyHistory.isLoading && !selectedLegacyRecord;
+  const legacyCycleNotAvailable = isLegacyCycle && legacyHistory.isSuccess && !selectedLegacyRecord;
 
   const showRealDetails = isRealCycle && rating.isSuccess && Boolean(rating.data) && reviews.isSuccess;
   const showLegacyDetails = isLegacyCycle && Boolean(selectedLegacyRecord);
@@ -163,6 +163,12 @@ export default function ParLeadHistoryModal({
           {realCycles.isError && (
             <ErrorNotice error={realCycles.error} onRetry={() => realCycles.refetch()} retrying={realCycles.isFetching}>
               Couldn't load past PAR cycles.
+            </ErrorNotice>
+          )}
+
+          {isLegacyCycle && legacyHistory.isError && (
+            <ErrorNotice error={legacyHistory.error} onRetry={() => legacyHistory.refetch()} retrying={legacyHistory.isFetching}>
+              Couldn't load this employee's legacy PAR history.
             </ErrorNotice>
           )}
 
