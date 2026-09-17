@@ -23,41 +23,46 @@
 // mutation itself. That keeps each PATCH independently retryable/observable
 // and the "how many groups" question entirely a caller concern.
 //
+// Neither mutation invalidates the user-groups query itself — deliberately.
+// EmailGroupsPage's handleConfirm is the ONLY caller of either hook (single-
+// row and bulk actions both go through it), and it awaits each `mutateAsync`
+// in the batch sequentially before moving to the next group. An `onSuccess`
+// invalidate here would therefore refire the shared query after EVERY group
+// in a batch, not once at the end — exactly the "refresh everything only
+// once the whole batch had landed" behaviour this comment already promised
+// but the code didn't keep. The page invalidates once, after its loop.
+//
 // No retry: a 401/403 or a malformed group name is a final answer, not a
 // transient one, and this is a caller-initiated write — retrying it silently
 // risks a duplicate attempt against a backend with no idempotency key.
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { authedPatch } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { emailGroupsServiceUrls } from "@config/apiConfig";
 import { useAsgardeoSub } from "@hooks/useAsgardeoSub";
 import type { GroupSubscriptionPayload } from "./emailGroupTypes";
 
-/** The user-groups query key for the signed-in subject. */
-function useUserGroupsKey(): unknown[] {
+/**
+ * The user-groups query key for the signed-in subject. Exported so the page
+ * can invalidate it itself, once, after a whole confirm batch completes.
+ */
+export function useUserGroupsKey(): unknown[] {
   const { state } = useAsgardeoSub();
   return ["email-groups-user", state.status === "ready" ? state.sub : undefined];
 }
 
 export function useSubscribeToGroup() {
   const getAccessToken = useAccessToken();
-  const qc = useQueryClient();
-  const userGroupsKey = useUserGroupsKey();
   return useMutation<void, Error, GroupSubscriptionPayload>({
     mutationFn: async (payload) => {
       await authedPatch<unknown>(emailGroupsServiceUrls.subscribe, await getAccessToken(), payload);
-    },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: userGroupsKey });
     },
   });
 }
 
 export function useUnsubscribeFromGroup() {
   const getAccessToken = useAccessToken();
-  const qc = useQueryClient();
-  const userGroupsKey = useUserGroupsKey();
   return useMutation<void, Error, GroupSubscriptionPayload>({
     mutationFn: async (payload) => {
       await authedPatch<unknown>(
@@ -65,9 +70,6 @@ export function useUnsubscribeFromGroup() {
         await getAccessToken(),
         payload,
       );
-    },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: userGroupsKey });
     },
   });
 }

@@ -60,16 +60,23 @@ export default function EmailSignaturePage() {
   // from the Me profile page. Re-running the prefill on that object-identity
   // change would silently overwrite a name the person had already edited by
   // hand — the exact thing this comment used to promise wouldn't happen.
+  //
+  // The same protection is needed within this ONE prefill too: the profile
+  // fetch is a real network round trip, so someone can start typing before
+  // it resolves. `prev.name || name` (not `name || prev.name`) means
+  // whatever they've already typed wins over the fetched value — a field
+  // is only ever filled in from the profile while it's still blank.
   const [hasPrefilled, setHasPrefilled] = useState(false);
   if (userInfo.data && !hasPrefilled) {
     setHasPrefilled(true);
-    const { firstName, lastName, designation } = userInfo.data;
+    const { firstName, lastName } = userInfo.data;
+    const designation = userInfo.data.designation ?? "";
     const name = [firstName, lastName].filter(Boolean).join(" ").trim();
     if (name || designation) {
       setData((prev) => ({
         ...prev,
-        name: name || prev.name,
-        designation: designation || prev.designation,
+        name: prev.name || name,
+        designation: prev.designation || designation,
       }));
     }
   }

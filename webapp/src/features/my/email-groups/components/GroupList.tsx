@@ -62,13 +62,19 @@ function GroupRow({
     >
       {checkbox && (
         <ListItemIcon sx={{ minWidth: 32 }}>
+          {/* No `tabIndex={-1}` here — the row's own onClick above is a
+              mouse-only convenience layer (a plain ListItem has no keyboard
+              activation path of its own), so the checkbox has to stay in
+              tab order itself or a keyboard user has no way to select a row
+              at all. `aria-label` names which group it toggles, since the
+              adjacent name text isn't wired up as this input's label. */}
           <Checkbox
             edge="start"
             checked={checkbox.checked}
-            tabIndex={-1}
             disableRipple
             onChange={checkbox.onChange}
             onClick={(e) => e.stopPropagation()}
+            slotProps={{ input: { "aria-label": `Select ${name}` } }}
           />
         </ListItemIcon>
       )}

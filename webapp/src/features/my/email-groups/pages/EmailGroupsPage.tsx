@@ -15,6 +15,7 @@
 // under the License.
 
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Box, Card, Skeleton, Stack } from "@wso2/oxygen-ui";
 import { MailsIcon } from "@wso2/oxygen-ui-icons-react";
 import { useUserInfo } from "@api/useUserInfo";
@@ -29,7 +30,11 @@ import PublicGroupsActionBar from "../components/PublicGroupsActionBar";
 import ConfirmGroupActionDialog from "../components/ConfirmGroupActionDialog";
 import { MyGroupsList, PublicGroupList } from "../components/GroupList";
 import { isEmailGroupsBackendConfigured, useEmailGroupCatalog } from "../api/useEmailGroupsData";
-import { useSubscribeToGroup, useUnsubscribeFromGroup } from "../api/useEmailGroupMutations";
+import {
+  useSubscribeToGroup,
+  useUnsubscribeFromGroup,
+  useUserGroupsKey,
+} from "../api/useEmailGroupMutations";
 import {
   filterMyGroupRows,
   filterPublicGroupsBySearch,
@@ -78,6 +83,8 @@ export default function EmailGroupsPage() {
 
   const subscribe = useSubscribeToGroup();
   const unsubscribe = useUnsubscribeFromGroup();
+  const qc = useQueryClient();
+  const userGroupsKey = useUserGroupsKey();
   const { showSuccess, showError } = useNotifications();
 
   const myRows = useMemo(
@@ -130,6 +137,14 @@ export default function EmailGroupsPage() {
       } catch {
         failed.push(groupName);
       }
+    }
+    // Once, after the whole batch — not per group. The mutations themselves
+    // don't invalidate on their own success; this is the one place that
+    // does, so a 10-group batch refetches the shared list once instead of
+    // ten times. Skipped only when every single group in the batch failed,
+    // since nothing then actually changed for the list to reflect.
+    if (failed.length < groups.length) {
+      await qc.invalidateQueries({ queryKey: userGroupsKey });
     }
     setIsSubmitting(false);
     setConfirmState(null);
