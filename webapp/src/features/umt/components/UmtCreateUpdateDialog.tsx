@@ -37,6 +37,7 @@ import {
   TextField,
 } from "@wso2/oxygen-ui";
 import { XIcon } from "@wso2/oxygen-ui-icons-react";
+import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useUmtMeta } from "../api/useUmtMeta";
 import MaintenanceDialog from "./MaintenanceDialog";
 
@@ -142,6 +143,17 @@ export default function UmtCreateUpdateDialog({
           yet. Create will show an unavailable notice instead of creating an update.
         </Alert>
 
+        {meta.isError && (
+          <ErrorNotice
+            error={meta.error}
+            onRetry={() => void meta.refetch()}
+            retrying={meta.isFetching}
+            sx={{ mb: 3 }}
+          >
+            Couldn&apos;t load product and version options.
+          </ErrorNotice>
+        )}
+
         <Tabs
           value={isProactive ? "proactive" : "customer"}
           onChange={(_event, value) => setIsProactive(value === "proactive")}
@@ -210,6 +222,7 @@ export default function UmtCreateUpdateDialog({
             options={productOptions}
             value={product}
             loading={meta.isPending}
+            disabled={meta.isError}
             onChange={(_event, selected) => {
               setProduct(selected);
               setVersion(null);
@@ -235,7 +248,8 @@ export default function UmtCreateUpdateDialog({
             <Autocomplete
               options={versionOptions}
               value={version}
-              disabled={!product || isCloudSupportUpdate}
+              loading={meta.isPending}
+              disabled={!product || isCloudSupportUpdate || meta.isError}
               onChange={(_event, selected) => setVersion(selected)}
               renderInput={(params) => (
                 <TextField
