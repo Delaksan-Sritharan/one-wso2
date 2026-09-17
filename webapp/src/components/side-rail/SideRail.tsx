@@ -163,8 +163,10 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   // same as `isTeamLead` itself already does for the route guard.
   const parLeadPortalGate = useParIsTeamLead(userInfo.data?.workEmail, isPeopleOps);
 
-  // Both services are a Colombo-office perk, so the section as a whole is
-  // Sri-Lanka-only — see isSriLankaWorkLocation. `userInfo` is the SAME call
+  // Both services are a Colombo-office perk, so both screens are Sri-Lanka-only
+  // — see isSriLankaWorkLocation. They now sit in different perspectives (self
+  // service under Me, manage-on-behalf under People Ops), which is why the ids
+  // are gated by SUBSCRIPTION_ITEM_IDS rather than by where they appear. `userInfo` is the SAME call
   // `caps` above already makes (people-app's /user-info), so this piggybacks
   // on an existing fetch rather than adding one: no new request, just one more
   // field read off a response already in flight for every perspective. While
@@ -174,8 +176,9 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   // gate is never mistakenly satisfied just because its data hasn't landed
   // yet.
   //
-  // Beyond that: the group and the self-service screen are open to every Sri
-  // Lanka employee — opting yourself in and out is not an HR-team action.
+  // Beyond that: the self-service screen is open to every Sri Lanka employee —
+  // opting yourself in and out is not an HR-team action, which is why it needs
+  // no subscriptionGate fetch and works on Me where the gate is not enabled.
   // Only the manage-on-behalf screen ALSO needs a group, and it stays hidden
   // while that gate is still resolving too: showing it first and withdrawing
   // it a moment later reads as the rail flickering, and failing CLOSED is the

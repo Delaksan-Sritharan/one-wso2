@@ -308,7 +308,9 @@ export default function App() {
               into an explanation. Someone who types the URL gets a sentence
               telling them who to ask, not a blank page — and the backend
               refuses the calls regardless. */}
-          <Route path="people-ops/subscriptions" element={<MySubscriptionsPage />} />
+          {/* Self-service sits under Me; managing on someone's behalf stays
+              under People Ops. */}
+          <Route path="me/subscriptions" element={<MySubscriptionsPage />} />
           <Route
             path="people-ops/subscriptions/manage"
             element={<ManageSubscriptionsPage />}

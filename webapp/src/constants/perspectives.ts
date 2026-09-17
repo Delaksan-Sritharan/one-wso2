@@ -125,7 +125,7 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   // a leaf because the two screens answer to different people: everyone opts
   // themself in and out, and a much smaller set manages other employees.
   //
-  // Note what is NOT here: `requires: ["admin"]` on the Manage child. The
+  // Note what is NOT here: `requires: ["admin"]`. The
   // capability vocabulary `requires` speaks is people-app privilege numbers,
   // and these screens gate on the SUBSCRIPTION service's own Asgardeo groups
   // (commuteAdminGroup / lunchAdminGroup, whose names it publishes on
@@ -133,37 +133,15 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   // not a commute admin — so the rail asks useSubscriptionGate for these ids
   // instead, exactly as it does for Leave, Finance and Marketing Ops. See
   // SUBSCRIPTION_ITEM_IDS and the wiring in SideRail.
+  // Managing other people's subscriptions is an HR action. The self-service
+  // half moved to Me (see ME_SECTIONS) — a bare leaf now, not a group, since
+  // only one screen is left here.
   {
-    id: "people-subscriptions",
-    label: "Subscriptions",
+    id: "people-subscriptions-manage",
+    label: "Manage Subscriptions",
     icon: TicketIcon,
-    // NOT alwaysGroup. Most people hold exactly one visible child (their own
-    // subscriptions), and SideRail already collapses a single-child group to
-    // a plain leaf — so an ordinary employee gets one clickable "Subscriptions"
-    // row, not an accordion they have to open to find their only option. Once
-    // useSubscriptionGate marks the caller an admin, "Manage" becomes visible
-    // too and the very same section expands into a real group of two. Unlike
-    // Master Data below, this is never "about to grow" for a given viewer —
-    // it genuinely differs by WHO is looking, not by what has shipped yet,
-    // which is the case `alwaysGroup` exists to override.
-    description: "Opt in and out of PickMe Commute and LaaS.",
-    children: [
-      {
-        id: "people-subscriptions-mine",
-        label: "My subscriptions",
-        path: "/people-ops/subscriptions",
-      },
-      {
-        id: "people-subscriptions-manage",
-        // Short on purpose: this is a rail label, and the rail's nested-item
-        // slot is narrow enough that "Manage for employees" was landing as
-        // "Manage for employ…" with no way to read the rest. The full
-        // sentence lives on the page itself (ManageSubscriptionsPage's
-        // title and subtitle both spell out what it does).
-        label: "Manage",
-        path: "/people-ops/subscriptions/manage",
-      },
-    ],
+    path: "/people-ops/subscriptions/manage",
+    description: "Subscribe or unsubscribe an employee on their behalf.",
   },
   // par-app, ported one screen at a time — see docs/ported-apps/par-app.md.
   // `alwaysGroup` for the same reason Master Data below carries it: a named
@@ -252,16 +230,19 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
  * an admin screen the subscription service then 403s — and hide it from an
  * actual commute admin who is not a People Ops admin.
  *
- * Derived from the section above so it cannot fall out of step when a screen
- * is added, and exported from here so the definition and the list of ids that
- * need special handling stay in one file.
+ * Written out by hand, NOT derived from a section list. It used to be built by
+ * scanning PEOPLE_OPS_SECTIONS for the "people-subscriptions" group, which tied
+ * the gate to where the screens happened to sit in the rail: moving one to
+ * another perspective dropped its id out of this set, and SideRail then fell
+ * through to people-app capabilities — silently skipping the Sri Lanka check
+ * and showing the screen to everyone. A gate must not depend on menu placement.
+ *
+ * Add an id here when a subscription screen is added.
  */
-export const SUBSCRIPTION_ITEM_IDS: ReadonlySet<string> = new Set(
-  PEOPLE_OPS_SECTIONS.filter((s) => s.id === "people-subscriptions").flatMap((s) => [
-    s.id,
-    ...(s.children ?? []).map((c) => c.id),
-  ]),
-);
+export const SUBSCRIPTION_ITEM_IDS: ReadonlySet<string> = new Set([
+  "people-subscriptions-mine",
+  "people-subscriptions-manage",
+]);
 
 /**
  * The Lead Portal's own rail id, which the rail must route through
@@ -306,6 +287,20 @@ const MARKETING_OPS_SECTIONS: PerspectiveSection[] = [
 // (OPD/credit-card/expense — moved in from the retired Finance persona).
 const ME_SECTIONS: PerspectiveSection[] = [
   { id: "me-my-team", label: "My Team", icon: UsersRoundIcon, path: "/me/my-team", requires: ["lead"] },
+  // Opting yourself in and out is something you do for yourself, so it sits
+  // under Me. Managing it on someone else's behalf is an HR action and stays
+  // under People Ops.
+  //
+  // Still gated by SUBSCRIPTION_ITEM_IDS below — that set is written out by
+  // hand precisely so an item can move between perspectives without losing its
+  // gate. Sri-Lanka-only, like the manage screen: both services are a Colombo
+  // office perk.
+  {
+    id: "people-subscriptions-mine",
+    label: "My Subscriptions",
+    icon: TicketIcon,
+    path: "/me/subscriptions",
+  },
   ...appsToSections(ME_APPS),
   ...appsToSections(ME_FINANCE_APPS),
 ];
