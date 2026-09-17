@@ -29,6 +29,11 @@ window.config = {
   // publishes (there is no separate config key for them).
   // ONE_WSO2_SUBSCRIPTION_BACKEND_URL: "<your-subscription-app-backend-url>",
 
+  // digiops-infra email-group-manager backend base URL. Optional — when
+  // absent the Email Groups screen shows a not-connected state and makes no
+  // requests. See docs/ported-apps/email-group-manager.md for the contract.
+  // ONE_WSO2_EMAIL_GROUPS_BACKEND_URL: "<your-email-group-manager-backend-url>",
+
   // people-ops-suite people-app backend base URL. Same value as people-app's
   // REACT_APP_BACKEND_BASE_URL — usually a Choreo API gateway URL. Powers
   // the live My profile page (employee + personal info fetch).

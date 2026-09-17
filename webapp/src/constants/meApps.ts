@@ -19,7 +19,7 @@
 // Same App → items shape as @constants/financeApps; see
 // that file's header for the general rationale.
 
-import { TreePalmIcon, UtensilsIcon } from "@wso2/oxygen-ui-icons-react";
+import { MailsIcon, SignatureIcon, TreePalmIcon, UtensilsIcon } from "@wso2/oxygen-ui-icons-react";
 import type { MenuApp } from "@constants/appMenu";
 
 export const ME_APPS: readonly MenuApp[] = [
@@ -58,6 +58,43 @@ export const ME_APPS: readonly MenuApp[] = [
         label: "Home",
         desc: "View the cafeteria menu, submit feedback, order dinner.",
         path: "/me/menu",
+      },
+    ],
+  },
+  // Ported from the standalone Email Group Manager app
+  // (digiops-infra/apps/email-group-manager) — the mailing-list subscription
+  // half. One screen, so — like Menu above — this collapses to a single rail
+  // leaf rather than an expandable group. The same source app's second tab,
+  // an email-signature generator, is its own separate app below rather than
+  // a tab here: the two share no data and no backend.
+  {
+    key: "email-groups",
+    name: "Email Groups",
+    icon: MailsIcon,
+    purpose: "Subscribe to and manage Google Groups mailing lists.",
+    items: [
+      {
+        id: "email-groups-home",
+        label: "Home",
+        desc: "Browse the group directory and manage your subscriptions.",
+        path: "/me/email-groups",
+      },
+    ],
+  },
+  // The other half of the same source app. No backend of its own — it's a
+  // pure client-side HTML generator, prefilled from the people-app profile
+  // this webapp already fetches for every "Me" page.
+  {
+    key: "email-signature",
+    name: "Email Signature",
+    icon: SignatureIcon,
+    purpose: "Build a WSO2 email signature and copy it into your mail client.",
+    items: [
+      {
+        id: "email-signature-home",
+        label: "Home",
+        desc: "Fill in your details and copy the signature into your mail client.",
+        path: "/me/email-signature",
       },
     ],
   },
