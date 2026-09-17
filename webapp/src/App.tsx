@@ -103,6 +103,7 @@ import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
 import LegalPage from "@features/legal/pages/LegalPage";
+import NdaPage from "@features/legal/pages/NdaPage";
 import PartnersListPage from "@features/due-diligence/partners/pages/PartnersListPage";
 import PartnerPendingPage from "@features/due-diligence/partners/pages/PartnerPendingPage";
 import PartnerDashboardPage from "@features/due-diligence/partners/pages/PartnerDashboardPage";
@@ -415,6 +416,7 @@ export default function App() {
               Diligence, alongside Finance (see the finance/ routes below and
               DUE_DILIGENCE_APPS). */}
           <Route path="legal" element={<LegalPage />} />
+          <Route path="legal/nda" element={<NdaPage />} />
           {/* Due Diligence — ported from digiops-finance/apps/due_diligence's
               admin-app. Routes live OUTSIDE both the Finance and Legal path
               prefixes (same reason /settings does): a screen reachable from

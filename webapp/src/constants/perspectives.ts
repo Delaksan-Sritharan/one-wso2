@@ -20,7 +20,9 @@
 import { csmUrl, isCsmConfigured, isIsacConfigured, isacUrl } from "@config/apiConfig";
 import {
   CheckCheckIcon,
+  ClipboardListIcon,
   DatabaseIcon,
+  FileSignatureIcon,
   HouseIcon,
   LifeBuoyIcon,
   MegaphoneIcon,
@@ -338,7 +340,15 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     externallyGated: true,
     access: true,
     path: "/legal",
-    sections: [...appsToSections(DUE_DILIGENCE_APPS)],
+    sections: [
+      {
+        id: "legal-nda",
+        label: "NDA",
+        icon: FileSignatureIcon,
+        path: "/legal/nda",
+      },
+      ...appsToSections(DUE_DILIGENCE_APPS),
+    ],
   },
   // A separate application, opened in a new tab. `access` follows the URL being
   // configured: without one the tile stays in its unbuilt state rather than
@@ -374,6 +384,13 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     access: true,
     path: "/marketing-ops",
     sections: MARKETING_OPS_SECTIONS,
+  },
+  {
+    key: "tasks",
+    label: "Tasks",
+    icon: ClipboardListIcon,
+    access: true,
+    path: "/tasks",
   },
   // "Me" is the Home landing: the person's own profile plus everyday apps —
   // Leave, Menu, and the finance claims.

@@ -79,6 +79,16 @@ const viteConfig = defineConfig({
   envPrefix: ["ONE_WSO2_"],
   server: {
     port: 3000,
+    proxy: {
+      // Dev-only proxy: browser calls /legal-backend/* (same origin, no CORS)
+      // and Vite forwards to localhost:9090/*. In production, set
+      // ONE_WSO2_LEGAL_BACKEND_URL to the real backend URL in config.js.
+      "/legal-backend": {
+        target: "http://localhost:9090",
+        rewrite: (path) => path.replace(/^\/legal-backend/, ""),
+        changeOrigin: true,
+      },
+    },
   },
 });
 

@@ -785,6 +785,18 @@ export function isIsacConfigured(): boolean {
 //
 // Empty string = not configured, and the tile then stays in its unbuilt state
 // rather than becoming a link to nowhere.
+export const legalBackendUrl: string = (
+  window.config?.ONE_WSO2_LEGAL_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
+
+export function isLegalBackendConfigured(): boolean {
+  return Boolean(legalBackendUrl);
+}
+
+export const legalServiceUrls = {
+  customerSearch: `${legalBackendUrl}/customer-search`,
+};
+
 export const csmUrl: string = window.config?.ONE_WSO2_CSM_URL ?? "";
 
 export function isCsmConfigured(): boolean {

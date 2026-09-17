@@ -114,6 +114,8 @@ declare global {
       // build, AuthGuard treats the user as signed in without ever calling
       // Asgardeo. Ignored in production builds (see devBypassAuth below),
       // so a stray true in a prod config.js can't disable auth.
+      // Backend that serves the customer-search endpoint used by the NDA page.
+      ONE_WSO2_LEGAL_BACKEND_URL?: string;
       ONE_WSO2_DEV_BYPASS_AUTH?: boolean;
       // Features built but not yet released — see @config/previewFeatures.
       // Absent or false hides the feature, so a deployment that says nothing
