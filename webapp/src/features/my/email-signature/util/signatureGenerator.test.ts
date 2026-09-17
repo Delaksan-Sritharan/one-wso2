@@ -57,6 +57,17 @@ describe("generateSignatureHTML", () => {
     expect(html).toContain("Software Engineer, WSO2");
   });
 
+  it("treats a whitespace-only name the same as blank", () => {
+    const html = generateSignatureHTML(data({ name: "   ", designation: "Software Engineer" }));
+    expect(html).not.toContain('<span style="color: #000000 !important;"></span>');
+    expect(html).toContain("Software Engineer, WSO2");
+  });
+
+  it("treats a whitespace-only designation the same as blank", () => {
+    const html = generateSignatureHTML(data({ name: "Jane Doe", designation: "   " }));
+    expect(html).not.toContain(", WSO2");
+  });
+
   it("combines work and personal phone with a separator", () => {
     const html = generateSignatureHTML(
       data({ name: "Jane", workPhone: "+94 11 000 0000", personalPhone: "+94 77 000 0000" }),

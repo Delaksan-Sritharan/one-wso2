@@ -124,7 +124,11 @@ export function generateSignatureHTML(data: SignatureData): string {
               </td>
             </tr>
             ${
-              data.name
+              // Trimmed, matching hasSignatureContent's own gate — a
+              // whitespace-only value is "blank" there, so a row it lets
+              // through untrimmed would render as a bare bold gap (name) or
+              // ", WSO2" with nothing before it (designation).
+              data.name.trim()
                 ? `<tr>
               <td style="${textTd("font-size: 13px;font-weight: 700;")}">
                 <span style="color: #000000 !important;">${escapeHtml(data.name)}</span>
@@ -133,7 +137,7 @@ export function generateSignatureHTML(data: SignatureData): string {
                 : ""
             }
             ${
-              data.designation
+              data.designation.trim()
                 ? `<tr>
               <td style="${textTd("font-size: 12px;font-weight: 600;")}">
                 <span style="color: #000000 !important;">${escapeHtml(data.designation)}, WSO2</span>

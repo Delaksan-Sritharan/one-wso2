@@ -53,8 +53,11 @@ function useGroupNamesQuery(key: string, url: string) {
     // current on returning to the page — the app-wide client's
     // `refetchOnMount: false` would otherwise leave a stale membership list
     // showing after a subscribe/unsubscribe made from elsewhere (or from a
-    // second tab).
-    refetchOnMount: key === "email-groups-user",
+    // second tab). Has to be `"always"`, not `true`: with a 5-minute
+    // staleTime, `true` only refetches once the data is already stale, so a
+    // remount inside that window would still serve the pre-change cache —
+    // exactly the case this exists to prevent.
+    refetchOnMount: key === "email-groups-user" ? "always" : false,
     retry: emailGroupRetry,
   });
   return foldIdentityError(query, subState, retryIdentity);
@@ -84,18 +87,27 @@ export function useUserGroups() {
  * query keeps its own `isError`/`refetch` so the page can retry only the one
  * that actually failed.
  *
- * Gated on `ready` rather than `isPending` alone: a disabled query (the
- * ordinary state before identity resolves) sits at `isPending: true`
- * indefinitely — that never flips to `isFetching` on its own, since a
- * disabled query never fetches. If identity resolution itself stalls (the
- * SDK call neither resolves nor rejects) rather than erroring, `ready` never
- * becomes true and all three queries stay perpetually disabled — without
- * this guard `isLoading` would stay `true` forever too, leaving the page on
- * its skeleton with no error and no retry. Same shape as
- * `useOrgMasterData.ts`'s `ready && results.some((r) => r.isPending)`.
+ * True while identity itself is still resolving (`subState.status ===
+ * "loading"`) OR while the queries it gates are pending — NOT `ready &&
+ * isPending` alone. A disabled query (the ordinary state before identity
+ * resolves) sits at `isPending: true` indefinitely, so gating on `ready`
+ * alone to guard against a stalled identity resolution blanks the WHOLE
+ * loading window instead: `ready` stays false for the entire (ordinary,
+ * usually brief, but real) duration of the id-token decode, during which
+ * `catalog` is still `undefined` and no query has errored yet — every child
+ * on the page sits behind `{catalog && ...}`, so the content area rendered
+ * nothing at all on a normal cold load, not even a skeleton.
+ *
+ * Including the identity-loading state restores the skeleton for that
+ * ordinary case. It does NOT resolve a genuine permanent hang (the decode
+ * promise neither resolving nor rejecting, ever) — that is a pre-existing
+ * limitation of the shared `useAsgardeoSub` hook itself, used by every
+ * feature in this app, and not something this hook can route around; an
+ * identity resolution that actually *fails* still correctly falls through
+ * to the per-query error notices via `foldIdentityError`.
  */
 export function useEmailGroupCatalog() {
-  const { ready } = useEmailGroupsQueryBasis();
+  const { ready, subState } = useEmailGroupsQueryBasis();
   const defaultGroups = useDefaultGroups();
   const allGroups = useAllGroups();
   const userGroups = useUserGroups();
@@ -108,7 +120,8 @@ export function useEmailGroupCatalog() {
   return {
     catalog,
     isLoading:
-      ready && (defaultGroups.isPending || allGroups.isPending || userGroups.isPending),
+      subState.status === "loading" ||
+      (ready && (defaultGroups.isPending || allGroups.isPending || userGroups.isPending)),
     isFetching: defaultGroups.isFetching || allGroups.isFetching || userGroups.isFetching,
     defaultGroups,
     allGroups,

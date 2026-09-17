@@ -107,15 +107,21 @@ export default function EmailGroupsPage() {
     });
   };
 
+  // What's actually joinable right now, intersected with the raw selection —
+  // `selected` is never pruned when a search hides a checked row, or when a
+  // refetch drops a group out of the joinable list entirely (e.g. someone
+  // else subscribed to it from another tab). The bulk action and the count
+  // the toolbar shows both read from this SAME value, on purpose: computing
+  // them separately is how "2 selected" and an enabled button end up next
+  // to an action that silently does nothing (or acts on only one of them).
+  const visibleSelected = useMemo(
+    () => joinableGroups.filter((g) => selected.has(g.name)).map((g) => g.name),
+    [joinableGroups, selected],
+  );
+
   const openBulkSubscribe = () => {
-    // Narrowed to what's actually joinable right now, not the raw selection
-    // — `selected` is never pruned when a search hides a checked row, or
-    // when a refetch drops a group out of the joinable list entirely (e.g.
-    // someone else subscribed to it from another tab). Without this, a
-    // group that's no longer even on screen could still get PATCHed.
-    const visible = joinableGroups.filter((g) => selected.has(g.name)).map((g) => g.name);
-    if (visible.length === 0) return;
-    setConfirmState({ action: "subscribe", groups: visible });
+    if (visibleSelected.length === 0) return;
+    setConfirmState({ action: "subscribe", groups: visibleSelected });
   };
 
   const handleConfirm = async () => {
@@ -238,6 +244,8 @@ export default function EmailGroupsPage() {
                   rows={myRows}
                   onUnsubscribe={(name) => setConfirmState({ action: "unsubscribe", groups: [name] })}
                   showCategoryTag={categoryFilter === "all"}
+                  search={myGroupsSearch}
+                  categoryFilter={categoryFilter}
                 />
               </Card>
 
@@ -253,7 +261,7 @@ export default function EmailGroupsPage() {
                 />
               </Box>
               <PublicGroupsActionBar
-                selectedCount={selected.size}
+                selectedCount={visibleSelected.length}
                 onSubscribeSelected={openBulkSubscribe}
                 onClearSelection={() => setSelected(new Set())}
               />
@@ -263,6 +271,7 @@ export default function EmailGroupsPage() {
                   selected={selected}
                   onToggleSelect={toggleSelect}
                   onSubscribe={(name) => setConfirmState({ action: "subscribe", groups: [name] })}
+                  search={publicGroupsSearch}
                 />
               </Card>
             </>

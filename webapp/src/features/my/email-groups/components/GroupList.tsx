@@ -26,7 +26,7 @@ import {
 } from "@wso2/oxygen-ui";
 import { MailPlusIcon, MailXIcon } from "@wso2/oxygen-ui-icons-react";
 import type { ReactNode } from "react";
-import type { GroupCategory, MyGroupRow } from "../api/emailGroupTypes";
+import type { GroupCategory, GroupCategoryFilter, MyGroupRow } from "../api/emailGroupTypes";
 import { splitIntoColumns } from "../util/columns";
 
 /** Both lists' column count. */
@@ -170,6 +170,29 @@ const CATEGORY_LABEL: Record<GroupCategory, string> = {
 };
 
 /**
+ * What to say when a list is empty — distinguishing "your search matched
+ * nothing" (there's something to clear or widen) from "there's genuinely
+ * nothing here" (no search box would help). Blaming a search that doesn't
+ * exist — e.g. telling someone with zero private memberships to try a
+ * different search when the Private filter's search box is blank — reads as
+ * a bug, not a translation of the actual state.
+ */
+const MY_GROUPS_EMPTY_MESSAGE: Record<GroupCategoryFilter, string> = {
+  all: "You're not in any groups yet.",
+  default: "You're not in any default groups.",
+  public: "You haven't subscribed to any public groups yet.",
+  private: "You're not in any private groups.",
+};
+
+function myGroupsEmptyText(search: string, filter: GroupCategoryFilter): string {
+  return search.trim() ? "No groups match your search." : MY_GROUPS_EMPTY_MESSAGE[filter];
+}
+
+function publicGroupsEmptyText(search: string): string {
+  return search.trim() ? "No groups match your search." : "You've joined every public group.";
+}
+
+/**
  * "My Groups" — every group the caller is already subscribed to, tagged with
  * where it came from. Default and private rows are read-only; a public row
  * carries the one Unsubscribe action this page offers (the joinable
@@ -179,6 +202,8 @@ export function MyGroupsList({
   rows,
   onUnsubscribe,
   showCategoryTag,
+  search,
+  categoryFilter,
 }: {
   rows: readonly MyGroupRow[];
   onUnsubscribe: (name: string) => void;
@@ -190,8 +215,11 @@ export function MyGroupsList({
    * per row.
    */
   showCategoryTag: boolean;
+  /** Only used to pick the right empty-state wording — see myGroupsEmptyText. */
+  search: string;
+  categoryFilter: GroupCategoryFilter;
 }) {
-  if (rows.length === 0) return <EmptyRow text="No groups match your search." />;
+  if (rows.length === 0) return <EmptyRow text={myGroupsEmptyText(search, categoryFilter)} />;
   return (
     <GroupColumns
       items={rows}
@@ -232,13 +260,16 @@ export function PublicGroupList({
   selected,
   onToggleSelect,
   onSubscribe,
+  search,
 }: {
   groups: readonly { name: string }[];
   selected: ReadonlySet<string>;
   onToggleSelect: (name: string) => void;
   onSubscribe: (name: string) => void;
+  /** Only used to pick the right empty-state wording — see publicGroupsEmptyText. */
+  search: string;
 }) {
-  if (groups.length === 0) return <EmptyRow text="No groups match your search." />;
+  if (groups.length === 0) return <EmptyRow text={publicGroupsEmptyText(search)} />;
   return (
     <GroupColumns
       items={groups}
