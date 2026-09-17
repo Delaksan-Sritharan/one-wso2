@@ -1,0 +1,254 @@
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+export interface UmtUpdateProduct {
+  productId?: string | number | null;
+  product?: {
+    id?: string | number | null;
+    name?: string | null;
+    version?: string | null;
+  } | null;
+  description?: string | null;
+  instruction?: string | null;
+  testPr?: string | null;
+  ignoreTestReason?: string | null;
+  type?: string | null;
+}
+
+export interface UmtSecurityAdvisory {
+  securityAdvisoryName?: string | null;
+}
+
+export interface UmtUpdateSummary {
+  id: number;
+  caseId?: string | number | null;
+  wso2CaseId?: string | null;
+  jiraId?: string | null;
+  internalGitIssue?: string | null;
+  securityInternalGitIssue?: string | null;
+  products?: UmtUpdateProduct[] | null;
+  isHotfix?: boolean | null;
+  lifecycleState?: string | null;
+  assignedTo?: string | null;
+  developedBy?: string | null;
+  reporter?: string | null;
+  reportedDate?: string | null;
+  bestCaseEstimate?: string | null;
+  mostLikelyEstimate?: string | null;
+  worstCaseEstimate?: string | null;
+  issueType?: string | null;
+  lifecycle?: string | null;
+  securityAdvisories?: UmtSecurityAdvisory[] | null;
+  issues?: string[] | null;
+  publicPullRequests?: string[] | null;
+  testPullRequests?: string[] | null;
+  pullRequests?: string[] | null;
+  artifacts?: string[] | null;
+  lastUpdatedTimestamp?: string | null;
+  lastUpdatedUser?: string | null;
+  highlightInstructions?: number | null;
+  qaArtifactsLocation?: string | null;
+  watcherList?: string[] | null;
+  reason?: string | null;
+}
+
+export interface UmtFileOperation {
+  file?: string | null;
+  operation?: string | null;
+  downloadURL?: string | null;
+}
+
+export interface UmtPullRequestAnalysisItem {
+  pr?: string | null;
+  preferredVersion?: string | null;
+}
+
+export interface UmtPullRequestAnalysis {
+  pullRequests?: UmtPullRequestAnalysisItem[] | null;
+  identifiedFileOperations?: UmtFileOperation[] | null;
+  additionalFileOperations?: UmtFileOperation[] | null;
+}
+
+export interface UmtProductAnalysisItem {
+  productId?: string | number | null;
+  productName?: string | null;
+  baseVersion?: string | null;
+  identifiedFiles?: UmtFileOperation[] | null;
+}
+
+export interface UmtProductAnalysis {
+  compatibleProducts?: UmtProductAnalysisItem[] | null;
+  applicableProducts?: UmtProductAnalysisItem[] | null;
+}
+
+export interface UmtUpdateDependency {
+  from?: { id?: string | number | null } | null;
+  to?: { id?: string | number | null } | null;
+  type?: string | null;
+}
+
+export interface UmtHotfixInfo {
+  isSuccess?: boolean;
+  message?: string | null;
+  hotfixUrl?: string | null;
+  uploadUrl?: string | null;
+  hotfixList?: string[] | null;
+}
+
+export interface UmtWorstCaseEstimateLogEntry {
+  updateId: number;
+  oldDate?: string | null;
+  newDate?: string | null;
+  timestamp?: string | null;
+  changedBy?: string | null;
+  reason?: string | null;
+}
+
+export interface UmtLifecycleHistoryEntry {
+  timestamp?: string | null;
+  fromState?: string | null;
+  toState?: string | null;
+  changedBy?: string | null;
+}
+
+export interface UmtUpdateBranch {
+  updateNumber?: number | null;
+  branchUrl?: string | null;
+  supportRepoUrl?: string | null;
+  publicRepoUrl?: string | null;
+  releaseTag?: string | null;
+  channel?: string | null;
+  productName?: string | null;
+  branchType?: string | null;
+  jenkinsJobUrl?: string | null;
+  issueKey?: string | null;
+  productVersion?: string | null;
+  status?: string | null;
+}
+
+export interface UmtBranchCreationRequest {
+  publicRepoUrl: string;
+  releaseTag: string;
+  channel: string;
+  productName: string;
+  branchType: "ComponentBranch" | "ProductBranch";
+  productVersion?: string;
+  jiraId?: string;
+  wso2CaseId?: string;
+}
+
+export interface UmtComponentMaxVersionRequest {
+  publicRepoUrl: string;
+  releaseTag: string;
+  productName: string;
+  productVersion: string;
+}
+
+export interface UmtComponentMaxVersionResponse {
+  version?: string | null;
+}
+
+export interface UmtUpdateFilters {
+  lifecycleState: string | null;
+  lifecycle: string | null;
+  productName: string | null;
+  productVersion: string | null;
+  securityAdvisory: string | null;
+  jiraId: string | null;
+  serviceNowCaseId: string | null;
+  internalGitIssue: string | null;
+  securityInternalGitIssue: string | null;
+  id: string | null;
+  type: string | null;
+  issueType: string | null;
+  assignee: string | null;
+  issue: string | null;
+  pullRequest: string | null;
+  artifacts: string | null;
+  releasedWithoutPublicPR: string | null;
+  releasedDate: string | null;
+  lastUpdatedTimestampAfter: string | null;
+}
+
+export type UmtUpdateFilterDraft = Record<keyof UmtUpdateFilters, string>;
+
+export interface UmtUpdatesResponse {
+  updates: UmtUpdateSummary[];
+  totalPages: number;
+  pageSize: number;
+}
+
+export interface UmtUpdateSearchRequest {
+  page: number;
+  pageSize: number;
+  filters: UmtUpdateFilters;
+}
+
+const FILTER_KEYS: (keyof UmtUpdateFilters)[] = [
+  "lifecycleState", "lifecycle", "productName", "productVersion",
+  "securityAdvisory", "jiraId", "serviceNowCaseId", "internalGitIssue",
+  "securityInternalGitIssue", "id", "type", "issueType", "assignee",
+  "issue", "pullRequest", "artifacts", "releasedWithoutPublicPR",
+  "releasedDate", "lastUpdatedTimestampAfter",
+];
+
+export const EMPTY_UMT_UPDATE_FILTERS: UmtUpdateFilters = Object.fromEntries(
+  FILTER_KEYS.map((key) => [key, null]),
+) as unknown as UmtUpdateFilters;
+
+export const EMPTY_UMT_UPDATE_FILTER_DRAFT: UmtUpdateFilterDraft = Object.fromEntries(
+  FILTER_KEYS.map((key) => [key, ""]),
+) as UmtUpdateFilterDraft;
+
+const DATE_FILTERS = new Set<keyof UmtUpdateFilters>([
+  "releasedWithoutPublicPR", "releasedDate", "lastUpdatedTimestampAfter",
+]);
+
+function wireDate(value: string): string {
+  return new Date(`${value}T00:00:00.000Z`).toISOString();
+}
+
+export function filtersFromDraft(draft: UmtUpdateFilterDraft): UmtUpdateFilters {
+  return Object.fromEntries(
+    FILTER_KEYS.map((key) => {
+      const value = draft[key].trim();
+      return [key, value ? (DATE_FILTERS.has(key) ? wireDate(value) : value) : null];
+    }),
+  ) as unknown as UmtUpdateFilters;
+}
+
+export function draftFromFilters(filters: UmtUpdateFilters): UmtUpdateFilterDraft {
+  return Object.fromEntries(
+    FILTER_KEYS.map((key) => {
+      const value = filters[key];
+      return [key, value && DATE_FILTERS.has(key) ? value.slice(0, 10) : (value ?? "")];
+    }),
+  ) as UmtUpdateFilterDraft;
+}
+
+export function activeUmtFilterCount(filters: UmtUpdateFilters): number {
+  return Object.values(filters).filter((value) => value !== null && value !== "").length;
+}
+
+// The UI page is zero-based. The backend computes its SQL offset with
+// `(page - 1) * pageSize`, so its contract is one-based.
+export function createUmtUpdateSearchRequest(
+  uiPage: number,
+  pageSize: number,
+  filters: UmtUpdateFilters,
+): UmtUpdateSearchRequest {
+  return { page: uiPage + 1, pageSize, filters };
+}
