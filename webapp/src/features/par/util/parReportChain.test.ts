@@ -75,9 +75,9 @@ describe("filterChainReports", () => {
 });
 
 describe("isEmployeeALead", () => {
-  it("is true only for the exact-case 'True' string", () => {
+  it("is case-insensitive", () => {
     expect(isEmployeeALead(report({ isEmployeeALead: "True" }))).toBe(true);
-    expect(isEmployeeALead(report({ isEmployeeALead: "true" }))).toBe(false);
+    expect(isEmployeeALead(report({ isEmployeeALead: "true" }))).toBe(true);
     expect(isEmployeeALead(report({ isEmployeeALead: "False" }))).toBe(false);
   });
 });

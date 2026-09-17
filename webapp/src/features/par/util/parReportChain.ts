@@ -16,10 +16,20 @@
 
 import type { ParChainReport } from "../api/types";
 
+// `isEmployeeALead` is a literal "True"/"False" string from the backend, not
+// a boolean. Source itself compares it two different ways in two places
+// (getFilteredRows does `.toLowerCase() === "true"`, the "View Subordinates"
+// action gate does an exact `=== "True"`) — reproducing that split here
+// would let the "Show Leads Only" filter and the action disagree on the
+// same row the moment the backend's casing ever changes. One shared,
+// case-insensitive predicate avoids that.
+export function isEmployeeALead(row: ParChainReport): boolean {
+  return row.isEmployeeALead.toLowerCase() === "true";
+}
+
 // Ports ReportChainView.tsx's own getFilteredRows: search matches the email
 // only (not the name, same narrower scope as Additional Reports), combined
-// with the "Show Leads Only" toggle — `isEmployeeALead` is a literal "True"
-// string from the backend, not a boolean.
+// with the "Show Leads Only" toggle.
 export function filterChainReports(
   rows: ParChainReport[],
   searchQuery: string,
@@ -27,16 +37,6 @@ export function filterChainReports(
 ): ParChainReport[] {
   const term = searchQuery.toLowerCase();
   return rows.filter(
-    (row) =>
-      row.parEmployeeEmail.toLowerCase().includes(term) &&
-      (!showLeadsOnly || row.isEmployeeALead.toLowerCase() === "true"),
+    (row) => row.parEmployeeEmail.toLowerCase().includes(term) && (!showLeadsOnly || isEmployeeALead(row)),
   );
-}
-
-// `params.row.isEmployeeALead === "True"` gates the "View Subordinates"
-// action in source — an exact-case comparison, unlike the toLowerCase one
-// above. Kept as its own predicate so the action and the filter can't
-// silently drift if the backend's casing ever changes.
-export function isEmployeeALead(row: ParChainReport): boolean {
-  return row.isEmployeeALead === "True";
 }

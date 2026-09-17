@@ -47,7 +47,7 @@ export function downloadParPdf(rating: ParRating, selfComment: string, leadComme
     ]);
   }
 
-  if (reviews && reviews.length > 0 && rows.length > 0) {
+  if (reviews && reviews.length > 0) {
     rows.push([{ content: "360° Reviews", colSpan: 3, styles: { fontStyle: "bold", fillColor: [200, 200, 200], halign: "center" } }]);
   }
   (reviews ?? []).forEach((review) => {
