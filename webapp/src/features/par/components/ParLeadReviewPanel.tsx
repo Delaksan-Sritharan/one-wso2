@@ -87,7 +87,9 @@ export default function ParLeadReviewPanel({
     setParRatingValue(parRatingData.parRating && parRatingData.parRating !== "NOT_ASSIGNED" ? parRatingData.parRating : "");
     setSpecialRating((parRatingData.parSpecialRating as "TOP5P" | "TOP20P" | undefined) ?? "NONE");
     setSpecialRatingConfirmed(
-      parRatingData.parRating === TOP_5_20_ENABLED_RATING && parRatingData.parSpecialRating !== "NONE",
+      parRatingData.parRating === TOP_5_20_ENABLED_RATING &&
+        Boolean(parRatingData.parSpecialRating) &&
+        parRatingData.parSpecialRating !== "NONE",
     );
   }
 

@@ -189,15 +189,18 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
               label: "Employee Portal",
               path: "/people-ops/performance",
             },
-            // `requires: ["lead"]` is a coarse nav-visibility heuristic, same
-            // as My Team above — one-wso2's general "lead" privilege, not
-            // par-app's own PAR-cycle-scoped isTeamLead. ParRequiresTeamLeadRoute
-            // is what actually enforces access at the route.
+            // Note what is NOT here: `requires: ["lead"]`. one-wso2's generic
+            // "lead" capability is people-app privilege 993 — unrelated to
+            // par-app's own PAR-cycle-scoped isTeamLead, and not guaranteed to
+            // agree with it either way. SideRail asks useParIsTeamLead for
+            // this one instead (PAR_LEAD_PORTAL_ITEM_ID below), the same
+            // treatment Finance/Leave/Marketing Ops/Subscriptions already get
+            // for the identical reason. ParRequiresTeamLeadRoute is what
+            // actually enforces access at the route either way.
             {
               id: "par-lead-portal",
               label: "Lead Portal",
               path: "/people-ops/performance/lead",
-              requires: ["lead"],
             },
           ],
         },
@@ -258,6 +261,13 @@ export const SUBSCRIPTION_ITEM_IDS: ReadonlySet<string> = new Set(
     ...(s.children ?? []).map((c) => c.id),
   ]),
 );
+
+/**
+ * The Lead Portal's own rail id, which the rail must route through
+ * useParIsTeamLead rather than through `requires`/`caps` — see the comment
+ * on the section itself, above.
+ */
+export const PAR_LEAD_PORTAL_ITEM_ID = "par-lead-portal";
 
 // Marketing Ops. Built from the registry now so the rail is ready, but the
 // perspective itself stays locked (`access: false` below) until Phase 1

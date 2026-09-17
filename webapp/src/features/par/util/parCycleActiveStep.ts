@@ -18,13 +18,24 @@ import type { ParCycle } from "../api/types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Matches `YYYY-MM-DD` — the only shape the backend's own par-cycle
+ * deadline fields carry, same as parDeadline.ts's own DATE_ONLY_RE. */
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 /** `dayjs().diff(date, "day", true)` — days between now and `date`,
  * fractional, positive once `date` is in the past. An absent date (source's
  * own `parSpecialRatingDeadline?` is optional on the type) never counts as
- * passed. */
+ * passed.
+ *
+ * `new Date("YYYY-MM-DD")` parses as UTC midnight, not local midnight — in a
+ * negative UTC offset that's still the previous evening locally, so this
+ * would read as "passed" up to several hours early. Appending a bare time
+ * (no zone) switches the same constructor to local-time parsing, matching
+ * how isDeadlinePassed (parDeadline.ts) already avoids this. */
 function daysSince(date: string | undefined, now: Date): number {
   if (!date) return -Infinity;
-  return (now.getTime() - new Date(date).getTime()) / DAY_MS;
+  const parsed = DATE_ONLY_RE.test(date) ? new Date(`${date}T00:00:00`) : new Date(date);
+  return (now.getTime() - parsed.getTime()) / DAY_MS;
 }
 
 // Ports TeamSummary.tsx's own useEffect: which of the cycle-dates stepper's

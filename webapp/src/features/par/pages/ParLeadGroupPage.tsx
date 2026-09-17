@@ -16,9 +16,10 @@
 
 import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router";
-import { Stack, Typography } from "@wso2/oxygen-ui";
+import { Box, Stack, Typography } from "@wso2/oxygen-ui";
 import { UsersIcon } from "@wso2/oxygen-ui-icons-react";
 import RoutedTabs, { type RoutedTabDef } from "@components/routed-tabs/RoutedTabs";
+import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useMeProfile } from "@features/my/api/useMeProfile";
 import ParShell from "../components/ParShell";
 import { useParIsTeamLead } from "../api/useParData";
@@ -59,8 +60,34 @@ export function ParLeadGroupIndex() {
  * ParRequiresLeadRoute. */
 export function ParRequiresTeamLeadRoute({ children }: { children: ReactNode }) {
   const profile = useMeProfile();
-  const { isTeamLead, isLoading } = useParIsTeamLead(profile.data?.userInfo.workEmail);
-  if (profile.isLoading || isLoading) return null;
-  if (!isTeamLead) return <Navigate to="/people-ops/performance" replace />;
+  const employeeInfo = useParIsTeamLead(profile.data?.userInfo.workEmail);
+  if (profile.isLoading || employeeInfo.isLoading) return null;
+  // A failed lookup must not read as "not a lead" — that would silently
+  // redirect an actual team lead away with no indication anything went
+  // wrong, the same mistake the fail-closed default above already guards
+  // against for the loading case.
+  if (profile.isError) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <ErrorNotice error={profile.error} onRetry={() => profile.refetch()} retrying={profile.isFetching}>
+          Couldn't load your profile.
+        </ErrorNotice>
+      </Box>
+    );
+  }
+  if (employeeInfo.isError) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <ErrorNotice
+          error={employeeInfo.error}
+          onRetry={() => employeeInfo.refetch()}
+          retrying={employeeInfo.isFetching}
+        >
+          Couldn't check whether you're a team lead.
+        </ErrorNotice>
+      </Box>
+    );
+  }
+  if (!employeeInfo.isTeamLead) return <Navigate to="/people-ops/performance" replace />;
   return <>{children}</>;
 }

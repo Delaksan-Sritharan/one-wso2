@@ -43,6 +43,7 @@ import { useParTeamDetails } from "../api/useLeadTeams";
 import { useSend360Reminder } from "../api/useLeadReminders";
 import { useLeadRatingUpdate } from "../api/useLeadRatingUpdate";
 import { calculateCycleActiveStep } from "../util/parCycleActiveStep";
+import { resolveGridSelectedIds } from "../util/parGridSelection";
 import ParCompletionStatusCard from "./ParCompletionStatusCard";
 import ParCycleDatesStepper from "./ParCycleDatesStepper";
 import ParStatusChip from "./ParStatusChip";
@@ -327,8 +328,8 @@ export default function ParLeadTeamRoster({
             rowHeight={56}
             checkboxSelection
             disableRowSelectionOnClick
-            rowSelectionModel={selectedIds}
-            onRowSelectionModelChange={(model) => setSelectedIds(model as unknown as number[])}
+            rowSelectionModel={{ type: "include", ids: new Set(selectedIds) }}
+            onRowSelectionModelChange={(model) => setSelectedIds(resolveGridSelectedIds(model, filteredMembers.map((m) => ({ id: m.parRatingId }))))}
             sx={{ border: "none" }}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             pageSizeOptions={[10, 20, 25]}
