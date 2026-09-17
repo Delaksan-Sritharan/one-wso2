@@ -89,9 +89,9 @@ export function useDueDiligenceGate(enabled = true): DueDiligenceGate {
     // useDueDiligenceMe's query stays permanently disabled (and therefore
     // permanently `isPending`) when the backend URL isn't set, so without
     // this an unconfigured deployment never stops "resolving" — and
-    // FinancePage ORs this straight into its own loading branch, which would
-    // otherwise hide Claim approval/CC Expenses/Expense Claims behind a
-    // skeleton forever.
+    // usePerspectiveVisibility ORs this straight into the aggregate the rail
+    // and the Finance/Legal landing both read, which would otherwise hold
+    // those two perspectives on a spinner forever.
     isResolving: enabled && isDueDiligenceBackendConfigured() && me.isPending,
     isError: me.isError,
     errorMessage: me.isError ? describeError(me.error) : undefined,

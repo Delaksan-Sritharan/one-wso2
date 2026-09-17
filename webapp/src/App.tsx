@@ -24,7 +24,6 @@ import OrgChartPage from "@features/org-chart/pages/OrgChartPage";
 import AuthGuard from "@layouts/AuthGuard";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import AppLayout from "@layouts/AppLayout";
-import PeopleOpsPage from "@features/people-ops/pages/PeopleOpsPage";
 import ActiveEmployeesReportPage from "@features/people-ops/pages/ActiveEmployeesReportPage";
 import ResignationsReportPage from "@features/people-ops/pages/ResignationsReportPage";
 import OrgStructurePage from "@features/people-ops/pages/OrgStructurePage";
@@ -51,8 +50,7 @@ import EmailGroupsPage from "@features/my/email-groups/pages/EmailGroupsPage";
 import EmailSignaturePage from "@features/my/email-signature/pages/EmailSignaturePage";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
-import FinancePage from "@features/finance/pages/FinancePage";
-import MarketingOpsPage from "@features/marketing-ops/pages/MarketingOpsPage";
+import PerspectiveLanding from "@components/perspective-landing/PerspectiveLanding";
 import AdCampaignsAnalyticsPage from "@features/marketing-ops/ad-campaigns/pages/AdCampaignsAnalyticsPage";
 import CampaignTrackerPage from "@features/marketing-ops/ad-campaigns/pages/CampaignTrackerPage";
 import UtmGeneratorPage from "@features/marketing-ops/utilities/pages/UtmGeneratorPage";
@@ -119,8 +117,6 @@ import ClaimApprovalPage, {
 import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
-import LegalPage from "@features/legal/pages/LegalPage";
-import SecurityPage from "@features/security/pages/SecurityPage";
 import { riskRoutes } from "@features/security/grc/modules/risk/routes";
 import { auditRoutes } from "@features/security/grc/modules/audit/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
@@ -246,9 +242,8 @@ export default function App() {
               three finance apps (opd-claims, cc-expenses, expense-claims).
               Moved in from the Finance perspective — same rationale as
               Leave, an employee submits/tracks these for themself (a
-              lead/finance-approver subset of items approves others'). The
-              Finance perspective itself is now just a skeleton tile (see
-              FinancePage) — these apps don't live there anymore. */}
+              lead/finance-approver subset of items approves others'). What is
+              left in the Finance perspective is approving other people's. */}
           {/* Me → Claims: the two things you file for yourself, one entry with
               a tab each. The forms keep routes of their own — both are long,
               both hold a draft, and both are worth linking to directly — and
@@ -289,7 +284,7 @@ export default function App() {
           <Route path="finance/cc/approve" element={<CcApprovePage />} />
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
-          <Route path="people-ops" element={<PeopleOpsPage />} />
+          <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
               from the standalone org-chart app. Unlike every other People Ops
               screen, this is NOT admin-gated — it has its own access model.
@@ -464,7 +459,7 @@ export default function App() {
           />
           {/* Finance perspective — skeleton "coming soon" tile; the actual
               claim apps are the me/claims routes above. */}
-          <Route path="finance" element={<FinancePage />} />
+          <Route path="finance" element={<PerspectiveLanding />} />
           {/* Finance → Claim approval. Approving is work you do for other
               people, so it sits here rather than under Me with the things you
               do for yourself; submitting and history stay there. Each tab is a
@@ -510,7 +505,7 @@ export default function App() {
               operations (Ad Campaigns, Email Workbench, Events, CRM Upload)
               still live in Marketing Ops; the overview deep-links out to them
               until their phase lands. */}
-          <Route path="marketing-ops" element={<MarketingOpsPage />} />
+          <Route path="marketing-ops" element={<PerspectiveLanding />} />
           {/* Email Workbench. The editor is transient state inside these pages, not
               a route of its own — see EmailWorkbenchPages. */}
           <Route
@@ -579,7 +574,7 @@ export default function App() {
           {/* Legal perspective — currently just a second entry point into Due
               Diligence, alongside Finance (see the finance/ routes below and
               DUE_DILIGENCE_APPS). */}
-          <Route path="legal" element={<LegalPage />} />
+          <Route path="legal" element={<PerspectiveLanding />} />
           {/* Security — the GRC platform's Risk Hub and Admin Console, lifted
               from grc-tools rather than rewritten. The two route fragments are
               the SOURCE's own (modules/{risk,audit,admin}/routes.tsx), spread
@@ -590,7 +585,7 @@ export default function App() {
               along with them, including the deliberate absence of one on
               Risk Registers. */}
           <Route path="security">
-            <Route index element={<SecurityPage />} />
+            <Route index element={<PerspectiveLanding />} />
             {auditRoutes}
             {riskRoutes}
             {adminRoutes}

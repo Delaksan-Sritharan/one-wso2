@@ -62,11 +62,6 @@ export interface PerspectiveSection {
   // When set, a leaf item is a route (rail navigates) rather than a
   // scroll-anchor. Used by the native Leave screens.
   path?: string;
-  // Overrides PeopleOpsPage's default overview-card copy, which otherwise
-  // assumes every shipped leaf is a filterable/exportable report (true for
-  // Active employees / Resignations, not for something like Org Chart).
-  // Omitted = the default copy applies.
-  description?: string;
   // Render as a group even with a single visible child — see MenuApp.alwaysGroup.
   alwaysGroup?: boolean;
   // When set, a leaf item leaves One WSO2 entirely: it renders as an anchor
@@ -97,9 +92,8 @@ function appsToSections(apps: readonly MenuApp[]): PerspectiveSection[] {
 
 // People Ops's prior app menu (People/Visitor/Careers) was retired per
 // restructuring feedback. These are the reports being onboarded, ported from
-// people-app. A section with a `path` is live (the rail navigates to it); one
-// without is still a "coming soon" anchor on the overview page — see
-// PeopleOpsPage, which reads exactly this list to decide which card to show.
+// people-app. Every section here is live: each leaf carries the `path` the rail
+// navigates to.
 //
 // `requires: ["admin"]` keeps the locked ones out of the rail for people who
 // can't use them. It is NOT the access control: the people-app backend
@@ -118,7 +112,6 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
     label: "Org Chart",
     icon: NetworkIcon,
     path: "/people-ops/org-chart",
-    description: "Browse who reports to whom, company-wide.",
   },
   // Subscriptions — PickMe Commute and LaaS, ported from the digiops-hr
   // subscription-app (previously a mobile microapp only). A group rather than
@@ -141,7 +134,6 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
     label: "Manage Subscriptions",
     icon: TicketIcon,
     path: "/people-ops/subscriptions/manage",
-    description: "Subscribe or unsubscribe an employee on their behalf.",
   },
   // par-app, ported one screen at a time — see docs/ported-apps/par-app.md.
   // `alwaysGroup` for the same reason Master Data below carries it: a named
@@ -150,10 +142,6 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   // `requires: ["admin"]` — every employee has their own PAR, same as Org
   // Chart and Subscriptions above. Spread in rather than filtered out, so
   // with the flag off the entry does not exist at all.
-  //
-  // `description` overrides PeopleOpsPage's default group copy ("Reference
-  // data used across the app.", written for Master Data) — PAR is not a
-  // reference-data lookup.
   ...(isPreviewEnabled("par")
     ? [
         {
@@ -161,7 +149,6 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
           label: "PAR",
           icon: ClipboardCheckIcon,
           alwaysGroup: true,
-          description: "Complete and share your PAR for the current cycle.",
           children: [
             {
               id: "par-employee-feedback",
@@ -356,6 +343,24 @@ export interface PerspectiveDef {
    * somewhere this app cannot take you.
    */
   externalUrl?: string;
+  /**
+   * True when this perspective has no overview of its own worth stopping on,
+   * so its landing route forwards you to the first rail item you can actually
+   * see. Someone who can see none is told so there, in a sentence.
+   *
+   * These perspectives' overviews had become a tile per rail item — a second,
+   * hand-maintained copy of the menu two feet to its right, which the rail says
+   * better and which drifted out of step with the registry every time an item
+   * was added. So the Overview row is dropped from the rail for these too: a
+   * row that only bounces you somewhere else is not a destination.
+   *
+   * The ROUTE stays either way. Switching perspective navigates to `path`, and
+   * it is the one place someone with nothing here can be told that.
+   *
+   * Me is the one perspective that does not carry this: its landing is the
+   * person's own profile, which is a page someone stops and reads.
+   */
+  forwardsToFirstItem?: boolean;
   sections?: PerspectiveSection[];
 }
 
@@ -368,6 +373,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     icon: UsersIcon,
     access: true,
     path: "/people-ops",
+    forwardsToFirstItem: true,
     sections: PEOPLE_OPS_SECTIONS,
   },
   // Submitting a claim and looking up your own stay under Me (see ME_SECTIONS)
@@ -380,6 +386,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     icon: WalletIcon,
     access: true,
     path: "/finance",
+    forwardsToFirstItem: true,
     sections: [
       {
         id: "claim-approval",
@@ -412,6 +419,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     externallyGated: true,
     access: true,
     path: "/legal",
+    forwardsToFirstItem: true,
     sections: [...appsToSections(DUE_DILIGENCE_APPS)],
   },
   // A separate application, opened in a new tab. `access` follows the URL being
@@ -447,6 +455,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     icon: MegaphoneIcon,
     access: true,
     path: "/marketing-ops",
+    forwardsToFirstItem: true,
     sections: MARKETING_OPS_SECTIONS,
   },
   // Security and Compliance — the GRC platform's Risk Hub, Audit Hub and Admin
@@ -476,6 +485,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     externallyGated: true,
     access: true,
     path: "/security",
+    forwardsToFirstItem: true,
     sections: [...appsToSections(SECURITY_APPS)],
   },
   // "Me" is the Home landing: the person's own profile plus everyday apps —
