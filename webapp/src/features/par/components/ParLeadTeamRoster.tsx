@@ -196,11 +196,16 @@ export default function ParLeadTeamRoster({
                 <IconButton
                   size="small"
                   aria-label="Copy Email"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    navigator.clipboard.writeText(params.row.parEmployeeEmail);
-                    showSuccess("Email copied");
+                    try {
+                      await navigator.clipboard.writeText(params.row.parEmployeeEmail);
+                      showSuccess("Email copied");
+                    } catch (err) {
+                      showError(describeError(err));
+                    }
                   }}
+                  onKeyDown={(e) => e.stopPropagation()}
                 >
                   <CopyIcon size={13} />
                 </IconButton>

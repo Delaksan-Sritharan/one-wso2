@@ -58,11 +58,16 @@ export default function ParLead360ReviewsTab({
   cycle,
   employeeEmail,
   leadStatus,
+  leadStatusKnown,
 }: {
   cycle: ParCycle;
   employeeEmail: string;
   /** ParLeadReviewTabs' own `rating.data?.parLeadStatus`. */
   leadStatus: string | undefined;
+  /** ParLeadReviewTabs' own `rating.isSuccess` — while the lead's own status
+   * is still loading or failed to load, the Request action must not open
+   * just because `leadStatus` reads as `undefined !== "SHARED"`. */
+  leadStatusKnown: boolean;
 }) {
   const profile = useMeProfile();
   const leadEmail = profile.data?.userInfo.workEmail;
@@ -79,7 +84,7 @@ export default function ParLead360ReviewsTab({
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [viewingReviewerEmail, setViewingReviewerEmail] = useState<string | undefined>(undefined);
 
-  const requestBlocked = isDeadlinePassed(cycle.parThreeSixtyRatingDeadline) || leadStatus === "SHARED";
+  const requestBlocked = !leadStatusKnown || isDeadlinePassed(cycle.parThreeSixtyRatingDeadline) || leadStatus === "SHARED";
 
   if (reviewers.isLoading) {
     return <Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />;
@@ -220,6 +225,12 @@ export default function ParLead360ReviewsTab({
                 <ParCommentView html={decodeParComment(viewingReview.reviewComment)} />
               </Box>
             </>
+          ) : reviews.isLoading ? (
+            <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 1.5 }} />
+          ) : reviews.isError ? (
+            <ErrorNotice error={reviews.error} onRetry={() => reviews.refetch()} retrying={reviews.isFetching}>
+              Couldn't load this reviewer's feedback.
+            </ErrorNotice>
           ) : (
             <Alert severity="info">This reviewer hasn't shared any comment.</Alert>
           )}

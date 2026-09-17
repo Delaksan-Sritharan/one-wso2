@@ -291,7 +291,11 @@ export default function ParLeadEmployeeHistoryTab() {
                 </Grid>
               );
             })()}
-            <InfoItem title={selectedLegacyRecord.employeeEmail} subtitle1="Employee" subtitle2={selectedLegacyRecord.employeeEmail} />
+            <InfoItem
+              title={selectedEmployee?.employeeName ?? selectedLegacyRecord.employeeEmail}
+              subtitle1="Employee"
+              subtitle2={selectedLegacyRecord.employeeEmail}
+            />
             <InfoItem
               title={selectedLegacyRecord.reviewerName ?? selectedLegacyRecord.reviewerEmail ?? ""}
               subtitle1="Lead"

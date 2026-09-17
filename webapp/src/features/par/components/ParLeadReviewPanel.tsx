@@ -234,10 +234,11 @@ export default function ParLeadReviewPanel({
               </Alert>
             )}
           </Box>
-          <Tooltip title="Download PAR details">
+          <Tooltip title={reviews.isSuccess ? "Download PAR details" : "360° reviews are still loading"}>
             <span>
               <IconButton
                 aria-label="download"
+                disabled={!reviews.isSuccess}
                 onClick={() => downloadParPdf(parRatingData, employeeComment, savedLeadComment, reviews.data)}
               >
                 <FileDownIcon size={18} />
@@ -380,7 +381,15 @@ export default function ParLeadReviewPanel({
       </Grid>
 
       <Grid size={12}>
-        <ParHistoryReviewSection reviews={reviews.data ?? []} />
+        {reviews.isLoading ? (
+          <Skeleton variant="rectangular" height={72} sx={{ borderRadius: 1.5 }} />
+        ) : reviews.isError ? (
+          <ErrorNotice error={reviews.error} onRetry={() => reviews.refetch()} retrying={reviews.isFetching}>
+            Couldn't load 360° feedback.
+          </ErrorNotice>
+        ) : (
+          <ParHistoryReviewSection reviews={reviews.data ?? []} />
+        )}
       </Grid>
 
       <Dialog open={confirming} onClose={() => setConfirming(false)} maxWidth="md" fullWidth>

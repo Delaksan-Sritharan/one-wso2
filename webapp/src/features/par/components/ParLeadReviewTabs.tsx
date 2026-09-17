@@ -92,7 +92,14 @@ export default function ParLeadReviewTabs({
 
       <Box sx={{ p: "10px 10px 0px 10px" }}>
         {tab === 0 && <ParLeadReviewPanel cycle={cycle} employeeEmail={employeeEmail} />}
-        {tab === 1 && <ParLead360ReviewsTab cycle={cycle} employeeEmail={employeeEmail} leadStatus={rating.data?.parLeadStatus} />}
+        {tab === 1 && (
+          <ParLead360ReviewsTab
+            cycle={cycle}
+            employeeEmail={employeeEmail}
+            leadStatus={rating.data?.parLeadStatus}
+            leadStatusKnown={rating.isSuccess}
+          />
+        )}
         {tab === 2 && <ParLeadF2fPanel cycle={cycle} employeeEmail={employeeEmail} />}
       </Box>
 

@@ -42,6 +42,7 @@ import { deriveLegacyRatingFromScore, parseLegacyQuestionAnswers } from "../util
 import { decodeParComment } from "../util/parComment";
 import { employeeChipLabel } from "../util/parLabels";
 import { ParCommentView } from "./ParContent";
+import ParEmptyState from "./ParEmptyState";
 import ParHistoryReviewSection from "./ParHistoryReviewSection";
 import ParLegacyReviewSection from "./ParLegacyReviewSection";
 import type { ParLegacyHistoryByEmail } from "../api/useLeadHistory";
@@ -122,6 +123,11 @@ export default function ParLeadHistoryModal({
     ? selectedLegacyRecord!.overallCommentManager!
     : "";
 
+  // "No record" wording stays deliberately vague: the backend can't tell "no
+  // rating exists for this cycle" apart from a genuine fetch error here.
+  const realCycleNotAvailable = isRealCycle && (rating.isError || reviews.isError || (rating.isSuccess && !rating.data));
+  const legacyCycleNotAvailable = isLegacyCycle && !legacyHistory.isLoading && !selectedLegacyRecord;
+
   const showRealDetails = isRealCycle && rating.isSuccess && Boolean(rating.data) && reviews.isSuccess;
   const showLegacyDetails = isLegacyCycle && Boolean(selectedLegacyRecord);
   const isLoadingSelection = (isRealCycle && (rating.isLoading || reviews.isLoading)) || (isLegacyCycle && legacyHistory.isLoading);
@@ -161,6 +167,13 @@ export default function ParLeadHistoryModal({
           )}
 
           {isLoadingSelection && <Skeleton variant="rectangular" height={220} sx={{ borderRadius: 1.5 }} />}
+
+          {legacyCycleNotAvailable && (
+            <ParEmptyState text="Not Available -- this employee has no PAR record for the selected cycle." />
+          )}
+          {realCycleNotAvailable && (
+            <ParEmptyState text="No PAR record found for the selected cycle, or it could not be loaded right now. Try again, or check back later if this seems wrong." />
+          )}
 
           {showLegacyDetails && selectedLegacyRecord && (
             <Stack spacing={2}>

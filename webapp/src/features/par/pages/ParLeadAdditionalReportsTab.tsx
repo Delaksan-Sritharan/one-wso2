@@ -36,6 +36,7 @@ import {
 } from "@wso2/oxygen-ui";
 import { CalendarIcon, CopyIcon, EyeIcon, PencilIcon, SearchIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
+import { describeError } from "@api/errors";
 import { useMeProfile } from "@features/my/api/useMeProfile";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useLeaveEmployees } from "@features/leave/api/useLeaveData";
@@ -61,7 +62,7 @@ export default function ParLeadAdditionalReportsTab() {
   const activeCycles = useActiveParCycle(workEmail);
   const cycle = activeCycles.data?.[0];
   const reports = useParAdditionalReports(cycle?.parCycleId, workEmail);
-  const { showSuccess } = useNotifications();
+  const { showSuccess, showError } = useNotifications();
   // No org-wide employee directory of our own — reuses Leave's for avatars.
   const thumbnails = useLeaveEmployees();
   const thumbnailByEmail = useMemo(
@@ -147,11 +148,16 @@ export default function ParLeadAdditionalReportsTab() {
                 <IconButton
                   size="small"
                   aria-label="Copy Email"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    navigator.clipboard.writeText(params.row.parEmployeeEmail);
-                    showSuccess("Email copied");
+                    try {
+                      await navigator.clipboard.writeText(params.row.parEmployeeEmail);
+                      showSuccess("Email copied");
+                    } catch (err) {
+                      showError(describeError(err));
+                    }
                   }}
+                  onKeyDown={(e) => e.stopPropagation()}
                 >
                   <CopyIcon size={13} />
                 </IconButton>

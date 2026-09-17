@@ -22,7 +22,8 @@ import type { ParLegacyQuestionAnswer, ParLegacyThreeSixtyReview } from "../api/
 export function parseLegacyQuestionAnswers(json: string | null): ParLegacyQuestionAnswer[] {
   if (!json) return [];
   try {
-    return JSON.parse(json) as ParLegacyQuestionAnswer[];
+    const parsed: unknown = JSON.parse(json);
+    return Array.isArray(parsed) ? (parsed as ParLegacyQuestionAnswer[]) : [];
   } catch {
     return [];
   }
@@ -31,7 +32,8 @@ export function parseLegacyQuestionAnswers(json: string | null): ParLegacyQuesti
 export function parseLegacyFeedback360(json: string | null): ParLegacyThreeSixtyReview[] {
   if (!json) return [];
   try {
-    return JSON.parse(json) as ParLegacyThreeSixtyReview[];
+    const parsed: unknown = JSON.parse(json);
+    return Array.isArray(parsed) ? (parsed as ParLegacyThreeSixtyReview[]) : [];
   } catch {
     return [];
   }
