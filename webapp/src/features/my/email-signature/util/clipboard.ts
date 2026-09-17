@@ -20,11 +20,33 @@
 // version, while a plain-text target (a chat box, a code editor) gets a
 // readable fallback instead of raw markup — a single-mimetype `writeText`
 // can only ever satisfy one of the two.
+
+/**
+ * Derives a readable plain-text version of the signature's HTML.
+ *
+ * A bare tag-strip (`html.replace(/<[^>]*>/g, "")`) leaves two things wrong:
+ * it does nothing about the HTML entities `escapeHtml` deliberately
+ * introduced (so "Jane & Co" comes back as "Jane &amp; Co"), and it inserts
+ * nothing where a table row ended, so every row runs into the next
+ * ("Jane &amp; CoR&amp;D, WSO2Work: ..."). Parsing the HTML properly (via
+ * `DOMParser`) and reading `.textContent` decodes entities as a side effect
+ * of real HTML parsing; inserting a newline at each `</tr>` first is what
+ * keeps rows apart once tags are gone.
+ */
+export function toPlainText(html: string): string {
+  const withRowBreaks = html.replace(/<\/tr>/gi, "</tr>\n");
+  const text = new DOMParser().parseFromString(withRowBreaks, "text/html").body.textContent ?? "";
+  return text
+    .replace(/[ \t]+\n/g, "\n") // trailing spaces before a line break
+    .replace(/\n{2,}/g, "\n") // a row omitted entirely (e.g. blank designation) leaves no blank line behind
+    .trim();
+}
+
 export async function copyRichText(html: string): Promise<boolean> {
   try {
     if (typeof window.ClipboardItem === "undefined") return false;
     const htmlBlob = new Blob([html], { type: "text/html" });
-    const textBlob = new Blob([html.replace(/<[^>]*>/g, "")], { type: "text/plain" });
+    const textBlob = new Blob([toPlainText(html)], { type: "text/plain" });
     await navigator.clipboard.write([
       new window.ClipboardItem({ "text/html": htmlBlob, "text/plain": textBlob }),
     ]);

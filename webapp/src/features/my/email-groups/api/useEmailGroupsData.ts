@@ -83,8 +83,19 @@ export function useUserGroups() {
  * looks identical to a subscribed one before `userGroups` has loaded). Each
  * query keeps its own `isError`/`refetch` so the page can retry only the one
  * that actually failed.
+ *
+ * Gated on `ready` rather than `isPending` alone: a disabled query (the
+ * ordinary state before identity resolves) sits at `isPending: true`
+ * indefinitely — that never flips to `isFetching` on its own, since a
+ * disabled query never fetches. If identity resolution itself stalls (the
+ * SDK call neither resolves nor rejects) rather than erroring, `ready` never
+ * becomes true and all three queries stay perpetually disabled — without
+ * this guard `isLoading` would stay `true` forever too, leaving the page on
+ * its skeleton with no error and no retry. Same shape as
+ * `useOrgMasterData.ts`'s `ready && results.some((r) => r.isPending)`.
  */
 export function useEmailGroupCatalog() {
+  const { ready } = useEmailGroupsQueryBasis();
   const defaultGroups = useDefaultGroups();
   const allGroups = useAllGroups();
   const userGroups = useUserGroups();
@@ -96,7 +107,8 @@ export function useEmailGroupCatalog() {
 
   return {
     catalog,
-    isLoading: defaultGroups.isPending || allGroups.isPending || userGroups.isPending,
+    isLoading:
+      ready && (defaultGroups.isPending || allGroups.isPending || userGroups.isPending),
     isFetching: defaultGroups.isFetching || allGroups.isFetching || userGroups.isFetching,
     defaultGroups,
     allGroups,

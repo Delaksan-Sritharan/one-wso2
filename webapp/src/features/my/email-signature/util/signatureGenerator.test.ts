@@ -51,6 +51,12 @@ describe("generateSignatureHTML", () => {
     expect(html).not.toContain(", WSO2");
   });
 
+  it("omits the name row entirely when blank, rather than an empty bold row", () => {
+    const html = generateSignatureHTML(data({ designation: "Software Engineer" }));
+    expect(html).not.toContain('<span style="color: #000000 !important;"></span>');
+    expect(html).toContain("Software Engineer, WSO2");
+  });
+
   it("combines work and personal phone with a separator", () => {
     const html = generateSignatureHTML(
       data({ name: "Jane", workPhone: "+94 11 000 0000", personalPhone: "+94 77 000 0000" }),

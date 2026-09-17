@@ -108,8 +108,14 @@ export default function EmailGroupsPage() {
   };
 
   const openBulkSubscribe = () => {
-    if (selected.size === 0) return;
-    setConfirmState({ action: "subscribe", groups: [...selected] });
+    // Narrowed to what's actually joinable right now, not the raw selection
+    // — `selected` is never pruned when a search hides a checked row, or
+    // when a refetch drops a group out of the joinable list entirely (e.g.
+    // someone else subscribed to it from another tab). Without this, a
+    // group that's no longer even on screen could still get PATCHed.
+    const visible = joinableGroups.filter((g) => selected.has(g.name)).map((g) => g.name);
+    if (visible.length === 0) return;
+    setConfirmState({ action: "subscribe", groups: visible });
   };
 
   const handleConfirm = async () => {
@@ -143,8 +149,13 @@ export default function EmailGroupsPage() {
     // does, so a 10-group batch refetches the shared list once instead of
     // ten times. Skipped only when every single group in the batch failed,
     // since nothing then actually changed for the list to reflect.
+    //
+    // Not awaited: invalidateQueries' returned promise resolves once the
+    // refetch itself completes, not just once it's kicked off. Awaiting it
+    // would hold the dialog in its spinner state for the full duration of
+    // the follow-up GET on top of the writes that already finished.
     if (failed.length < groups.length) {
-      await qc.invalidateQueries({ queryKey: userGroupsKey });
+      void qc.invalidateQueries({ queryKey: userGroupsKey });
     }
     setIsSubmitting(false);
     setConfirmState(null);
