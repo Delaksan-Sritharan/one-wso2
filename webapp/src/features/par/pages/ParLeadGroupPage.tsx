@@ -37,6 +37,9 @@ import { useParIsTeamLead } from "../api/useParData";
 // daily is a weak place to preserve that one inconsistency.
 const TABS: RoutedTabDef[] = [
   { segment: "direct-reports", label: "Direct Reports" },
+  { segment: "additional-reports", label: "Additional Reports" },
+  { segment: "report-chain", label: "Report Chain" },
+  { segment: "employee-history", label: "Employee History" },
   { segment: "allocation", label: "Top 5%/20% Allocation" },
 ];
 

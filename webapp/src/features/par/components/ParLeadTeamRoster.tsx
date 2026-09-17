@@ -14,8 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  Avatar,
   Box,
   Button,
   Card,
@@ -39,6 +40,7 @@ import { CalendarIcon, CopyIcon, EyeIcon, PencilIcon, SearchIcon } from "@wso2/o
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
+import { useLeaveEmployees } from "@features/leave/api/useLeaveData";
 import { useParTeamDetails } from "../api/useLeadTeams";
 import { useSend360Reminder } from "../api/useLeadReminders";
 import { useLeadRatingUpdate } from "../api/useLeadRatingUpdate";
@@ -47,7 +49,6 @@ import { resolveGridSelectedIds } from "../util/parGridSelection";
 import ParCompletionStatusCard from "./ParCompletionStatusCard";
 import ParCycleDatesStepper from "./ParCycleDatesStepper";
 import ParStatusChip from "./ParStatusChip";
-import ParEmptyState from "./ParEmptyState";
 import type { ParCycle, ParRatingMinimal, ParTeamSummary } from "../api/types";
 
 // Ports TeamSummary.tsx: one team's completion cards + member roster.
@@ -71,6 +72,12 @@ export default function ParLeadTeamRoster({
   const send360Reminder = useSend360Reminder();
   const ratingUpdate = useLeadRatingUpdate(cycle.parCycleId);
   const { showSuccess, showError } = useNotifications();
+  // No org-wide employee directory of our own — reuses Leave's for avatars.
+  const employees = useLeaveEmployees();
+  const thumbnailByEmail = useMemo(
+    () => new Map(employees.data?.map((e) => [e.workEmail, e.employeeThumbnail]) ?? []),
+    [employees.data],
+  );
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -110,12 +117,18 @@ export default function ParLeadTeamRoster({
     }
   };
 
+  // Validated before the confirm dialog opens, not only at confirm-time.
+  const handleOpenShareConfirm = () => {
+    if (!selectedMembers.every((m) => m.parLeadStatus === "DRAFT")) {
+      showError("Unable to share selected reviews. Please select only draft reviews.");
+      return;
+    }
+    setShareConfirmOpen(true);
+  };
+
   const handleShareConfirmed = async () => {
     setShareConfirmOpen(false);
-    // TeamSummary.tsx's own validateRatings: checked at confirm-time, not by
-    // disabling the button ahead of it — every selected row must already be
-    // a lead-side DRAFT, or the whole action bails with a toast and nothing
-    // is shared, not even the valid rows.
+    // Re-validated in case the selection changed since the dialog opened.
     if (!selectedMembers.every((m) => m.parLeadStatus === "DRAFT")) {
       showError("Unable to share selected reviews. Please select only draft reviews.");
       return;
@@ -139,7 +152,6 @@ export default function ParLeadTeamRoster({
     }
     setSharing(false);
     setSelectedIds([]);
-    // TeamSummary.tsx's own three-way message, verbatim shape.
     if (passedCount === 0) {
       showError(`Failed to share ${failedCount} ratings. ${reasons.join(", ")}`);
     } else if (failedCount !== 0) {
@@ -165,14 +177,36 @@ export default function ParLeadTeamRoster({
               onOpenReview(params.row.parEmployeeEmail);
             }
           }}
-          sx={{ cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "center", height: "100%" }}
+          sx={{ cursor: "pointer", display: "flex", alignItems: "center", height: "100%" }}
         >
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {params.row.parEmployeeName}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {params.row.parEmployeeEmail}
-          </Typography>
+          <Avatar
+            src={thumbnailByEmail.get(params.row.parEmployeeEmail) || undefined}
+            slotProps={{ img: { referrerPolicy: "no-referrer" } }}
+            sx={{ mr: 1.5, height: "2.2rem", width: "2.2rem" }}
+          />
+          <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {params.row.parEmployeeName}
+            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">
+                {params.row.parEmployeeEmail}
+              </Typography>
+              <Tooltip title="Copy Email" arrow>
+                <IconButton
+                  size="small"
+                  aria-label="Copy Email"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(params.row.parEmployeeEmail);
+                    showSuccess("Email copied");
+                  }}
+                >
+                  <CopyIcon size={13} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
         </Box>
       ),
     },
@@ -297,7 +331,7 @@ export default function ParLeadTeamRoster({
             <Button variant="contained" disabled={selectedIds.length === 0} onClick={handleCopyEmails} startIcon={<CopyIcon size={16} />}>
               Copy Emails
             </Button>
-            <Button variant="contained" disabled={selectedIds.length === 0 || sharing} onClick={() => setShareConfirmOpen(true)}>
+            <Button variant="contained" disabled={selectedIds.length === 0 || sharing} onClick={handleOpenShareConfirm}>
               Share
             </Button>
             <TextField
@@ -318,23 +352,19 @@ export default function ParLeadTeamRoster({
           </Stack>
         </Stack>
 
-        {filteredMembers.length === 0 ? (
-          <ParEmptyState text="No team members found" />
-        ) : (
-          <DataGrid.DataGrid
-            rows={filteredMembers}
-            columns={columns}
-            getRowId={(row) => row.parRatingId}
-            rowHeight={56}
-            checkboxSelection
-            disableRowSelectionOnClick
-            rowSelectionModel={{ type: "include", ids: new Set(selectedIds) }}
-            onRowSelectionModelChange={(model) => setSelectedIds(resolveGridSelectedIds(model, filteredMembers.map((m) => ({ id: m.parRatingId }))))}
-            sx={{ border: "none" }}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-            pageSizeOptions={[10, 20, 25]}
-          />
-        )}
+        <DataGrid.DataGrid
+          rows={filteredMembers}
+          columns={columns}
+          getRowId={(row) => row.parRatingId}
+          rowHeight={56}
+          checkboxSelection
+          disableRowSelectionOnClick
+          rowSelectionModel={{ type: "include", ids: new Set(selectedIds) }}
+          onRowSelectionModelChange={(model) => setSelectedIds(resolveGridSelectedIds(model, filteredMembers.map((m) => ({ id: m.parRatingId }))))}
+          sx={{ border: "none" }}
+          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          pageSizeOptions={[10, 20, 25]}
+        />
       </Card>
 
       {/* TeamSummary.tsx opens this in its own CustomModal at width="80vw"
