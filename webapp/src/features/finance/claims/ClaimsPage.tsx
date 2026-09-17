@@ -29,19 +29,18 @@ import {
 import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import RoutedTabs from "@components/routed-tabs/RoutedTabs";
 import { CLAIMS_PATH, defaultClaimTab, visibleClaimTypes } from "./claimsTabs";
-import { useUserInfo } from "@api/useUserInfo";
-import { isSriLankaWorkLocation } from "@utils/locationGate";
+import { useSriLankaEmployee } from "@hooks/useSriLankaEmployee";
 
 /**
  * Whether this employee is offered the OPD tab.
  *
- * Reads the SAME /user-info the rest of the app already fetches, so this costs
- * no extra request. Unresolved reads as false, which fails closed — the tab
- * appears a moment later rather than flashing and being withdrawn.
+ * Unresolved reads as false, which fails closed — the tab appears a moment
+ * later rather than flashing and being withdrawn. That is right for the tab
+ * BAR; see ClaimsIndex for why the same unresolved `false` is not right for
+ * choosing where to land.
  */
 function useIsSriLanka(): boolean {
-  const userInfo = useUserInfo();
-  return isSriLankaWorkLocation(userInfo.data?.workLocation);
+  return useSriLankaEmployee().isSriLanka;
 }
 
 // One screen for both kinds of claim you file for yourself.
@@ -152,7 +151,18 @@ function AddClaimButton() {
  * `/me/claims` itself opens on the type people file most often — of the ones
  * they are offered. OPD is first and is Sri-Lanka-only, so a fixed default
  * would have landed everyone else on a tab that is not there.
+ *
+ * Held until /user-info answers, which is the half `defaultClaimTab`'s own
+ * tests could not cover. Unresolved reads as "not Sri Lanka", and on a cold
+ * load — a bookmark, a refresh, a link into Claims — that sent a Colombo
+ * employee to Expense and then unmounted this route, so the real answer
+ * arriving a moment later had nothing left to correct.
+ *
+ * `null` rather than a spinner: the tab bar above is already on screen, and
+ * this resolves in the time it takes /user-info to return.
  */
 export function ClaimsIndex() {
-  return <Navigate to={`${CLAIMS_PATH}/${defaultClaimTab(useIsSriLanka()).segment}`} replace />;
+  const { isSriLanka, isResolving } = useSriLankaEmployee();
+  if (isResolving) return null;
+  return <Navigate to={`${CLAIMS_PATH}/${defaultClaimTab(isSriLanka).segment}`} replace />;
 }

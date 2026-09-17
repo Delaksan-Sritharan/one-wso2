@@ -100,6 +100,32 @@ describe("useAsgardeoSub — deciding whether a decode failure means the session
     expect(refreshIdToken).toHaveBeenCalledTimes(1);
   });
 
+  // A silent re-auth is a prompt=none iframe against a session the user has
+  // just ended. The live branch below already checked `cancelled` after its
+  // await; this path did not, so a sign-out or unmount while the raw token was
+  // being read fell straight through to refreshIdToken().
+  it("does not start a silent re-auth for a session that ended mid-check", async () => {
+    let release!: (token: string) => void;
+    rawIdToken.mockReturnValue(
+      new Promise<string>((resolve) => {
+        release = resolve;
+      }),
+    );
+    getDecodedIdToken.mockRejectedValue(new Error("expired"));
+
+    const { unmount } = renderHook(() => useAsgardeoSub());
+    await waitFor(() => expect(rawIdToken).toHaveBeenCalled());
+
+    unmount();
+    release(deadToken());
+    // Two turns of the microtask queue: one for the raw-token read to settle,
+    // one for whatever the effect would do next.
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(refreshIdToken).not.toHaveBeenCalled();
+  });
+
   // The escape hatch, matching @api/http: anything unreadable behaves exactly
   // as it did before this check existed.
   it("falls back to re-auth when the raw token cannot be read", async () => {

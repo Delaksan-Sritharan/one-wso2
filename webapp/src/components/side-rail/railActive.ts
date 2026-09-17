@@ -112,6 +112,11 @@ export function activeItemId({
  * LEAF, which may sit inside the first group rather than being it. Rail order,
  * so "the first one" means on screen what it means here.
  *
+ * `path` only, never `externalUrl`, and that is a rule rather than an
+ * oversight: ISAC is the FIRST row of the Marketing Ops rail, and opening a
+ * perspective must not fling you into another tab. An outbound row is
+ * something you choose, so it is offered in the rail and skipped here.
+ *
  * `resolveVisible` is asked about a group as well as its children: a group
  * hidden as a whole takes its children with it, which is what the rail does.
  */

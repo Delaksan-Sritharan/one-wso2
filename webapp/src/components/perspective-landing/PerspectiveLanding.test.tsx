@@ -45,7 +45,15 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import PerspectiveLanding from "./PerspectiveLanding";
 
 function UrlProbe() {
-  return <div data-testid="url">{useLocation().pathname}</div>;
+  const { pathname, state } = useLocation();
+  return (
+    <>
+      <div data-testid="url">{pathname}</div>
+      <div data-testid="from">
+        {(state as { fromPerspective?: string } | null)?.fromPerspective ?? "none"}
+      </div>
+    </>
+  );
 }
 
 function renderLanding() {
@@ -87,6 +95,16 @@ describe("a perspective landing that forwards to the first item", () => {
     ];
     renderLanding();
     expect(screen.getByTestId("url")).toHaveTextContent("/security/risk/dashboard");
+  });
+
+  // Some destinations sit outside their perspective's path prefix — Legal and
+  // Finance both forward into the shared /due-diligence/* routes — and the rail
+  // reads the URL first. Without this the perspective survives only by the
+  // sessionStorage memory an effect happened to write before we left.
+  it("carries the perspective through the redirect", () => {
+    visibility.current.visibleLeaves = [leaf("dd-partners", "/due-diligence/partners")];
+    renderLanding();
+    expect(screen.getByTestId("from")).toHaveTextContent("security");
   });
 
   // THE bug this guards. Every gate fails closed while it answers, so the

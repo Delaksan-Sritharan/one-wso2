@@ -116,6 +116,24 @@ describe("fetchWithReauth — attributing a 401", () => {
     expect(refreshAccessToken).toHaveBeenCalledTimes(1);
   });
 
+  // A successful refresh retires the evidence gathered under the token it
+  // replaced. Without that, origin A's 401 under the OLD token still counts
+  // toward corroboration, so ONE 401 under the new token reaches
+  // ORIGINS_BEFORE_DOUBT on a dead token's testimony and re-auths again.
+  it("does not let a replaced token's 401 corroborate the next one's", async () => {
+    fetchMock.mockResolvedValue(res(401));
+
+    // Token A expires, so this one legitimately refreshes — and records
+    // origin A on the way through.
+    await fetchWithReauth("https://a.example.com/api/x", {}, deadToken());
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+
+    // Now a DIFFERENT origin refuses the fresh, live token. On its own that is
+    // one origin, which is that backend's problem, not our session's.
+    await fetchWithReauth("https://b.example.com/api/y", {}, liveToken());
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+  });
+
   it("leaves non-401 responses alone entirely", async () => {
     fetchMock.mockResolvedValue(res(403));
 

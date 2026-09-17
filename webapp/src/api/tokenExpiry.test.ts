@@ -77,6 +77,20 @@ describe("classifyToken", () => {
     expect(classifyToken(token, NOW).kind).toBe("unknown");
   });
 
+  // Not a token shape any IdP emits, but "live" is the answer that SUPPRESSES
+  // a re-auth, so anything of an unexpected shape has to land on unknown —
+  // which restores the old conduct rather than narrowing it. Both of these
+  // carry a perfectly readable future `exp` in segment two, and both read as
+  // live if the check is `>= 2` segments instead of exactly 3.
+  it.each([
+    ["two segments", 2],
+    ["four segments", 4],
+  ])("reports a %s token as unknown, however readable its payload", (_label, count) => {
+    const three = jwt({ exp: atSec(NOW) + 600 }).split(".");
+    const token = count === 2 ? three.slice(0, 2).join(".") : [...three, "extra"].join(".");
+    expect(classifyToken(token, NOW).kind).toBe("unknown");
+  });
+
   it("carries the expiry back so a caller can say when", () => {
     const exp = atSec(NOW) + 600;
     const t = classifyToken(jwt({ exp }), NOW);

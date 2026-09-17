@@ -131,7 +131,13 @@ export function useAsgardeoSub(): { state: SubState; retry: () => void } {
         // Same rule @api/http applies to a 401 — see api/tokenExpiry.ts.
         let recoveryFailure: unknown;
         try {
-          if (await idTokenStillLive()) {
+          const stillLive = await idTokenStillLive();
+          // Checked BEFORE either recovery path, not just the decode inside the
+          // live branch. A sign-out or unmount during that await used to fall
+          // straight through to refreshIdToken() — starting a silent re-auth
+          // for a session the user has just ended.
+          if (cancelled) return;
+          if (stillLive) {
             const retried = await getDecodedIdToken();
             if (cancelled) return;
             const s = (retried as { sub?: string } | null | undefined)?.sub;

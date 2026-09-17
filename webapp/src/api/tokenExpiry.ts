@@ -62,8 +62,12 @@ function b64urlDecode(segment: string): string {
  */
 export function classifyToken(rawToken: string, nowMs: number = Date.now()): TokenStatus {
   if (!rawToken) return { kind: "unknown", reason: "no token" };
+  // Exactly three. Two or four segments with a readable payload would decode
+  // and could classify as `live`, and "live" is the answer that SUPPRESSES a
+  // re-auth — so anything that is not the shape we expect has to fall through
+  // to `unknown`, which restores the old conduct rather than narrowing it.
   const parts = rawToken.split(".");
-  if (parts.length < 2) return { kind: "unknown", reason: "not a JWT" };
+  if (parts.length !== 3) return { kind: "unknown", reason: "not a JWT" };
 
   let payload: unknown;
   try {

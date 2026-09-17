@@ -16,14 +16,21 @@
  * under the License.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Stubbed rather than provided: importing the real hook pulls @asgardeo/browser
-// into this file's module graph, and that package's `buffer` directory import
-// does not resolve under vitest's ESM loader — the same failure
-// features/tour/tourTargets.test.tsx hits. The page only reads workLocation.
-vi.mock("@api/useUserInfo", () => ({
-  useUserInfo: () => ({ data: { workLocation: "Sri Lanka" } }),
+// Stubbed rather than provided: the real hook reaches /user-info through
+// @asgardeo/browser, whose `buffer` directory import does not resolve under
+// vitest's ESM loader — the same failure features/tour/tourTargets.test.tsx
+// hits. A factory mock keeps that module from ever being evaluated.
+//
+// Mutable, because `isResolving` is half of what this screen has to get right:
+// the location arrives a beat after the first render, and what the page does in
+// that beat is the bug the last two tests in this file guard.
+const location = vi.hoisted(() => ({
+  value: { isSriLanka: true, isResolving: false },
+}));
+vi.mock("@hooks/useSriLankaEmployee", () => ({
+  useSriLankaEmployee: () => location.value,
 }));
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -61,6 +68,10 @@ function show(initial = "/me/claims") {
   );
 }
 
+beforeEach(() => {
+  location.value = { isSriLanka: true, isResolving: false };
+});
+
 describe("landing on Claims", () => {
   // Deliberately not "the last tab you used": two people describing this screen
   // to each other should be looking at the same thing.
@@ -96,6 +107,22 @@ describe("landing on Claims", () => {
     await screen.findByRole("tab", { name: "OPD claims" });
     await userEvent.click(screen.getByRole("tab", { name: "OPD claims" }));
     await waitFor(() => expect(screen.getByTestId("url")).toHaveTextContent("/me/claims/opd"));
+  });
+
+  // THE bug. Unresolved reads as "not Sri Lanka", so this used to navigate
+  // straight to Expense on a cold load — a bookmark, a refresh, a link into
+  // Claims — and then unmount, leaving the real answer nothing to correct.
+  it("waits for the work location before choosing a tab", () => {
+    location.value = { isSriLanka: false, isResolving: true };
+    show();
+    expect(screen.getByTestId("url")).toHaveTextContent("/me/claims");
+    expect(screen.queryByTestId("tab")).not.toBeInTheDocument();
+  });
+
+  it("opens on Expense for everyone else, once the location is known", async () => {
+    location.value = { isSriLanka: false, isResolving: false };
+    show();
+    expect(await screen.findByTestId("url")).toHaveTextContent("/me/claims/expense");
   });
 });
 

@@ -51,6 +51,7 @@ import EmailSignaturePage from "@features/my/email-signature/pages/EmailSignatur
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import PerspectiveLanding from "@components/perspective-landing/PerspectiveLanding";
+import SriLankaRoute from "@components/route-guards/SriLankaRoute";
 import AdCampaignsAnalyticsPage from "@features/marketing-ops/ad-campaigns/pages/AdCampaignsAnalyticsPage";
 import CampaignTrackerPage from "@features/marketing-ops/ad-campaigns/pages/CampaignTrackerPage";
 import UtmGeneratorPage from "@features/marketing-ops/utilities/pages/UtmGeneratorPage";
@@ -252,10 +253,29 @@ export default function App() {
           <Route path="me/claims" element={<ClaimsPage />}>
             <Route index element={<ClaimsIndex />} />
             <Route path="expense" element={<ExpenseClaimsTab />} />
-            <Route path="opd" element={<OpdClaimsTab />} />
+            {/* Colombo-office perk, so the ROUTE refuses it too — hiding the
+                tab only stopped it being offered, not being typed. Note the
+                similarly-named /finance/claim-approval/opd is NOT guarded: a
+                finance approver anywhere may decide a Colombo employee's OPD
+                claim. */}
+            <Route
+              path="opd"
+              element={
+                <SriLankaRoute>
+                  <OpdClaimsTab />
+                </SriLankaRoute>
+              }
+            />
           </Route>
           <Route path="me/claims/expense/new" element={<ExpenseNewClaimPage />} />
-          <Route path="me/claims/opd/new" element={<OpdNewClaimPage />} />
+          <Route
+            path="me/claims/opd/new"
+            element={
+              <SriLankaRoute>
+                <OpdNewClaimPage />
+              </SriLankaRoute>
+            }
+          />
           {/* Behind the same preview flag as its menu entry. Hiding only the
               entry would leave the page reachable by anyone with the URL, which
               is not what "not released yet" means. */}
@@ -305,10 +325,21 @@ export default function App() {
               refuses the calls regardless. */}
           {/* Self-service sits under Me; managing on someone's behalf stays
               under People Ops. */}
-          <Route path="me/subscriptions" element={<MySubscriptionsPage />} />
+          <Route
+            path="me/subscriptions"
+            element={
+              <SriLankaRoute>
+                <MySubscriptionsPage />
+              </SriLankaRoute>
+            }
+          />
           <Route
             path="people-ops/subscriptions/manage"
-            element={<ManageSubscriptionsPage />}
+            element={
+              <SriLankaRoute>
+                <ManageSubscriptionsPage />
+              </SriLankaRoute>
+            }
           />
           {/* People Ops → PAR: the employee half of par-app, ported one screen
               at a time. Tab names match par-app's own OngoingCycleView tab bar
@@ -570,7 +601,14 @@ export default function App() {
           {/* Me → Menu: the cafeteria screen ported from the standalone
               menu app. One page, as the original was. The functional spec and
               the deviation list live in docs/ported-apps/menu-app.md. */}
-          <Route path="me/menu" element={<MenuHomePage />} />
+          <Route
+            path="me/menu"
+            element={
+              <SriLankaRoute>
+                <MenuHomePage />
+              </SriLankaRoute>
+            }
+          />
           {/* Legal perspective — currently just a second entry point into Due
               Diligence, alongside Finance (see the finance/ routes below and
               DUE_DILIGENCE_APPS). */}

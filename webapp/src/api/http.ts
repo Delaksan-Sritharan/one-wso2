@@ -23,7 +23,7 @@
 // non-2xx to get the right retry behavior.
 
 import { refreshAccessToken } from "@api/authBridge";
-import { classifyToken, noteUnauthorized } from "@api/tokenExpiry";
+import { classifyToken, noteUnauthorized, resetUnauthorizedOrigins } from "@api/tokenExpiry";
 
 // Thrown on non-2xx responses (and on unexpectedly-empty 2xx GETs). Carries
 // the HTTP status so retry logic (both per-query in features and global in
@@ -168,6 +168,13 @@ export async function fetchWithReauth(url: string, init: RequestInit, accessToke
     );
     return first;
   }
+  // The refresh succeeded, so every 401 recorded above belongs to a token that
+  // no longer exists. Leaving them in place lets a single 401 under the NEW
+  // token reach ORIGINS_BEFORE_DOUBT on the strength of a dead one's evidence,
+  // and corroboration is supposed to mean "several backends are refusing the
+  // credentials we hold now".
+  resetUnauthorizedOrigins();
+
   if (!isReplaySafe) return first;
   return fetch(url, withAuth(freshToken));
 }
