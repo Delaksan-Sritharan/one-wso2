@@ -69,7 +69,13 @@ function HistoryBody() {
   // The OPD backend refuses the whole app to anyone holding neither of its
   // roles, so the submitter check is what tells an ineligible account why the
   // screen is empty rather than leaving them with a bare "no claims".
-  if (!userInfo.isLoading && !opdHasRole(userInfo.data, OPD_ROLE.CLAIM_SUBMITTER)) {
+  //
+  // `isError` is excluded deliberately. A failed lookup leaves `data`
+  // undefined, and `opdHasRole` reads that as "no role" — so without this the
+  // screen would tell someone their account is ineligible when all that
+  // happened is a request failed, and offer them no way to retry. A confirmed
+  // refusal still lands here, because a successful load is not an error.
+  if (!userInfo.isLoading && !userInfo.isError && !opdHasRole(userInfo.data, OPD_ROLE.CLAIM_SUBMITTER)) {
     return (
       <Alert severity="info">
         OPD claims aren&apos;t available for your account (they&apos;re limited to permanent

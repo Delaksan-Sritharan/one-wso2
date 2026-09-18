@@ -59,6 +59,12 @@ export function useFinanceGate(enabled = true): FinanceGate {
   // backend refuses the whole app to anyone without it, so the menu must not
   // offer a screen whose every request comes back 403.
   const opdSubmitter = opdHasRole(opd.data, OPD_ROLE.CLAIM_SUBMITTER);
+  // A lookup that FAILED is not the same answer as one that came back without
+  // the role: `opd.data` is undefined either way, and `isResolving` is false
+  // once the retries give up. Treating the two alike would silently drop OPD
+  // out of the menu whenever its backend had a bad minute, with nothing on
+  // screen to say why or to retry.
+  const opdUnknown = opd.isError;
   const expenseLead = Boolean(expense.data?.enableLeadView);
   const expenseFinance = Boolean(expense.data?.enableFinanceView);
 
@@ -99,7 +105,10 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // role, not the approver one: this is your own history, the same claims
       // the Me-side OPD tab shows.
       case "opd-history":
-        return opdSubmitter;
+        // Shown while the answer is unknown: the screen behind it carries its
+        // own error notice and a retry, which is a better place to find out
+        // than a menu entry that quietly is not there.
+        return opdSubmitter || opdUnknown;
       case "cc-approve":
         return ccLeadOrFinance;
       case "cc-settings":

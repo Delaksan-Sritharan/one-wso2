@@ -33,10 +33,16 @@ vi.mock("../../components/FinanceShell", () => ({
   ),
 }));
 
-const state: { roles: number[]; claims: OpdClaim[]; claimsError: Error | null } = {
+const state: {
+  roles: number[];
+  claims: OpdClaim[];
+  claimsError: Error | null;
+  userInfoError: Error | null;
+} = {
   roles: [444],
   claims: [],
   claimsError: null,
+  userInfoError: null,
 };
 
 /** The payload the screen last asked `/search-claims` for. */
@@ -44,11 +50,13 @@ let lastPayload: unknown = null;
 
 vi.mock("../useOpd", () => ({
   useOpdUserInfo: () => ({
-    data: { firstName: "A", lastName: "B", workEmail: "me@wso2.com", userRoles: state.roles },
+    data: state.userInfoError
+      ? undefined
+      : { firstName: "A", lastName: "B", workEmail: "me@wso2.com", userRoles: state.roles },
     isLoading: false,
-    isError: false,
+    isError: Boolean(state.userInfoError),
     isFetching: false,
-    error: null,
+    error: state.userInfoError,
     refetch: vi.fn(),
   }),
   useOpdClaims: (payload: unknown) => {
@@ -112,6 +120,7 @@ beforeEach(() => {
   state.roles = [444];
   state.claims = [claim()];
   state.claimsError = null;
+  state.userInfoError = null;
   lastPayload = null;
 });
 
@@ -124,6 +133,18 @@ describe("the screen", () => {
   it("asks only for the signed-in person's claims", () => {
     show();
     expect(lastPayload).toMatchObject({ email: "me@wso2.com" });
+  });
+});
+
+// A failed lookup leaves `data` undefined, which reads as "no role" — so
+// without the isError guard this screen would tell someone their account is
+// ineligible when all that happened is a request failed.
+describe("when the role lookup fails", () => {
+  it("offers a retry rather than calling the account ineligible", () => {
+    state.userInfoError = new Error("boom");
+    show();
+    expect(screen.getByText(/Couldn't load your claims/)).toBeInTheDocument();
+    expect(screen.queryByText(/aren't available for your account/)).not.toBeInTheDocument();
   });
 });
 
