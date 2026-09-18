@@ -55,6 +55,12 @@ export function useFinanceGate(enabled = true): FinanceGate {
   const ccLeadOrFinance = ccHasAccess(cc.data, "lead") || ccHasAccess(cc.data, "finance");
   const ccFinance = ccHasAccess(cc.data, "finance");
   const opdFinance = opdHasRole(opd.data, OPD_ROLE.FINANCE_APPROVER);
+  // Filing an OPD claim is its own role, and not one everybody holds: the OPD
+  // backend grants it only to a permanent employee at an eligible location
+  // (`utils.bal:35-37`), and refuses the whole app — 403 on /user-info — to
+  // anyone with neither role. Without this the New Claim entry would be shown
+  // to people whose every OPD request is rejected.
+  const opdSubmitter = opdHasRole(opd.data, OPD_ROLE.CLAIM_SUBMITTER);
   const expenseLead = Boolean(expense.data?.enableLeadView);
   const expenseFinance = Boolean(expense.data?.enableFinanceView);
 
@@ -75,6 +81,10 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // No lead stage exists for OPD — the backend grants role 555 or nothing.
       case "claim-approval-opd":
         return opdFinance;
+      // OPD Claims → New Claim, in the Finance perspective. The submitter role,
+      // not the finance one: this is the screen where you file your own.
+      case "opd-new":
+        return opdSubmitter;
       // Behind a preview flag until the Finance and Me new-claim entry points
       // are reconciled. Answered here as well as by removing the registry
       // entry, because the Finance overview builds its tiles by hand and asks

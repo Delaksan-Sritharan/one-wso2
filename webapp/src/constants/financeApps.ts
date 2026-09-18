@@ -27,9 +27,10 @@
 // Each app's own backend still enforces its real role scheme; these
 // capability gates just decide what shows in the rail.
 
-import { CreditCardIcon, ReceiptTextIcon } from "@wso2/oxygen-ui-icons-react";
+import { CreditCardIcon, ReceiptTextIcon, StethoscopeIcon } from "@wso2/oxygen-ui-icons-react";
 import { CC_PATH } from "@features/finance/cc/ccPaths";
 import { expenseFinancePaths } from "@features/finance/expense/expenseFinancePaths";
+import { opdPaths } from "@features/finance/opd/opdPaths";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import type { MenuApp } from "@constants/appMenu";
 
@@ -127,6 +128,34 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
       { id: "cc-settings", label: "Settings", desc: "Upload and reconcile bank statements (finance).", requires: ["admin"], path: `${CC_PATH}/settings` },
     ],
   },
+  {
+    // OPD has been a tab under Me → Claims and nothing else, which is right for
+    // the history — you file your own — but left the app with no front door of
+    // its own the way Expense Claims and Credit Card Expenses have.
+    //
+    // `alwaysGroup` because it is one screen today and will not stay that way:
+    // Claim History and Approvals belong here too. Collapsing to a leaf now
+    // would teach the wrong shape and make the item disappear as a concept the
+    // day a second one lands.
+    key: "opd",
+    name: "OPD Claims",
+    icon: StethoscopeIcon,
+    purpose: "Claim outpatient medical expenses against your annual limit.",
+    alwaysGroup: true,
+    items: [
+      {
+        id: "opd-new",
+        label: "New Claim",
+        desc: "File a new OPD claim, one bill at a time.",
+        // Not a coarse capability: the OPD backend decides this, and it refuses
+        // the whole app to anyone holding neither of its roles. `requires` here
+        // only forces useFinanceGate to answer for the id — see its `opd-new`
+        // case, which asks the OPD backend rather than people-app.
+        requires: ["employee"],
+        path: opdPaths.newClaim,
+      },
+    ],
+  },
 ];
 
 /** Every finance-domain app, wherever it is surfaced. */
@@ -166,4 +195,5 @@ export const FINANCE_EYEBROW = {
   claims: eyebrowFor("claims"),
   cc: eyebrowFor("cc"),
   expense: eyebrowFor("expense"),
+  opd: eyebrowFor("opd"),
 } as const;

@@ -62,7 +62,10 @@ describe("where each finance app lives", () => {
   it("keeps claims with the person, and both the card and expense claims with finance", async () => {
     const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load();
     expect(keys(ME_FINANCE_APPS)).toEqual(["claims"]);
-    expect(keys(FINANCE_PERSPECTIVE_APPS)).toEqual(["expense", "cc"]);
+    // "opd" joins the Finance side for the same reason "expense" did: the Me
+    // tab is for tracking what you filed, and the app needs a front door of
+    // its own for the screens that are not that.
+    expect(keys(FINANCE_PERSPECTIVE_APPS)).toEqual(["expense", "cc", "opd"]);
   });
 
   // The flag gates the New Claim ITEM, not the whole app. New Claim duplicates
@@ -110,7 +113,7 @@ describe("where each finance app lives", () => {
         keys(FINANCE_PERSPECTIVE_APPS).includes(k),
       );
       expect(overlap).toEqual([]);
-      expect(keys(FINANCE_APPS).sort()).toEqual(["cc", "claims", "expense"]);
+      expect(keys(FINANCE_APPS).sort()).toEqual(["cc", "claims", "expense", "opd"]);
     }
   });
 

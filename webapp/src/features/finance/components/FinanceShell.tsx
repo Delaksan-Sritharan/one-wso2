@@ -29,6 +29,7 @@ export default function FinanceShell({
   subtitle,
   configured,
   configKey,
+  actions,
   fill = false,
   children,
 }: {
@@ -39,6 +40,19 @@ export default function FinanceShell({
   subtitle?: string;
   configured: boolean;
   configKey: string; // e.g. "ONE_WSO2_OPD_BACKEND_URL"
+  /**
+   * Page-level buttons, on the title's line and against the right edge.
+   *
+   * For a screen whose actions are the point of it — OPD's New Claim, where
+   * Add expense and Submit are what the page is for, and a row of its own
+   * below the title costs the bill list ~50px of height it needs more.
+   *
+   * Absent on every other finance screen, and when it is absent the title
+   * block renders exactly as it did before this prop existed: the flex row
+   * only wraps it when there is something to put on the other side, so no
+   * screen that doesn't ask for actions can be shifted by them.
+   */
+  actions?: ReactNode;
   /**
    * Give the screen exactly the height left in the page and no more, instead
    * of letting it grow the page.
@@ -58,8 +72,8 @@ export default function FinanceShell({
   children: ReactNode;
 }) {
   const fillColumn = { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" } as const;
-  return (
-    <Box sx={fill ? fillColumn : undefined}>
+  const titleBlock = (
+    <>
       <Chip
         icon={<eyebrow.icon size={14} />}
         label={eyebrow.label}
@@ -82,6 +96,30 @@ export default function FinanceShell({
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25, maxWidth: "70ch" }}>
           {subtitle}
         </Typography>
+      )}
+    </>
+  );
+
+  return (
+    <Box sx={fill ? fillColumn : undefined}>
+      {actions ? (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 2,
+            // On a narrow window the buttons drop below the title rather than
+            // squeezing it to nothing.
+            flexWrap: "wrap",
+            flexShrink: 0,
+          }}
+        >
+          <Box sx={{ minWidth: 0 }}>{titleBlock}</Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>{actions}</Box>
+        </Box>
+      ) : (
+        titleBlock
       )}
 
       {configured ? (

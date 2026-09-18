@@ -24,6 +24,8 @@ import { useFinanceGate } from "../api/useFinanceGate";
 import { CLAIM_APPROVAL_PATH } from "../approvals/claimApprovalTabs";
 import { ccPaths } from "../cc/ccPaths";
 import { expenseFinancePaths } from "../expense/expenseFinancePaths";
+import { opdPaths } from "../opd/opdPaths";
+import { FINANCE_EYEBROW } from "@constants/financeApps";
 import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
 import { DUE_DILIGENCE_APPS, DUE_DILIGENCE_EYEBROW } from "@constants/dueDiligenceApps";
 
@@ -71,6 +73,17 @@ export default function FinancePage() {
       icon: CreditCardIcon,
       title: "Credit Card Expenses",
       description: "Categorise and submit your corporate card spend, and see what is outstanding.",
+    },
+    {
+      id: "opd",
+      // The submitter role, which is what the app's one screen needs. Gated on
+      // the OPD backend's own answer, so someone it refuses is not offered a
+      // tile into a 403.
+      show: gate.canSee("opd-new"),
+      to: opdPaths.newClaim,
+      icon: FINANCE_EYEBROW.opd.icon,
+      title: FINANCE_EYEBROW.opd.label,
+      description: "Claim outpatient medical expenses against your annual limit.",
     },
     {
       id: "due-diligence",
