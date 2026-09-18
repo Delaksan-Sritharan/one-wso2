@@ -26,13 +26,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 type FinanceApps = typeof import("./financeApps");
 
 async function load(
-  preview: {
-    expenseSubmitter?: boolean;
-    claimApproval?: boolean;
-    opdClaims?: boolean;
-    expenseClaims?: boolean;
-    creditCardExpenses?: boolean;
-  } = {},
+  preview: { expenseSubmitter?: boolean; opdClaims?: boolean } = {},
 ): Promise<FinanceApps> {
   vi.resetModules();
   window.config = {
@@ -113,24 +107,15 @@ describe("where each finance app lives", () => {
 
   it("puts every app KEY in exactly one of the two", async () => {
     for (const preview of [{}, { expenseSubmitter: true }]) {
-      const { FINANCE_APPS, ME_FINANCE_APPS, CLAIM_APPROVAL_APPS, FINANCE_PERSPECTIVE_APPS } =
-        await load({
-          ...preview,
-          claimApproval: true,
-          opdClaims: true,
-          expenseClaims: true,
-          creditCardExpenses: true,
-        });
-      const financeSide = [...keys(CLAIM_APPROVAL_APPS), ...keys(FINANCE_PERSPECTIVE_APPS)];
-      const overlap = keys(ME_FINANCE_APPS).filter((k) => financeSide.includes(k));
+      const { FINANCE_APPS, ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load({
+        ...preview,
+        opdClaims: true,
+      });
+      const overlap = keys(ME_FINANCE_APPS).filter((k) =>
+        keys(FINANCE_PERSPECTIVE_APPS).includes(k),
+      );
       expect(overlap).toEqual([]);
-      expect(keys(FINANCE_APPS).sort()).toEqual([
-        "cc",
-        "claim-approval",
-        "claims",
-        "expense",
-        "opd",
-      ]);
+      expect(keys(FINANCE_APPS).sort()).toEqual(["cc", "claims", "expense", "opd"]);
     }
   });
 
@@ -180,21 +165,5 @@ describe("the OPD Claims preview flag", () => {
   it("shows it when the flag is on", async () => {
     const { FINANCE_PERSPECTIVE_APPS } = await load({ opdClaims: true });
     expect(keys(FINANCE_PERSPECTIVE_APPS)).toContain("opd");
-  });
-});
-
-// Claim approval is not ready for production: the OPD queue has never run
-// against the real backend, and expense approving is not in the section yet.
-// The whole group is held back, not one item inside it.
-describe("the claim approval preview flag", () => {
-  it("hides the whole group when the flag is off", async () => {
-    const { CLAIM_APPROVAL_APPS, FINANCE_APPS } = await load();
-    expect(CLAIM_APPROVAL_APPS).toEqual([]);
-    expect(keys(FINANCE_APPS)).not.toContain("claim-approval");
-  });
-
-  it("shows it when the flag is on", async () => {
-    const { CLAIM_APPROVAL_APPS } = await load({ claimApproval: true });
-    expect(keys(CLAIM_APPROVAL_APPS)).toEqual(["claim-approval"]);
   });
 });
