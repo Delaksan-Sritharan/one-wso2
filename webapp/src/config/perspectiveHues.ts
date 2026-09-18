@@ -107,6 +107,22 @@ export const PERSPECTIVE_HUES: Record<string, PerspectiveHue> = {
     light: { bg: "#F1E8FB", fg: "#7C4AB3" },
     dark: { bg: "#241D2C", fg: "#9B5DE0" },
   },
+  // RevOps. Yellow-green at 89 degrees: 75 degrees from its nearest neighbour
+  // (finance, at 164), which is more separation than any other free slot on the
+  // wheel offered. Measured 4.71:1 light and 4.53:1 dark with the wash treatment.
+  //
+  // Note this is DARKER than a green picked for the wash alone would need to be.
+  // A wash-mounted glyph only has to clear 3:1 against its own wash, but this hue
+  // is also an app mark's `lead`, painted straight onto the white launcher tile —
+  // #74A63F measured 2.89:1 there and had to be dropped. See appMarkTones.ts.
+  //
+  // The palette is at six of the eight it can carry. Two left before the cap in
+  // perspectiveHues.test.ts forces the encoding conversation.
+  revops: {
+    hue: "#678F3D",
+    light: { bg: "#E1F3CE", fg: "#4E7326" },
+    dark: { bg: "#1A1D16", fg: "#678F3D" },
+  },
 };
 
 export function perspectiveHue(key: string): PerspectiveHue | undefined {

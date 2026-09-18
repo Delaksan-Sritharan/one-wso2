@@ -20,6 +20,8 @@ import { Navigate, Route, Routes } from "react-router";
 import { landingPath } from "@config/landingConfig";
 import SettingsPage from "@features/settings/pages/SettingsPage";
 import MenuHomePage from "@features/menu/pages/MenuHomePage";
+import RevOpsMeetingsPage from "@features/revops/pages/RevOpsMeetingsPage";
+import MeetingDetailPage from "@features/revops/pages/MeetingDetailPage";
 import AuthGuard from "@layouts/AuthGuard";
 import AppLayout from "@layouts/AppLayout";
 import PeopleOpsPage from "@features/people-ops/pages/PeopleOpsPage";
@@ -341,6 +343,19 @@ export default function App() {
           <Route path="marketing-ops/crm-upload/runs" element={<CrmUploadRunLogPage />} />
           <Route path="marketing-ops/crm-upload/records" element={<CrmUploadRecordsPage />} />
           <Route path="marketing-ops/crm-upload/review" element={<CrmUploadReviewPage />} />
+          {/* RevOps — auto-recorded meetings. The meeting history ported from
+              meet-app; scheduling stays in the calendar add-on and the
+              analytics dashboard was out of scope. No route-level guard: the
+              meet-app backend refuses a caller in no authorised group on every
+              endpoint, and RevOpsShell turns that 403 into an explanation, so
+              someone reaching this URL gets an answer rather than a blank
+              page. See docs/ported-apps/revops-meetings.md. */}
+          <Route path="revops" element={<RevOpsMeetingsPage />} />
+          {/* One meeting: the recording, and the call's details. A route rather than a
+              dialog because a recording is something people send each other, and a dialog
+              has no address — this survives a refresh, a bookmark and a paste into Slack.
+              The transcript and smart notes land in its left column. */}
+          <Route path="revops/meetings/:meetingId" element={<MeetingDetailPage />} />
           <Route path="settings" element={<SettingsPage />} />
           {/* Me → Menu: the cafeteria screen ported from the standalone
               menu app. One page, as the original was. The functional spec and

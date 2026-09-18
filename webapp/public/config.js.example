@@ -21,6 +21,15 @@ window.config = {
   // makes no requests. See docs/ported-apps/menu-app.md for the contract.
   // ONE_WSO2_MENU_BACKEND_URL: "https://<gateway>/menu-app/v1",
 
+  // RevOps (auto-recorded meetings) backend — people-ops-suite's meet-app
+  // service, reused unchanged. Powers the RevOps app's meeting history.
+  // Optional — when absent RevOps is hidden from the launcher entirely and the
+  // /revops route shows a "not connected" notice.
+  // drive-service base URL is NOT needed here: the streaming URL is minted by
+  // meet-app-backend and arrives already pointing at drive-service. Nothing in this app
+  // constructs it.
+  // ONE_WSO2_REVOPS_BACKEND_URL: "https://apis-stg.wso2.com/<component>/meet-app-backend/v1.0",
+
   // people-ops-suite people-app backend base URL. Same value as people-app's
   // REACT_APP_BACKEND_BASE_URL — usually a Choreo API gateway URL. Powers
   // the live My profile page (employee + personal info fetch).

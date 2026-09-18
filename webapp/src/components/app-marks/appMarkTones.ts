@@ -61,6 +61,10 @@ export const APP_MARK_TONES: Record<string, AppMarkTones> = {
   finance: { field: "#95D3C1", lead: "#22A37D", detail: "#1C8666" },
   marketing: { field: "#F0A8C9", lead: "#E04A8F", detail: "#B83D75" },
   csm: { field: "#CFB1F0", lead: "#9B5DE0", detail: "#7F4CB8" },
+  // RevOps. `lead` is darker than a wash-only green would need: a mark's lead
+  // sits on the white tile and is measured against it, where #74A63F came to
+  // 2.89:1. #678F3D is 3.77:1 light and 4.63:1 dark.
+  revops: { field: "#A4BC8B", lead: "#678F3D", detail: "#557532" },
 };
 
 /**

@@ -23,6 +23,7 @@ import {
   MarketingMark,
   MeMark,
   PeopleMark,
+  RevOpsMark,
   type MarkProps,
 } from "./AppMark";
 
@@ -36,6 +37,7 @@ const APP_MARKS: Record<string, (p: MarkProps) => ReactElement> = {
   finance: FinanceMark,
   marketing: MarketingMark,
   csm: CsmMark,
+  revops: RevOpsMark,
 };
 
 /**

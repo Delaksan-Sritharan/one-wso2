@@ -17,18 +17,25 @@
 // Central perspective registry. The waffle switcher and left rail both read
 // from this — one edit here changes every entry point.
 
-import { csmUrl, isCsmConfigured, isIsacConfigured, isacUrl } from "@config/apiConfig";
+import {
+  csmUrl,
+  isCsmConfigured,
+  isIsacConfigured,
+  isacUrl,
+} from "@config/apiConfig";
 import {
   CheckCheckIcon,
   DatabaseIcon,
   HouseIcon,
   LifeBuoyIcon,
   MegaphoneIcon,
+  RadioIcon,
   SatelliteDishIcon,
   UserRoundIcon,
   UserRoundMinusIcon,
   UsersIcon,
   UsersRoundIcon,
+  VideoIcon,
   WalletIcon,
   type LucideIcon,
 } from "@wso2/oxygen-ui-icons-react";
@@ -169,6 +176,23 @@ const ME_SECTIONS: PerspectiveSection[] = [
   ...appsToSections(ME_FINANCE_APPS),
 ];
 
+// RevOps's rail. One entry today — the meeting history — but a list rather than
+// nothing, because the rail is how you get back to the screen from a deep link
+// and because the detail view for a single recording lands next to it next.
+const REVOPS_SECTIONS: PerspectiveSection[] = [
+  {
+    id: "revops-meetings",
+    label: "Meetings",
+    // NOT RadioIcon, which belongs to the perspective itself. SideRail renders
+    // the Overview row with `active.icon`, so a section reusing the perspective
+    // icon puts the same glyph on two adjacent rows and the rail stops being
+    // scannable. Video reads as "recorded call" and its solid rectangle is the
+    // strongest silhouette contrast against Radio's arcs at 20px.
+    icon: VideoIcon,
+    path: "/revops",
+  },
+];
+
 export interface PerspectiveDef {
   key: string;
   label: string;
@@ -241,6 +265,36 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     icon: LifeBuoyIcon,
     access: isCsmConfigured(),
     externalUrl: csmUrl || undefined,
+  },
+  // RevOps — auto-recorded meetings. One screen so far: the meeting history
+  // ported from meet-app. Create Meeting stayed behind (scheduling happens in
+  // the calendar add-on) and the analytics dashboard was out of scope.
+  //
+  // `externallyGated` because access is decided by the meet-app backend's own
+  // privileges (ADMIN 762 / TEAM 987), not by One WSO2's four capabilities: a
+  // signed-in user who is in neither group gets a 403 on every endpoint. That
+  // flag is what keeps someone from being LANDED here at sign-in only to meet
+  // an authorization notice — the rail and launcher still show it, where the
+  // notice is the right answer.
+  //
+  // `access: true` regardless of whether the backend URL is set, unlike CSM
+  // just above. The difference is that CSM is somewhere else — with no URL its
+  // tile could only ever be a link to nowhere — whereas RevOps is a page we host,
+  // and that page explains its own not-connected state. Menu is the precedent:
+  // it stays in the rail unconfigured and says what is missing, which is how an
+  // operator finds out a key is unset. Hiding it instead would make a missing
+  // config indistinguishable from a feature that was never built.
+  //
+  // `isRevOpsBackendConfigured` is still imported and used by the page itself; it
+  // just doesn't decide visibility.
+  {
+    key: "revops",
+    label: "RevOps",
+    icon: RadioIcon,
+    access: true,
+    externallyGated: true,
+    path: "/revops",
+    sections: REVOPS_SECTIONS,
   },
   // Marketing Ops — UNLOCKED. Ported so far: Utilities (UTM + Asset Name
   // generators and their Marketing Admin panels) and Ad Campaigns → Analytics.
