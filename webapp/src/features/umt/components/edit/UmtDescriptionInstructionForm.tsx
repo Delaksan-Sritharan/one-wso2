@@ -103,14 +103,27 @@ export default function UmtDescriptionInstructionForm({
     setHotfixInstruction(firstProduct?.instruction ?? "");
   }
 
-  // ---- Non-hotfix rows table, re-seeded whenever the backend product list changes ----
+  // ---- Non-hotfix rows table, reseeded on a confirmed save or a different
+  // update — never just because the backend product list's array reference
+  // changed. `["umt-update"]` is invalidated by many unrelated mutations
+  // elsewhere on this page (mark as duplicate, testing saves, lifecycle
+  // transitions, ...), each handing back a structurally-new (even if
+  // content-identical) product list; reseeding on that alone would silently
+  // discard rows the user added/removed locally but hadn't saved yet. ----
   const initialRows = useMemo(
     () => products.filter(umtProductHasDescriptionInstruction).map(toRow),
     [products],
   );
   const [rows, setRows] = useState<DescriptionInstructionRow[]>(initialRows);
+  const [isRowsDirty, setIsRowsDirty] = useState(false);
   const [lastInitialRows, setLastInitialRows] = useState(initialRows);
-  if (initialRows !== lastInitialRows) {
+  const [lastId, setLastId] = useState(id);
+  if (id !== lastId) {
+    setLastId(id);
+    setLastInitialRows(initialRows);
+    setRows(initialRows);
+    setIsRowsDirty(false);
+  } else if (!isRowsDirty && initialRows !== lastInitialRows) {
     setLastInitialRows(initialRows);
     setRows(initialRows);
   }
@@ -166,6 +179,7 @@ export default function UmtDescriptionInstructionForm({
         })),
       ]);
     }
+    setIsRowsDirty(true);
     closeAddModal();
   }
 
@@ -220,6 +234,7 @@ export default function UmtDescriptionInstructionForm({
       setIsGeneralDescriptionChecked(false);
       setIsImplementationDetailsChecked(false);
       setIsImpactChecked(false);
+      setIsRowsDirty(false);
     } catch (error) {
       showError(`Failed to save description and instructions. ${describeError(error)}`);
     }
@@ -309,7 +324,10 @@ export default function UmtDescriptionInstructionForm({
           <IconButton
             aria-label="Delete row"
             size="small"
-            onClick={() => setRows((prev) => prev.filter((row) => row.productId !== params.row.productId))}
+            onClick={() => {
+              setRows((prev) => prev.filter((row) => row.productId !== params.row.productId));
+              setIsRowsDirty(true);
+            }}
           >
             <TrashIcon size={16} />
           </IconButton>
@@ -345,7 +363,14 @@ export default function UmtDescriptionInstructionForm({
         >
           Description and Instructions
         </Button>
-        <Button variant="outlined" disabled={rows.length === 0} onClick={() => setRows([])}>
+        <Button
+          variant="outlined"
+          disabled={rows.length === 0}
+          onClick={() => {
+            setRows([]);
+            setIsRowsDirty(true);
+          }}
+        >
           Clear All
         </Button>
         {missingProducts.length === 0 && products.length > 0 && (

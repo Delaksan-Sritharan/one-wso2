@@ -62,10 +62,23 @@ export function useUmtStagingTestResults(id: string, lifecycleState: string | nu
   });
 }
 
+export class UmtPartialTestingSaveError extends Error {
+  constructor(public readonly failedRows: UmtStagingTestResultRequest[], totalRows: number) {
+    super(`Failed to save ${failedRows.length} of ${totalRows} row(s).`);
+    this.name = "UmtPartialTestingSaveError";
+  }
+}
+
 // Saves only the rows the user actually touched this session, one PUT per
 // row, all inside this one mutationFn (not Promise.all'd from the caller) so
 // isPending/error reflect the whole batch rather than only the last call —
 // same reasoning as useUmtSaveDescriptionInstruction's two-sequenced PUTs.
+// Rows are awaited with allSettled (not Promise.all) so one row's failure
+// doesn't cut the others off mid-flight; any failures are reported back via
+// UmtPartialTestingSaveError.failedRows so the caller can keep those rows'
+// drafts for retry while clearing the ones that saved. Invalidation runs in
+// onSettled so a partial failure still refreshes both queries to reflect
+// whichever rows actually persisted.
 export function useUmtSaveTestingResults(id: string) {
   const getAccessToken = useAccessToken();
   const queryClient = useQueryClient();
@@ -73,11 +86,15 @@ export function useUmtSaveTestingResults(id: string) {
   return useMutation<void, Error, UmtStagingTestResultRequest[]>({
     mutationFn: async (rows) => {
       const accessToken = await getAccessToken();
-      await Promise.all(
+      const results = await Promise.allSettled(
         rows.map((row) => authedPut(umtServiceUrls.updateIntegrationTestStaging(id), accessToken, row)),
       );
+      const failedRows = rows.filter((_, index) => results[index].status === "rejected");
+      if (failedRows.length > 0) {
+        throw new UmtPartialTestingSaveError(failedRows, rows.length);
+      }
     },
-    onSuccess: async () => {
+    onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["umt-update-staging-test-results"] }),
         queryClient.invalidateQueries({ queryKey: ["umt-update"] }),

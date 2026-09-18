@@ -40,11 +40,17 @@ function writeString(key: string, value: string | null): void {
   }
 }
 
-function readJson<T>(key: string, fallback: T): T {
+// `JSON.parse` only throws on malformed JSON text — a validly-parsed value of
+// the wrong shape (manual edit, or a value written by a future/older shape)
+// would otherwise reach callers as `T` on nothing more than a type
+// assertion. `isValid` re-checks the parsed value's actual shape so a
+// mismatch falls back the same way a parse error does.
+function readJson<T>(key: string, fallback: T, isValid: (value: unknown) => value is T): T {
   const raw = readString(key);
   if (!raw) return fallback;
   try {
-    return JSON.parse(raw) as T;
+    const parsed: unknown = JSON.parse(raw);
+    return isValid(parsed) ? parsed : fallback;
   } catch {
     return fallback;
   }
@@ -67,7 +73,7 @@ export function writePersistedEditStep(id: string, stepId: string | null): void 
 // --- PR Analysis manual-add drafts (id-scoped) ---
 
 export function readPersistedPullRequests(id: string): UmtPullRequestAnalysisItem[] {
-  return readJson(`one-wso2.umt-pr-analysis-prs.v1.${id}`, []);
+  return readJson(`one-wso2.umt-pr-analysis-prs.v1.${id}`, [], Array.isArray);
 }
 
 export function writePersistedPullRequests(id: string, rows: UmtPullRequestAnalysisItem[]): void {
@@ -75,7 +81,7 @@ export function writePersistedPullRequests(id: string, rows: UmtPullRequestAnaly
 }
 
 export function readPersistedManualFiles(id: string): UmtFileOperation[] {
-  return readJson(`one-wso2.umt-pr-analysis-files.v1.${id}`, []);
+  return readJson(`one-wso2.umt-pr-analysis-files.v1.${id}`, [], Array.isArray);
 }
 
 export function writePersistedManualFiles(id: string, rows: UmtFileOperation[]): void {
@@ -83,7 +89,7 @@ export function writePersistedManualFiles(id: string, rows: UmtFileOperation[]):
 }
 
 export function readPersistedBundleInfoChanges(id: string): UmtBundleInfoChange[] {
-  return readJson(`one-wso2.umt-pr-analysis-bundle-info.v1.${id}`, []);
+  return readJson(`one-wso2.umt-pr-analysis-bundle-info.v1.${id}`, [], Array.isArray);
 }
 
 export function writePersistedBundleInfoChanges(id: string, rows: UmtBundleInfoChange[]): void {

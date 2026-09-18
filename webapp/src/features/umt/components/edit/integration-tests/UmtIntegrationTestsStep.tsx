@@ -24,6 +24,20 @@ import { isIntegrationTestsSaveDisabled, type UmtIntegrationTestDraftRow } from 
 
 type ProductWithId = UmtUpdateProduct & { productId: string | number };
 
+function seedTestPrDrafts(products: ProductWithId[]): Record<string, string> {
+  return Object.fromEntries(products.map((p) => [String(p.productId), p.testPr ?? ""]));
+}
+
+function seedIgnoreDrafts(products: ProductWithId[]): Record<string, boolean> {
+  return Object.fromEntries(
+    products.map((p) => [String(p.productId), Boolean(p.ignoreTestReason?.trim()) && !p.testPr?.trim()]),
+  );
+}
+
+function seedReasonDrafts(products: ProductWithId[]): Record<string, string> {
+  return Object.fromEntries(products.map((p) => [String(p.productId), p.ignoreTestReason ?? ""]));
+}
+
 export default function UmtIntegrationTestsStep({ id, update }: { id: string; update: UmtUpdateSummary }) {
   const { showSuccess, showError } = useNotifications();
   const saveMutation = useUmtSaveIntegrationTests(id);
@@ -35,29 +49,33 @@ export default function UmtIntegrationTestsStep({ id, update }: { id: string; up
 
   const [isDirty, setIsDirty] = useState(false);
   const [testPrDrafts, setTestPrDrafts] = useState<Record<string, string>>(() =>
-    Object.fromEntries(products.map((p) => [String(p.productId), p.testPr ?? ""])),
+    seedTestPrDrafts(products),
   );
   const [ignoreDrafts, setIgnoreDrafts] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(
-      products.map((p) => [String(p.productId), Boolean(p.ignoreTestReason?.trim()) && !p.testPr?.trim()]),
-    ),
+    seedIgnoreDrafts(products),
   );
   const [reasonDrafts, setReasonDrafts] = useState<Record<string, string>>(() =>
-    Object.fromEntries(products.map((p) => [String(p.productId), p.ignoreTestReason ?? ""])),
+    seedReasonDrafts(products),
   );
   const [helmChartTagDraft, setHelmChartTagDraft] = useState(() => products[0]?.helmChartTag ?? "");
 
+  // Reseed on a confirmed save (isDirty cleared, then the next `products`
+  // reference picks up the saved server state) or a different update — never
+  // just because `products`' array reference changed. `["umt-update"]` is
+  // invalidated by many unrelated mutations elsewhere on this page, each
+  // handing back a structurally-new (even if content-identical) products
+  // array; reseeding on that alone while the user has unsaved Test PR /
+  // ignore-reason / Helm Chart Tag drafts would silently discard them.
   const [lastProducts, setLastProducts] = useState(products);
-  if (products !== lastProducts) {
+  const [lastId, setLastId] = useState(id);
+  const identityChanged = id !== lastId;
+  if (identityChanged || (!isDirty && products !== lastProducts)) {
+    setLastId(id);
     setLastProducts(products);
-    setIsDirty(false);
-    setTestPrDrafts(Object.fromEntries(products.map((p) => [String(p.productId), p.testPr ?? ""])));
-    setIgnoreDrafts(
-      Object.fromEntries(
-        products.map((p) => [String(p.productId), Boolean(p.ignoreTestReason?.trim()) && !p.testPr?.trim()]),
-      ),
-    );
-    setReasonDrafts(Object.fromEntries(products.map((p) => [String(p.productId), p.ignoreTestReason ?? ""])));
+    if (identityChanged) setIsDirty(false);
+    setTestPrDrafts(seedTestPrDrafts(products));
+    setIgnoreDrafts(seedIgnoreDrafts(products));
+    setReasonDrafts(seedReasonDrafts(products));
     setHelmChartTagDraft(products[0]?.helmChartTag ?? "");
   }
 

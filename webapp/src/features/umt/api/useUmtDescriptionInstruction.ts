@@ -23,7 +23,9 @@ import type { UmtBehaviorChangeRequest, UmtProductDetailsRequest } from "./umtUp
 // Saves the Description and Instruction step. `behaviorChange` is null for
 // the hotfix branch (which never touches those fields); otherwise both
 // PUTs are sequenced inside this one mutation so a failure in either
-// surfaces to the caller.
+// surfaces to the caller. Invalidation runs in onSettled (not onSuccess) so
+// a second-PUT failure still refreshes the cache to reflect the first PUT's
+// persisted write instead of leaving stale data on screen.
 export function useUmtSaveDescriptionInstruction(id: string) {
   const getAccessToken = useAccessToken();
   const queryClient = useQueryClient();
@@ -40,7 +42,7 @@ export function useUmtSaveDescriptionInstruction(id: string) {
         await authedPut(umtServiceUrls.update(id), accessToken, behaviorChange);
       }
     },
-    onSuccess: async () => {
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["umt-update"] });
     },
   });

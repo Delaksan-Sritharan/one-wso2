@@ -123,7 +123,7 @@ function UmtUpdateBody({ id }: { id: string | undefined }) {
   );
   const subscriptionAction = isSubscribed ? "unsubscribe" : "subscribe";
   const hasEditRole = Boolean(
-    userInfo.data?.roles.some((role) => UMT_EDIT_ROLE_IDS.has(role)),
+    userInfo.data?.roles?.some((role) => UMT_EDIT_ROLE_IDS.has(role)),
   );
   const canEditDevelopmentFields =
     hasEditRole && update.data?.lifecycleState === "Development";

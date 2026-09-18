@@ -50,7 +50,7 @@ import type {
 } from "../../../api/umtUpdates";
 import { useUmtMeta } from "../../../api/useUmtMeta";
 import { useUmtProductAnalysis } from "../../../api/useUmtUpdateViewData";
-import { useUmtSaveProductAnalysis } from "../../../api/useUmtProductAnalysis";
+import { UmtPartialProductAnalysisSaveError, useUmtSaveProductAnalysis } from "../../../api/useUmtProductAnalysis";
 import { groupFileOperationsByType } from "../../../lib/umtPrAnalysis";
 
 const { DataGrid: DataGridComponent } = DataGrid;
@@ -62,7 +62,7 @@ interface DenseColumn<Row> {
 }
 
 function productKey(name: string | null | undefined, version: string | null | undefined): string {
-  return `${name ?? ""}-${version ?? ""}`;
+  return JSON.stringify([name ?? "", version ?? ""]);
 }
 
 export default function UmtProductAnalysisStep({ id, update }: { id: string; update: UmtUpdateSummary }) {
@@ -226,12 +226,16 @@ export default function UmtProductAnalysisStep({ id, update }: { id: string; upd
     const products = [...(update.products ?? []), ...addedProducts];
 
     try {
-      await saveAnalysis.mutateAsync({ products, analysis });
+      await saveAnalysis.mutateAsync({ products, analysis, previousProducts: update.products ?? [] });
       showSuccess("Product analysis updated.");
       setAddedProducts([]);
       setApplicableProductRows({});
     } catch (error) {
-      showError(`Failed to update product analysis. ${describeError(error)}`);
+      if (error instanceof UmtPartialProductAnalysisSaveError) {
+        showError(error.message);
+      } else {
+        showError(`Failed to update product analysis. ${describeError(error)}`);
+      }
     }
   }
 

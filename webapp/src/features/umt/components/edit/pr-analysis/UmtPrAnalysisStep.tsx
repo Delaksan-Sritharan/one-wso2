@@ -43,6 +43,7 @@ import type { UmtBundleInfoChange, UmtFileOperation, UmtPullRequestAnalysisItem,
 import type { UmtUpdateType } from "../../../api/umtTypes";
 import { useUmtPullRequestAnalysis } from "../../../api/useUmtUpdateViewData";
 import {
+  UmtPartialProceedError,
   useUmtPrAnalysisStatus,
   useUmtProceedFromPrAnalysis,
   useUmtStartPullRequestAnalysis,
@@ -211,7 +212,11 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
       await proceed.mutateAsync();
       showSuccess(`Update ${id} advanced to PRAnalyzed.`);
     } catch (error) {
-      showError(`Proceed failed. ${describeError(error)}`);
+      if (error instanceof UmtPartialProceedError) {
+        showError(error.message);
+      } else {
+        showError(`Proceed failed. ${describeError(error)}`);
+      }
     }
   }
 

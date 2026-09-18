@@ -64,7 +64,10 @@ export function useUmtMarkAsDuplicate(id: string) {
       });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["umt-update"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["umt-update"] }),
+        queryClient.invalidateQueries({ queryKey: ["umt-update-dependencies"] }),
+      ]);
     },
   });
 }

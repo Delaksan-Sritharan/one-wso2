@@ -19,7 +19,7 @@ import { Alert, Box, Button, Divider, FormControlLabel, Paper, Radio, RadioGroup
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import type { UmtStagingTestResultRecord, UmtStagingTestResultRequest, UmtUpdateSummary } from "../../../api/umtUpdates";
-import { useUmtSaveTestingResults, useUmtStagingTestResults } from "../../../api/useUmtTesting";
+import { UmtPartialTestingSaveError, useUmtSaveTestingResults, useUmtStagingTestResults } from "../../../api/useUmtTesting";
 import {
   UMT_TESTING_RESULT_OPTIONS,
   umtAutomatedTestResultColor,
@@ -121,12 +121,25 @@ export default function UmtTestingStep({ id, update }: { id: string; update: Umt
         },
       ];
     });
+    const sentProductIds = new Set(payload.map((row) => String(row.productId)));
     try {
       await saveMutation.mutateAsync(payload);
       showSuccess("Test results saved.");
-      setDrafts({});
+      // Only clear drafts that were actually sent — a product dropped by a
+      // background poll between the edit and this click (L109-111) never
+      // made it into `payload`, so its draft must survive in case the poll
+      // brings the row back.
+      setDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([productId]) => !sentProductIds.has(productId))));
     } catch (error) {
-      showError(`Failed to save test results. ${describeError(error)}`);
+      if (error instanceof UmtPartialTestingSaveError) {
+        const failedIds = new Set(error.failedRows.map((row) => String(row.productId)));
+        setDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([productId]) => failedIds.has(productId))));
+        showError(
+          `Saved ${payload.length - error.failedRows.length} of ${payload.length} row(s). ${error.failedRows.length} failed — retry below.`,
+        );
+      } else {
+        showError(`Failed to save test results. ${describeError(error)}`);
+      }
     }
   }
 

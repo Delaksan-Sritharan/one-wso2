@@ -20,9 +20,33 @@ import { umtServiceUrls } from "@config/apiConfig";
 import { useAccessToken } from "@hooks/useAccessToken";
 import type { UmtProductAnalysisRequest, UmtUpdateProduct } from "./umtUpdates";
 
+// Thrown when the product replace succeeds but the analysis save that follows
+// it fails. `productsRestored` tells the caller whether the compensating
+// revert (putting `previousProducts` back) itself succeeded, so it can choose
+// between "retry analysis" (products are back to what you saw before) and a
+// louder warning (the replace is still in effect and needs a manual look).
+export class UmtPartialProductAnalysisSaveError extends Error {
+  constructor(
+    public readonly analysisError: unknown,
+    public readonly productsRestored: boolean,
+  ) {
+    super(
+      productsRestored
+        ? "Saved the product list, but the analysis failed to save. The product list was reverted — retry Analyze."
+        : "Saved the product list, but the analysis failed to save, and reverting the product list also failed.",
+    );
+    this.name = "UmtPartialProductAnalysisSaveError";
+  }
+}
+
 // Modifies the update's product list, then resubmits the product-analysis
 // result — the "Analyze" action on this step makes both calls together
-// (PUT .../products then PUT .../productAnalysis).
+// (PUT .../products then PUT .../productAnalysis). If the second call fails,
+// the first has already committed a full product-list replace on the
+// backend, so we compensate by putting `previousProducts` back rather than
+// leaving the update holding a product list the analysis was never run
+// against. Invalidation runs in onSettled so the cache reflects whichever
+// state (reverted or not) the backend actually ended up in.
 export function useUmtSaveProductAnalysis(id: string) {
   const getAccessToken = useAccessToken();
   const queryClient = useQueryClient();
@@ -30,14 +54,26 @@ export function useUmtSaveProductAnalysis(id: string) {
   return useMutation<
     void,
     Error,
-    { products: UmtUpdateProduct[]; analysis: UmtProductAnalysisRequest }
+    { products: UmtUpdateProduct[]; analysis: UmtProductAnalysisRequest; previousProducts: UmtUpdateProduct[] }
   >({
-    mutationFn: async ({ products, analysis }) => {
+    mutationFn: async ({ products, analysis, previousProducts }) => {
       const accessToken = await getAccessToken();
       await authedPut(umtServiceUrls.updateProducts(id), accessToken, products);
-      await authedPut(umtServiceUrls.updateProductAnalysis(id), accessToken, analysis);
+      try {
+        await authedPut(umtServiceUrls.updateProductAnalysis(id), accessToken, analysis);
+      } catch (analysisError) {
+        let productsRestored = false;
+        try {
+          await authedPut(umtServiceUrls.updateProducts(id), accessToken, previousProducts);
+          productsRestored = true;
+        } catch {
+          // Restoration failed too — surfaced via productsRestored below
+          // rather than thrown, so the caller sees the original failure.
+        }
+        throw new UmtPartialProductAnalysisSaveError(analysisError, productsRestored);
+      }
     },
-    onSuccess: async () => {
+    onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["umt-update"] }),
         queryClient.invalidateQueries({ queryKey: ["umt-update-product-analysis"] }),

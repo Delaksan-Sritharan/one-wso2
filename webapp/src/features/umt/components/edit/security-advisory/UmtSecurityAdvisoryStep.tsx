@@ -44,15 +44,26 @@ export default function UmtSecurityAdvisoryStep({ id, update }: { id: string; up
   const { showSuccess, showError } = useNotifications();
   const saveMutation = useUmtSaveSecurityAdvisories(id);
 
-  // ---- Draft rows, reset whenever the backend list itself changes ----
+  // ---- Draft rows, reset on a confirmed save or a different update, never
+  // just because the backend list's array reference changed. `["umt-update"]`
+  // is invalidated by many unrelated mutations elsewhere on this page (mark
+  // as duplicate, testing saves, lifecycle transitions, ...), each of which
+  // hands back a structurally-new (even if content-identical) advisories
+  // array; reseeding on that alone would silently discard advisories the
+  // user added/removed locally but hadn't saved yet. ----
   const initialRows = useMemo(() => update.securityAdvisories ?? [], [update.securityAdvisories]);
   const [rows, setRows] = useState<UmtSecurityAdvisory[]>(initialRows);
   const [isDirty, setIsDirty] = useState(false);
   const [lastInitialRows, setLastInitialRows] = useState(initialRows);
-  if (initialRows !== lastInitialRows) {
+  const [lastId, setLastId] = useState(id);
+  if (id !== lastId) {
+    setLastId(id);
     setLastInitialRows(initialRows);
     setRows(initialRows);
     setIsDirty(false);
+  } else if (!isDirty && initialRows !== lastInitialRows) {
+    setLastInitialRows(initialRows);
+    setRows(initialRows);
   }
 
   // ---- Add modal state ----

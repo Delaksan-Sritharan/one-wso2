@@ -529,6 +529,13 @@ function csvValue(row: UmtUpdateSummary, key: ColumnKey): string {
   }
 }
 
+// Quoting alone only satisfies CSV syntax — Excel/Sheets/LibreOffice decide
+// whether to evaluate a cell as a formula from its first character regardless
+// of quoting, so a value an authorized user set (assignedTo,
+// securityAdvisoryName, ...) starting with =, +, -, or @ would run as a
+// formula for whoever later opens the exported file. Prefixing with `'`
+// forces it to render as inert text instead.
 function escapeCsv(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`;
+  const safeValue = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  return `"${safeValue.replaceAll('"', '""')}"`;
 }

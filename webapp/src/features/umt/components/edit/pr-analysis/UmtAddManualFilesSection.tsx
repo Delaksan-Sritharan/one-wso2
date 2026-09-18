@@ -228,7 +228,13 @@ export default function UmtAddManualFilesSection({
       if (needsBundleInfo) {
         onBundlesInfoChanged([
           ...bundlesInfoChanges,
-          { bundlesInfoPath, jarName, jarVersion, relativeJarPath, entryType },
+          {
+            bundlesInfoPath: bundlesInfoPath.trim(),
+            jarName: jarName.trim(),
+            jarVersion,
+            relativeJarPath: relativeJarPath.trim(),
+            entryType,
+          },
         ]);
       }
       onDirty();
@@ -253,7 +259,11 @@ export default function UmtAddManualFilesSection({
       sourceFilePath,
       file: file ?? new Blob([], { type: "application/octet-stream" }),
     });
-    return [{ file: `${path}/${fileName}`, operation: op, sourceFilePath }];
+    // `path` may already be the full file path — manualFileNameMatchesPath
+    // accepts a relativePath whose last segment equals the uploaded file's
+    // name — so only append fileName when path is still just the directory.
+    const filePath = path.endsWith(`/${fileName}`) ? path : `${path}/${fileName}`;
+    return [{ file: filePath, operation: op, sourceFilePath }];
   }
 
   async function addZipEntries(

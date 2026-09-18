@@ -74,8 +74,13 @@ export function __resetUmtGateCacheForTests(): void {
 export function useUmtGate(enabled = true): UmtGate {
   const { isSignedIn } = useAsgardeo();
   const userInfo = useUmtUserInfo(enabled);
-  const resolvedNow = !userInfo.isPending && !userInfo.isError;
   const roleIds = userInfo.data?.roles;
+  // TanStack keeps the last successful `data` in the cache through a failed
+  // background refetch (`isError` and `data` are not mutually exclusive) —
+  // so a request that has ever succeeded still has usable data even while
+  // `isError` is currently true. Only a check that has *never* produced a
+  // real answer (first load, or one already cleared to nothing) has none.
+  const hasData = userInfo.data !== undefined;
 
   // Mutating module state must happen as an effect, not during render (React
   // may render this hook more than once per commit) — the read below is
@@ -83,12 +88,35 @@ export function useUmtGate(enabled = true): UmtGate {
   useEffect(() => {
     if (!isSignedIn) {
       lastKnownRoles = null;
-    } else if (resolvedNow) {
+    } else if (hasData) {
       lastKnownRoles = umtRolesFromIds(roleIds);
+    } else if (userInfo.isError) {
+      // A failed check that has never returned real data must never leave a
+      // remembered grant behind for a later remount (e.g. navigating away
+      // and back while /update/user-info is still erroring) to resurrect.
+      lastKnownRoles = null;
     }
-  }, [isSignedIn, resolvedNow, roleIds]);
+  }, [isSignedIn, hasData, roleIds, userInfo.isError]);
 
-  const roles = resolvedNow ? umtRolesFromIds(roleIds) : (lastKnownRoles ?? new Set<UmtRole>());
+  // `lastKnownRoles` exists only to smooth over a remount while the SAME
+  // decision is still in flight (see the comment above the module variable);
+  // it must not be consulted once a check has genuinely failed with no data
+  // to fall back on, or an admin whose role was just revoked keeps seeing
+  // admin-only controls enabled for as long as `/update/user-info` keeps
+  // erroring. This has to be checked here, not only in the effect above:
+  // writing to a module variable in an effect doesn't itself trigger a
+  // re-render, so the render that first observes `isError` would otherwise
+  // still compute roles from the not-yet-cleared cache.
+  //
+  // A background refetch failing while `data` is still cached (a transient
+  // blip on an already-authorized session) is deliberately NOT treated as a
+  // denial here: `hasData` takes priority over `isError`, so the last real
+  // answer keeps being used instead of blanking an already-working page.
+  const roles = hasData
+    ? umtRolesFromIds(roleIds)
+    : userInfo.isError
+      ? new Set<UmtRole>()
+      : (lastKnownRoles ?? new Set<UmtRole>());
   const hasRole = (role: UmtRole): boolean => roles.has(role);
 
   return {
@@ -102,8 +130,11 @@ export function useUmtGate(enabled = true): UmtGate {
     // Only shown when there's truly no prior decision to fall back on — i.e.
     // the session's actual first load, not a remount of an already-known one.
     isResolving: enabled && userInfo.isPending && !lastKnownRoles,
-    isError: userInfo.isError,
-    errorMessage: userInfo.isError ? describeError(userInfo.error) : undefined,
+    // Only surfaced when there's no cached answer to fall back on — a
+    // background refetch failure with `data` still cached is absorbed above
+    // instead of being reported as a request failure to the caller.
+    isError: userInfo.isError && !hasData,
+    errorMessage: userInfo.isError && !hasData ? describeError(userInfo.error) : undefined,
     retry: () => void userInfo.refetch(),
   };
 }

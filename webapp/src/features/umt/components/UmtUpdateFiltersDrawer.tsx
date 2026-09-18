@@ -69,6 +69,17 @@ export default function UmtUpdateFiltersDrawer({
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState<UmtUpdateFilterDraft>(() => draftFromFilters(filters));
+  // The drawer stays mounted while closed (only `open` toggles), so an
+  // initializer-only useState never sees a `filters` change made while it
+  // was closed (e.g. the page's own "Clear filters" button). `filters` only
+  // ever gets a new reference from the page's own setState (on Apply or
+  // Clear), never from an incidental re-render, so reseeding on identity
+  // change here is a reliable signal, not a spurious one.
+  const [lastFilters, setLastFilters] = useState(filters);
+  if (filters !== lastFilters) {
+    setLastFilters(filters);
+    setDraft(draftFromFilters(filters));
+  }
   const set = (key: keyof UmtUpdateFilterDraft, value: string) => {
     setDraft((current) => ({ ...current, [key]: value }));
   };

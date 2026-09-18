@@ -712,6 +712,12 @@ const fileOperationColumns: DenseColumn<UmtFileOperation>[] = [
 function renderLinkValue(value: string | null | undefined): ReactNode {
   const normalizedValue = displayValue(value);
   if (normalizedValue === "N/A") return normalizedValue;
+  // Public Pull Requests / Integration Pull Requests accept any non-blank
+  // text (EditableLinkSection has no `validate` for them), so this can't
+  // assume normalizedValue is a URL — rendering it as an href unconditionally
+  // would turn arbitrary text into a broken or misleading (or, for a
+  // javascript: value, script-executing) link.
+  if (!/^https?:\/\//i.test(normalizedValue)) return normalizedValue;
 
   return (
     <Link

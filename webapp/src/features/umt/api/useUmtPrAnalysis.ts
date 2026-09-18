@@ -114,11 +114,36 @@ export function useUmtStartPullRequestAnalysis(id: string) {
   });
 }
 
+// Thrown when the lifecycle promotion succeeds but starting product analysis
+// fails. The promotion isn't reverted here: PRAnalyzed is a forward step in a
+// one-directional state machine, and PUTting the update back to its previous
+// state is not a transition this app otherwise performs — it risks either
+// being rejected by the backend's own transition rules or silently hiding
+// that the update genuinely advanced. Instead the caller is told plainly what
+// happened, and how to actually recover: PR Analysis's own Proceed button is
+// gone as soon as the promotion commits (the stepper follows the now-real
+// PRAnalyzed lifecycleState straight to Product Analysis), so there is no
+// same-screen retry — the only path back to a retry is demoting the update
+// (Product Analysis's "Demote to Development") and running Proceed again
+// from PR Analysis.
+export class UmtPartialProceedError extends Error {
+  constructor(public readonly analysisStartError: unknown) {
+    super(
+      "Advanced to PRAnalyzed, but starting product analysis failed. Use Product Analysis's " +
+        "\"Demote to Development\" button, then Proceed again from PR Analysis to retry.",
+    );
+    this.name = "UmtPartialProceedError";
+  }
+}
+
 // PR Analysis's Proceed sends two calls together — promote to PRAnalyzed,
 // then start product analysis — then invalidates the relevant queries to
 // pick up results. `lifecycleState: "PRAnalyzed"` is hardcoded here
 // (rather than sent from the backend's promoteStages[0], as most later
 // transitions do) since it's the fixed first step out of Development.
+// Invalidation runs in onSettled (not onSuccess) so a failure in the second
+// call still refreshes the cache to reflect the lifecycle promotion that did
+// commit, instead of leaving the UI showing the pre-Proceed state.
 export function useUmtProceedFromPrAnalysis(id: string) {
   const getAccessToken = useAccessToken();
   const queryClient = useQueryClient();
@@ -127,9 +152,13 @@ export function useUmtProceedFromPrAnalysis(id: string) {
     mutationFn: async () => {
       const accessToken = await getAccessToken();
       await authedPut(umtServiceUrls.update(id), accessToken, { lifecycleState: "PRAnalyzed" });
-      await authedPost(umtServiceUrls.updateProductAnalysis(id), accessToken, {});
+      try {
+        await authedPost(umtServiceUrls.updateProductAnalysis(id), accessToken, {});
+      } catch (analysisStartError) {
+        throw new UmtPartialProceedError(analysisStartError);
+      }
     },
-    onSuccess: async () => {
+    onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["umt-update"] }),
         queryClient.invalidateQueries({ queryKey: ["umt-updates"] }),

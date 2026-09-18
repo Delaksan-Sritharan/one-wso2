@@ -44,7 +44,8 @@ export function laterDate(date: Date, days: number): Date {
 
 // A format check only — the backend does the authoritative existence check
 // via a real GitHub API call.
-const GITHUB_ISSUE_URL_REGEX = /https:\/\/github\.com\/.*wso2.*\/[A-Za-z0-9-]+\/issues\/[0-9]+/;
+const GITHUB_ISSUE_URL_REGEX =
+  /^https:\/\/github\.com\/[^/]*wso2[^/]*\/[A-Za-z0-9-]+\/issues\/[0-9]+\/?$/;
 
 export function isValidGithubIssueUrl(value: string): boolean {
   return GITHUB_ISSUE_URL_REGEX.test(value.trim());

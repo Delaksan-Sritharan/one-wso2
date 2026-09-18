@@ -98,6 +98,20 @@ describe("gate states", () => {
     gate().retry();
     expect(userInfo.refetch).toHaveBeenCalledOnce();
   });
+
+  it("keeps the last successful roles through a background refetch failure instead of denying access", () => {
+    // TanStack keeps `data` from the last successful fetch even while a
+    // later background refetch is failing (isError and data are not
+    // mutually exclusive) — a transient blip must not blank an
+    // already-authorized page.
+    userInfo.data = { roles: [555] };
+    userInfo.isError = true;
+    userInfo.error = new Error("gateway unavailable");
+    const result = gate();
+    expect(result.isError).toBe(false);
+    expect(result.isAdmin).toBe(true);
+    expect(result.isAuthorized).toBe(true);
+  });
 });
 
 describe("remount smoothing (the /umt <-> /umt/updates navigation flash)", () => {
