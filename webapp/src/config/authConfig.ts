@@ -48,6 +48,10 @@ declare global {
       // and LaaS opt-in/opt-out). Optional — when absent the Subscriptions
       // screens show a not-connected state.
       ONE_WSO2_SUBSCRIPTION_BACKEND_URL?: string;
+      // Base URL for the digiops-infra email-group-manager backend (Google
+      // Groups mailing-list subscriptions). Optional — when absent the Email
+      // Groups screen shows a not-connected state.
+      ONE_WSO2_EMAIL_GROUPS_BACKEND_URL?: string;
       // Base URL for the digiops-hr promotion-app backend. Optional — when
       // absent, ConnectedServices' "Last promoted date" row falls back to a
       // "not configured" state and doesn't fire a request.
@@ -85,6 +89,10 @@ declare global {
       // screens are lifted rather than rewritten and a GRC deployment already
       // publishes this exact key. See apiConfig.ts.
       ONE_WSO2_GRC_PLATFORM_BACKEND_URL?: string;
+      // Base URL for the standalone Updates Manager service. Optional — when
+      // absent, UmtShell shows a not-connected state and makes no UMT requests.
+      // Its /update/user-info roles are local to UMT, not People capabilities.
+      ONE_WSO2_UMT_BACKEND_URL?: string;
       // Base URL of the leave-app frontend itself (not its backend) —
       // used to deep-link into flows this webapp doesn't replicate, like
       // sabbatical requests. Optional — when absent, that link is hidden.

@@ -34,7 +34,7 @@ function section(id: string) {
 describe("People Ops rail sections", () => {
   it("points the Active employees entry at the report route", () => {
     expect(section("people-active-employee-report")).toMatchObject({
-      label: "Active employees",
+      label: "Active Employees",
       path: ACTIVE_EMPLOYEES_REPORT_PATH,
       requires: ["admin"],
     });
@@ -56,7 +56,7 @@ describe("People Ops rail sections", () => {
     expect(masterData?.path).toBeUndefined();
     expect(masterData?.children).toHaveLength(1);
     expect(masterData?.children?.[0]).toMatchObject({
-      label: "Org structure",
+      label: "Org Structure",
       path: ORG_STRUCTURE_PATH,
       requires: ["admin"],
     });

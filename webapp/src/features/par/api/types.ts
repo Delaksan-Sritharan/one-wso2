@@ -82,7 +82,20 @@ export interface ParRating {
   parRatingId: number;
   parCycleId: number;
   parEmployeeEmail: string;
+  // The employee's display name. Required in the source app's own ParRating
+  // (par-app/webapp/src/utils/types.ts), so the wire does carry it — optional
+  // here for the same reason parBusinessUnit and the rest below are: this
+  // backend omits fields in some states, and the only reader already falls
+  // back to the email.
+  parEmployeeName?: string;
   parLeadEmail?: string;
+  // Present on the wire but unused until now — the History tab's "Team"
+  // info row (EmployeeHistoryView.tsx's own parTeam/parDepartment) and
+  // Review.tsx's own breadcrumb (all four, BU/Dept/Team/SubTeam).
+  parBusinessUnit?: string;
+  parTeam?: string;
+  parDepartment?: string;
+  parSubTeam?: string;
   // Base64 of a UTF-8-encoded string (par-app's NONE_EMPTY_BASE64_STRING_REGEX
   // constraint) — decode with decodeParComment before rendering. Absent until
   // the employee has saved a draft.
@@ -247,6 +260,93 @@ export interface ParRatingMinimal {
 // backend type — absent/empty roster reads the same as "no members yet".
 export interface ParTeamDetails extends ParTeamSummary {
   details: ParRatingMinimal[] | null;
+}
+
+// GET /employees?leadEmail= — mirrors backend's BasicEmployeeInfo. Pure
+// org-chart data (managerEmail match), not tied to any PAR cycle or rating
+// record — direct reports only, unlike the PAR-cycle-scoped "reports"/
+// "report-levels" endpoints above. Backs the Employee History tab's
+// employee picker (EmployeeReportView.tsx's fetchEntityEmployees).
+export interface ParEmployee {
+  employeeName: string;
+  workEmail: string;
+  employeeThumbnail?: string;
+  isLead?: boolean;
+  managerEmail?: string;
+}
+
+// GET /legacy-par-history/{employeeEmail} — mirrors backend's
+// LegacyParHistory exactly. Pre-migration PeopleHR export data; the legacy
+// system never populated overallRating/overallSpecialRating, so those are
+// always null and a display-only rating is derived from managerScoreCode
+// instead (see util/parLegacyHistory.ts).
+export interface ParLegacyHistory {
+  legacyHeaderId: number;
+  employeeEmail: string;
+  location: string | null;
+  businessUnit: string | null;
+  department: string | null;
+  team: string | null;
+  subTeam: string | null;
+  reviewerName: string | null;
+  reviewerEmail: string | null;
+  cycleName: string;
+  reviewCompletedDate: string | null;
+  overallRating: string | null;
+  overallSpecialRating: string | null;
+  overallCommentEmployee: string | null;
+  overallCommentManager: string | null;
+  employeeScoreCode: number | null;
+  managerScoreCode: number | null;
+  // Raw JSON string — array of ParLegacyQuestionAnswer, one per review
+  // question (variable length). Parse with parseLegacyQuestionAnswers.
+  questionAnswers: string | null;
+  // Raw JSON string — array of ParLegacyThreeSixtyReview, one per legacy
+  // 360 reviewer, if migrated. Parse with parseLegacyFeedback360.
+  feedback360: string | null;
+}
+
+export interface ParLegacyQuestionAnswer {
+  title: string | null;
+  employeeAnswer: string | null;
+  managerFeedback: string | null;
+  employeeAnswerComment?: string | null;
+  managerAnswerComment?: string | null;
+  employeeAnsweredBy?: string | null;
+  managerAnsweredBy?: string | null;
+}
+
+// The legacy PeopleHR export only ever captured the reviewer's name, not an
+// email — unlike Par360Review, which is keyed by reviewerEmail.
+export interface ParLegacyThreeSixtyReview {
+  reviewerName: string;
+  reviewRating: string;
+  reviewComment: string | null;
+}
+
+// GET /par-cycles/{cycleId}/reports?leadEmail= — mirrors backend's
+// AdditionalReportsParRating exactly (ParRatingMinimal + these two fields).
+// Returns BOTH direct and indirect reports; the "Additional Reports" tab
+// keeps only `reportingType === "indirect"` client-side, matching source's
+// own getFilteredRows — direct reports already have their own tab.
+export interface ParAdditionalReport extends ParRatingMinimal {
+  parDirectLead: string;
+  reportingType: string;
+}
+
+// GET /par-cycles/{cycleId}/report-levels?leadEmail= — mirrors backend's
+// ChainReportsParRating exactly. One level of the "Report Chain" tab's
+// drill-down: the DIRECT reports of whichever email is currently selected
+// (starting with the caller's own). `isEmployeeALead` is a literal "True"/
+// "False" string from the backend, not a boolean — compared as such,
+// matching source.
+export interface ParChainReport extends ParRatingMinimal {
+  parTeam: string;
+  parSubTeam: string;
+  parLeadEmail: string;
+  parDepartment: string;
+  parBusinessUnit: string;
+  isEmployeeALead: string;
 }
 
 // One row of GET /par-cycles/{cycleId}/special-rating-groups-quota — mirrors
