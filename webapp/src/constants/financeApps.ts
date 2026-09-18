@@ -27,9 +27,10 @@
 // Each app's own backend still enforces its real role scheme; these
 // capability gates just decide what shows in the rail.
 
-import { CreditCardIcon, ReceiptTextIcon } from "@wso2/oxygen-ui-icons-react";
+import { CreditCardIcon, ReceiptTextIcon, StethoscopeIcon } from "@wso2/oxygen-ui-icons-react";
 import { CC_PATH } from "@features/finance/cc/ccPaths";
 import { expenseFinancePaths } from "@features/finance/expense/expenseFinancePaths";
+import { opdFinancePaths } from "@features/finance/opd/opdFinancePaths";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import type { MenuApp } from "@constants/appMenu";
 
@@ -114,6 +115,34 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
     ],
   },
   {
+    // OPD has been a tab under Me → Claims and nothing else, which is right for
+    // filing your own but left the app with no front door of its own the way
+    // Expense Claims has. Only Claim History lives here today; New Claim stays
+    // under Me until the two are reconciled, so there is one way in and no
+    // guessing which.
+    key: "opd",
+    name: "OPD Claims",
+    icon: StethoscopeIcon,
+    purpose: "Track the outpatient medical claims you have submitted.",
+    // One screen today and it will not stay that way. Collapsing to a leaf now
+    // would teach the wrong shape and make the item vanish as a concept the day
+    // a second one lands.
+    alwaysGroup: true,
+    items: [
+      {
+        id: "opd-history",
+        label: "Claim History",
+        desc: "OPD claims you have submitted, and where each one has got to.",
+        // Not a coarse capability: the OPD backend decides this, and refuses
+        // the whole app to anyone holding neither of its roles. `requires` only
+        // forces useFinanceGate to answer for the id — see its `opd-history`
+        // case, which asks the OPD backend rather than people-app.
+        requires: ["employee"],
+        path: opdFinancePaths.history,
+      },
+    ],
+  },
+  {
     key: "cc",
     name: "Credit Card Expenses",
     icon: CreditCardIcon,
@@ -166,4 +195,5 @@ export const FINANCE_EYEBROW = {
   claims: eyebrowFor("claims"),
   cc: eyebrowFor("cc"),
   expense: eyebrowFor("expense"),
+  opd: eyebrowFor("opd"),
 } as const;

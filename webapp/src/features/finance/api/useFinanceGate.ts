@@ -55,6 +55,10 @@ export function useFinanceGate(enabled = true): FinanceGate {
   const ccLeadOrFinance = ccHasAccess(cc.data, "lead") || ccHasAccess(cc.data, "finance");
   const ccFinance = ccHasAccess(cc.data, "finance");
   const opdFinance = opdHasRole(opd.data, OPD_ROLE.FINANCE_APPROVER);
+  // Filing an OPD claim is its own role and not one everybody holds: the
+  // backend refuses the whole app to anyone without it, so the menu must not
+  // offer a screen whose every request comes back 403.
+  const opdSubmitter = opdHasRole(opd.data, OPD_ROLE.CLAIM_SUBMITTER);
   const expenseLead = Boolean(expense.data?.enableLeadView);
   const expenseFinance = Boolean(expense.data?.enableFinanceView);
 
@@ -91,6 +95,11 @@ export function useFinanceGate(enabled = true): FinanceGate {
         return expenseLead;
       case "expense-finance-approvals":
         return expenseFinance;
+      // OPD Claims → Claim History, in the Finance perspective. The submitter
+      // role, not the approver one: this is your own history, the same claims
+      // the Me-side OPD tab shows.
+      case "opd-history":
+        return opdSubmitter;
       case "cc-approve":
         return ccLeadOrFinance;
       case "cc-settings":
