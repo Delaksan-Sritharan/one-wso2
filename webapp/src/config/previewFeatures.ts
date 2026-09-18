@@ -75,7 +75,21 @@ export type PreviewFeature =
    * route inside it. `useUmtGate`'s own role check against the UMT backend is
    * unrelated and keeps working the same regardless of this flag.
    */
-  | "umt";
+  | "umt"
+  /**
+   * The whole RevOps perspective — rail entry, launcher tile, landing-page
+   * option, favourites eligibility, and both `/revops` routes. Gated as a
+   * perspective rather than per screen, for the same reason as `umt`: what has
+   * to stay preview-only is the perspective existing at all, not one route
+   * inside it.
+   *
+   * Held back until the recording/transcript pipeline has run in production
+   * long enough to trust — locally it cannot run at all, since the Pub/Sub
+   * flow only executes in the deployed backend. The meet-app backend's own
+   * SALES_TEAM/SALES_ADMIN check is unrelated and still applies with the flag
+   * on; this decides whether anyone sees the app, that decides who may use it.
+   */
+  | "revops";
 
 /**
  * Whether a preview feature should be shown.
