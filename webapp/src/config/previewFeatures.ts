@@ -61,6 +61,13 @@ export type PreviewFeature =
    */
   | "expenseSubmitter"
   /**
+   * Finance → OPD Claims, the app's own front door under the Finance
+   * perspective. Only Claim History is migrated so far, and it has never run
+   * against the real OPD backend — the development account is refused by it —
+   * so the group is held back as a whole rather than screen by screen.
+   */
+  | "opdClaims"
+  /**
    * People Ops → Performance, par-app's Employee Portal ported in #61. Held back until
    * the Lead Portal, Admin Portal, Report Chain and F2F follow it over — see
    * docs/ported-apps/par-app.md §7.

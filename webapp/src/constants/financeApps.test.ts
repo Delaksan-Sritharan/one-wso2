@@ -25,7 +25,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  */
 type FinanceApps = typeof import("./financeApps");
 
-async function load(preview: { expenseSubmitter?: boolean } = {}): Promise<FinanceApps> {
+async function load(
+  preview: { expenseSubmitter?: boolean; opdClaims?: boolean } = {},
+): Promise<FinanceApps> {
   vi.resetModules();
   window.config = {
     ...(window.config ?? {}),
@@ -60,7 +62,7 @@ describe("where each finance app lives", () => {
   // keeps its own registry key, distinct from "claims", which is what the other
   // invariants below actually depend on.
   it("keeps claims with the person, and both the card and expense claims with finance", async () => {
-    const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load();
+    const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load({ opdClaims: true });
     expect(keys(ME_FINANCE_APPS)).toEqual(["claims"]);
     expect(keys(FINANCE_PERSPECTIVE_APPS)).toEqual(["expense", "opd", "cc"]);
   });
@@ -105,7 +107,10 @@ describe("where each finance app lives", () => {
 
   it("puts every app KEY in exactly one of the two", async () => {
     for (const preview of [{}, { expenseSubmitter: true }]) {
-      const { FINANCE_APPS, ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load(preview);
+      const { FINANCE_APPS, ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load({
+        ...preview,
+        opdClaims: true,
+      });
       const overlap = keys(ME_FINANCE_APPS).filter((k) =>
         keys(FINANCE_PERSPECTIVE_APPS).includes(k),
       );
@@ -145,5 +150,20 @@ describe("where each finance app lives", () => {
     expect(FINANCE_EYEBROW.claims.label).toBeTruthy();
     expect(FINANCE_EYEBROW.cc.label).toBeTruthy();
     expect(FINANCE_EYEBROW.expense.label).toBeTruthy();
+  });
+});
+
+// OPD Claims is not ready for production: Claim History has never run against
+// the real OPD backend. The whole group is held back, not one item inside it.
+describe("the OPD Claims preview flag", () => {
+  it("hides the group when the flag is off", async () => {
+    const { FINANCE_PERSPECTIVE_APPS, FINANCE_APPS } = await load();
+    expect(keys(FINANCE_PERSPECTIVE_APPS)).not.toContain("opd");
+    expect(keys(FINANCE_APPS)).not.toContain("opd");
+  });
+
+  it("shows it when the flag is on", async () => {
+    const { FINANCE_PERSPECTIVE_APPS } = await load({ opdClaims: true });
+    expect(keys(FINANCE_PERSPECTIVE_APPS)).toContain("opd");
   });
 });

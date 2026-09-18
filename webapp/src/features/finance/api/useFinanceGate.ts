@@ -105,6 +105,10 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // role, not the approver one: this is your own history, the same claims
       // the Me-side OPD tab shows.
       case "opd-history":
+        // Behind the same flag as the group it sits in: answered here as well
+        // as by dropping the registry entry, because the Finance overview
+        // builds its tiles by hand and asks the gate by id.
+        if (!isPreviewEnabled("opdClaims")) return false;
         // Shown while the answer is unknown: the screen behind it carries its
         // own error notice and a retry, which is a better place to find out
         // than a menu entry that quietly is not there.

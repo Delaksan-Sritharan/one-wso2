@@ -114,6 +114,8 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
       },
     ],
   },
+  ...(isPreviewEnabled("opdClaims")
+    ? ([
   {
     // OPD has been a tab under Me → Claims and nothing else, which is right for
     // filing your own but left the app with no front door of its own the way
@@ -141,7 +143,9 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
         path: opdFinancePaths.history,
       },
     ],
-  },
+  }
+      ] as MenuApp[])
+    : []),
   {
     key: "cc",
     name: "Credit Card Expenses",
