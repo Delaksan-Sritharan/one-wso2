@@ -44,6 +44,14 @@ declare global {
       // Cafeteria menu backend (daily menu, lunch feedback, dinner orders).
       // Optional — when absent the Menu screen shows a not-connected state.
       ONE_WSO2_MENU_BACKEND_URL?: string;
+      // Base URL for the digiops-hr subscription-app backend (PickMe Commute
+      // and LaaS opt-in/opt-out). Optional — when absent the Subscriptions
+      // screens show a not-connected state.
+      ONE_WSO2_SUBSCRIPTION_BACKEND_URL?: string;
+      // Base URL for the digiops-infra email-group-manager backend (Google
+      // Groups mailing-list subscriptions). Optional — when absent the Email
+      // Groups screen shows a not-connected state.
+      ONE_WSO2_EMAIL_GROUPS_BACKEND_URL?: string;
       // Base URL for the RevOps (auto-recorded meetings) backend — people-ops-
       // suite's meet-app service, reused unchanged. Optional — when absent the
       // RevOps app shows a not-connected state and makes no requests.
@@ -73,6 +81,22 @@ declare global {
       ONE_WSO2_OPD_BACKEND_URL?: string; // opd-claims
       ONE_WSO2_CC_EXPENSES_BACKEND_URL?: string; // cc-expenses
       ONE_WSO2_EXPENSE_CLAIMS_BACKEND_URL?: string; // expense-claims
+      // Base URL for the digiops-finance due_diligence backend — the Due
+      // Diligence app, surfaced under both the Finance and Legal
+      // perspectives. Same optional/"not connected" contract as the three
+      // above.
+      ONE_WSO2_DUE_DILIGENCE_BACKEND_URL?: string;
+      // Base URL for the grc-tools grc-platform backend — the Security
+      // perspective. Optional/"not connected" like the others, but that backend
+      // must accept this app's Asgardeo client id as an audience first. Keeps
+      // the SOURCE's key name rather than an ONE_WSO2_* one, because those
+      // screens are lifted rather than rewritten and a GRC deployment already
+      // publishes this exact key. See apiConfig.ts.
+      ONE_WSO2_GRC_PLATFORM_BACKEND_URL?: string;
+      // Base URL for the standalone Updates Manager service. Optional — when
+      // absent, UmtShell shows a not-connected state and makes no UMT requests.
+      // Its /update/user-info roles are local to UMT, not People capabilities.
+      ONE_WSO2_UMT_BACKEND_URL?: string;
       // Base URL of the leave-app frontend itself (not its backend) —
       // used to deep-link into flows this webapp doesn't replicate, like
       // sabbatical requests. Optional — when absent, that link is hidden.
@@ -110,6 +134,11 @@ declare global {
       // Asgardeo. Ignored in production builds (see devBypassAuth below),
       // so a stray true in a prod config.js can't disable auth.
       ONE_WSO2_DEV_BYPASS_AUTH?: boolean;
+      // Features built but not yet released — see @config/previewFeatures.
+      // Absent or false hides the feature, so a deployment that says nothing
+      // shows nothing. Typed loosely here and narrowed by `PreviewFeature` at
+      // the read, so this declaration does not have to be edited for each flag.
+      ONE_WSO2_PREVIEW_FEATURES?: Record<string, boolean | undefined>;
     };
   }
 }

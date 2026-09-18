@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { activeGroupIds, activeItemId, onPathOrBelow } from "./railActive";
+import { activeGroupIds, activeItemId, onPathOrBelow, visibleLeavesOf } from "./railActive";
 import type { PerspectiveSection } from "@constants/perspectives";
 
 // Driven off the real registry, not a fixture: the bug this covers was a rail
@@ -173,5 +173,44 @@ describe("an exact match beats a descendant one", () => {
         overviewId: "ov",
       }),
     ).toBe("reports-active");
+  });
+});
+
+describe("visibleLeavesOf", () => {
+  const sections: PerspectiveSection[] = [
+    { id: "group", label: "Group", children: [
+      { id: "child-hidden", label: "Hidden", path: "/a/hidden" },
+      { id: "child-shown", label: "Shown", path: "/a/shown" },
+    ] },
+    { id: "leaf", label: "Leaf", path: "/b" },
+  ];
+
+  // THE thing a perspective landing depends on: the first entry is where it
+  // sends you, and a group is not somewhere you can be sent.
+  it("returns leaves in rail order, never the groups holding them", () => {
+    expect(visibleLeavesOf(sections, () => true).map((s) => s.id)).toEqual([
+      "child-hidden",
+      "child-shown",
+      "leaf",
+    ]);
+  });
+
+  it("drops a child its gate hides", () => {
+    const visible = (s: PerspectiveSection) => s.id !== "child-hidden";
+    expect(visibleLeavesOf(sections, visible).map((s) => s.id)).toEqual(["child-shown", "leaf"]);
+  });
+
+  // A hidden group takes its children with it — the rail never renders them,
+  // so a landing must never forward to one.
+  it("drops a hidden group's children with it", () => {
+    const visible = (s: PerspectiveSection) => s.id !== "group";
+    expect(visibleLeavesOf(sections, visible).map((s) => s.id)).toEqual(["leaf"]);
+  });
+
+  // A scroll-anchor section carries no path. Forwarding to one would navigate
+  // nowhere.
+  it("skips a leaf with no route", () => {
+    const anchors: PerspectiveSection[] = [{ id: "anchor", label: "Anchor" }];
+    expect(visibleLeavesOf(anchors, () => true)).toEqual([]);
   });
 });

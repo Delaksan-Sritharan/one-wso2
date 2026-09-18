@@ -27,8 +27,8 @@
  * the launcher is the one surface with nothing else doing that job.
  *
  * SIZING, and the constraint that will eventually break this: the registry holds
- * five perspectives and every one of them has a hue, so the set is at five of the
- * eight it can carry. Hue discrimination collapses somewhere past that, and each
+ * eight perspective hues, so the set is at the eight it can carry. Hue
+ * discrimination collapses somewhere past that, and each
  * new perspective wants one — at which point the answer is a different encoding
  * (hue per domain family, or back to monochrome), not a longer list.
  * perspectiveHues.test.ts caps the palette at eight so that decision is forced
@@ -49,7 +49,7 @@
  * reviewed, and asserted — see perspectiveHues.test.ts, which fails if any pair
  * drops below the 3:1 floor.
  *
- * OPEN: four of these five are not brand colours. The WSO2 brand system defines one
+ * OPEN: seven of these eight are not brand colours. The WSO2 brand system defines one
  * accent, so a palette this wide needs a brand-owner ruling — the same conversation
  * as the 180x72px logo minimum and the contained-button contrast. Until then this is
  * launcher-local and easy to withdraw.
@@ -107,17 +107,50 @@ export const PERSPECTIVE_HUES: Record<string, PerspectiveHue> = {
     light: { bg: "#F1E8FB", fg: "#7C4AB3" },
     dark: { bg: "#241D2C", fg: "#9B5DE0" },
   },
-  // RevOps. Yellow-green at 89 degrees: 75 degrees from its nearest neighbour
-  // (finance, at 164), which is more separation than any other free slot on the
-  // wheel offered. Measured 4.71:1 light and 4.53:1 dark with the wash treatment.
+  // Indigo — distinct from both people's sky blue (207°) and csm's violet
+  // (268°) by sitting at 225°, between them but far enough from each to read
+  // as its own colour rather than a shade of either. Tints computed against
+  // the same contrast formula the test uses — 4.92:1 light, 4.30:1 dark, both
+  // inside the 3.5 headroom rule with the wash treatment.
+  // Gold, and the last hue this palette should gain casually. Chosen for the gap
+  // rather than the association: the six before it sit at 13, 162, 207, 225, 268
+  // and 332 degrees, leaving 13-162 as the only wide opening, and 43 degrees puts
+  // it 30 from Me's orange — wider than the tightest existing pair (People at 207
+  // and Legal at 225, 18 apart). It reads as audit/caution, which suits the
+  // subject, but that is a bonus rather than the reason.
   //
-  // Note this is DARKER than a green picked for the wash alone would need to be.
-  // A wash-mounted glyph only has to clear 3:1 against its own wash, but this hue
-  // is also an app mark's `lead`, painted straight onto the white launcher tile —
-  // #74A63F measured 2.89:1 there and had to be dropped. See appMarkTones.ts.
+  // Together with UMT below, this takes the palette to its eight-hue cap. The
+  // next perspective should force a different encoding rather than a ninth hue.
+  security: {
+    hue: "#B8860B",
+    light: { bg: "#F9EFD7", fg: "#7E5C07" },
+    dark: { bg: "#282420", fg: "#B8860B" },
+  },
+  legal: {
+    hue: "#6C89E0",
+    light: { bg: "#CFD8F3", fg: "#3854A8" },
+    dark: { bg: "#262A34", fg: "#6C89E0" },
+  },
+
+  // Leaf green puts UMT between Security's gold and Finance's teal without
+  // crowding either: its 84-degree hue is 41 degrees from Security and 78 from
+  // Finance. The wash/foreground pairs retain the same contrast headroom
+  // asserted for every launcher tile below.
+  umt: {
+    hue: "#5F8F1F",
+    light: { bg: "#EFF6E6", fg: "#426A16" },
+    dark: { bg: "#20281A", fg: "#8ABF42" },
+  },
+
+  // RevOps. Yellow-green at 89 degrees. NOTE the collision risk: umt above sits
+  // at 84 degrees, five degrees away, so these two are the closest pair in the
+  // palette by a wide margin and the launcher cannot be relied on to tell them
+  // apart by hue alone. Recorded here rather than silently re-picked because
+  // the fix is a palette decision, not a local one — see the cap note above.
   //
-  // The palette is at six of the eight it can carry. Two left before the cap in
-  // perspectiveHues.test.ts forces the encoding conversation.
+  // Darker than a green picked for the wash alone would need to be: this hue is
+  // also an app mark's `lead`, painted straight onto the white launcher tile,
+  // where #74A63F measured 2.89:1 and had to be dropped. See appMarkTones.ts.
   revops: {
     hue: "#678F3D",
     light: { bg: "#E1F3CE", fg: "#4E7326" },

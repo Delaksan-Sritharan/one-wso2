@@ -16,6 +16,7 @@
 
 import { useState } from "react";
 import { Box, Button, Card, Skeleton, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
+import { Link as RouterLink } from "react-router";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import VehiclesCard from "./VehiclesCard";
@@ -25,6 +26,7 @@ import {
 } from "../api/usePromotionEmployeeInfo";
 import { formatDate } from "../api/derive";
 import PromotionHistoryDialog from "./PromotionHistoryDialog";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import PerformanceStages from "./PerformanceStages";
 import BankAccountsCard from "./BankAccountsCard";
 
@@ -79,6 +81,14 @@ export default function ConnectedServices() {
             </Tooltip>
           </Stack>
           <PerformanceStages workEmail={ownerEmail} />
+          {/* Hand-built link, so the registry's gate does not cover it. */}
+          {isPreviewEnabled("par") && (
+            <Box sx={{ mt: 1.25 }}>
+              <Button variant="outlined" size="small" component={RouterLink} to="/people-ops/performance" fullWidth>
+                Open employee feedback
+              </Button>
+            </Box>
+          )}
         </Card>
 
         <BankAccountsCard ownerEmail={ownerEmail} />

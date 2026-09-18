@@ -76,7 +76,7 @@ Runtime config is read from `window.config` set by `public/config.js`. Build-tim
 | `ONE_WSO2_PEOPLE_BACKEND_URL` | people-ops-suite people-app backend base URL (Choreo gateway) — powers the live My profile page | `<people-app-backend-url>` |
 | `ONE_WSO2_MENU_BACKEND_URL` | Cafeteria menu backend — daily menu, lunch feedback, dinner orders (Workspace → Menu) | `<menu-app-backend-url>` |
 | `ONE_WSO2_LEAVE_WEB_APP_URL` | leave-app frontend base URL (not its backend) — deep-links into flows this webapp doesn't replicate (e.g. sabbatical requests). Optional — when absent, that link is hidden | `<your-leave-app-frontend-url>` |
-| `ONE_WSO2_THEME` | Theme name (`oneWso2` / `acrylicOrange`, `classic`, `highContrast`) — default `oneWso2` (the one-wso2 palette overlay on top of AcrylicOrange; `acrylicOrange` is an alias for the same theme) | `oneWso2` |
+| `ONE_WSO2_THEME` | Theme name — `wso2`, `acrylicOrange`, `acrylicPurple`, `classic`, `highContrast`, `paleIndigo`, `paleGray`. Default `wso2` (Oxygen's WSO2-branded theme, and the only one whose dark mode is WSO2 blue rather than a neutral black). `oneWso2` is a retired alias that still resolves to `acrylicOrange`, so saved preferences keep working | `wso2` |
 | `ONE_WSO2_DEV_BYPASS_AUTH` | Dev-only escape hatch — when `true`, AuthGuard renders without ever calling Asgardeo. **Never** set in prod. | `false` |
 
 ### Import Aliases

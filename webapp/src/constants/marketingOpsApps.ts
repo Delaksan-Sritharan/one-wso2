@@ -57,6 +57,7 @@
 import {
   ChartNoAxesCombinedIcon,
   MegaphoneIcon,
+  PaletteIcon,
   RefreshCwIcon,
   SettingsIcon,
   TicketIcon,
@@ -80,21 +81,21 @@ export const MARKETING_OPS_APPS: readonly MenuApp[] = [
       // — it's an immersive workspace reached by opening a template or a draft.
       {
         id: "mops-email-create",
-        label: "Create an email",
+        label: "Create an Email",
         desc: "Start from an approved template, edit its content, and push the finished email to Pardot.",
         requires: ["admin"],
         path: "/marketing-ops/email-workbench/create",
       },
       {
         id: "mops-email-history",
-        label: "My emails",
+        label: "My Emails",
         desc: "Your own drafts and completed emails, with their Pardot sync state.",
         requires: ["admin"],
         path: "/marketing-ops/email-workbench/history",
       },
       {
         id: "mops-email-manage",
-        label: "Manage templates",
+        label: "Manage Templates",
         desc: "Onboard, edit or remove the approved templates marketers build from.",
         requires: ["admin"],
         path: "/marketing-ops/email-workbench/manage",
@@ -106,7 +107,7 @@ export const MARKETING_OPS_APPS: readonly MenuApp[] = [
       // `emailworkbench` — the same one the other three items need.
       {
         id: "mops-email-blocks",
-        label: "Block catalog",
+        label: "Block Catalog",
         desc: "The components the email editor offers. Editing a block changes what future emails insert.",
         requires: ["admin"],
         path: "/marketing-ops/email-workbench/blocks",
@@ -135,6 +136,15 @@ export const MARKETING_OPS_APPS: readonly MenuApp[] = [
         desc: "Paid-ad performance across Google Ads and LinkedIn, with the Salesforce funnel and ROI for Google.",
         requires: ["admin"],
         path: "/marketing-ops/ad-campaigns/analytics",
+      },
+      // Same capability gate as Analytics (`adcampaigns`) — same backend,
+      // same operation, a different screen.
+      {
+        id: "mops-campaign-tracker",
+        label: "Campaign Tracker",
+        desc: "Weekly operating rhythm for live campaigns — register, weekly change log, and budget pacing for Google Ads and LinkedIn.",
+        requires: ["admin"],
+        path: "/marketing-ops/ad-campaigns/campaign-tracker",
       },
     ],
   },
@@ -212,6 +222,22 @@ export const MARKETING_OPS_APPS: readonly MenuApp[] = [
     ],
   },
   {
+    key: "design-studio",
+    name: "Design Studio",
+    icon: PaletteIcon,
+    purpose:
+      "Build branded LinkedIn post and banner graphics from the shared background-image library.",
+    items: [
+      {
+        id: "mops-design-studio-post-builder",
+        label: "Post Builder",
+        desc: "Design a LinkedIn post or banner — pick a type, fill in content, choose a background, and export.",
+        requires: ["admin"],
+        path: "/marketing-ops/design-studio/post-builder",
+      },
+    ],
+  },
+  {
     key: "utilities",
     name: "Utilities",
     icon: WrenchIcon,
@@ -266,14 +292,14 @@ export const MARKETING_OPS_APPS: readonly MenuApp[] = [
       //               Marketing Ops meanwhile.
       {
         id: "mops-admin-utm",
-        label: "UTM Generator lists",
+        label: "UTM Generator Lists",
         desc: "Source, Medium, Region and Business Unit values offered by the UTM Link Generator.",
         requires: ["admin"],
         path: "/marketing-ops/admin/utm",
       },
       {
         id: "mops-admin-asset-name",
-        label: "Asset Name lists",
+        label: "Asset Name Lists",
         desc: "Per-generator dropdown values for the Asset Name Generator.",
         requires: ["admin"],
         path: "/marketing-ops/admin/asset-name",
@@ -282,7 +308,7 @@ export const MARKETING_OPS_APPS: readonly MenuApp[] = [
       // inside the operation because they configure it rather than use it.
       {
         id: "mops-admin-pardot",
-        label: "Pardot send defaults",
+        label: "Pardot Send Defaults",
         desc: "Campaign, tracker domain, email types and sender applied to every email pushed to Pardot.",
         requires: ["admin"],
         path: "/marketing-ops/admin/pardot",
@@ -292,7 +318,7 @@ export const MARKETING_OPS_APPS: readonly MenuApp[] = [
       // at all and what each is allowed to contain, so it ships with the operation.
       {
         id: "mops-admin-events",
-        label: "Events statuses & columns",
+        label: "Events Statuses & Columns",
         desc: "Member statuses and the per-status columns an attendee workbook must carry to be imported.",
         requires: ["admin"],
         path: "/marketing-ops/admin/events",
@@ -317,6 +343,7 @@ export const MARKETING_OPS_EYEBROW = {
   adCampaigns: eyebrowFor("ad-campaigns"),
   events: eyebrowFor("events"),
   crmUpload: eyebrowFor("crm-upload"),
+  designStudio: eyebrowFor("design-studio"),
   utilities: eyebrowFor("utilities"),
   admin: eyebrowFor("admin"),
 } as const;

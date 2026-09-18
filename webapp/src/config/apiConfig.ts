@@ -146,13 +146,21 @@ export const bankingServiceUrls = {
     `${bankingBackendUrl}/employee/accounts?employeeWorkEmail=${encodeURIComponent(workEmail)}`,
 };
 
-// PAR (Performance Appraisal Review) app backend. Same Choreo gateway
-// rewrite pattern as promotion-app. Also uses x-user-timezone-offset via
+// ---- PAR app backend ---------------------------------------------------------
+// Same Choreo gateway rewrite pattern as promotion-app. Also uses x-user-timezone-offset via
 // digiopsHeaders().
 export const parBackendUrl: string =
   window.config?.ONE_WSO2_PAR_BACKEND_URL ?? "";
 
 export const parServiceUrls = {
+  // GET /employees/{workEmail} — par-app's OWN employee record, distinct
+  // from people-app's. Carries `leadEmail: string?` — the exact field
+  // OngoingCycleView.tsx gates its tab set on (`leadEmail !== null`).
+  // Deliberately NOT people-app's `managerEmail`: the two disagreed in
+  // practice for at least one real account, so this is fetched from
+  // par-app's own backend rather than assumed from a different one's org
+  // chart. Self-lookup is allowed (isSelf in service.bal).
+  parEmployeeInfo: (workEmail: string) => `${parBackendUrl}/employees/${encodeURIComponent(workEmail)}`,
   // GET /par-cycles?email=<workEmail>&status=OPEN — returns ParCycle[] for
   // the caller's own active review cycles. Non-lead/non-admin callers can
   // only query their own email.
@@ -163,6 +171,112 @@ export const parServiceUrls = {
   // parEmployeeStatus / parLeadStatus we use for the chip + copy).
   parRating: (parCycleId: number, workEmail: string) =>
     `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(workEmail)}/par-ratings`,
+  // PATCH .../par-ratings/{parRatingId} — save a draft or submit the
+  // self-review (parEmployeeStatus: DRAFT | SHARED). Backend enforces which
+  // fields the caller may set for their own record — see ParRatingModify.
+  parRatingUpdate: (parCycleId: number, workEmail: string, parRatingId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(workEmail)}/par-ratings/${parRatingId}`,
+
+  // ---- 360° feedback ---------------------------------------------------------
+  //
+  // `workEmail` in these four is always the employee BEING reviewed — for
+  // "reviewers"/"review-requests" that's the caller themself; for "review" the
+  // caller is the reviewer, resolved from the token, so this is the employee
+  // whose review they're reading/writing.
+
+  // GET .../reviewers, POST .../reviewers (Par360ReviewRequestCreate) — the
+  // people you've asked (or your lead asked, on your behalf) to review you.
+  par360Reviewers: (parCycleId: number, workEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(workEmail)}/reviewers`,
+  // GET — the requests waiting on YOU as a reviewer, for every employee who
+  // asked. `workEmail` here is the caller's own email — see the resource's
+  // `email` param, which the backend also accepts as the invoker's identity.
+  par360ReviewRequests: (workEmail: string, parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(workEmail)}/review-requests`,
+  // GET/PATCH .../review — the caller's own review OF `employeeWorkEmail`.
+  par360Review: (parCycleId: number, employeeWorkEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(employeeWorkEmail)}/review`,
+
+  // GET /par-cycles/{cycleId}/participants — the people IN THIS CYCLE (name +
+  // email only), leadEmail omitted (par-app's OfferFeedbackView.tsx always
+  // passes `leadEmail: null`, i.e. every participant, not one lead's team).
+  // Backs "Voluntary Feedback"'s picker — offering a review to someone who
+  // never asked has no existing request row to search against. NOT the same
+  // as GET /meta/employees, which is org-wide and not scoped to this cycle.
+  par360Participants: (parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/participants`,
+
+  // ---- Lead Portal -------------------------------------------------------------
+  //
+  // GET .../teams?leadEmail= — every team this lead owns (a lead can have
+  // more than one). `leadEmail` is a query param, not a path segment, so
+  // the backend can also resolve it from the token when self-querying.
+  parTeams: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/teams?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../teams/{teamId} — one team's roster (ParTeamDetails.details).
+  parTeamDetails: (parCycleId: number, parTeamId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/teams/${parTeamId}`,
+  // PATCH .../reminders/schedule-360-reminders — no body; scoped to the
+  // calling lead's own reports server-side (isLeadInActiveParCycle), not a
+  // global send. MultiTeamSummary.tsx's "Send 360° Reminder" button.
+  parSchedule360Reminders: () => `${parBackendUrl}/reminders/schedule-360-reminders`,
+  // GET .../special-rating-groups-quota?leadEmail= — SpecialRatingAllocationView's
+  // own fetchQuotaGroupRatings. Non-admin callers may only pass their own
+  // email (enforced server-side); leadEmail stays a required param here
+  // since the Lead Portal never omits it (that's the admin-only "everyone"
+  // view, out of scope for this portal).
+  parSpecialRatingAllocations: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups-quota?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../reports?leadEmail= — EmployeeReportView.tsx's own
+  // fetchDirectAndIndirectReports. Returns both direct and indirect reports;
+  // the Additional Reports tab keeps only the indirect ones.
+  parAdditionalReports: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/reports?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../report-levels?leadEmail= — ReportChainView.tsx's own
+  // fetchDirectEmployeePars. One drill-down level: the direct reports of
+  // whichever email is passed, not always the caller's own.
+  parReportLevels: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/report-levels?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET /employees?leadEmail= — EmployeeReportView.tsx's own
+  // fetchEntityEmployees. Org-chart direct reports, not PAR-cycle-scoped.
+  parLeadEmployees: (leadEmail: string) => `${parBackendUrl}/employees?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET /par-cycles?status=CLOSED, no email — EmployeeHistoryView.tsx's own
+  // fetchClosedParCycles: every closed cycle org-wide, gated only on the
+  // caller being a lead in the active cycle (or admin), not scoped to their
+  // own participation the way parCycles(email, "CLOSED") above is.
+  parAllClosedCycles: () => `${parBackendUrl}/par-cycles?status=CLOSED`,
+  // GET .../participants?leadEmail= — same endpoint parServiceUrls.par360Participants
+  // hits with no leadEmail (org-wide); EmployeeHistoryView.tsx's own
+  // fetchParticipants scopes it to the calling lead's own reports instead.
+  parHistoryParticipants: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/participants?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../employees/{email}/reviews — every review ABOUT that employee
+  // (reviewer, rating, comment, status), regardless of who's asking, as
+  // opposed to par360Review (the caller's OWN review of someone else).
+  parEmployeeReviews: (parCycleId: number, employeeEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(employeeEmail)}/reviews`,
+  // GET /legacy-par-history/{employeeEmail} — pre-migration PeopleHR export
+  // data. 360 feedback is server-side stripped when the caller IS the
+  // employee (self-view); a lead viewing a report's history gets it intact.
+  parLegacyHistory: (employeeEmail: string) =>
+    `${parBackendUrl}/legacy-par-history/${encodeURIComponent(employeeEmail)}`,
+
+  // ---- F2F scheduling ---------------------------------------------------------
+  //
+  // Flat top-level paths on the same par-app backend, not nested under
+  // /par-cycles — service.bal's own resource layout.
+
+  // GET .../calendar/busy-times?date=YYYY-MM-DD — the invoker's and their
+  // lead's busy periods for that day (server resolves the lead; nothing
+  // about them is passed from here). Raw Google Calendar freebusy shape.
+  calendarBusyTimes: (date: string) =>
+    `${parBackendUrl}/calendar/busy-times?date=${encodeURIComponent(date)}`,
+  // POST .../calendar/schedule-f2f (ScheduleF2fRequest) — creates the Google
+  // Calendar event (with a Meet link Google generates) and emails both
+  // attendees the invite. Returns bare 201 with no body: the app never
+  // shows the Meet link itself, only a "meeting scheduled" confirmation —
+  // see ParScheduleF2fDialog.tsx.
+  calendarScheduleF2f: () => `${parBackendUrl}/calendar/schedule-f2f`,
 };
 
 // Leave app backend (people-ops-suite/apps/leave-app). Its own service
@@ -310,8 +424,7 @@ export const expenseServiceUrls = {
     `${expenseBackendUrl}/claims/${encodeURIComponent(claimId)}/transactions`,
   employees: `${expenseBackendUrl}/employees`,
   expenseTypes: (travelJobNumber?: string) =>
-    `${expenseBackendUrl}/user-configurations/expense-types${
-      travelJobNumber ? `?travelJobNumber=${encodeURIComponent(travelJobNumber)}` : ""
+    `${expenseBackendUrl}/user-configurations/expense-types${travelJobNumber ? `?travelJobNumber=${encodeURIComponent(travelJobNumber)}` : ""
     }`,
   exchangeRates: (baseCode: string, date: string) =>
     `${expenseBackendUrl}/currencies/${encodeURIComponent(baseCode)}/rates/${encodeURIComponent(date)}`,
@@ -319,6 +432,38 @@ export const expenseServiceUrls = {
     `${expenseBackendUrl}/claims/${encodeURIComponent(email)}/transactions/receipts/file`,
   receiptFile: (fileName: string) =>
     `${expenseBackendUrl}/claims/transactions/receipts/file/${encodeURIComponent(fileName)}`,
+};
+
+// ---- Updates Manager backend ---------------------------------------------
+//
+// Reuses the standalone Updates Manager service without changing its route
+// layout. Identity and dashboard statistics live below `/update`, while the
+// shared metadata endpoint remains at the service root. Keep that split when
+// adding endpoints; prefixing `/meta` with `/update` returns the wrong route.
+//
+// `/update/user-info` returns UMT's own numeric roles (444/555/666). They are
+// interpreted by useUmtGate and must not be mixed with the People backend's
+// app-wide capabilities.
+//
+// Empty string = not configured; UmtShell renders the connection state and
+// prevents its feature children from mounting. Trailing slashes are stripped
+// because every endpoint below adds its own leading slash.
+export const umtBackendUrl: string = (
+  window.config?.ONE_WSO2_UMT_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
+
+export function isUmtBackendConfigured(): boolean {
+  return Boolean(umtBackendUrl);
+}
+
+export const umtServiceUrls = {
+  // GET — caller identity and UMT-local roles; this is the perspective gate.
+  userInfo: `${umtBackendUrl}/update/user-info`,
+  // GET — products, versions, issue types, lifecycles and user emails shared
+  // by the update workflows. This endpoint deliberately sits outside /update.
+  meta: `${umtBackendUrl}/meta`,
+  // GET — aggregate update lifecycle and release-chunk build counts.
+  updatesStats: `${umtBackendUrl}/update/stats`,
 };
 
 // ---- marketing-ops backend -------------------------------------------------
@@ -399,6 +544,68 @@ export const marketingOpsServiceUrls = {
   adAnalyticsLinkedInRoiRun: `${marketingOpsBackendUrl}/api/ad-campaigns/analytics/linkedin-roi/run`,
   adAnalyticsDashboardRun: `${marketingOpsBackendUrl}/api/ad-campaigns/analytics/dashboard/run`,
 
+  // ---- ad campaigns → campaign tracker ---------------------------------------
+  //
+  // The weekly operating rhythm for every live campaign: Register/Budget Pacing
+  // are live reads of Google Ads/LinkedIn (via the Marketing Entity Service)
+  // plus a thin persisted overlay (the four Register override fields; manual
+  // Budget Pacing rows); Weekly Log rows are fully persisted server-side. See
+  // useCampaignTracker.ts for how each endpoint is used.
+  campaignTrackerRegister: (platform: "google_ads" | "linkedin", includeInactive: boolean) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/register?platform=${platform}${
+      includeInactive ? "&include_inactive=true" : ""
+    }`,
+  campaignTrackerRegisterOverride: (campaignId: string, platform: "google_ads" | "linkedin") =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/register/${encodeURIComponent(campaignId)}?platform=${platform}`,
+  campaignTrackerBudgetPacing: (platform: "google_ads" | "linkedin") =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/budget-pacing?platform=${platform}`,
+  campaignTrackerBudgetPacingManual: `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/budget-pacing/manual`,
+  campaignTrackerBudgetPacingManualRow: (id: string) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/budget-pacing/manual/${encodeURIComponent(id)}`,
+  campaignTrackerWeeklyLog: (days: number, includeUnlogged: boolean) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/weekly-log?days=${days}${
+      includeUnlogged ? "&include_unlogged=true" : ""
+    }`,
+  // Bare collection URL (no query string) — POST to create a manual entry.
+  campaignTrackerWeeklyLogCreate: `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/weekly-log`,
+  campaignTrackerWeeklyLogGroup: (groupId: string) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/weekly-log/${encodeURIComponent(groupId)}`,
+  campaignTrackerWeeklyLogEntries: (groupId: string) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/weekly-log/${encodeURIComponent(groupId)}/entries`,
+  campaignTrackerWeeklyLogEntry: (groupId: string, entryId: string) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/weekly-log/${encodeURIComponent(groupId)}/entries/${encodeURIComponent(entryId)}`,
+  campaignTrackerLinkedinRefresh: `${marketingOpsBackendUrl}/api/ad-campaigns/campaign-tracker/linkedin-refresh`,
+  // ---- ad campaigns → BU ownership registry ----------------------------------
+  //
+  // Owner name/email + which BU they currently own, with full append-only
+  // history. Reads are open to anyone with Ad Campaigns access; writes require
+  // admin (enforced server-side — see the backend's `require_admin`).
+  ownershipOwners: `${marketingOpsBackendUrl}/api/ad-campaigns/ownership/owners`,
+  ownershipBuCurrent: `${marketingOpsBackendUrl}/api/ad-campaigns/ownership/bu-ownership/current`,
+  ownershipBuHistory: (bu?: string) =>
+    `${marketingOpsBackendUrl}/api/ad-campaigns/ownership/bu-ownership/history${bu ? `?bu=${encodeURIComponent(bu)}` : ""}`,
+  ownershipBuAssign: `${marketingOpsBackendUrl}/api/ad-campaigns/ownership/bu-ownership`,
+
+  // ---- design studio ----------------------------------------------------------
+  //
+  // The shared, DB-backed background-image library the Post Builder canvas editor
+  // draws from. Images are uploaded once and shared across users; content is
+  // immutable once uploaded (only name/description can change — see
+  // designStudioBackgroundImage below), so the thumbnail/full-image GETs are safe
+  // to cache forever client-side (see fetchBackgroundThumbnail/fetchBackgroundImage
+  // in useDesignStudio.ts).
+  //
+  // Thumbnail/image return BINARY, not JSON — same reason as
+  // emailWorkbenchTemplateThumbnail above: fetch as a blob with the Authorization
+  // header (see @features/finance/util/financeReceipts for the established pattern).
+  designStudioBackgroundImages: `${marketingOpsBackendUrl}/api/design-studio/background-images`,
+  designStudioBackgroundImage: (id: string) =>
+    `${marketingOpsBackendUrl}/api/design-studio/background-images/${encodeURIComponent(id)}`,
+  designStudioBackgroundImageThumbnail: (id: string) =>
+    `${marketingOpsBackendUrl}/api/design-studio/background-images/${encodeURIComponent(id)}/thumbnail`,
+  designStudioBackgroundImageFile: (id: string) =>
+    `${marketingOpsBackendUrl}/api/design-studio/background-images/${encodeURIComponent(id)}/image`,
+
   // ---- email workbench -------------------------------------------------------
   //
   // The template library (approved HTML + thumbnail), per-user drafts, the
@@ -416,8 +623,7 @@ export const marketingOpsServiceUrls = {
   emailWorkbenchTemplate: (id: string) =>
     `${marketingOpsBackendUrl}/api/email-workbench/templates/${encodeURIComponent(id)}`,
   emailWorkbenchTemplateThumbnail: (id: string, version?: string) =>
-    `${marketingOpsBackendUrl}/api/email-workbench/templates/${encodeURIComponent(id)}/thumbnail${
-      version ? `?v=${encodeURIComponent(version)}` : ""
+    `${marketingOpsBackendUrl}/api/email-workbench/templates/${encodeURIComponent(id)}/thumbnail${version ? `?v=${encodeURIComponent(version)}` : ""
     }`,
   emailWorkbenchCategories: `${marketingOpsBackendUrl}/api/email-workbench/categories`,
   emailWorkbenchDrafts: `${marketingOpsBackendUrl}/api/email-workbench/drafts`,
@@ -531,6 +737,148 @@ function query(params?: URLSearchParams): string {
   return s ? `?${s}` : "";
 }
 
+// ---- due-diligence backend -------------------------------------------------
+//
+// The Due Diligence app (digiops-finance/apps/due_diligence/backend/admin) is a
+// Ballerina service, same Choreo Bearer -> x-jwt-assertion gateway rewrite
+// pattern as every other digiops-finance backend above. Surfaced under both the
+// Finance and Legal perspectives — see DUE_DILIGENCE_APPS in
+// @constants/dueDiligenceApps and useDueDiligenceGate.
+//
+// GET /user-info returns ONLY the caller's computed role names
+// (`{ roles: string[] }`) — never their raw Asgardeo group names or their
+// email, by design: see UserInfoResponse on the backend. Empty string = not
+// configured; DueDiligenceShell renders a "not connected" state rather than
+// firing broken requests.
+//
+// Trailing slashes stripped for the same reason as marketingOpsBackendUrl —
+// every builder below concatenates a path onto this.
+export const dueDiligenceBackendUrl: string = (
+  window.config?.ONE_WSO2_DUE_DILIGENCE_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
+
+export function isDueDiligenceBackendConfigured(): boolean {
+  return Boolean(dueDiligenceBackendUrl);
+}
+
+// Every builder below is checked directly against the backend's own resource
+// function signatures in service.bal (not against the source frontend's
+// admin-config.js endpoint-constant table, which in a few places — renew,
+// form-status, the trade-reference-vs-partner id shape — turned out to
+// disagree with what the backend actually routes).
+export const dueDiligenceServiceUrls = {
+  // GET — the caller's own due-diligence role names. Authenticated but not
+  // gated: an authenticated caller who holds none of the mapped Asgardeo
+  // groups still gets a 200 with `roles: []`, which is what lets the UI
+  // render an honest "you don't have access" state instead of a bare 403.
+  userInfo: `${dueDiligenceBackendUrl}/user-info`,
+  // GET — app-wide, non-identity config (currently just the client-facing
+  // webapp's base URL, for "Copy Link"). The backend owns this value
+  // (its own `clientBaseUrl` configurable) rather than One WSO2 duplicating
+  // it in window.config — one source of truth for a URL only the backend's
+  // deployment actually knows.
+  appConfig: `${dueDiligenceBackendUrl}/app-config`,
+
+  // ---- partners (resellers) -------------------------------------------------
+  partners: `${dueDiligenceBackendUrl}/partners`,
+  partner: (companyId: string | number) => `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(companyId)}`,
+  // PATCH — the same "one partner" resource also carries the "enable trade
+  // reference" toggle (PartnerUpdatePayload); there is no separate
+  // "/enable-trade-ref" path on the backend despite the source frontend
+  // naming a constant that way.
+  partnerUpdate: (linkId: string | number) => `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(linkId)}`,
+  partnerLink: `${dueDiligenceBackendUrl}/partner/link`,
+  // GET ?filled=<bool> — unfilled/filled reseller link data.
+  partnerLinksUnfilled: (filled: boolean) => `${dueDiligenceBackendUrl}/partners/links?filled=${filled}`,
+  partnerLinkStatus: (linkId: string | number) =>
+    `${dueDiligenceBackendUrl}/partners/links/${encodeURIComponent(linkId)}/status`,
+  partnerLinkResendEmail: (linkId: string | number) =>
+    `${dueDiligenceBackendUrl}/partners/links/${encodeURIComponent(linkId)}/resend-email`,
+  // POST — renews by link id alone, NOT nested under a company id.
+  partnerLinkRenew: (linkId: string | number) =>
+    `${dueDiligenceBackendUrl}/partners/link/${encodeURIComponent(linkId)}/renew`,
+  partnerFormStatus: (companyId: string | number) =>
+    `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(companyId)}/form-status`,
+  partnerLinkStatusField: (companyId: string | number) =>
+    `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(companyId)}/link-status`,
+  partnerQuestions: `${dueDiligenceBackendUrl}/partners/questions`,
+  partnerAnswers: (companyId: string | number) =>
+    `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(companyId)}/answers`,
+  legalQuestions: (companyId: string | number) =>
+    `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(companyId)}/questions/legal`,
+  legalAnswers: (companyId: string | number) =>
+    `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(companyId)}/answers/legal`,
+  legalApproval: `${dueDiligenceBackendUrl}/legal-approval`,
+  approvalSummary: (companyId: string | number) =>
+    `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(companyId)}/approval-summary`,
+  approvalEmail: `${dueDiligenceBackendUrl}/approval-email`,
+  specialApprovalEmail: `${dueDiligenceBackendUrl}/special-approval-email`,
+  linkExpiry: `${dueDiligenceBackendUrl}/link-expiry`,
+
+  // ---- finance feedback + comments ------------------------------------------
+  financeFeedback: `${dueDiligenceBackendUrl}/finance/feedback`,
+  // POST — bulk create (a FinanceComments[] body); PATCH — edit ONE, by id.
+  financeComments: `${dueDiligenceBackendUrl}/finance/comments`,
+  financeComment: (commentId: string | number) =>
+    `${dueDiligenceBackendUrl}/finance/comments/${encodeURIComponent(commentId)}`,
+
+  // ---- legal comments + files ------------------------------------------------
+  // POST — bulk create (a LegalCommentPayload[] body); PATCH — edit ONE, by id.
+  legalComments: `${dueDiligenceBackendUrl}/legal/comments`,
+  legalComment: (commentId: string | number) =>
+    `${dueDiligenceBackendUrl}/legal/comments/${encodeURIComponent(commentId)}`,
+
+  // ---- credit score -----------------------------------------------------------
+  // GET — one partner's items, by id. POST — bulk insert (a CreditScoreItems[]
+  // body, no id in the path — the company id travels in the payload).
+  creditScoreItemsForPartner: (companyId: string | number) =>
+    `${dueDiligenceBackendUrl}/credit-score-items/${encodeURIComponent(companyId)}`,
+  creditScoreItemsInsert: `${dueDiligenceBackendUrl}/credit-score-items`,
+  // PATCH — replace the ratio scale table (a CreditScoreRatios[] body). The
+  // CURRENT scales are read from `preferences` below (types:Ratios), not
+  // from this path — there is no GET on ratio-scales.
+  ratioScales: `${dueDiligenceBackendUrl}/ratio-scales`,
+
+  // ---- files --------------------------------------------------------------
+  // GET ?fileExtension=<ext> — by file name.
+  file: (fileName: string, fileExtension: string) =>
+    `${dueDiligenceBackendUrl}/files/${encodeURIComponent(fileName)}?fileExtension=${encodeURIComponent(fileExtension)}`,
+  // POST ?fileExtension=&fileName= (binary body) — keyed by the partner's
+  // contact EMAIL, per the backend's own doc comment (not a company id).
+  partnerFileUpload: (email: string, fileName: string, fileExtension: string) =>
+    `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(email)}/files` +
+    `?fileExtension=${encodeURIComponent(fileExtension)}&fileName=${encodeURIComponent(fileName)}`,
+  partnerFileDelete: (email: string, fileName: string) =>
+    `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(email)}/files/${encodeURIComponent(fileName)}`,
+  partnerFilesMetadata: (email: string) =>
+    `${dueDiligenceBackendUrl}/partners/${encodeURIComponent(email)}/files/metadata`,
+
+  // ---- trade references ------------------------------------------------------
+  tradeReferences: `${dueDiligenceBackendUrl}/trade-references`,
+  // GET — needs BOTH ids; there is no single-id trade-reference lookup.
+  tradeReference: (companyId: string | number, linkId: string | number) =>
+    `${dueDiligenceBackendUrl}/trade-references/${encodeURIComponent(companyId)}/${encodeURIComponent(linkId)}`,
+  tradeReferenceLinkId: (companyId: string | number) =>
+    `${dueDiligenceBackendUrl}/trade-references/${encodeURIComponent(companyId)}/link-id`,
+  tradeReferenceQuestions: `${dueDiligenceBackendUrl}/trade-references/info/questions`,
+  // PATCH — a fixed path; the link is identified by the TradeRefLink body, not a path segment.
+  tradeReferenceFormStatus: `${dueDiligenceBackendUrl}/trade-reference/form-status`,
+  // POST — renews by link id alone, NOT nested under a company id.
+  tradeReferenceLinkRenew: (linkId: string | number) =>
+    `${dueDiligenceBackendUrl}/trade-references/link/${encodeURIComponent(linkId)}/renew`,
+
+  // ---- preferences (admin only) -----------------------------------------------
+  // GET returns the current Ratios (including the ratio scale table); see
+  // `ratioScales` above for how the table is WRITTEN.
+  preferences: `${dueDiligenceBackendUrl}/preferences`,
+  // GET / POST (create) share this path; DELETE also uses it, with the
+  // email to remove in the request body (types:Email), not a path segment.
+  notificationEmails: `${dueDiligenceBackendUrl}/emails`,
+
+  // ---- reference data -----------------------------------------------------
+  countries: `${dueDiligenceBackendUrl}/countries`,
+};
+
 // Base URL of the Pardot UI, for deep-linking to a template after it's pushed.
 // Not an API — a link target. Defaults to Pardot's own host, which is correct for
 // every WSO2 environment today; the key exists so a sandbox can point elsewhere.
@@ -626,6 +974,129 @@ export const menuServiceUrls = {
   // GET the current order, POST to place or change it, DELETE to cancel.
   dinner: `${menuBackendUrl}/dinner`,
 };
+
+// ---------------------------------------------------------------------------
+// Subscription backend (digiops-hr subscription-app). The two paid staff
+// services an employee opts in and out of — PickMe Commute and LaaS (lunch as
+// a service) — plus the admin screens that manage them on someone's behalf.
+// See docs/ported-apps/subscription-app.md for the contract.
+//
+// Unlike every builder above, the subject's email is a PATH SEGMENT rather
+// than something the token alone decides. The service reads it and compares it
+// with the JWT's own email: equal means self-service (date windows enforced),
+// different means an admin acting for someone else (windows bypassed, admin
+// group required). So each builder takes an email — the caller's own address
+// for the self-service screen, the selected employee's for the admin one.
+export const subscriptionBackendUrl: string =
+  window.config?.ONE_WSO2_SUBSCRIPTION_BACKEND_URL ?? "";
+
+export function isSubscriptionBackendConfigured(): boolean {
+  return Boolean(subscriptionBackendUrl);
+}
+
+// ---------------------------------------------------------------------------
+// Email Group Manager backend (digiops-infra/apps/email-group-manager). Lets
+// an employee browse the company's Google Groups mailing lists, subscribe or
+// unsubscribe themselves, and — client-side only, no backend of its own —
+// build an email signature. See docs/ported-apps/email-group-manager.md for
+// the contract.
+//
+// The source app's own GET /user-info is NOT reused here: this webapp already
+// has an identical call (people-app's, via @api/useUserInfo) for the
+// signed-in caller's name, designation and work email, and asking a second
+// backend the same question would just be a second round trip for the same
+// answer. `isAdmin` on the source response was dead code even in the
+// original — nothing in its UI branched on it — so it has no equivalent here.
+export const emailGroupsBackendUrl: string =
+  window.config?.ONE_WSO2_EMAIL_GROUPS_BACKEND_URL ?? "";
+
+export function isEmailGroupsBackendConfigured(): boolean {
+  return Boolean(emailGroupsBackendUrl);
+}
+
+export const emailGroupsServiceUrls = {
+  // Groups every employee is subscribed to automatically. Read-only — there is
+  // no endpoint to leave one.
+  defaultGroups: `${emailGroupsBackendUrl}/default-google-groups`,
+  // The full catalog the caller may subscribe to or unsubscribe from.
+  allGroups: `${emailGroupsBackendUrl}/all-google-groups`,
+  // The caller's own current memberships — a mix of default groups, catalog
+  // groups they opted into, and groups an admin added them to that aren't in
+  // the catalog at all ("other" groups on the page).
+  userGroups: `${emailGroupsBackendUrl}/user-google-groups`,
+  // PATCH, body `{groupName, userEmail}`. The subject is not decided by a path
+  // segment or the token alone — it's a field in the payload — so unlike every
+  // other backend in this file these two calls are the same URL regardless of
+  // who they're for; that's fine, because the only caller this page ever acts
+  // for is the signed-in employee themself.
+  subscribe: `${emailGroupsBackendUrl}/google-group/subscribe`,
+  unsubscribe: `${emailGroupsBackendUrl}/google-group/unsubscribe`,
+};
+
+export const subscriptionServiceUrls = {
+  // Distance ranges, the four opt-in/opt-out day boundaries, the LaaS price,
+  // the fee-exempt groups AND the names of the two admin groups. One call
+  // supplies both the page's content and the vocabulary its gate needs — see
+  // useSubscriptionGate for why the group names can't be hard-coded here.
+  metaInfo: `${subscriptionBackendUrl}/subscriptions/meta-info`,
+  // The admin picker's roster: active + marked-leaver employees. 403s for a
+  // caller in neither admin group, so it is only ever fetched from the admin
+  // screen.
+  employees: `${subscriptionBackendUrl}/employees`,
+  // GET returns the subscription or 404 when the employee has never had one.
+  commute: (email: string) =>
+    `${subscriptionBackendUrl}/commutes/${encodeURIComponent(email)}`,
+  subscribeCommute: (email: string) =>
+    `${subscriptionBackendUrl}/commutes/${encodeURIComponent(email)}/subscribe`,
+  unsubscribeCommute: (email: string) =>
+    `${subscriptionBackendUrl}/commutes/${encodeURIComponent(email)}/unsubscribe`,
+  // Singular "meal" — the service's own spelling, not a typo.
+  meal: (email: string) => `${subscriptionBackendUrl}/meal/${encodeURIComponent(email)}`,
+  subscribeMeal: (email: string) =>
+    `${subscriptionBackendUrl}/meal/${encodeURIComponent(email)}/subscribe`,
+  unsubscribeMeal: (email: string) =>
+    `${subscriptionBackendUrl}/meal/${encodeURIComponent(email)}/unsubscribe`,
+};
+
+// ---------------------------------------------------------------------------
+// GRC Platform — the Security perspective (Risk Hub, Audit Hub and Admin
+// Console), lifted from grc-tools/apps/grc-platform.
+//
+// ONE THING ABOUT THIS BACKEND THAT NO SIBLING HERE SHARES: it verifies the
+// token's `aud`, and each Asgardeo application mints its own. It used to accept
+// a single AUTH_AUDIENCE — the GRC webapp's client id — so every request from
+// here 401'd with `token has invalid audience`. That backend now takes a
+// comma-separated set (grc-tools #82, merged and deployed), and AUTH_AUDIENCE
+// names this app's client id too.
+//
+// Left here because the failure is otherwise unrecognisable: a 401 on EVERY
+// Security call, including /me/privileges, while every other backend in this
+// app works. If that comes back, check AUTH_AUDIENCE before anything else. A
+// second IdP entry is NOT the fix — the backend's runtime map is keyed by
+// issuer and both apps share one, so it would overwrite the first.
+//
+// CORS is not a factor either way, despite that backend's own
+// middleware/cors.go allowing exactly one origin. It never reaches the browser:
+// requests go through the Choreo gateway, which answers the preflight itself
+// and reflects the caller's origin. Measured with an OPTIONS against stage. The
+// Go middleware only matters to a browser hitting the service directly.
+//
+// These screens send THIS APP'S ACCESS TOKEN, like every other backend here —
+// not the ID token the GRC source sends. See features/security/grc/shim.
+//
+// Named for the BACKEND (grc-platform), not for the perspective. The label on
+// that perspective is a product decision that has already changed once —
+// "Security" became "Security and Compliance" — and a config key that tracks a
+// label goes stale the next time. The service, its Choreo component and its
+// repo are all called grc-platform, so this name stays greppable across all
+// three.
+export const securityBackendUrl: string = (
+  window.config?.ONE_WSO2_GRC_PLATFORM_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
+
+export function isSecurityBackendConfigured(): boolean {
+  return Boolean(securityBackendUrl);
+}
 
 // ---------------------------------------------------------------------------
 // RevOps backend. RevOps is the One WSO2 perspective for the call-review

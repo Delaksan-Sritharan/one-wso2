@@ -14,39 +14,49 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Theme selection, and nothing else: this file picks between shipped Oxygen
-// presets plus One WSO2's own brand theme, then applies the accessibility
-// overlay. Keeping selection separate from definition is what stops a theme
-// file accreting palette edits — the brand layer itself (palette, typography,
-// surfaces) lives in brandTheme.ts.
+// Theme selection, and nothing else: this file picks between the themes Oxygen
+// ships, then applies the accessibility overlay.
+//
+// Oxygen's themes are used AS SHIPPED. There is deliberately no brand layer on
+// top any more — an earlier iteration extended AcrylicOrangeTheme with One WSO2
+// colours and solid surfaces (config/brandTheme.ts, removed); taking Oxygen's
+// presets unmodified is what keeps this file a picker rather than a second
+// design system. Palette questions belong upstream in Oxygen, not here.
 
 import {
+  AcrylicOrangeTheme,
   AcrylicPurpleTheme,
-  ChoreoTheme,
   ClassicTheme,
   HighContrastTheme,
+  PaleGrayTheme,
+  PaleIndigoTheme,
+  WSO2Theme,
 } from "@wso2/oxygen-ui";
-import type { OxygenTheme } from "@wso2/oxygen-ui/styles/Themes/OxygenThemeBase";
-import { OneWso2Theme } from "@config/brandTheme";
+import type { OxygenTheme } from "@wso2/oxygen-ui/styles/OxygenThemeBase";
 import { withA11yOverrides } from "@config/a11yThemeOverrides";
 
 export const THEMES = {
-  // The brand theme IS Acrylic Orange with One WSO2's palette and solid surfaces
-  // layered on (see brandTheme.ts, which extends AcrylicOrangeTheme), so it keeps
-  // that name. Deployments already ship ONE_WSO2_THEME="acrylicOrange".
-  acrylicOrange: OneWso2Theme,
+  acrylicOrange: AcrylicOrangeTheme,
   // Alias, resolvable but not offered — an earlier iteration persisted this key,
   // so saved preferences must keep working. canonicalThemeKey() folds it back.
-  oneWso2: OneWso2Theme,
+  oneWso2: AcrylicOrangeTheme,
   acrylicPurple: AcrylicPurpleTheme,
-  choreo: ChoreoTheme,
   classic: ClassicTheme,
   highContrast: HighContrastTheme,
+  // Deliberately NOT offered: OxygenTheme (= AcrylicBaseTheme) and
+  // PaleBaseTheme, which are the bases the themes above extend rather than
+  // finished looks of their own.
+  wso2: WSO2Theme,
+  paleIndigo: PaleIndigoTheme,
+  paleGray: PaleGrayTheme,
 } satisfies Record<string, OxygenTheme>;
 
 export type ThemeKey = keyof typeof THEMES;
 
-export const DEFAULT_THEME_KEY: ThemeKey = "acrylicOrange";
+// WSO2 is the default: it is Oxygen's own WSO2-branded preset, and the only one
+// whose dark mode is the WSO2 blue (background.default #0f172a) rather than a
+// neutral black. THEME_OPTIONS lists it first — a test pins option[0] to this.
+export const DEFAULT_THEME_KEY: ThemeKey = "wso2";
 
 /**
  * What the picker offers, in display order. The brand theme leads because it is
@@ -55,11 +65,13 @@ export const DEFAULT_THEME_KEY: ThemeKey = "acrylicOrange";
  * out so the menu does not list it twice.
  */
 export const THEME_OPTIONS: { key: ThemeKey; label: string }[] = [
+  { key: "wso2", label: "WSO2" },
   { key: "acrylicOrange", label: "Acrylic Orange" },
   { key: "acrylicPurple", label: "Acrylic Purple" },
-  { key: "choreo", label: "Choreo" },
   { key: "classic", label: "Classic" },
   { key: "highContrast", label: "High Contrast" },
+  { key: "paleIndigo", label: "Pale Indigo" },
+  { key: "paleGray", label: "Pale Gray" },
 ];
 
 export function isThemeKey(value: unknown): value is ThemeKey {

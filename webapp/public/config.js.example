@@ -14,13 +14,25 @@ window.config = {
   // ONE_WSO2_ASGARDEO_MYACCOUNT_URL: "https://myaccount.asgardeo.io/t/<your-org>",
 
   // UI
-  ONE_WSO2_THEME: "acrylicOrange",
+  ONE_WSO2_THEME: "wso2",
 
   // Cafeteria menu backend (daily menu, lunch feedback, dinner orders).
   // Optional — when absent the Menu screen shows a not-connected state and
   // makes no requests. See docs/ported-apps/menu-app.md for the contract.
   // ONE_WSO2_MENU_BACKEND_URL: "https://<gateway>/menu-app/v1",
 
+  // digiops-hr subscription-app backend base URL (PickMe Commute + LaaS
+  // opt-in/opt-out). Optional — when absent the People Ops → Subscriptions
+  // screens show a not-connected state and make no requests. See
+  // docs/ported-apps/subscription-app.md for the contract, including the
+  // two Asgardeo admin groups this backend's own /subscriptions/meta-info
+  // publishes (there is no separate config key for them).
+  // ONE_WSO2_SUBSCRIPTION_BACKEND_URL: "<your-subscription-app-backend-url>",
+
+  // digiops-infra email-group-manager backend base URL. Optional — when
+  // absent the Email Groups screen shows a not-connected state and makes no
+  // requests. See docs/ported-apps/email-group-manager.md for the contract.
+  // ONE_WSO2_EMAIL_GROUPS_BACKEND_URL: "<your-email-group-manager-backend-url>",
   // RevOps (auto-recorded meetings) backend — people-ops-suite's meet-app
   // service, reused unchanged. Powers the RevOps app's meeting history.
   // Optional — when absent RevOps is hidden from the launcher entirely and the
@@ -58,6 +70,16 @@ window.config = {
   // pattern; leave-app has its own /user-info + privileges.
   // ONE_WSO2_LEAVE_BACKEND_URL: "<your-leave-app-backend-url>",
 
+  // grc-tools grc-platform backend base URL — the Security perspective
+  // (Risk Hub, Audit Hub and Admin Console), lifted from grc-tools. Optional —
+  // when absent the Security screens cannot load, and the perspective says so
+  // rather than calling anything.
+  //
+  // That backend must list this app's Asgardeo client id in its AUTH_AUDIENCE,
+  // or every request from here 401s. Already done for stage. See
+  // src/config/apiConfig.ts.
+  // ONE_WSO2_GRC_PLATFORM_BACKEND_URL: "<your-grc-platform-backend-url>",
+
   // digiops-finance backend base URLs — the three apps in the Finance
   // perspective. Each is a separate Ballerina service with its own
   // /user-info + role scheme. Optional — when a URL is absent, that app's
@@ -66,6 +88,11 @@ window.config = {
   // ONE_WSO2_OPD_BACKEND_URL: "<your-opd-claims-backend-url>",
   // ONE_WSO2_CC_EXPENSES_BACKEND_URL: "<your-cc-expenses-backend-url>",
   // ONE_WSO2_EXPENSE_CLAIMS_BACKEND_URL: "<your-expense-claims-backend-url>",
+
+  // Updates Manager backend base URL. Optional — when absent, UMT shows a
+  // not-connected state and makes no requests. The value is the service root;
+  // the access check is GET <base-url>/update/user-info.
+  // ONE_WSO2_UMT_BACKEND_URL: "<your-updates-manager-backend-url>",
 
   // leave-app frontend base URL (not its backend) — used to deep-link into
   // flows this webapp doesn't replicate (e.g. sabbatical requests).
@@ -78,6 +105,12 @@ window.config = {
   // that prefix). Same Choreo API gateway URL pattern otherwise. Optional —
   // when absent, the Marketing Ops screens show a "not connected" state.
   // ONE_WSO2_MARKETINGOPS_BACKEND_URL: "<your-marketing-ops-backend-url>",
+
+  // digiops-finance due_diligence backend base URL — the Due Diligence app,
+  // surfaced under both the Finance and Legal perspectives. Same Choreo API
+  // gateway URL pattern as the other digiops-finance backends above. Optional
+  // — when absent, the Due Diligence screens show a "not connected" state.
+  // ONE_WSO2_DUE_DILIGENCE_BACKEND_URL: "<your-due-diligence-backend-url>",
 
   // ISAC base URL — a separate marketing application, linked to from the top of
   // the Marketing Ops rail and opened in a new tab. Nothing here calls it as an
@@ -109,4 +142,16 @@ window.config = {
   // alive; true signs out at 30 minutes, which is what the security checklist
   // (ONEWSO2-R1) asks for.
   // ONE_WSO2_IDLE_AUTO_SIGN_OUT: false,
+
+  // Features that are built and merged but not released yet. Absent or false
+  // hides the feature — a deployment that says nothing shows nothing, so
+  // production is safe without anyone remembering to add an entry.
+  //
+  // NOT the same as an empty backend URL above. That means "not wired up";
+  // this means "wired up, but not for you yet".
+  //
+  // Each entry is deleted when its feature ships — a list that only grows
+  // stops describing anything.
+  //
+  // ONE_WSO2_PREVIEW_FEATURES: { expenseSubmitter: false, umt: false },
 };

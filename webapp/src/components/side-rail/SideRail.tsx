@@ -20,17 +20,11 @@ import { ExternalLinkIcon, SettingsIcon } from "@wso2/oxygen-ui-icons-react";
 import { Link as RouterLink, matchPath, useLocation, useNavigate } from "react-router";
 import { useActivePerspective } from "@context/perspective/PerspectiveContext";
 import type { PerspectiveSection } from "@constants/perspectives";
-import { capabilitiesFromPrivileges, type Capability } from "@constants/appMenu";
-import { FINANCE_ITEM_IDS } from "@constants/financeApps";
-import { LEAVE_ITEM_IDS } from "@constants/meApps";
-import { useUserInfo } from "@api/useUserInfo";
-import { useFinanceGate } from "@features/finance/api/useFinanceGate";
-import { useLeaveGate } from "@features/leave/api/useLeaveGate";
 import {
   activeGroupIds as activeGroupIdsFor,
   activeItemId as activeItemIdFor,
 } from "./railActive";
-import { useMarketingOpsGate } from "@features/marketing-ops/api/useMarketingOpsGate";
+import { usePerspectiveVisibility } from "./usePerspectiveVisibility";
 
 // Context-sensitive left rail, built on Oxygen's compound `Sidebar`.
 //
@@ -95,46 +89,14 @@ const ELLIPSIS_SX = {
 
 export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   const active = useActivePerspective();
-  const userInfo = useUserInfo();
-  const caps = capabilitiesFromPrivileges(userInfo.data?.privileges);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Finance items (OPD/credit-card/expense, surfaced under Me) gate on each
-  // finance app's OWN backend roles, not the coarse people-app capabilities
-  // — so someone who is a people-app lead but not a cc-expenses lead/finance
-  // doesn't see "Approve Submissions". Dispatched per item id rather than
-  // per perspective since Finance items are just some of Me's sections now.
-  // Only fetch those roles while Me is active.
-  // Both perspectives: the claim apps' own screens are under Me, and Claim
-  // approval is under Finance. One gate answers for both, so it has to be
-  // asked in either place.
-  const financeGate = useFinanceGate(active.key === "me" || active.key === "finance");
-
-  // Leave is the same problem again: its backend numbers LEAD 879 /
-  // PEOPLE_OPS_TEAM 789, unrelated to people-app's 993 / 999. Reading
-  // `requires` against `caps` showed Reports to a people-app lead who cannot
-  // use it, and hid it from a leave lead who can.
-  const leaveGate = useLeaveGate(active.key === "me");
-
-  // Marketing Ops is the same shape of problem and needs the same treatment:
-  // its rail gates on the MARKETING OPS backend's own Asgardeo groups
-  // (app-marketingops-*), which bear no relation to the people-app privilege
-  // numbers `caps` is built from. Reading `requires` against `caps` would show
-  // a people-app admin every marketing screen — including ones the marketing
-  // backend then 403s — and hide them from an actual Marketing Ops admin who
-  // happens not to be a people-app admin. The registry says as much at
-  // @constants/perspectives: the `requires` on those sections is a coarse hint,
-  // and whatever renders them has to ask this gate.
-  const isMarketingOps = active.key === "marketing";
-  const marketingOpsGate = useMarketingOpsGate(isMarketingOps);
-
-  const resolveVisible = (s: PerspectiveSection): boolean => {
-    if (FINANCE_ITEM_IDS.has(s.id)) return financeGate.canSee(s.id);
-    if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
-    if (isMarketingOps) return marketingOpsGate.canSee(s.id);
-    return sectionAllowed(s.requires, caps);
-  };
+  // Who can see what. This used to be ~100 lines of gate wiring right here,
+  // which made the rail the only thing in the app that knew — see
+  // usePerspectiveVisibility for why the perspective landing routes need the
+  // same answer and why a second copy of it would drift.
+  const { resolveVisible } = usePerspectiveVisibility();
 
   // Memoised because `?? []` would otherwise hand a fresh array to the
   // dependency lists below on every render, defeating both useMemos.
@@ -246,7 +208,15 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
     if (id === OVERVIEW_ID) return;
     const path = pathById.get(id);
     if (path) {
-      navigate(path);
+      // Carry the perspective along, same as the Settings navigation above.
+      // Harmless for a path that lives under this perspective's own prefix
+      // (findPerspectiveByPath resolves it directly and never reads this
+      // state) — load-bearing for one that doesn't, like Due Diligence's
+      // /due-diligence/* routes, which are reachable from both Finance and
+      // Legal and can't live under either one's own path prefix. Without
+      // this, landing there would fall back to the Me rail instead of
+      // keeping whichever of the two the caller actually came from.
+      navigate(path, { state: { fromPerspective: active.key } });
       return;
     }
     scrollToSection(id);
@@ -266,9 +236,16 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
 
           {/* The perspective's own landing page. Previously this was a
               clickable eyebrow label; as a real row it can also be
-              highlighted when you're on it. */}
-          {active.path && (
-            <RouteItem id={OVERVIEW_ID} to={active.path}>
+              highlighted when you're on it.
+
+              Dropped for the perspectives whose landing only forwards you to
+              the first row below it — see `forwardsToFirstItem`. The route is
+              still there and still reached (switching perspective goes to it),
+              but as a rail row it would be a destination that bounces, and one
+              that renders as selected for a split second on a screen you are
+              about to leave. */}
+          {active.path && !active.forwardsToFirstItem && (
+            <RouteItem id={OVERVIEW_ID} to={active.path} fromPerspective={active.key}>
               <Sidebar.Item id={OVERVIEW_ID}>
                 <Sidebar.ItemIcon>
                   <active.icon />
@@ -284,6 +261,7 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
               section={s}
               resolveVisible={resolveVisible}
               containsActiveRoute={activeGroupIds.has(s.id)}
+              fromPerspective={active.key}
             />
           ))}
 
@@ -315,11 +293,6 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   );
 }
 
-function sectionAllowed(requires: Capability[] | undefined, caps: Set<Capability>): boolean {
-  if (!requires || requires.length === 0) return true;
-  return requires.some((r) => caps.has(r));
-}
-
 /**
  * Wraps a rail row in a real anchor so middle-click / cmd-click open a new
  * tab. Oxygen's Sidebar already strips link underlines (`& a` in its root
@@ -328,13 +301,29 @@ function sectionAllowed(requires: Capability[] | undefined, caps: Set<Capability
 function RouteItem({
   to,
   children,
+  fromPerspective,
 }: {
   id: string;
   to: string;
   children: ReactNode;
+  /**
+   * Carried as navigation state, same as SideRail's own Settings navigation.
+   * Harmless for a route under this perspective's own path prefix
+   * (PerspectiveProvider resolves it directly and never reads this state) —
+   * load-bearing for one that isn't, like Due Diligence's routes, which are
+   * reachable from both Finance and Legal and can't live under either one's
+   * own prefix.
+   */
+  fromPerspective?: string;
 }): JSX.Element {
   return (
-    <Link component={RouterLink} to={to} color="inherit" underline="none">
+    <Link
+      component={RouterLink}
+      to={to}
+      state={fromPerspective ? { fromPerspective } : undefined}
+      color="inherit"
+      underline="none"
+    >
       {children}
     </Link>
   );
@@ -352,6 +341,7 @@ function SectionNode({
   section,
   resolveVisible,
   containsActiveRoute,
+  fromPerspective,
 }: {
   section: PerspectiveSection;
   resolveVisible: (section: PerspectiveSection) => boolean;
@@ -365,6 +355,8 @@ function SectionNode({
    * navigation, and closing it again is the user's business.
    */
   containsActiveRoute: boolean;
+  /** The perspective this section is rendered under — see RouteItem. */
+  fromPerspective: string;
 }): JSX.Element | null {
   if (section.children && section.children.length > 0) {
     const visible = section.children.filter((c) => resolveVisible(c));
@@ -378,7 +370,15 @@ function SectionNode({
     // child's name vanishes from the rail until the second one arrives.
     if (visible.length === 1 && !section.alwaysGroup) {
       const only = visible[0];
-      return <LeafItem id={only.id} label={section.label} icon={section.icon} to={only.path} />;
+      return (
+        <LeafItem
+          id={only.id}
+          label={section.label}
+          icon={section.icon}
+          to={only.path}
+          fromPerspective={fromPerspective}
+        />
+      );
     }
 
 
@@ -414,6 +414,7 @@ function SectionNode({
       icon={section.icon}
       to={section.path}
       href={section.externalUrl}
+      fromPerspective={fromPerspective}
     />
   );
 }
@@ -432,6 +433,7 @@ function LeafItem({
   icon: Icon,
   to,
   href,
+  fromPerspective,
 }: {
   id: string;
   label: string;
@@ -441,6 +443,8 @@ function LeafItem({
   // active-highlighted: no route of ours is current once the user is over
   // there, and highlighting it would claim otherwise.
   href?: string;
+  /** The perspective this leaf is rendered under — see RouteItem. */
+  fromPerspective?: string;
 }): JSX.Element {
   const item = (
     <Sidebar.Item id={id}>
@@ -470,7 +474,7 @@ function LeafItem({
     );
   }
   return to ? (
-    <RouteItem id={id} to={to}>
+    <RouteItem id={id} to={to} fromPerspective={fromPerspective}>
       {item}
     </RouteItem>
   ) : (

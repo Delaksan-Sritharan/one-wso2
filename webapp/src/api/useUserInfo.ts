@@ -33,6 +33,13 @@ export interface UserInfoLite {
   workEmail: string;
   employeeThumbnail: string | null;
   designation: string | null;
+  // The employee's work location (e.g. "Sri Lanka", "India") — same field
+  // people-app's onboarding form calls Work Location, now also returned on
+  // /user-info so the rail can gate location-specific features (Subscriptions:
+  // PickMe Commute / LaaS are Colombo-office-only) without a second fetch.
+  // Absent, not just possibly empty, for anyone /user-info predates knowing
+  // this about — same shape as `designation` above.
+  workLocation: string | null;
   privileges?: number[];
 }
 
