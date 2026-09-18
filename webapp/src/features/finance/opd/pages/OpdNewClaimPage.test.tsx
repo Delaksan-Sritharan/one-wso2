@@ -49,6 +49,11 @@ const state = {
   roles: [444],
 };
 
+// The receipt button reaches for a token, which pulls in Asgardeo — stubbed
+// here rather than loaded, as the other finance tests do.
+vi.mock("@hooks/useAccessToken", () => ({ useAccessToken: () => async () => "token" }));
+vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
+
 vi.mock("../useOpd", () => ({
   useOpdUserInfo: () => ({
     data: { workEmail: "me@wso2.com", userRoles: state.roles },

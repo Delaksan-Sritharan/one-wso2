@@ -23,7 +23,6 @@
 // non-2xx to get the right retry behavior.
 
 import { refreshAccessToken } from "@api/authBridge";
-import { classifyToken, noteUnauthorized, resetUnauthorizedOrigins } from "@api/tokenExpiry";
 
 // Thrown on non-2xx responses (and on unexpectedly-empty 2xx GETs). Carries
 // the HTTP status so retry logic (both per-query in features and global in
@@ -120,39 +119,6 @@ export async function fetchWithReauth(url: string, init: RequestInit, accessToke
   const first = await fetch(url, withAuth(accessToken));
   if (first.status !== 401) return first;
 
-  // Whose fault is this 401?
-  //
-  // Reaching for a silent re-auth on every 401 is what let ONE backend break
-  // the whole app: the re-auth attempt failing is what raises the app-wide
-  // session-expired dialog, and that dialog is not dismissable. A backend
-  // answering 401 for its own reasons — a bad audience, a misconfigured
-  // gateway, a bug — could therefore lock every screen, including the ones it
-  // has nothing to do with.
-  //
-  // The token answers it. If it has not expired, our credentials are fine and
-  // this 401 belongs to the backend that sent it, so the caller's own error
-  // handling should take over untouched.
-  //
-  // The exception is a token revoked BEFORE it expires (disabled at the IdP, or
-  // the session ended there): still live by `exp`, refused by everything. That
-  // is what noteUnauthorized corroborates — our credentials being dead is not
-  // something one backend knows privately, so two distinct origins refusing
-  // within the window re-opens the doubt.
-  //
-  // "unknown" (an opaque or unreadable token) falls through to the old
-  // behaviour deliberately: this check can narrow when re-auth is attempted,
-  // never widen it.
-  const status = classifyToken(accessToken);
-  const corroborated = noteUnauthorized(url);
-  if (status.kind === "live" && !corroborated) {
-    console.warn(
-      `[auth] 401 on ${url} while our access token is still valid ` +
-        `(expires ${new Date(status.expiresAt).toISOString()}). Treating this as that ` +
-        `backend's rejection, not an expired session — no re-auth attempted.`,
-    );
-    return first;
-  }
-
   const isReplaySafe = (init.method ?? "GET").toUpperCase() === "GET";
   let freshToken: string;
   try {
@@ -168,13 +134,6 @@ export async function fetchWithReauth(url: string, init: RequestInit, accessToke
     );
     return first;
   }
-  // The refresh succeeded, so every 401 recorded above belongs to a token that
-  // no longer exists. Leaving them in place lets a single 401 under the NEW
-  // token reach ORIGINS_BEFORE_DOUBT on the strength of a dead one's evidence,
-  // and corroboration is supposed to mean "several backends are refusing the
-  // credentials we hold now".
-  resetUnauthorizedOrigins();
-
   if (!isReplaySafe) return first;
   return fetch(url, withAuth(freshToken));
 }
