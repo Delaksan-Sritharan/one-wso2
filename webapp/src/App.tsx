@@ -606,12 +606,16 @@ export default function App() {
               endpoint, and RevOpsShell turns that 403 into an explanation, so
               someone reaching this URL gets an answer rather than a blank
               page. See docs/ported-apps/revops-meetings.md. */}
-          <Route path="revops" element={<RevOpsMeetingsPage />} />
+          {isPreviewEnabled("revops") && (
+            <Route path="revops" element={<RevOpsMeetingsPage />} />
+          )}
           {/* One meeting: the recording, and the call's details. A route rather than a
               dialog because a recording is something people send each other, and a dialog
               has no address — this survives a refresh, a bookmark and a paste into Slack.
               The transcript and smart notes land in its left column. */}
-          <Route path="revops/meetings/:meetingId" element={<MeetingDetailPage />} />
+          {isPreviewEnabled("revops") && (
+            <Route path="revops/meetings/:meetingId" element={<MeetingDetailPage />} />
+          )}
           <Route path="settings" element={<SettingsPage />} />
           {/* Me → Menu: the cafeteria screen ported from the standalone
               menu app. One page, as the original was. The functional spec and
