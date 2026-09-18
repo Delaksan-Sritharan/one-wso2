@@ -69,7 +69,7 @@ export default function OpdNewClaimPage() {
     <FinanceShell
       eyebrow={FINANCE_EYEBROW.claims}
       title="New OPD claim"
-      subtitle="Add each outpatient bill as a line — bill date, amount, a short description and its receipt — then submit the whole claim to finance. Your remaining OPD balance is shown as you go."
+      subtitle="Add each outpatient bill with its receipt, then submit them together to finance."
       configured={isOpdBackendConfigured()}
       configKey="ONE_WSO2_OPD_BACKEND_URL"
     >
@@ -186,7 +186,7 @@ function NewClaimBody() {
 
   if (userInfo.isLoading || appData.isLoading) {
     return (
-      <Stack spacing={1.75} sx={{ maxWidth: 880 }}>
+      <Stack spacing={1.75}>
         <Skeleton variant="rectangular" height={96} sx={{ borderRadius: 1.5 }} />
         <Skeleton variant="rectangular" height={160} sx={{ borderRadius: 1.5 }} />
       </Stack>
@@ -249,7 +249,7 @@ function NewClaimBody() {
   };
 
   return (
-    <Stack spacing={1.75} sx={{ maxWidth: 880 }}>
+    <Stack spacing={1.75}>
       {/* NewClaim.tsx:129-172,382 — only offered when the backend still reports
           a last-year balance; otherwise there is nothing to claim against. */}
       {lastYearSummary && (
