@@ -106,7 +106,9 @@ export function useParIsTeamLead(workEmail: string | undefined, enabled = true) 
  */
 export function useParCanSeeLeadPortal(workEmail: string | undefined, enabled = true) {
   const employeeInfo = useParIsTeamLead(workEmail, enabled);
-  const directReports = useParLeadEmployees(enabled && !employeeInfo.isTeamLead ? workEmail : undefined);
+  const directReports = useParLeadEmployees(
+    enabled && !employeeInfo.isLoading && !employeeInfo.isTeamLead ? workEmail : undefined,
+  );
   return {
     canSee: employeeInfo.isTeamLead || (directReports.isSuccess && directReports.data.length > 0),
     isLoading: employeeInfo.isLoading || (!employeeInfo.isTeamLead && directReports.isLoading),
