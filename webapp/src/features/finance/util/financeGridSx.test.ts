@@ -53,12 +53,17 @@ describe("the finance grids do not ring the cell you clicked", () => {
 
   it("is what every card grid actually passes to sx", () => {
     // The constant is worthless if a grid styles itself instead. These are the
-    // four DataGrids in the feature.
+    // DataGrids in the feature.
     const files = [
       "cc/CcTxnTable.tsx",
       "cc/pages/CcHistoryPage.tsx",
-      "cc/pages/CcSettingsPage.tsx",
+      // The statement grid, which Bank Statement Upload renders for each of
+      // its three tabs. It lives beside the page rather than inside it — the
+      // page is the header, the tabs and the upload dialog now.
+      "cc/CcStatementGrid.tsx",
       "cc/pages/CcNewTransactionsPage.tsx",
+      "cc/pages/CcPendingPage.tsx",
+      "cc/pages/CcApprovePage.tsx",
     ];
     for (const f of files) {
       const src = readFileSync(join(__dirname, "..", f), "utf8");

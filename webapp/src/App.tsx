@@ -24,7 +24,6 @@ import OrgChartPage from "@features/org-chart/pages/OrgChartPage";
 import AuthGuard from "@layouts/AuthGuard";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import AppLayout from "@layouts/AppLayout";
-import PeopleOpsPage from "@features/people-ops/pages/PeopleOpsPage";
 import ActiveEmployeesReportPage from "@features/people-ops/pages/ActiveEmployeesReportPage";
 import ResignationsReportPage from "@features/people-ops/pages/ResignationsReportPage";
 import OrgStructurePage from "@features/people-ops/pages/OrgStructurePage";
@@ -33,17 +32,26 @@ import ManageSubscriptionsPage from "@features/subscriptions/pages/ManageSubscri
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
 import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par/pages/ParGroupPage";
+import ParLeadGroupPage, { ParLeadGroupIndex, ParRequiresTeamLeadRoute } from "@features/par/pages/ParLeadGroupPage";
 // Lazy on purpose, same reasoning as the leave report tabs below —
 // react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
 // transitively, and only someone who opens /people-ops/performance needs them.
 const ParEmployeeFeedbackTab = lazy(() => import("@features/par/pages/ParEmployeeFeedbackTab"));
 const ParRequestFeedbackTab = lazy(() => import("@features/par/pages/ParRequestFeedbackTab"));
 const ParProvideFeedbackTab = lazy(() => import("@features/par/pages/ParProvideFeedbackTab"));
+const ParF2fTab = lazy(() => import("@features/par/pages/ParF2fTab"));
 const ParHistoryTab = lazy(() => import("@features/par/pages/ParHistoryTab"));
+const ParLeadDirectReportsTab = lazy(() => import("@features/par/pages/ParLeadDirectReportsTab"));
+const ParLeadAdditionalReportsTab = lazy(() => import("@features/par/pages/ParLeadAdditionalReportsTab"));
+const ParLeadReportChainTab = lazy(() => import("@features/par/pages/ParLeadReportChainTab"));
+const ParLeadEmployeeHistoryTab = lazy(() => import("@features/par/pages/ParLeadEmployeeHistoryTab"));
+const ParLeadAllocationTab = lazy(() => import("@features/par/pages/ParLeadAllocationTab"));
+import EmailGroupsPage from "@features/my/email-groups/pages/EmailGroupsPage";
+import EmailSignaturePage from "@features/my/email-signature/pages/EmailSignaturePage";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
-import FinancePage from "@features/finance/pages/FinancePage";
-import MarketingOpsPage from "@features/marketing-ops/pages/MarketingOpsPage";
+import PerspectiveLanding from "@components/perspective-landing/PerspectiveLanding";
+import SriLankaRoute from "@components/route-guards/SriLankaRoute";
 import AdCampaignsAnalyticsPage from "@features/marketing-ops/ad-campaigns/pages/AdCampaignsAnalyticsPage";
 import CampaignTrackerPage from "@features/marketing-ops/ad-campaigns/pages/CampaignTrackerPage";
 import UtmGeneratorPage from "@features/marketing-ops/utilities/pages/UtmGeneratorPage";
@@ -110,7 +118,9 @@ import ClaimApprovalPage, {
 import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
-import LegalPage from "@features/legal/pages/LegalPage";
+import { riskRoutes } from "@features/security/grc/modules/risk/routes";
+import { auditRoutes } from "@features/security/grc/modules/audit/routes";
+import { adminRoutes } from "@features/security/grc/modules/admin/routes";
 import PartnersListPage from "@features/due-diligence/partners/pages/PartnersListPage";
 import PartnerPendingPage from "@features/due-diligence/partners/pages/PartnerPendingPage";
 import PartnerDashboardPage from "@features/due-diligence/partners/pages/PartnerDashboardPage";
@@ -124,6 +134,7 @@ import ViewPdfPage from "@features/due-diligence/shared/pages/ViewPdfPage";
 import ViewImagePage from "@features/due-diligence/shared/pages/ViewImagePage";
 import ExpenseApprovalsScreen from "@features/finance/expense/approvals/ExpenseApprovalsScreen";
 import ExpenseLeadApprovalsScreen from "@features/finance/expense/approvals/ExpenseLeadApprovalsScreen";
+import UmtHomePage from "@features/umt/pages/UmtHomePage";
 
 export default function App() {
   return (
@@ -134,6 +145,10 @@ export default function App() {
           <Route index element={<Navigate to={landingPath()} replace />} />
           {/* Me home — the full profile page including Connected apps. */}
           <Route path="me" element={<MyProfilePage />} />
+          {/* Only the UMT dashboard is mounted in this phase; UmtShell owns its role
+              gate. Behind the same preview flag as its perspective entry — hiding
+              only the rail/launcher tile would leave the route reachable by URL. */}
+          {isPreviewEnabled("umt") && <Route path="umt" element={<UmtHomePage />} />}
           {/* My Team — placeholder for now; the real subordinates view is on
               hold this iteration (mirrors people-app's lead-only nav item). */}
           {/* My Team — a lead's reporting chain, ported from people-app. The
@@ -228,21 +243,39 @@ export default function App() {
               three finance apps (opd-claims, cc-expenses, expense-claims).
               Moved in from the Finance perspective — same rationale as
               Leave, an employee submits/tracks these for themself (a
-              lead/finance-approver subset of items approves others'). The
-              Finance perspective itself is now just a skeleton tile (see
-              FinancePage) — these apps don't live there anymore. */}
+              lead/finance-approver subset of items approves others'). What is
+              left in the Finance perspective is approving other people's. */}
           {/* Me → Claims: the two things you file for yourself, one entry with
               a tab each. The forms keep routes of their own — both are long,
               both hold a draft, and both are worth linking to directly — and
-              are reached through the Add claim menu, because no single form
+              are reached through the New claim menu, because no single form
               could take both types. See features/finance/claims. */}
           <Route path="me/claims" element={<ClaimsPage />}>
             <Route index element={<ClaimsIndex />} />
             <Route path="expense" element={<ExpenseClaimsTab />} />
-            <Route path="opd" element={<OpdClaimsTab />} />
+            {/* Colombo-office perk, so the ROUTE refuses it too — hiding the
+                tab only stopped it being offered, not being typed. Note the
+                similarly-named /finance/claim-approval/opd is NOT guarded: a
+                finance approver anywhere may decide a Colombo employee's OPD
+                claim. */}
+            <Route
+              path="opd"
+              element={
+                <SriLankaRoute>
+                  <OpdClaimsTab />
+                </SriLankaRoute>
+              }
+            />
           </Route>
           <Route path="me/claims/expense/new" element={<ExpenseNewClaimPage />} />
-          <Route path="me/claims/opd/new" element={<OpdNewClaimPage />} />
+          <Route
+            path="me/claims/opd/new"
+            element={
+              <SriLankaRoute>
+                <OpdNewClaimPage />
+              </SriLankaRoute>
+            }
+          />
           {/* Behind the same preview flag as its menu entry. Hiding only the
               entry would leave the page reachable by anyone with the URL, which
               is not what "not released yet" means. */}
@@ -271,7 +304,7 @@ export default function App() {
           <Route path="finance/cc/approve" element={<CcApprovePage />} />
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
-          <Route path="people-ops" element={<PeopleOpsPage />} />
+          <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
               from the standalone org-chart app. Unlike every other People Ops
               screen, this is NOT admin-gated — it has its own access model.
@@ -290,15 +323,28 @@ export default function App() {
               into an explanation. Someone who types the URL gets a sentence
               telling them who to ask, not a blank page — and the backend
               refuses the calls regardless. */}
-          <Route path="people-ops/subscriptions" element={<MySubscriptionsPage />} />
+          {/* Self-service sits under Me; managing on someone's behalf stays
+              under People Ops. */}
+          <Route
+            path="me/subscriptions"
+            element={
+              <SriLankaRoute>
+                <MySubscriptionsPage />
+              </SriLankaRoute>
+            }
+          />
           <Route
             path="people-ops/subscriptions/manage"
-            element={<ManageSubscriptionsPage />}
+            element={
+              <SriLankaRoute>
+                <ManageSubscriptionsPage />
+              </SriLankaRoute>
+            }
           />
           {/* People Ops → PAR: the employee half of par-app, ported one screen
               at a time. Tab names match par-app's own OngoingCycleView tab bar
               (Employee Feedback / Request 360° Feedback / Provide 360°
-              Feedback / F2F) rather than invented ones; F2F isn't ported yet.
+              Feedback / F2F) rather than invented ones.
               See docs/ported-apps/par-app.md. Not admin-gated — every employee
               has their own PAR, same as Org Chart and Subscriptions above.
               Behind the same preview flag as its rail entry — hiding only the
@@ -338,11 +384,81 @@ export default function App() {
                   </Suspense>
                 }
               />
+              {/* F2F is leadless-gated too — OngoingCycleView.tsx's leadless
+                  branch has no F2F tab at all, same as Employee Feedback and
+                  Request 360°. */}
+              <Route
+                path="f2f"
+                element={
+                  <ParRequiresLeadRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParF2fTab />
+                    </Suspense>
+                  </ParRequiresLeadRoute>
+                }
+              />
               <Route
                 path="history"
                 element={
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
                     <ParHistoryTab />
+                  </Suspense>
+                }
+              />
+            </Route>
+          )}
+          {/* People Ops → PAR → Lead Portal: par-app's LeadPortal.tsx, ported
+              one tab at a time. Only Direct Reports exists so far — see
+              docs/ported-apps/par-app.md. Gated on the same preview flag as
+              the Employee Portal, plus ParRequiresTeamLeadRoute (par-app's
+              own Role.TEAM_LEAD gate on /lead-portal). */}
+          {isPreviewEnabled("par") && (
+            <Route
+              path="people-ops/performance/lead"
+              element={
+                <ParRequiresTeamLeadRoute>
+                  <ParLeadGroupPage />
+                </ParRequiresTeamLeadRoute>
+              }
+            >
+              <Route index element={<ParLeadGroupIndex />} />
+              <Route
+                path="direct-reports"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadDirectReportsTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="additional-reports"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadAdditionalReportsTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="report-chain"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadReportChainTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="employee-history"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadEmployeeHistoryTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="allocation"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParLeadAllocationTab />
                   </Suspense>
                 }
               />
@@ -374,7 +490,7 @@ export default function App() {
           />
           {/* Finance perspective — skeleton "coming soon" tile; the actual
               claim apps are the me/claims routes above. */}
-          <Route path="finance" element={<FinancePage />} />
+          <Route path="finance" element={<PerspectiveLanding />} />
           {/* Finance → Claim approval. Approving is work you do for other
               people, so it sits here rather than under Me with the things you
               do for yourself; submitting and history stay there. Each tab is a
@@ -420,7 +536,7 @@ export default function App() {
               operations (Ad Campaigns, Email Workbench, Events, CRM Upload)
               still live in Marketing Ops; the overview deep-links out to them
               until their phase lands. */}
-          <Route path="marketing-ops" element={<MarketingOpsPage />} />
+          <Route path="marketing-ops" element={<PerspectiveLanding />} />
           {/* Email Workbench. The editor is transient state inside these pages, not
               a route of its own — see EmailWorkbenchPages. */}
           <Route
@@ -485,11 +601,33 @@ export default function App() {
           {/* Me → Menu: the cafeteria screen ported from the standalone
               menu app. One page, as the original was. The functional spec and
               the deviation list live in docs/ported-apps/menu-app.md. */}
-          <Route path="me/menu" element={<MenuHomePage />} />
+          <Route
+            path="me/menu"
+            element={
+              <SriLankaRoute>
+                <MenuHomePage />
+              </SriLankaRoute>
+            }
+          />
           {/* Legal perspective — currently just a second entry point into Due
               Diligence, alongside Finance (see the finance/ routes below and
               DUE_DILIGENCE_APPS). */}
-          <Route path="legal" element={<LegalPage />} />
+          <Route path="legal" element={<PerspectiveLanding />} />
+          {/* Security — the GRC platform's Risk Hub and Admin Console, lifted
+              from grc-tools rather than rewritten. The two route fragments are
+              the SOURCE's own (modules/{risk,audit,admin}/routes.tsx), spread
+              unedited; nesting them here is what turns the source's /risk/* and
+              /audit/* into this app's /security/risk/*, /security/audit/* and
+              /security/admin/*
+              without touching either file. Their per-route PrivilegeGuards come
+              along with them, including the deliberate absence of one on
+              Risk Registers. */}
+          <Route path="security">
+            <Route index element={<PerspectiveLanding />} />
+            {auditRoutes}
+            {riskRoutes}
+            {adminRoutes}
+          </Route>
           {/* Due Diligence — ported from digiops-finance/apps/due_diligence's
               admin-app. Routes live OUTSIDE both the Finance and Legal path
               prefixes (same reason /settings does): a screen reachable from
@@ -520,6 +658,16 @@ export default function App() {
           <Route path="due-diligence/preferences" element={<DueDiligencePreferencesPage />} />
           <Route path="due-diligence/view-pdf" element={<ViewPdfPage />} />
           <Route path="due-diligence/view-image" element={<ViewImagePage />} />
+          {/* Me → Email Groups: the mailing-list subscription manager ported
+              from the standalone Email Group Manager app (the email-signature
+              half of that app is not part of this port). Every employee sees
+              the same screen — the backend enforces access, not a route
+              guard. */}
+          <Route path="me/email-groups" element={<EmailGroupsPage />} />
+          {/* Me → Email Signature: the other half of the same source app,
+              its own menu item rather than a tab — it shares no data or
+              backend with Email Groups. Pure client-side HTML generator. */}
+          <Route path="me/email-signature" element={<EmailSignaturePage />} />
           {/* Catch-all → landing */}
           <Route path="*" element={<Navigate to={landingPath()} replace />} />
         </Route>

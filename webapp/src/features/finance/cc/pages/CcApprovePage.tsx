@@ -15,17 +15,37 @@
 // under the License.
 
 import { useMemo, useState } from "react";
-import { Alert, Box, Button, MenuItem, Skeleton, Stack, TextField, Typography } from "@wso2/oxygen-ui";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  DataGrid,
+  IconButton,
+  MenuItem,
+  Popover,
+  Skeleton,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@wso2/oxygen-ui";
+import { FilterIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { isCcBackendConfigured } from "@config/apiConfig";
 import FinanceShell from "../../components/FinanceShell";
 import { describeError } from "../../util/financeError";
-import { CcTxnTable } from "../CcTxnTable";
+import { CcApproveDetail } from "../CcApproveDetail";
+import { StatusChip, ccStatusMeta } from "../../components/FinanceChips";
+import { FINANCE_GRID_SX } from "../../util/financeGridSx";
+import { bareAmount, formatNice } from "../../util/financeFormat";
+import { ToolbarNoExport as ApproveToolbar } from "../ccGridToolbar";
+import { selectedIds as gridSelectedIds } from "../ccSelection";
 import { useCcApprove, useCcSaveEdit } from "../useCcMutations";
 import { CcEditDialog } from "../CcEditDialog";
 import { CcPickOne } from "../CcPickOne";
 import { CC_SNACK } from "../ccCopy";
-import { useCcTransactions, useCcUserInfo } from "../useCc";
+import { useCcTransactions, useCcUserInfo, useCreditCards } from "../useCc";
 import { ccHasAccess, type CcTransaction } from "../ccTypes";
 
 // FILTER_ALL in approve-submissions/index.tsx.
@@ -71,6 +91,7 @@ export default function CcApprovePage() {
       subtitle="Review and approve card transactions submitted by your team. Leads approve pending-lead items; finance gives the final approval."
       configured={isCcBackendConfigured()}
       configKey="ONE_WSO2_CC_EXPENSES_BACKEND_URL"
+      fill
     >
       <ApproveBody
         userInfo={userInfo}
@@ -97,6 +118,12 @@ function ApproveBody({
   onPickRole: (r: ApproveRole) => void;
 }) {
   const txns = useCcTransactions();
+  // Only for the reassignment list — the queue itself is not card-scoped here.
+  // `true` to include inactive cards: a pending row can outlive its card, and
+  // whether someone is a valid lead has nothing to do with whether a card is
+  // still open. Without it the row's own current lead could be missing from
+  // the options, leaving the control showing a value it does not offer.
+  const allCards = useCreditCards(true);
   const { showSuccess, showError } = useNotifications();
   const [checked, setChecked] = useState<Set<number>>(new Set());
 
@@ -109,6 +136,8 @@ function ApproveBody({
   const [card, setCard] = useState(ALL);
   const [stage, setStage] = useState(ALL);
   const [editing, setEditing] = useState<CcTransaction | null>(null);
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
+  const [filterOpen, setFilterOpen] = useState<HTMLElement | null>(null);
   const saveEdit = useCcSaveEdit();
   const leadApprove = useCcApprove("lead");
   const financeApprove = useCcApprove("finance");
@@ -150,6 +179,22 @@ function ApproveBody({
   const users = useMemo(() => [...new Set(inMode.map((t) => t.employeeEmail))].sort(), [inMode]);
   const cards = useMemo(() => [...new Set(inMode.map((t) => t.ccNumber))].sort(), [inMode]);
 
+  // Who a submission can be re-pointed at. From every card rather than from the
+  // rows on screen (index.tsx:62-69): a lead with nothing pending right now is
+  // still a lead, and is often exactly who a misrouted row belongs to. Each
+  // card's `leadEmail` may name several, comma-separated.
+  const leadList = useMemo(
+    () =>
+      [
+        ...new Set(
+          (allCards.data ?? []).flatMap((c) =>
+            (c.leadEmail ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+          ),
+        ),
+      ].sort(),
+    [allCards.data],
+  );
+
   const rows = useMemo(() => {
     let list = inMode;
     if (user !== ALL) list = list.filter((t) => t.employeeEmail === user);
@@ -175,6 +220,20 @@ function ApproveBody({
   // waits for it. (The source does not guard this; see the spec.)
   const busy = approving || saveEdit.isPending;
 
+  /**
+   * Narrowing or switching mode clears the selection.
+   *
+   * `checked` holds ids and `selected` intersects it with what is on screen, so
+   * a hidden tick is never submitted — but it is not forgotten either. Widen the
+   * filter again, or switch role and back, and it returns as a live selection
+   * the reader last saw a different queue for. Cleared at the point of change
+   * rather than from an effect, which this codebase treats as an error.
+   */
+  const narrow = <T,>(set: (v: T) => void) => (v: T) => {
+    setChecked(new Set());
+    set(v);
+  };
+
   const toggle = (id: number) =>
     setChecked((prev) => {
       const next = new Set(prev);
@@ -195,6 +254,40 @@ function ApproveBody({
       .catch((err) => showError(describeError(err)));
   };
 
+  const columns = useMemo<DataGrid.GridColDef<CcTransaction>[]>(
+    () => [
+      { field: "id", headerName: "ID", width: 70 },
+      { field: "txnDescription", headerName: "Description", flex: 1, minWidth: 120 },
+      {
+        field: "txnDate",
+        headerName: "Date",
+        width: 105,
+        renderCell: (p) => formatNice(p.value as string),
+      },
+      {
+        // ApproveTransactionsDataGrid.tsx:110-128 — this queue mixes both
+        // stages, so which one a row is at is the column that earns its place.
+        field: "status",
+        headerName: "Status",
+        width: 130,
+        align: "center",
+        headerAlign: "center",
+        renderCell: (p) => {
+          const meta = ccStatusMeta(p.value as string);
+          return <StatusChip label={meta.label} color={meta.color} />;
+        },
+      },
+      {
+        field: "txnAmount",
+        headerName: "Amount($)",
+        type: "number",
+        width: 100,
+        renderCell: (p) => bareAmount(p.value as number),
+      },
+    ],
+    [],
+  );
+
   if (userInfo.isLoading) {
     return <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1.5 }} />;
   }
@@ -205,19 +298,25 @@ function ApproveBody({
     return <Alert severity="info">Approvals are limited to leads and finance approvers.</Alert>;
   }
 
+  // The row the panel is showing. Derived, so a row approved out of the queue
+  // falls back to the first rather than leaving the panel on something gone.
+  const activeRowId = rows.some((r) => r.id === selectedRowId) ? selectedRowId : rows[0]?.id ?? null;
+  const selectedRow = rows.find((r) => r.id === activeRowId) ?? null;
+  const activeFilters = [user, card, role === "finance" ? stage : ALL].filter((f) => f !== ALL).length;
+
   return (
-    <Box>
+    <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
       {/* index.tsx:198-210 — offered only to someone who holds both roles;
           everyone else has one mode and the heading already names it. */}
       {isLead && isFinance && role && (
-        <Box sx={{ width: 220, mb: 2 }}>
+        <Box sx={{ width: 220, mb: 2, alignSelf: "flex-end" }}>
           <TextField
             select
             size="small"
             fullWidth
             label="Approve Role"
             value={role}
-            onChange={(e) => onPickRole(e.target.value as ApproveRole)}
+            onChange={(e) => narrow(onPickRole)(e.target.value as ApproveRole)}
           >
             {/* FilterMenu.tsx:51-60 — the source's own option wording. */}
             <MenuItem value="lead">Approve as Lead</MenuItem>
@@ -226,49 +325,31 @@ function ApproveBody({
         </Box>
       )}
 
-      {/* FilterMenu.tsx:79-88 for the stage labels. */}
-      <Stack direction="row" spacing={1.5} sx={{ mb: 2, flexWrap: "wrap" }}>
-        <CcPickOne label="User" value={user} onChange={setUser} options={users} />
-        <CcPickOne label="Card" value={card} onChange={setCard} options={cards} />
-        {role === "finance" && (
-          <CcPickOne
-            label="Status"
-            value={stage}
-            onChange={setStage}
-            options={["pending_lead", "pending_finance"]}
-            optionLabel={(o) => (o === "pending_lead" ? "Pending Lead" : "Pending Finance")}
-          />
-        )}
-      </Stack>
-
-      {txns.isLoading ? (
-        <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1.5 }} />
-      ) : txns.isError ? (
-        <Alert severity="error">Couldn't load transactions. {describeError(txns.error)}</Alert>
-      ) : rows.length === 0 ? (
-        <Typography sx={{ fontSize: 13, color: "text.secondary", py: 3 }}>
-          Nothing to approve right now.
-        </Typography>
-      ) : (
-        <Stack spacing={2}>
-          <CcTxnTable
-            txns={rows}
-            showUser
-            showCard
-            selection={{ checked, onToggle: toggle, isSelectable }}
-            // ApproveTransactionsDataGrid.tsx:372 — enableEdit is finance-only,
-            // and EditPane.tsx:659-665 locks the fields while a row is still
-            // with the lead, so finance corrects only what has reached them.
-            edit={
-              isFinance
-                ? {
-                    canEdit: (t) => t.status === "pending_finance",
-                    onEdit: (t) => setEditing(t),
-                  }
-                : undefined
-            }
-          />
-          <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+      {/* ApproveFilterPopover.tsx — the source keeps these behind one trigger
+          rather than spending a row of the page on three selects that are
+          usually left alone. The badge says how many are narrowing the queue. */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+        <Button
+          variant="text"
+          onClick={(e) => setFilterOpen(e.currentTarget)}
+          startIcon={<FilterIcon size={16} />}
+          sx={{ textTransform: "none", fontWeight: 600 }}
+        >
+          Filter
+          {activeFilters > 0 && (
+            <Chip label={activeFilters} size="small" color="primary" sx={{ ml: 0.75, height: 18, fontSize: 10.5 }} />
+          )}
+        </Button>
+        {/* :266-273 — the disabled tooltip names the role, because the reason a
+            row cannot be ticked is which stage it is at. */}
+        <Tooltip
+          title={
+            selectedCount === 0 || busy
+              ? `Select transactions to approve as ${role === "lead" ? "lead" : "finance"}`
+              : "Approve selected transactions"
+          }
+        >
+          <span>
             <Button
               variant="contained"
               color="success"
@@ -278,12 +359,183 @@ function ApproveBody({
             >
               {approving ? "Approving…" : `Approve ${selectedCount || ""}`.trim()}
             </Button>
+          </span>
+        </Tooltip>
+      </Stack>
+
+      <Popover
+        open={filterOpen !== null}
+        anchorEl={filterOpen}
+        onClose={() => setFilterOpen(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        {/* ApproveFilterPopover.tsx, down to the wording: the fields are named
+            "Filter by …" and their empty option is "No Filter", which inside a
+            Filter panel reads as the absence of a value rather than as one. */}
+        <Stack spacing={2} sx={{ p: 2, width: 320 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography sx={{ fontSize: 16, fontWeight: 700 }}>Filter</Typography>
+            <IconButton size="small" aria-label="Close filters" onClick={() => setFilterOpen(null)}>
+              <XIcon size={16} />
+            </IconButton>
+          </Stack>
+          {/* index.tsx:91-95 resets the stage whenever the mode is Lead — a
+              lead's queue is one stage by definition, so it is finance-only. */}
+          {role === "finance" && (
+            <CcPickOne
+              label="Filter by status"
+              value={stage}
+              onChange={narrow(setStage)}
+              options={["pending_lead", "pending_finance"]}
+              optionLabel={(o) => (o === "pending_lead" ? "Pending Lead" : "Pending Finance")}
+              emptyLabel="No Filter"
+            />
+          )}
+          <CcPickOne label="Filter by user" value={user} onChange={narrow(setUser)} options={users} emptyLabel="No Filter" />
+          <CcPickOne label="Filter by card" value={card} onChange={narrow(setCard)} options={cards} emptyLabel="No Filter" />
+          <Stack direction="row" justifyContent="flex-end" spacing={1}>
+            <Button
+              size="small"
+              variant="outlined"
+              // Nothing to reset until something is narrowing the queue.
+              disabled={activeFilters === 0}
+              onClick={() => {
+                setUser(ALL);
+                setCard(ALL);
+                setStage(ALL);
+              }}
+            >
+              Reset
+            </Button>
+            <Button size="small" variant="contained" onClick={() => setFilterOpen(null)}>
+              Apply
+            </Button>
+          </Stack>
+        </Stack>
+      </Popover>
+
+      {txns.isLoading ? (
+        <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 1.5 }} />
+      ) : txns.isError ? (
+        <Alert severity="error">Couldn't load transactions. {describeError(txns.error)}</Alert>
+      ) : rows.length === 0 ? (
+        // ApproveTransactionsDataGrid.tsx:216-220 for the second pair. The
+        // first is ours: the source says "All submissions have been Approved."
+        // however the list came to be empty, which is plainly untrue when a
+        // filter is what emptied it and work is still waiting behind it.
+        <Box sx={{ py: 3 }}>
+          {activeFilters > 0 ? (
+            <>
+              <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>No submissions match these filters.</Typography>
+              <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                Clear them to see the rest of the queue.
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>No submissions to approve.</Typography>
+              <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                All submissions have been Approved.
+              </Typography>
+            </>
+          )}
+        </Box>
+      ) : (
+        // The source's 50/50 split (:365-380): the queue stays readable while a
+        // row is inspected. Neither half scrolls the page — the panel scrolls
+        // inside its own card when the window is short.
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={2}
+          alignItems="stretch"
+          sx={{ flex: { md: 1 }, minHeight: { xs: "auto", md: 0 } }}
+        >
+          <Box
+            sx={{
+              width: { xs: "100%", md: "50%" },
+              display: "flex",
+              flexDirection: "column",
+              height: { xs: 440, md: "100%" },
+              minHeight: 0,
+              "& .MuiDataGrid-row": { cursor: "pointer" },
+              "& .MuiDataGrid-row.selected-row": {
+                bgcolor: "action.selected",
+                boxShadow: (theme) => `inset 3px 0 0 ${theme.palette.primary.main}`,
+              },
+              "& .MuiDataGrid-row.selected-row .MuiDataGrid-cell": { fontWeight: 600 },
+            }}
+          >
+            <Box sx={{ flex: 1, minHeight: 0 }}>
+              <DataGrid.DataGrid
+                rows={rows}
+                columns={columns}
+                showToolbar
+                slots={{ toolbar: ApproveToolbar }}
+                density="compact"
+                disableRowSelectionOnClick
+                checkboxSelection
+                // :159-164 — actionable is decided by the mode alone.
+                isRowSelectable={(p) => isSelectable(p.row)}
+                rowSelectionModel={{ type: "include", ids: new Set(checked) }}
+                onRowSelectionModelChange={(model) => {
+                  const next = gridSelectedIds(model, rows.filter(isSelectable));
+                  for (const t of rows) {
+                    if (next.has(t.id) !== checked.has(t.id)) toggle(t.id);
+                  }
+                }}
+                onRowClick={(p) => setSelectedRowId(Number(p.id))}
+                // The grid turns neither Enter nor Space into a row click, so
+                // without this a keyboard reader could move the focus ring down
+                // the list while the panel stayed where they left it.
+                onCellKeyDown={(p, e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  setSelectedRowId(Number(p.id));
+                }}
+                getRowClassName={(p) => (p.id === activeRowId ? "selected-row" : "")}
+                initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
+                pageSizeOptions={[5, 10, 25]}
+                sx={FINANCE_GRID_SX}
+              />
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              width: { xs: "100%", md: "50%" },
+              display: "flex",
+              flexDirection: "column",
+              height: { xs: "auto", md: "100%" },
+              minHeight: 0,
+              overflowY: "auto",
+              border: 1,
+              borderColor: "divider",
+              borderRadius: 1.5,
+              p: 1.75,
+            }}
+          >
+            {selectedRow ? (
+              <CcApproveDetail
+                key={selectedRow.id}
+                txn={selectedRow}
+                // :372 — Edit is finance's alone. What it may then change
+                // depends on the stage; `CcEditDialog` decides that.
+                canEdit={isFinance}
+                onEdit={() => setEditing(selectedRow)}
+              />
+            ) : (
+              <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                Select a transaction to see its details.
+              </Typography>
+            )}
           </Box>
         </Stack>
       )}
 
       <CcEditDialog
         txn={editing}
+        financeAdmin={role === "finance"}
+        leadList={leadList}
         onClose={() => setEditing(null)}
         onSave={(patched) => {
           setEditing(null);

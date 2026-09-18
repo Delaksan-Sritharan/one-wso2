@@ -42,7 +42,7 @@ describe("pinnableRoute", () => {
   // qualified one, so this doubles as the check that a newly ported app was
   // wired into the registry and not just into the router.
   it("qualifies a ported app's screen from the registry", () => {
-    expect(pinnableRoute("/me/menu").label).toBe("Menu · Home");
+    expect(pinnableRoute("/me/menu").label).toBe("Cafeteria · Home");
     expect(isKnownRoute("/me/menu")).toBe(true);
   });
 

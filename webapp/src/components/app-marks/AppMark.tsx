@@ -17,7 +17,7 @@
  */
 
 /**
- * Filled, two-tone marks for the six perspectives, used ONLY by the app
+ * Filled, two-tone marks for the eight perspectives, used ONLY by the app
  * launcher.
  *
  * Why these exist at all: Lucide ships no filled icons, so the launcher tile got
@@ -75,11 +75,52 @@ export function MeMark({ size }: MarkProps) {
   const t = appMarkTones("me")!;
   return (
     <Svg size={size}>
+      {/* Pale silhouette, then the roof and door in lead — the same build every
+          other mark here uses: a large shape in `field`, with `lead` carrying
+          the identifying form.
+
+          The house was previously one solid `lead` block with a `detail` door,
+          which made it the darkest mark in the launcher by a wide margin —
+          mean L* 54.7 against 57.1–76.3 for the other five. This lands at 67.9,
+          beside People at 66.4.
+
+          The roof reuses the silhouette's own arc, closed straight across at
+          the wall line. Drawing separate roof and wall paths renders
+          identically but duplicates that bottom edge, leaving two things to
+          keep in sync when the outline is ever adjusted. */}
       <path
         d="M6 20a4 4 0 0 1 1.418-3.056l14-12a4 4 0 0 1 5.164 0l14 12A4 4 0 0 1 42 20v18a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z"
+        fill={t.field}
+      />
+      <path
+        d="M6 20a4 4 0 0 1 1.418-3.056l14-12a4 4 0 0 1 5.164 0l14 12A4 4 0 0 1 42 20z"
         fill={t.lead}
       />
-      <path d="M30 42v-16a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v16z" fill={t.detail} />
+      <path d="M30 42v-16a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v16z" fill={t.lead} />
+    </Svg>
+  );
+}
+
+/**
+ * Security — a shield, echoing the perspective's own rail glyph.
+ *
+ * Built the way the rest of this set is: the silhouette carries `field`, the
+ * identifying form carries `lead`, and a small accent carries `detail`. The
+ * band is the shield's own upper section closed at the waist rather than a
+ * second drawn shape, so there is no near-duplicate outline to keep in sync if
+ * the silhouette ever moves.
+ *
+ * Measures L* 68.5 at 49% coverage — beside People (66.4) and Me (66.7), which
+ * is the point: before this existed the launcher fell back to the outline glyph
+ * on a wash, and Security was the one tile that did not look like a tile.
+ */
+export function SecurityMark({ size }: MarkProps) {
+  const t = appMarkTones("security")!;
+  return (
+    <Svg size={size}>
+      <path d="M24 4 6 10v14c0 9.6 7.4 16.8 18 20 10.6-3.2 18-10.4 18-20V10z" fill={t.field} />
+      <path d="M24 4 6 10v12h36V10z" fill={t.lead} />
+      <path d="M21.6 33.4l-7.9-7.9 3.3-3.3 4.6 4.6 10.4-10.4 3.3 3.3z" fill={t.detail} />
     </Svg>
   );
 }
@@ -184,6 +225,39 @@ export function LegalMark({ size }: MarkProps) {
       <path d="M4 32l6-16 6 16c-1.74 1.3-3.84 2-6 2s-4.26-.7-6-2z" fill={t.field} />
       <path d="M32 32l6-16 6 16c-1.74 1.3-3.84 2-6 2s-4.26-.7-6-2z" fill={t.field} />
       <circle cx="24" cy="8" r="3" fill={t.detail} />
+    </Svg>
+  );
+}
+
+/** UMT — two rotating arrows representing the update cycle. */
+export function UmtMark({ size }: MarkProps) {
+  const t = appMarkTones("umt")!;
+  return (
+    <Svg size={size}>
+      <g transform="translate(24 24) scale(0.1) translate(-394.847 -298.782)">
+        <path
+          id="arrow_body_1"
+          d="m223.41603,324.63551l54.63337,-1.22016l0,-16.0976c0.0009,0.24455 -9.10856,-70.31723 60.63647,-110.97521c69.74502,-40.65798 135.48081,16.71228 135.46153,16.82866c-0.01929,0.11638 37.07416,-42.68238 37.07325,-42.92692c0.0009,0.24455 -88.82634,-84.15712 -201.10032,-20.75357c-112.27398,63.40355 -86.21649,179.04725 -86.21739,178.8027"
+          fill={t.lead}
+        />
+        <path
+          id="arrow_body_2"
+          transform="rotate(180 396.116 298.782)"
+          d="m223.41603,324.63551l54.63337,-1.22016l0,-16.0976c0.0009,0.24455 -9.10856,-70.31723 60.63647,-110.97521c69.74502,-40.65798 135.48081,16.71228 135.46153,16.82866c-0.01929,0.11638 37.07416,-42.68238 37.07325,-42.92692c0.0009,0.24455 -88.82634,-84.15712 -201.10032,-20.75357c-112.27398,63.40355 -86.21649,179.04725 -86.21739,178.8027"
+          fill={t.lead}
+        />
+        <path
+          id="arrowhead_1"
+          transform="rotate(180 250.042 351.497)"
+          d="m185.43103,397.60062l64.61047,-92.20791l64.61047,92.20791l-129.22094,0z"
+          fill={t.field}
+        />
+        <path
+          id="arrowhead_2"
+          d="m475.04176,306.04207l64.61046,-92.20791l64.61047,92.20791l-129.22093,0z"
+          fill={t.field}
+        />
+      </g>
     </Svg>
   );
 }

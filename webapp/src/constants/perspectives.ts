@@ -18,16 +18,19 @@
 // from this — one edit here changes every entry point.
 
 import { csmUrl, isCsmConfigured, isIsacConfigured, isacUrl } from "@config/apiConfig";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import {
   CheckCheckIcon,
   ClipboardCheckIcon,
   DatabaseIcon,
   HouseIcon,
   LifeBuoyIcon,
+  LayoutDashboard,
   MegaphoneIcon,
   NetworkIcon,
   SatelliteDishIcon,
   ScaleIcon,
+  ShieldIcon,
   TicketIcon,
   UserRoundIcon,
   UserRoundMinusIcon,
@@ -36,12 +39,12 @@ import {
   WalletIcon,
   type LucideIcon,
 } from "@wso2/oxygen-ui-icons-react";
-import { isPreviewEnabled } from "@config/previewFeatures";
 import type { Capability, MenuApp } from "@constants/appMenu";
 import { FINANCE_PERSPECTIVE_APPS, ME_FINANCE_APPS } from "@constants/financeApps";
 import { CLAIM_APPROVAL_PATH } from "@features/finance/approvals/claimApprovalTabs";
 import { MARKETING_OPS_APPS } from "@constants/marketingOpsApps";
 import { DUE_DILIGENCE_APPS } from "@constants/dueDiligenceApps";
+import { SECURITY_APPS } from "@constants/securityApps";
 import { ME_APPS } from "@constants/meApps";
 
 export interface PerspectiveSection {
@@ -59,11 +62,6 @@ export interface PerspectiveSection {
   // When set, a leaf item is a route (rail navigates) rather than a
   // scroll-anchor. Used by the native Leave screens.
   path?: string;
-  // Overrides PeopleOpsPage's default overview-card copy, which otherwise
-  // assumes every shipped leaf is a filterable/exportable report (true for
-  // Active employees / Resignations, not for something like Org Chart).
-  // Omitted = the default copy applies.
-  description?: string;
   // Render as a group even with a single visible child — see MenuApp.alwaysGroup.
   alwaysGroup?: boolean;
   // When set, a leaf item leaves One WSO2 entirely: it renders as an anchor
@@ -94,9 +92,8 @@ function appsToSections(apps: readonly MenuApp[]): PerspectiveSection[] {
 
 // People Ops's prior app menu (People/Visitor/Careers) was retired per
 // restructuring feedback. These are the reports being onboarded, ported from
-// people-app. A section with a `path` is live (the rail navigates to it); one
-// without is still a "coming soon" anchor on the overview page — see
-// PeopleOpsPage, which reads exactly this list to decide which card to show.
+// people-app. Every section here is live: each leaf carries the `path` the rail
+// navigates to.
 //
 // `requires: ["admin"]` keeps the locked ones out of the rail for people who
 // can't use them. It is NOT the access control: the people-app backend
@@ -115,14 +112,13 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
     label: "Org Chart",
     icon: NetworkIcon,
     path: "/people-ops/org-chart",
-    description: "Browse who reports to whom, company-wide.",
   },
   // Subscriptions — PickMe Commute and LaaS, ported from the digiops-hr
   // subscription-app (previously a mobile microapp only). A group rather than
   // a leaf because the two screens answer to different people: everyone opts
   // themself in and out, and a much smaller set manages other employees.
   //
-  // Note what is NOT here: `requires: ["admin"]` on the Manage child. The
+  // Note what is NOT here: `requires: ["admin"]`. The
   // capability vocabulary `requires` speaks is people-app privilege numbers,
   // and these screens gate on the SUBSCRIPTION service's own Asgardeo groups
   // (commuteAdminGroup / lunchAdminGroup, whose names it publishes on
@@ -130,50 +126,22 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   // not a commute admin — so the rail asks useSubscriptionGate for these ids
   // instead, exactly as it does for Leave, Finance and Marketing Ops. See
   // SUBSCRIPTION_ITEM_IDS and the wiring in SideRail.
+  // Managing other people's subscriptions is an HR action. The self-service
+  // half moved to Me (see ME_SECTIONS) — a bare leaf now, not a group, since
+  // only one screen is left here.
   {
-    id: "people-subscriptions",
-    label: "Subscriptions",
+    id: "people-subscriptions-manage",
+    label: "Manage Subscriptions",
     icon: TicketIcon,
-    // NOT alwaysGroup. Most people hold exactly one visible child (their own
-    // subscriptions), and SideRail already collapses a single-child group to
-    // a plain leaf — so an ordinary employee gets one clickable "Subscriptions"
-    // row, not an accordion they have to open to find their only option. Once
-    // useSubscriptionGate marks the caller an admin, "Manage" becomes visible
-    // too and the very same section expands into a real group of two. Unlike
-    // Master Data below, this is never "about to grow" for a given viewer —
-    // it genuinely differs by WHO is looking, not by what has shipped yet,
-    // which is the case `alwaysGroup` exists to override.
-    description: "Opt in and out of PickMe Commute and LaaS.",
-    children: [
-      {
-        id: "people-subscriptions-mine",
-        label: "My subscriptions",
-        path: "/people-ops/subscriptions",
-      },
-      {
-        id: "people-subscriptions-manage",
-        // Short on purpose: this is a rail label, and the rail's nested-item
-        // slot is narrow enough that "Manage for employees" was landing as
-        // "Manage for employ…" with no way to read the rest. The full
-        // sentence lives on the page itself (ManageSubscriptionsPage's
-        // title and subtitle both spell out what it does).
-        label: "Manage",
-        path: "/people-ops/subscriptions/manage",
-      },
-    ],
+    path: "/people-ops/subscriptions/manage",
   },
-  // par-app's employee half, ported one screen at a time — see
-  // docs/ported-apps/par-app.md. `alwaysGroup` for the same reason Master
-  // Data below carries it: this holds only one item today (Employee
-  // Portal) but more are coming (F2F scheduling), so it stays a named
-  // group rather than a bare leaf that would need reshaping later. Not
+  // par-app, ported one screen at a time — see docs/ported-apps/par-app.md.
+  // `alwaysGroup` for the same reason Master Data below carries it: a named
+  // group rather than a bare leaf, since more items (F2F scheduling; the
+  // rest of Lead Portal) are still coming. Employee Portal isn't
   // `requires: ["admin"]` — every employee has their own PAR, same as Org
   // Chart and Subscriptions above. Spread in rather than filtered out, so
   // with the flag off the entry does not exist at all.
-  //
-  // `description` overrides PeopleOpsPage's default group copy ("Reference
-  // data used across the app.", written for Master Data) — PAR is not a
-  // reference-data lookup.
   ...(isPreviewEnabled("par")
     ? [
         {
@@ -181,12 +149,24 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
           label: "PAR",
           icon: ClipboardCheckIcon,
           alwaysGroup: true,
-          description: "Complete and share your PAR for the current cycle.",
           children: [
             {
               id: "par-employee-feedback",
               label: "Employee Portal",
               path: "/people-ops/performance",
+            },
+            // Note what is NOT here: `requires: ["lead"]`. one-wso2's generic
+            // "lead" capability is people-app privilege 993 — unrelated to
+            // par-app's own PAR-cycle-scoped isTeamLead, and not guaranteed to
+            // agree with it either way. SideRail asks useParIsTeamLead for
+            // this one instead (PAR_LEAD_PORTAL_ITEM_ID below), the same
+            // treatment Finance/Leave/Marketing Ops/Subscriptions already get
+            // for the identical reason. ParRequiresTeamLeadRoute is what
+            // actually enforces access at the route either way.
+            {
+              id: "par-lead-portal",
+              label: "Lead Portal",
+              path: "/people-ops/performance/lead",
             },
           ],
         },
@@ -194,7 +174,7 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
     : []),
   {
     id: "people-active-employee-report",
-    label: "Active employees",
+    label: "Active Employees",
     icon: UserRoundIcon,
     path: "/people-ops/reports/active-employees",
     requires: ["admin"],
@@ -213,13 +193,13 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   // when more are known to be coming.
   {
     id: "people-master-data",
-    label: "Master data",
+    label: "Master Data",
     icon: DatabaseIcon,
     alwaysGroup: true,
     children: [
       {
         id: "people-master-data-org-structure",
-        label: "Org structure",
+        label: "Org Structure",
         path: "/people-ops/master-data/org-structure",
         requires: ["admin"],
       },
@@ -237,16 +217,51 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
  * an admin screen the subscription service then 403s — and hide it from an
  * actual commute admin who is not a People Ops admin.
  *
- * Derived from the section above so it cannot fall out of step when a screen
- * is added, and exported from here so the definition and the list of ids that
- * need special handling stay in one file.
+ * Written out by hand, NOT derived from a section list. It used to be built by
+ * scanning PEOPLE_OPS_SECTIONS for the "people-subscriptions" group, which tied
+ * the gate to where the screens happened to sit in the rail: moving one to
+ * another perspective dropped its id out of this set, and SideRail then fell
+ * through to people-app capabilities — silently skipping the Sri Lanka check
+ * and showing the screen to everyone. A gate must not depend on menu placement.
+ *
+ * Add an id here when a subscription screen is added.
  */
-export const SUBSCRIPTION_ITEM_IDS: ReadonlySet<string> = new Set(
-  PEOPLE_OPS_SECTIONS.filter((s) => s.id === "people-subscriptions").flatMap((s) => [
-    s.id,
-    ...(s.children ?? []).map((c) => c.id),
-  ]),
-);
+/**
+ * Rail ids for screens behind a Colombo-office perk, hidden from everyone else.
+ *
+ * Location is ORTHOGONAL to role: it is not "which backend decides this", it is
+ * "does this benefit exist where you work". So the rail applies it as an AND on
+ * top of whichever gate otherwise owns the id, rather than as another branch in
+ * that chain — a commute admin outside Sri Lanka still sees nothing.
+ *
+ * Both a section id and its child ids can appear here. `resolveVisible` runs
+ * over sections and children alike, so listing only the parent would leave the
+ * child reachable once the parent is expanded.
+ *
+ * This is the rail only. The backends refuse the calls regardless, and someone
+ * who types a URL gets the page's own empty state — same treatment every other
+ * rail gate in this file gets.
+ */
+export const SRI_LANKA_ONLY_ITEM_IDS: ReadonlySet<string> = new Set([
+  // Cafeteria — the WSO2 Colombo canteen. Section and its single child.
+  "sec-app-menu",
+  "menu-home",
+  // PickMe Commute and LaaS.
+  "people-subscriptions-mine",
+  "people-subscriptions-manage",
+]);
+
+export const SUBSCRIPTION_ITEM_IDS: ReadonlySet<string> = new Set([
+  "people-subscriptions-mine",
+  "people-subscriptions-manage",
+]);
+
+/**
+ * The Lead Portal's own rail id, which the rail must route through
+ * useParIsTeamLead rather than through `requires`/`caps` — see the comment
+ * on the section itself, above.
+ */
+export const PAR_LEAD_PORTAL_ITEM_ID = "par-lead-portal";
 
 // Marketing Ops. Built from the registry now so the rail is ready, but the
 // perspective itself stays locked (`access: false` below) until Phase 1
@@ -284,6 +299,20 @@ const MARKETING_OPS_SECTIONS: PerspectiveSection[] = [
 // (OPD/credit-card/expense — moved in from the retired Finance persona).
 const ME_SECTIONS: PerspectiveSection[] = [
   { id: "me-my-team", label: "My Team", icon: UsersRoundIcon, path: "/me/my-team", requires: ["lead"] },
+  // Opting yourself in and out is something you do for yourself, so it sits
+  // under Me. Managing it on someone else's behalf is an HR action and stays
+  // under People Ops.
+  //
+  // Still gated by SUBSCRIPTION_ITEM_IDS below — that set is written out by
+  // hand precisely so an item can move between perspectives without losing its
+  // gate. Sri-Lanka-only, like the manage screen: both services are a Colombo
+  // office perk.
+  {
+    id: "people-subscriptions-mine",
+    label: "My Subscriptions",
+    icon: TicketIcon,
+    path: "/me/subscriptions",
+  },
   ...appsToSections(ME_APPS),
   ...appsToSections(ME_FINANCE_APPS),
 ];
@@ -314,6 +343,24 @@ export interface PerspectiveDef {
    * somewhere this app cannot take you.
    */
   externalUrl?: string;
+  /**
+   * True when this perspective has no overview of its own worth stopping on,
+   * so its landing route forwards you to the first rail item you can actually
+   * see. Someone who can see none is told so there, in a sentence.
+   *
+   * These perspectives' overviews had become a tile per rail item — a second,
+   * hand-maintained copy of the menu two feet to its right, which the rail says
+   * better and which drifted out of step with the registry every time an item
+   * was added. So the Overview row is dropped from the rail for these too: a
+   * row that only bounces you somewhere else is not a destination.
+   *
+   * The ROUTE stays either way. Switching perspective navigates to `path`, and
+   * it is the one place someone with nothing here can be told that.
+   *
+   * Me is the one perspective that does not carry this: its landing is the
+   * person's own profile, which is a page someone stops and reads.
+   */
+  forwardsToFirstItem?: boolean;
   sections?: PerspectiveSection[];
 }
 
@@ -326,6 +373,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     icon: UsersIcon,
     access: true,
     path: "/people-ops",
+    forwardsToFirstItem: true,
     sections: PEOPLE_OPS_SECTIONS,
   },
   // Submitting a claim and looking up your own stay under Me (see ME_SECTIONS)
@@ -338,10 +386,11 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     icon: WalletIcon,
     access: true,
     path: "/finance",
+    forwardsToFirstItem: true,
     sections: [
       {
         id: "claim-approval",
-        label: "Claim approval",
+        label: "Claim Approval",
         icon: CheckCheckIcon,
         path: CLAIM_APPROVAL_PATH,
       },
@@ -370,6 +419,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     externallyGated: true,
     access: true,
     path: "/legal",
+    forwardsToFirstItem: true,
     sections: [...appsToSections(DUE_DILIGENCE_APPS)],
   },
   // A separate application, opened in a new tab. `access` follows the URL being
@@ -405,7 +455,38 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     icon: MegaphoneIcon,
     access: true,
     path: "/marketing-ops",
+    forwardsToFirstItem: true,
     sections: MARKETING_OPS_SECTIONS,
+  },
+  // Security and Compliance — the GRC platform's Risk Hub, Audit Hub and Admin
+  // Console, lifted from grc-tools rather than rewritten. Its own perspective:
+  // a different function, and an authorization model no other perspective
+  // shares.
+  //
+  // `externallyGated` for the same reason as Legal and Marketing Ops: `access`
+  // only says the perspective is built, not that whoever opens it can use it.
+  // Here the gate is the GRC backend's own privilege set — someone holding no
+  // grant sees the perspective and is told plainly that they have none, which
+  // is the right answer for a surface people are told exists.
+  {
+    // The key and path stay "security" while the LABEL is "Security and
+    // Compliance". They are not the same thing: the key threads through the
+    // route prefix, every item id, the privilege map, the hue and the app mark,
+    // and renaming it would churn all of that plus the 16 navigation paths
+    // inside the lifted tree, for no change a user could see.
+    key: "security",
+    label: "Security and Compliance",
+    // The plain shield, not ShieldCheck — that one is Audit Hub's, transcribed
+    // from the GRC source's nav.ts, and the two rendered identically one rail
+    // row apart. Plain is the right glyph for the container anyway: Risk Hub
+    // adds an exclamation, Audit Hub a tick, and this holds both. It also
+    // matches the banded-shield launcher mark.
+    icon: ShieldIcon,
+    externallyGated: true,
+    access: true,
+    path: "/security",
+    forwardsToFirstItem: true,
+    sections: [...appsToSections(SECURITY_APPS)],
   },
   // "Me" is the Home landing: the person's own profile plus everyday apps —
   // Leave, Menu, and the finance claims.
@@ -420,6 +501,29 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     path: "/me",
     sections: ME_SECTIONS,
   },
+  // UMT currently exposes only its dashboard. An empty section list keeps the
+  // rail at Overview until the update, product, chunk and statistics routes are
+  // actually ported; UmtShell performs the service-owned role check at /umt.
+  //
+  // Held behind a preview flag, whole perspective and all, until it's ready for
+  // production — not just `access: false`, because that would still leave a
+  // disabled "not available yet" tile in the waffle (see FUNCTIONAL_PERSPECTIVES
+  // below, which is unfiltered). Spread in exactly like FINANCE_PERSPECTIVE_APPS
+  // does for the expense app, so with the flag off the entry does not exist at
+  // all, and every surface that reads PERSPECTIVES stays clean.
+  ...(isPreviewEnabled("umt")
+    ? [
+        {
+          key: "umt",
+          label: "UMT",
+          icon: LayoutDashboard,
+          externallyGated: true,
+          access: true,
+          path: "/umt",
+          sections: [],
+        },
+      ]
+    : []),
 ];
 
 /**

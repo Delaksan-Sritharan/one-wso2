@@ -205,6 +205,78 @@ export const parServiceUrls = {
   // as GET /meta/employees, which is org-wide and not scoped to this cycle.
   par360Participants: (parCycleId: number) =>
     `${parBackendUrl}/par-cycles/${parCycleId}/participants`,
+
+  // ---- Lead Portal -------------------------------------------------------------
+  //
+  // GET .../teams?leadEmail= — every team this lead owns (a lead can have
+  // more than one). `leadEmail` is a query param, not a path segment, so
+  // the backend can also resolve it from the token when self-querying.
+  parTeams: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/teams?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../teams/{teamId} — one team's roster (ParTeamDetails.details).
+  parTeamDetails: (parCycleId: number, parTeamId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/teams/${parTeamId}`,
+  // PATCH .../reminders/schedule-360-reminders — no body; scoped to the
+  // calling lead's own reports server-side (isLeadInActiveParCycle), not a
+  // global send. MultiTeamSummary.tsx's "Send 360° Reminder" button.
+  parSchedule360Reminders: () => `${parBackendUrl}/reminders/schedule-360-reminders`,
+  // GET .../special-rating-groups-quota?leadEmail= — SpecialRatingAllocationView's
+  // own fetchQuotaGroupRatings. Non-admin callers may only pass their own
+  // email (enforced server-side); leadEmail stays a required param here
+  // since the Lead Portal never omits it (that's the admin-only "everyone"
+  // view, out of scope for this portal).
+  parSpecialRatingAllocations: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups-quota?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../reports?leadEmail= — EmployeeReportView.tsx's own
+  // fetchDirectAndIndirectReports. Returns both direct and indirect reports;
+  // the Additional Reports tab keeps only the indirect ones.
+  parAdditionalReports: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/reports?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../report-levels?leadEmail= — ReportChainView.tsx's own
+  // fetchDirectEmployeePars. One drill-down level: the direct reports of
+  // whichever email is passed, not always the caller's own.
+  parReportLevels: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/report-levels?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET /employees?leadEmail= — EmployeeReportView.tsx's own
+  // fetchEntityEmployees. Org-chart direct reports, not PAR-cycle-scoped.
+  parLeadEmployees: (leadEmail: string) => `${parBackendUrl}/employees?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET /par-cycles?status=CLOSED, no email — EmployeeHistoryView.tsx's own
+  // fetchClosedParCycles: every closed cycle org-wide, gated only on the
+  // caller being a lead in the active cycle (or admin), not scoped to their
+  // own participation the way parCycles(email, "CLOSED") above is.
+  parAllClosedCycles: () => `${parBackendUrl}/par-cycles?status=CLOSED`,
+  // GET .../participants?leadEmail= — same endpoint parServiceUrls.par360Participants
+  // hits with no leadEmail (org-wide); EmployeeHistoryView.tsx's own
+  // fetchParticipants scopes it to the calling lead's own reports instead.
+  parHistoryParticipants: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/participants?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../employees/{email}/reviews — every review ABOUT that employee
+  // (reviewer, rating, comment, status), regardless of who's asking, as
+  // opposed to par360Review (the caller's OWN review of someone else).
+  parEmployeeReviews: (parCycleId: number, employeeEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(employeeEmail)}/reviews`,
+  // GET /legacy-par-history/{employeeEmail} — pre-migration PeopleHR export
+  // data. 360 feedback is server-side stripped when the caller IS the
+  // employee (self-view); a lead viewing a report's history gets it intact.
+  parLegacyHistory: (employeeEmail: string) =>
+    `${parBackendUrl}/legacy-par-history/${encodeURIComponent(employeeEmail)}`,
+
+  // ---- F2F scheduling ---------------------------------------------------------
+  //
+  // Flat top-level paths on the same par-app backend, not nested under
+  // /par-cycles — service.bal's own resource layout.
+
+  // GET .../calendar/busy-times?date=YYYY-MM-DD — the invoker's and their
+  // lead's busy periods for that day (server resolves the lead; nothing
+  // about them is passed from here). Raw Google Calendar freebusy shape.
+  calendarBusyTimes: (date: string) =>
+    `${parBackendUrl}/calendar/busy-times?date=${encodeURIComponent(date)}`,
+  // POST .../calendar/schedule-f2f (ScheduleF2fRequest) — creates the Google
+  // Calendar event (with a Meet link Google generates) and emails both
+  // attendees the invite. Returns bare 201 with no body: the app never
+  // shows the Meet link itself, only a "meeting scheduled" confirmation —
+  // see ParScheduleF2fDialog.tsx.
+  calendarScheduleF2f: () => `${parBackendUrl}/calendar/schedule-f2f`,
 };
 
 // Leave app backend (people-ops-suite/apps/leave-app). Its own service
@@ -360,6 +432,38 @@ export const expenseServiceUrls = {
     `${expenseBackendUrl}/claims/${encodeURIComponent(email)}/transactions/receipts/file`,
   receiptFile: (fileName: string) =>
     `${expenseBackendUrl}/claims/transactions/receipts/file/${encodeURIComponent(fileName)}`,
+};
+
+// ---- Updates Manager backend ---------------------------------------------
+//
+// Reuses the standalone Updates Manager service without changing its route
+// layout. Identity and dashboard statistics live below `/update`, while the
+// shared metadata endpoint remains at the service root. Keep that split when
+// adding endpoints; prefixing `/meta` with `/update` returns the wrong route.
+//
+// `/update/user-info` returns UMT's own numeric roles (444/555/666). They are
+// interpreted by useUmtGate and must not be mixed with the People backend's
+// app-wide capabilities.
+//
+// Empty string = not configured; UmtShell renders the connection state and
+// prevents its feature children from mounting. Trailing slashes are stripped
+// because every endpoint below adds its own leading slash.
+export const umtBackendUrl: string = (
+  window.config?.ONE_WSO2_UMT_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
+
+export function isUmtBackendConfigured(): boolean {
+  return Boolean(umtBackendUrl);
+}
+
+export const umtServiceUrls = {
+  // GET — caller identity and UMT-local roles; this is the perspective gate.
+  userInfo: `${umtBackendUrl}/update/user-info`,
+  // GET — products, versions, issue types, lifecycles and user emails shared
+  // by the update workflows. This endpoint deliberately sits outside /update.
+  meta: `${umtBackendUrl}/meta`,
+  // GET — aggregate update lifecycle and release-chunk build counts.
+  updatesStats: `${umtBackendUrl}/update/stats`,
 };
 
 // ---- marketing-ops backend -------------------------------------------------
@@ -890,6 +994,45 @@ export function isSubscriptionBackendConfigured(): boolean {
   return Boolean(subscriptionBackendUrl);
 }
 
+// ---------------------------------------------------------------------------
+// Email Group Manager backend (digiops-infra/apps/email-group-manager). Lets
+// an employee browse the company's Google Groups mailing lists, subscribe or
+// unsubscribe themselves, and — client-side only, no backend of its own —
+// build an email signature. See docs/ported-apps/email-group-manager.md for
+// the contract.
+//
+// The source app's own GET /user-info is NOT reused here: this webapp already
+// has an identical call (people-app's, via @api/useUserInfo) for the
+// signed-in caller's name, designation and work email, and asking a second
+// backend the same question would just be a second round trip for the same
+// answer. `isAdmin` on the source response was dead code even in the
+// original — nothing in its UI branched on it — so it has no equivalent here.
+export const emailGroupsBackendUrl: string =
+  window.config?.ONE_WSO2_EMAIL_GROUPS_BACKEND_URL ?? "";
+
+export function isEmailGroupsBackendConfigured(): boolean {
+  return Boolean(emailGroupsBackendUrl);
+}
+
+export const emailGroupsServiceUrls = {
+  // Groups every employee is subscribed to automatically. Read-only — there is
+  // no endpoint to leave one.
+  defaultGroups: `${emailGroupsBackendUrl}/default-google-groups`,
+  // The full catalog the caller may subscribe to or unsubscribe from.
+  allGroups: `${emailGroupsBackendUrl}/all-google-groups`,
+  // The caller's own current memberships — a mix of default groups, catalog
+  // groups they opted into, and groups an admin added them to that aren't in
+  // the catalog at all ("other" groups on the page).
+  userGroups: `${emailGroupsBackendUrl}/user-google-groups`,
+  // PATCH, body `{groupName, userEmail}`. The subject is not decided by a path
+  // segment or the token alone — it's a field in the payload — so unlike every
+  // other backend in this file these two calls are the same URL regardless of
+  // who they're for; that's fine, because the only caller this page ever acts
+  // for is the signed-in employee themself.
+  subscribe: `${emailGroupsBackendUrl}/google-group/subscribe`,
+  unsubscribe: `${emailGroupsBackendUrl}/google-group/unsubscribe`,
+};
+
 export const subscriptionServiceUrls = {
   // Distance ranges, the four opt-in/opt-out day boundaries, the LaaS price,
   // the fee-exempt groups AND the names of the two admin groups. One call
@@ -914,3 +1057,43 @@ export const subscriptionServiceUrls = {
   unsubscribeMeal: (email: string) =>
     `${subscriptionBackendUrl}/meal/${encodeURIComponent(email)}/unsubscribe`,
 };
+
+// ---------------------------------------------------------------------------
+// GRC Platform — the Security perspective (Risk Hub, Audit Hub and Admin
+// Console), lifted from grc-tools/apps/grc-platform.
+//
+// ONE THING ABOUT THIS BACKEND THAT NO SIBLING HERE SHARES: it verifies the
+// token's `aud`, and each Asgardeo application mints its own. It used to accept
+// a single AUTH_AUDIENCE — the GRC webapp's client id — so every request from
+// here 401'd with `token has invalid audience`. That backend now takes a
+// comma-separated set (grc-tools #82, merged and deployed), and AUTH_AUDIENCE
+// names this app's client id too.
+//
+// Left here because the failure is otherwise unrecognisable: a 401 on EVERY
+// Security call, including /me/privileges, while every other backend in this
+// app works. If that comes back, check AUTH_AUDIENCE before anything else. A
+// second IdP entry is NOT the fix — the backend's runtime map is keyed by
+// issuer and both apps share one, so it would overwrite the first.
+//
+// CORS is not a factor either way, despite that backend's own
+// middleware/cors.go allowing exactly one origin. It never reaches the browser:
+// requests go through the Choreo gateway, which answers the preflight itself
+// and reflects the caller's origin. Measured with an OPTIONS against stage. The
+// Go middleware only matters to a browser hitting the service directly.
+//
+// These screens send THIS APP'S ACCESS TOKEN, like every other backend here —
+// not the ID token the GRC source sends. See features/security/grc/shim.
+//
+// Named for the BACKEND (grc-platform), not for the perspective. The label on
+// that perspective is a product decision that has already changed once —
+// "Security" became "Security and Compliance" — and a config key that tracks a
+// label goes stale the next time. The service, its Choreo component and its
+// repo are all called grc-platform, so this name stays greppable across all
+// three.
+export const securityBackendUrl: string = (
+  window.config?.ONE_WSO2_GRC_PLATFORM_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
+
+export function isSecurityBackendConfigured(): boolean {
+  return Boolean(securityBackendUrl);
+}

@@ -56,12 +56,23 @@ export interface AppMarkTones {
 
 /** Keyed by `PerspectiveDef.key`, same keys as PERSPECTIVE_HUES. */
 export const APP_MARK_TONES: Record<string, AppMarkTones> = {
+  // `detail` is unused by MeMark, which is field + lead only — see the note
+  // there on why the house stopped being a solid block. Kept rather than made
+  // optional: every other perspective needs all three, and the contrast tests
+  // below check the full set per key. Don't reach for it to add a third tone
+  // here without re-measuring the mark's weight against its neighbours.
   me: { field: "#F8AA95", lead: "#F14E23", detail: "#C6401D" },
   people: { field: "#9BC9F0", lead: "#2E8FE0", detail: "#2675B8" },
   finance: { field: "#95D3C1", lead: "#22A37D", detail: "#1C8666" },
   marketing: { field: "#F0A8C9", lead: "#E04A8F", detail: "#B83D75" },
   csm: { field: "#CFB1F0", lead: "#9B5DE0", detail: "#7F4CB8" },
   legal: { field: "#B8C6F0", lead: "#6C89E0", detail: "#5970B8" },
+  // Derived by the same rule as the six above it, from Security's own
+  // PERSPECTIVE_HUES entry: field is the hue 50% toward white, detail is the
+  // hue at 82% (the 18%-black mix this file's header describes). The test
+  // recomputes every ratio, so these are asserted rather than trusted.
+  security: { field: "#DCC285", lead: "#B8860B", detail: "#976E09" },
+  umt: { field: "#AFC78F", lead: "#5F8F1F", detail: "#4E7519" },
 };
 
 /**

@@ -57,22 +57,45 @@ const COMMENT_MAX = 30;
 // and the unit/region/job-number fields the chosen category requires.
 export function CcEditDialog({
   txn,
+  financeAdmin,
+  leadList,
   onClose,
   onSave,
 }: {
   txn: CcTransaction | null;
+  /**
+   * The viewer is acting as finance. Only the approve queue passes this, and
+   * only it changes what a row still with its lead may have done to it — see
+   * `leadOnly` below.
+   */
+  financeAdmin?: boolean;
+  /** Who a submission could be re-pointed at. Finance only. */
+  leadList?: string[];
   onClose: () => void;
   onSave: (patched: CcTransaction) => void;
 }) {
-  return txn ? <CcEditForm key={txn.id} txn={txn} onClose={onClose} onSave={onSave} /> : null;
+  return txn ? (
+    <CcEditForm
+      key={txn.id}
+      txn={txn}
+      financeAdmin={financeAdmin}
+      leadList={leadList}
+      onClose={onClose}
+      onSave={onSave}
+    />
+  ) : null;
 }
 
 function CcEditForm({
   txn,
+  financeAdmin,
+  leadList,
   onClose,
   onSave,
 }: {
   txn: CcTransaction;
+  financeAdmin?: boolean;
+  leadList?: string[];
   onClose: () => void;
   onSave: (patched: CcTransaction) => void;
 }) {
@@ -88,7 +111,26 @@ function CcEditForm({
   const [jobNumber, setJobNumber] = useState(txn.travelJobNumber ?? "");
   const [receiptFileName, setReceiptFileName] = useState(txn.receiptFileName);
   const [contractFileName, setContractFileName] = useState(txn.contractFileName);
+  // The source shows and writes the FIRST lead of what may be a comma-separated
+  // list (`EditPane.tsx:1448-1453`), replacing the whole list with the one
+  // chosen. Kept verbatim: the backend routes to whoever is named here.
+  const [leadEmail, setLeadEmail] = useState(txn.leadEmail?.split(",")[0]?.trim() ?? "");
   const attachment = useCcAttachment();
+
+  /**
+   * Finance, looking at a transaction that has not reached it yet.
+   *
+   * `EditPane.tsx:659-670` — finance may re-point such a row at a different
+   * lead and may change **nothing else** about it: the categorisation is still
+   * the card holder's and their lead's to settle. Once the row is
+   * `pending_finance` the reverse holds — the lead field disappears and
+   * everything else opens up.
+   *
+   * The port had no way into this at all: `canEdit` only ever offered finance a
+   * `pending_finance` row, so a submission sitting on the wrong lead had no way
+   * forward short of the lead acting.
+   */
+  const leadOnly = Boolean(financeAdmin) && txn.status === "pending_lead";
 
   const categories = menus.expenseTypes.data?.categories ?? [];
   const typeOptions = category ? menus.expenseTypes.data?.types[category] ?? [] : [];
@@ -135,7 +177,7 @@ function CcEditForm({
   const jobMissingUnits = Boolean(jobUnits) && !(jobUnits?.productUnit && jobUnits?.businessUnit);
   const jobUsable = Boolean(jobUnits) && fundingSources.length > 0;
 
-  const patched: CcTransaction = {
+  const edited: CcTransaction = {
     ...txn,
     expenseCategoryLabel: category || null,
     expenseTypeLabel: typeLabel || null,
@@ -156,9 +198,32 @@ function CcEditForm({
     receiptFileName,
     contractFileName,
   };
+
+  /**
+   * What Save would write.
+   *
+   * In `leadOnly` the patch is built from the ROW, not from the form, and only
+   * the lead moves. The form's controls are disabled there but their state is
+   * still live, and the units are the problem: `unitIndex` only resolves once
+   * the aligned menu arrays have loaded and still contain this row's exact
+   * pair. Until then — or ever, if the pair has since been reorganised away —
+   * it reads empty, which would carry `productUnit: null` into the patch.
+   *
+   * That did two things, both bad. `ccTxnComplete` then failed, so Save stayed
+   * disabled and finance could not re-point the submission at all — the whole
+   * point of this screen's edit. And had it saved, it would have wiped the
+   * card holder's categorisation on the way past.
+   */
+  const patched: CcTransaction = leadOnly
+    ? { ...txn, leadEmail: leadEmail || null }
+    : edited;
   // A job with no funding sources is not applied, so it cannot complete the
   // row. Missing units deliberately do NOT block — see jobMissingUnits above.
-  const valid = ccTxnComplete(patched) && !jobUnusable;
+  // Reassignment asks only for a lead, and a different one — the row's
+  // categorisation is not this mode's to judge or to re-save unchanged.
+  const valid = leadOnly
+    ? Boolean(leadEmail) && leadEmail !== (txn.leadEmail?.split(",")[0]?.trim() ?? "")
+    : ccTxnComplete(patched) && !jobUnusable;
 
   return (
     <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
@@ -174,6 +239,7 @@ function CcEditForm({
             <Field label="Expense category">
               <Select
                 value={category}
+                disabled={leadOnly}
                 onChange={(e) => {
                   setCategory(String(e.target.value));
                   setTypeLabel(""); // types depend on category
@@ -192,7 +258,7 @@ function CcEditForm({
               <Select
                 value={typeLabel}
                 onChange={(e) => setTypeLabel(String(e.target.value))}
-                disabled={!category}
+                disabled={leadOnly || !category}
                 displayEmpty
                 renderValue={(v) => (v ? String(v) : <Placeholder />)}
               >
@@ -209,6 +275,7 @@ function CcEditForm({
             <Field label="Travel job number">
               <Select
                 value={jobNumber}
+                disabled={leadOnly}
                 onChange={(e) => setJobNumber(String(e.target.value))}
                 displayEmpty
                 renderValue={(v) => (v ? String(v) : <Placeholder />)}
@@ -248,6 +315,7 @@ function CcEditForm({
             <Field label="Product unit">
               <Select<number | "">
                 value={unitIndex}
+                disabled={leadOnly}
                 onChange={(e) => setUnitIndex(e.target.value === "" ? "" : Number(e.target.value))}
                 displayEmpty
                 renderValue={(v) => (v === "" ? <Placeholder /> : unitOptions[Number(v)]?.label ?? String(v))}
@@ -265,6 +333,7 @@ function CcEditForm({
             <Field label="Sub region">
               <Select
                 value={subRegion}
+                disabled={leadOnly}
                 onChange={(e) => setSubRegion(String(e.target.value))}
                 displayEmpty
                 renderValue={(v) => (v ? String(v) : <Placeholder />)}
@@ -278,12 +347,33 @@ function CcEditForm({
             </Field>
           )}
 
+          {/* EditPane.tsx:1429-1457 — the one thing finance may change on a row
+              still with its lead, and the only time this field exists at all.
+              Once the row reaches finance it disappears and the rest unlocks. */}
+          {leadOnly && (
+            <Field label="Lead approver">
+              <Select
+                value={leadEmail}
+                onChange={(e) => setLeadEmail(String(e.target.value))}
+                displayEmpty
+                renderValue={(v) => (v ? String(v) : <Placeholder />)}
+              >
+                {(leadList ?? []).map((l) => (
+                  <MenuItem key={l} value={l}>
+                    {l}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Field>
+          )}
+
           <Box>
             <FieldLabel>Comment</FieldLabel>
             <TextField
               size="small"
               fullWidth
               value={comment}
+              disabled={leadOnly}
               onChange={(e) => setComment(e.target.value.slice(0, COMMENT_MAX))}
               placeholder="Short note for this transaction"
               helperText={`${comment.length}/${COMMENT_MAX}`}
@@ -297,6 +387,7 @@ function CcEditForm({
               label="Receipt"
               fileName={receiptFileName}
               busy={attachment.upload.isPending}
+              viewOnly={leadOnly}
               onPick={async (file) => {
                 const name = await attachment.upload.mutateAsync({ id: txn.id, attachmentType: "receipt", file });
                 setReceiptFileName(name || file.name);
@@ -311,6 +402,7 @@ function CcEditForm({
               label="Contract (optional)"
               fileName={contractFileName}
               busy={attachment.upload.isPending}
+              viewOnly={leadOnly}
               onPick={async (file) => {
                 const name = await attachment.upload.mutateAsync({ id: txn.id, attachmentType: "contract", file });
                 setContractFileName(name || file.name);
@@ -397,12 +489,19 @@ function AttachmentField({
   label,
   fileName,
   busy,
+  viewOnly,
   onPick,
   onRemove,
 }: {
   label: string;
   fileName: string | null;
   busy: boolean;
+  /**
+   * Show what is attached and offer no way to change it —
+   * `AttachmentButton.tsx:406,467`, which kills the upload trigger and drops
+   * the Remove button entirely while a row is not the viewer's to edit.
+   */
+  viewOnly?: boolean;
   onPick: (file: File) => Promise<void>;
   onRemove: () => Promise<void>;
 }) {
@@ -440,16 +539,18 @@ function AttachmentField({
       <FieldLabel>{label}</FieldLabel>
       <input ref={input} type="file" accept={CC_ATTACHMENT_ACCEPT} onChange={handle} style={{ display: "none" }} />
       <Stack direction="row" alignItems="center" spacing={1}>
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => input.current?.click()}
-          disabled={busy}
-          sx={{ textTransform: "none", fontWeight: 600 }}
-        >
-          {busy ? "Uploading…" : fileName ? "Replace" : "Upload"}
-        </Button>
-        {fileName && (
+        {!viewOnly && (
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => input.current?.click()}
+            disabled={busy}
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
+            {busy ? "Uploading…" : fileName ? "Replace" : "Upload"}
+          </Button>
+        )}
+        {fileName && !viewOnly && (
           <Button
             size="small"
             variant="text"

@@ -29,6 +29,11 @@ window.config = {
   // publishes (there is no separate config key for them).
   // ONE_WSO2_SUBSCRIPTION_BACKEND_URL: "<your-subscription-app-backend-url>",
 
+  // digiops-infra email-group-manager backend base URL. Optional — when
+  // absent the Email Groups screen shows a not-connected state and makes no
+  // requests. See docs/ported-apps/email-group-manager.md for the contract.
+  // ONE_WSO2_EMAIL_GROUPS_BACKEND_URL: "<your-email-group-manager-backend-url>",
+
   // people-ops-suite people-app backend base URL. Same value as people-app's
   // REACT_APP_BACKEND_BASE_URL — usually a Choreo API gateway URL. Powers
   // the live My profile page (employee + personal info fetch).
@@ -57,6 +62,16 @@ window.config = {
   // pattern; leave-app has its own /user-info + privileges.
   // ONE_WSO2_LEAVE_BACKEND_URL: "<your-leave-app-backend-url>",
 
+  // grc-tools grc-platform backend base URL — the Security perspective
+  // (Risk Hub, Audit Hub and Admin Console), lifted from grc-tools. Optional —
+  // when absent the Security screens cannot load, and the perspective says so
+  // rather than calling anything.
+  //
+  // That backend must list this app's Asgardeo client id in its AUTH_AUDIENCE,
+  // or every request from here 401s. Already done for stage. See
+  // src/config/apiConfig.ts.
+  // ONE_WSO2_GRC_PLATFORM_BACKEND_URL: "<your-grc-platform-backend-url>",
+
   // digiops-finance backend base URLs — the three apps in the Finance
   // perspective. Each is a separate Ballerina service with its own
   // /user-info + role scheme. Optional — when a URL is absent, that app's
@@ -65,6 +80,11 @@ window.config = {
   // ONE_WSO2_OPD_BACKEND_URL: "<your-opd-claims-backend-url>",
   // ONE_WSO2_CC_EXPENSES_BACKEND_URL: "<your-cc-expenses-backend-url>",
   // ONE_WSO2_EXPENSE_CLAIMS_BACKEND_URL: "<your-expense-claims-backend-url>",
+
+  // Updates Manager backend base URL. Optional — when absent, UMT shows a
+  // not-connected state and makes no requests. The value is the service root;
+  // the access check is GET <base-url>/update/user-info.
+  // ONE_WSO2_UMT_BACKEND_URL: "<your-updates-manager-backend-url>",
 
   // leave-app frontend base URL (not its backend) — used to deep-link into
   // flows this webapp doesn't replicate (e.g. sabbatical requests).
@@ -125,5 +145,5 @@ window.config = {
   // Each entry is deleted when its feature ships — a list that only grows
   // stops describing anything.
   //
-  // ONE_WSO2_PREVIEW_FEATURES: { expenseSubmitter: false },
+  // ONE_WSO2_PREVIEW_FEATURES: { expenseSubmitter: false, umt: false },
 };

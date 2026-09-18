@@ -27,8 +27,8 @@
  * the launcher is the one surface with nothing else doing that job.
  *
  * SIZING, and the constraint that will eventually break this: the registry holds
- * six perspectives and every one of them has a hue, so the set is at six of the
- * eight it can carry. Hue discrimination collapses somewhere past that, and each
+ * eight perspective hues, so the set is at the eight it can carry. Hue
+ * discrimination collapses somewhere past that, and each
  * new perspective wants one — at which point the answer is a different encoding
  * (hue per domain family, or back to monochrome), not a longer list.
  * perspectiveHues.test.ts caps the palette at eight so that decision is forced
@@ -49,7 +49,7 @@
  * reviewed, and asserted — see perspectiveHues.test.ts, which fails if any pair
  * drops below the 3:1 floor.
  *
- * OPEN: five of these six are not brand colours. The WSO2 brand system defines one
+ * OPEN: seven of these eight are not brand colours. The WSO2 brand system defines one
  * accent, so a palette this wide needs a brand-owner ruling — the same conversation
  * as the 180x72px logo minimum and the contained-button contrast. Until then this is
  * launcher-local and easy to withdraw.
@@ -112,10 +112,34 @@ export const PERSPECTIVE_HUES: Record<string, PerspectiveHue> = {
   // as its own colour rather than a shade of either. Tints computed against
   // the same contrast formula the test uses — 4.92:1 light, 4.30:1 dark, both
   // inside the 3.5 headroom rule with the wash treatment.
+  // Gold, and the last hue this palette should gain casually. Chosen for the gap
+  // rather than the association: the six before it sit at 13, 162, 207, 225, 268
+  // and 332 degrees, leaving 13-162 as the only wide opening, and 43 degrees puts
+  // it 30 from Me's orange — wider than the tightest existing pair (People at 207
+  // and Legal at 225, 18 apart). It reads as audit/caution, which suits the
+  // subject, but that is a bonus rather than the reason.
+  //
+  // Together with UMT below, this takes the palette to its eight-hue cap. The
+  // next perspective should force a different encoding rather than a ninth hue.
+  security: {
+    hue: "#B8860B",
+    light: { bg: "#F9EFD7", fg: "#7E5C07" },
+    dark: { bg: "#282420", fg: "#B8860B" },
+  },
   legal: {
     hue: "#6C89E0",
     light: { bg: "#CFD8F3", fg: "#3854A8" },
     dark: { bg: "#262A34", fg: "#6C89E0" },
+  },
+
+  // Leaf green puts UMT between Security's gold and Finance's teal without
+  // crowding either: its 84-degree hue is 41 degrees from Security and 78 from
+  // Finance. The wash/foreground pairs retain the same contrast headroom
+  // asserted for every launcher tile below.
+  umt: {
+    hue: "#5F8F1F",
+    light: { bg: "#EFF6E6", fg: "#426A16" },
+    dark: { bg: "#20281A", fg: "#8ABF42" },
   },
 };
 
