@@ -28,6 +28,10 @@ function toneFor(step: OpdActivityStep): string {
       return "error.main";
     case "Pending":
       return "warning.main";
+    // A status this app does not recognise gets no colour of its own: green or
+    // amber would be a claim about where the claim stands that nobody made.
+    case "Unknown":
+      return "text.secondary";
     default:
       return "success.main";
   }
@@ -116,7 +120,10 @@ function Step({ step, isLast }: { step: OpdActivityStep; isLast: boolean }) {
           {step.state !== "done" && (
             <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 500 }}>
               {" "}
-              ({step.state})
+              {/* An unrecognised status is shown as the backend sent it, the
+                  way `opdStatusMeta` does, rather than translated into a word
+                  this app made up. */}
+              ({step.state === "Unknown" ? (step.rawStatus ?? "Unknown") : step.state})
             </Typography>
           )}
         </Typography>

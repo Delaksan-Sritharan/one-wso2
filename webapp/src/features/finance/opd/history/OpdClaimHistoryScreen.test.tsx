@@ -79,7 +79,11 @@ function claim(over: Partial<OpdClaim> = {}): OpdClaim {
   return {
     id: "OPD-2001",
     employeeEmail: "me@wso2.com",
-    createdDate: "2026-09-17 12:00:00.0",
+    // A bare date, so the row renders the same day in every timezone. Noon UTC
+    // is already the 18th in UTC+12 and beyond, which failed this assertion in
+    // Auckland while passing everywhere else. How a real timestamp is parsed is
+    // asserted on the instant, in opdHistoryTypes.test.ts.
+    createdDate: "2026-09-17",
     totalAmount: 7400,
     transactions: [
       { date: "2026-09-16", amount: 7400, comment: "Consultation", receiptUrl: "r.pdf" },

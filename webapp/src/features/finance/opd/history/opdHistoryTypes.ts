@@ -129,7 +129,13 @@ export interface OpdActivityStep {
   /** ISO datetime, or null when the step has not happened yet. */
   date: string | null;
   /** The parenthesised word after the label — only the review carries one. */
-  state: "done" | "Pending" | "Approved" | "Rejected";
+  state: "done" | "Pending" | "Approved" | "Rejected" | "Unknown";
+  /**
+   * What the backend actually said, when it said something this app does not
+   * recognise. `opdStatusMeta` shows such a value verbatim rather than guessing
+   * at it, and the trail does the same instead of calling it pending.
+   */
+  rawStatus?: string;
   /** Finance's words, on a rejection. */
   reason?: string | null;
 }
@@ -144,6 +150,11 @@ export interface OpdActivityStep {
 export function opdActivitySteps(claim: OpdClaim): OpdActivityStep[] {
   const details = claim.statusDetails;
   const status = details.status;
+  // Absent reads as pending, matching `opdStatusMeta`, which maps null and
+  // undefined onto PENDING. PENDING_OLD is the same state under an older name.
+  // Anything else is a value this app has never heard of: showing it as pending
+  // would state something about the claim that nobody told us.
+  const isPending = status == null || status === "PENDING" || status === "PENDING_OLD";
   const review: OpdActivityStep =
     status === "APPROVED"
       ? { label: "Finance Review", date: details.financeApprovedDate, state: "Approved" }
@@ -154,7 +165,9 @@ export function opdActivitySteps(claim: OpdClaim): OpdActivityStep[] {
             state: "Rejected",
             reason: details.financeRejectedReason ?? null,
           }
-        : { label: "Finance Review", date: null, state: "Pending" };
+        : isPending
+          ? { label: "Finance Review", date: null, state: "Pending" }
+          : { label: "Finance Review", date: null, state: "Unknown", rawStatus: status };
 
   return [{ label: "Claim Submission", date: claim.createdDate, state: "done" }, review];
 }

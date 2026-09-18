@@ -64,7 +64,16 @@ function HistoryBody() {
 
   const email = userInfo.data?.workEmail;
   const payload = useMemo(() => toOpdSearchPayload(filters, email), [filters, email]);
-  const claims = useOpdClaims(payload, Boolean(email));
+  // Gated on the role as well as the email. `useOpdClaims` checks sign-in,
+  // config and identity but knows nothing about OPD's roles, so once user-info
+  // landed a non-submitter's visit fired a POST /search-claims the backend was
+  // always going to refuse — before the alert below had a chance to render.
+  const canViewClaims =
+    !userInfo.isLoading &&
+    !userInfo.isError &&
+    Boolean(email) &&
+    opdHasRole(userInfo.data, OPD_ROLE.CLAIM_SUBMITTER);
+  const claims = useOpdClaims(payload, canViewClaims);
 
   // The OPD backend refuses the whole app to anyone holding neither of its
   // roles, so the submitter check is what tells an ineligible account why the

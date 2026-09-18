@@ -49,7 +49,13 @@ export function historyDate(value: string | null | undefined): string {
  */
 export function parseUtcTimestamp(value: string | null | undefined): Date | null {
   if (!value) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?/.exec(value);
+  // Anchored at both ends, with fractional seconds and a trailing Z allowed.
+  // An unanchored prefix match accepted "…T03:54:47+05:30" and then handed the
+  // head to Date.UTC, throwing the offset away and reporting a time that was
+  // hours out. A shape we cannot read is better shown as "—" than as a
+  // confident wrong answer. `Z` is kept because it says UTC, which is what this
+  // already assumes.
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z?)?$/.exec(value);
   if (!m) return null;
   const [, y, mo, d, hh, mm, ss] = m;
   const date =

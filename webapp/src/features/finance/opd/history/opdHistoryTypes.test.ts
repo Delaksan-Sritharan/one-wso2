@@ -143,6 +143,18 @@ describe("the activity trail", () => {
     expect(review.state).toBe("Pending");
   });
 
+  it("reads a missing status as pending, as the status chip does", () => {
+    expect(opdActivitySteps(claim(null))[1].state).toBe("Pending");
+  });
+
+  // A status this app has never heard of is not pending. Saying so would state
+  // something about the claim that nobody told us.
+  it("shows an unrecognised status as the backend sent it", () => {
+    const [, review] = opdActivitySteps(claim("ESCALATED" as OpdClaimStatus));
+    expect(review.state).toBe("Unknown");
+    expect(review.rawStatus).toBe("ESCALATED");
+  });
+
   it("dates an approval", () => {
     const [, review] = opdActivitySteps(
       claim("APPROVED", { financeApprovedDate: "2026-09-18 04:10:00.0" }),
@@ -183,9 +195,28 @@ describe("dates", () => {
   });
 
   it("renders in the source's DD-MMM-YYYY shape", () => {
-    // Midday UTC: the same calendar day in every zone from UTC-11 to UTC+11,
-    // so the format is asserted without the timezone deciding the answer.
-    expect(historyDate("2026-09-17 12:00:00.0")).toBe("17-Sep-2026");
+    // A BARE date, not a timestamp: it is built from local fields, so it lands
+    // on the day it says in every timezone. Midday UTC would have been enough
+    // for most of them, but it is already 18 Sep in UTC+12 and beyond, and a
+    // suite that fails in New Zealand is a suite nobody trusts. The UTC parsing
+    // itself is asserted on the instant, above.
+    expect(historyDate("2026-09-17")).toBe("17-Sep-2026");
+  });
+
+  // An unanchored match accepted an offset-bearing value and then threw the
+  // offset away, reporting a time hours out with total confidence.
+  it("refuses a timestamp carrying an offset it would have to discard", () => {
+    expect(parseUtcTimestamp("2026-09-17T03:54:47+05:30")).toBeNull();
+    expect(historyDate("2026-09-17T03:54:47+05:30")).toBe("—");
+  });
+
+  it("still accepts fractional seconds and a trailing Z", () => {
+    expect(parseUtcTimestamp("2026-09-17 03:54:47.0")?.toISOString()).toBe(
+      "2026-09-17T03:54:47.000Z",
+    );
+    expect(parseUtcTimestamp("2026-09-17T03:54:47Z")?.toISOString()).toBe(
+      "2026-09-17T03:54:47.000Z",
+    );
   });
 
   it("does not blank a row it cannot parse", () => {
