@@ -21,9 +21,8 @@ import { useLeaveEmployees } from "@features/leave/api/useLeaveData";
 import ParEmployeeHistoryView from "./ParEmployeeHistoryView";
 
 // par-app's Review.tsx: "PAR HISTORY" opens EmployeeHistoryCard in a real
-// modal (CustomModal) — unlike ChainViewTab.tsx, which swaps it in inline
-// instead (see ParLeadHistoryChainTab.tsx, which uses ParEmployeeHistoryView
-// directly for that reason, not this Dialog wrapper).
+// modal (CustomModal). This wraps the shared content (ParEmployeeHistoryView)
+// in that Dialog.
 export default function ParLeadHistoryModal({
   open,
   onClose,

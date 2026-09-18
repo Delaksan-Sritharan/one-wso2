@@ -44,7 +44,6 @@ const ParHistoryTab = lazy(() => import("@features/par/pages/ParHistoryTab"));
 const ParLeadDirectReportsTab = lazy(() => import("@features/par/pages/ParLeadDirectReportsTab"));
 const ParLeadAdditionalReportsTab = lazy(() => import("@features/par/pages/ParLeadAdditionalReportsTab"));
 const ParLeadReportChainTab = lazy(() => import("@features/par/pages/ParLeadReportChainTab"));
-const ParLeadHistoryChainTab = lazy(() => import("@features/par/pages/ParLeadHistoryChainTab"));
 const ParLeadEmployeeHistoryTab = lazy(() => import("@features/par/pages/ParLeadEmployeeHistoryTab"));
 const ParLeadAllocationTab = lazy(() => import("@features/par/pages/ParLeadAllocationTab"));
 import EmailGroupsPage from "@features/my/email-groups/pages/EmailGroupsPage";
@@ -409,7 +408,7 @@ export default function App() {
             </Route>
           )}
           {/* People Ops → PAR → Lead Portal: par-app's LeadPortal.tsx, ported
-              one tab at a time — all six tabs are now live. Reviewing and
+              one tab at a time — all five tabs are now live. Reviewing and
               rating your reports' PAR is People-Ops-team work, unlike the
               employee half (now under Me — see docs/ported-apps/par-app.md).
               Gated on the same preview flag as the employee portal, plus
@@ -462,14 +461,6 @@ export default function App() {
                 element={
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
                     <ParLeadAllocationTab />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="history-chain"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParLeadHistoryChainTab />
                   </Suspense>
                 }
               />

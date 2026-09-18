@@ -49,9 +49,8 @@ function InfoItem({ title, subtitle1, subtitle2 }: { title: string; subtitle1: s
 
 // par-app's EmployeeHistoryCard.tsx: the same real+legacy cycle history
 // ParLeadEmployeeHistoryTab.tsx shows, for one fixed employee (no cycle
-// picker). Split out so it can render both as a modal (ParLeadHistoryModal.tsx)
-// and inline (ParLeadHistoryChainTab.tsx), matching how source renders the
-// identical component both ways depending on caller.
+// picker). Kept separate from ParLeadHistoryModal.tsx's Dialog shell so the
+// content itself stays independent of how it's presented.
 export default function ParEmployeeHistoryView({
   employeeEmail,
   employeeName,

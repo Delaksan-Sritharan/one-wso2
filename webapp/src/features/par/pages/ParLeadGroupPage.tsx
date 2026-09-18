@@ -41,7 +41,6 @@ const TABS: RoutedTabDef[] = [
   { segment: "report-chain", label: "Report Chain" },
   { segment: "employee-history", label: "Employee History" },
   { segment: "allocation", label: "Top 5%/20% Allocation" },
-  { segment: "history-chain", label: "History Chain" },
 ];
 
 // One page frame for everything a lead does for their reports — the
