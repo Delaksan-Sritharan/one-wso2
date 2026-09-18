@@ -21,6 +21,7 @@ import { useAccessToken } from "@hooks/useAccessToken";
 import { parBackendUrl, parServiceUrls } from "@config/apiConfig";
 import { digiopsHeaders } from "@features/my/util/digiopsHeaders";
 import type { ParCycle, ParEmployeeInfo, ParRating } from "./types";
+import { useParLeadEmployees } from "./useLeadHistory";
 
 // GET par-app's own /employees/{workEmail} — carries `leadEmail`, the exact
 // field OngoingCycleView.tsx gates its tab set on. Not people-app's
@@ -91,6 +92,24 @@ export function useParIsTeamLead(workEmail: string | undefined, enabled = true) 
     error: info.error,
     isFetching: info.isFetching,
     refetch: info.refetch,
+  };
+}
+
+/**
+ * Whether the signed-in employee should see the Lead Portal nav item.
+ * isTeamLead is scoped to the active cycle (see ParEmployeeInfo), so this
+ * ORs in the org-chart signal (GET /employees?leadEmail=) to keep it visible
+ * once a lead's cycle closes — matching ParRequiresTeamLeadRoute, the route
+ * guard that actually enforces access. Only fetches that fallback once
+ * isTeamLead resolves false. Fails CLOSED while either is unresolved, same
+ * as useParIsTeamLead alone.
+ */
+export function useParCanSeeLeadPortal(workEmail: string | undefined, enabled = true) {
+  const employeeInfo = useParIsTeamLead(workEmail, enabled);
+  const directReports = useParLeadEmployees(enabled && !employeeInfo.isTeamLead ? workEmail : undefined);
+  return {
+    canSee: employeeInfo.isTeamLead || (directReports.isSuccess && directReports.data.length > 0),
+    isLoading: employeeInfo.isLoading || (!employeeInfo.isTeamLead && directReports.isLoading),
   };
 }
 
