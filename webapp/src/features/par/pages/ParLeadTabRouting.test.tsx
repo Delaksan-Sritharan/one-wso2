@@ -26,9 +26,21 @@ const employeeInfo: { isSuccess: boolean; isLoading: boolean; data?: { isTeamLea
   isLoading: false,
 };
 
+// The org-chart fallback ParRequiresTeamLeadRoute falls back to once
+// isTeamLead resolves false — GET /employees?leadEmail= via
+// useParLeadEmployees, keyed "par-lead-employees".
+const directReports: { isSuccess: boolean; isLoading: boolean; isError: boolean; data?: unknown[] } = {
+  isSuccess: false,
+  isLoading: false,
+  isError: false,
+};
+
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: ({ queryKey }: { queryKey: unknown[] }) =>
-    queryKey[0] === "par-employee-info" ? employeeInfo : { data: undefined },
+  useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
+    if (queryKey[0] === "par-employee-info") return employeeInfo;
+    if (queryKey[0] === "par-lead-employees") return directReports;
+    return { data: undefined };
+  },
 }));
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
 vi.mock("@hooks/useAccessToken", () => ({ useAccessToken: () => async () => "token" }));
@@ -58,12 +70,21 @@ beforeEach(() => {
   employeeInfo.isSuccess = false;
   employeeInfo.isLoading = false;
   employeeInfo.data = undefined;
+  directReports.isSuccess = false;
+  directReports.isLoading = false;
+  directReports.isError = false;
+  directReports.data = undefined;
   profile.isLoading = false;
 });
 
 function isTeamLead(value: boolean) {
   employeeInfo.isSuccess = true;
   employeeInfo.data = { isTeamLead: value };
+}
+
+function hasDirectReports(value: boolean) {
+  directReports.isSuccess = true;
+  directReports.data = value ? [{ workEmail: "report@wso2.com" }] : [];
 }
 
 /** The group, wired the way App.tsx wires it. */
@@ -83,6 +104,7 @@ function show(initial = "/people-ops/performance/lead") {
         >
           <Route index element={<ParLeadGroupIndex />} />
           <Route path="direct-reports" element={<Tab name="Direct Reports" />} />
+          <Route path="employee-history" element={<Tab name="Employee History" />} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -105,8 +127,11 @@ describe("a team lead", () => {
   });
 });
 
-describe("someone who isn't a team lead", () => {
-  beforeEach(() => isTeamLead(false));
+describe("someone who isn't a team lead and has no reports either", () => {
+  beforeEach(() => {
+    isTeamLead(false);
+    hasDirectReports(false);
+  });
 
   // Unlike ParRequiresLeadRoute (fails open — a UX-only tab-visibility
   // decision), this fails CLOSED: showing an empty Lead Portal to everyone
@@ -122,6 +147,38 @@ describe("someone who isn't a team lead", () => {
   it("is redirected away even when deep-linking straight to a tab", async () => {
     show("/people-ops/performance/lead/direct-reports");
     expect(await screen.findByTestId("url")).toHaveTextContent("/me/performance");
+  });
+});
+
+describe("a lead with reports but no active cycle", () => {
+  // isTeamLead is scoped to the active cycle (see ParEmployeeInfo), so a
+  // real lead reads false here even though the org chart says otherwise —
+  // ParRequiresTeamLeadRoute's fallback is what should let them in.
+  beforeEach(() => {
+    isTeamLead(false);
+    hasDirectReports(true);
+  });
+
+  it("lands on Employee History, not the Employee Portal", async () => {
+    show();
+    expect(await screen.findByTestId("url")).toHaveTextContent(
+      "/people-ops/performance/lead/employee-history",
+    );
+    expect(await screen.findByTestId("tab-body")).toHaveTextContent("Employee History");
+  });
+
+  it("sees only the Employee History tab", async () => {
+    show();
+    await screen.findByTestId("tab-body");
+    expect(screen.queryByRole("tab", { name: "Direct Reports" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(1);
+  });
+
+  it("is redirected to Employee History when deep-linking straight to a cycle-scoped tab", async () => {
+    show("/people-ops/performance/lead/direct-reports");
+    expect(await screen.findByTestId("url")).toHaveTextContent(
+      "/people-ops/performance/lead/employee-history",
+    );
   });
 });
 
