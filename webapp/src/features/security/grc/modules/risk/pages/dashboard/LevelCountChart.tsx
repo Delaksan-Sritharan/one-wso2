@@ -18,7 +18,7 @@ import { BarChart } from "@wso2/oxygen-ui-charts-react";
 import { Typography } from "@wso2/oxygen-ui";
 import type { JSX } from "react";
 import type { RiskLevelCount } from "../../api/riskApi";
-import { LEVEL_FALLBACK_COLORS, LEVEL_LABELS, LEVEL_ORDER, type OnDrillDown } from "./constants";
+import { CHART_ANIMATION_MS, LEVEL_FALLBACK_COLORS, LEVEL_LABELS, LEVEL_ORDER, type OnDrillDown } from "./constants";
 
 interface LevelCountChartProps {
   data: RiskLevelCount[];
@@ -67,7 +67,7 @@ export default function LevelCountChart({ data, onDrillDown, registerId }: Level
       height={420}
       maxBarSize={64}
       legend={{ show: false }}
-      isAnimationActive={false}
+      animationDuration={CHART_ANIMATION_MS}
       margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
     />
   );

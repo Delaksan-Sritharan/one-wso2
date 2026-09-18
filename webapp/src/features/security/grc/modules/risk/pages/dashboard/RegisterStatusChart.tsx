@@ -19,6 +19,7 @@ import { Box, Typography } from "@wso2/oxygen-ui";
 import type { JSX } from "react";
 import type { RegisterStatusLevelCount } from "../../api/riskApi";
 import {
+  CHART_ANIMATION_MS,
   LEVEL_FALLBACK_COLORS,
   LEVEL_LABELS,
   LEVEL_ORDER,
@@ -108,7 +109,7 @@ export default function RegisterStatusChart({ data, onDrillDown, registerId }: R
           bars={bars}
           height={CHART_HEIGHT}
           maxBarSize={56}
-          isAnimationActive={false}
+          animationDuration={CHART_ANIMATION_MS}
           margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
           yAxis={{ show: true }}
         />

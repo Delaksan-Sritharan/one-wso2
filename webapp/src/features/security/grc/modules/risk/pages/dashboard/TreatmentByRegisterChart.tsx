@@ -19,6 +19,7 @@ import { Box, Typography } from "@wso2/oxygen-ui";
 import type { JSX } from "react";
 import type { RegisterTreatmentCount } from "../../api/riskApi";
 import {
+  CHART_ANIMATION_MS,
   TREATMENT_COLORS,
   TREATMENT_LABELS,
   TREATMENT_ORDER,
@@ -113,7 +114,7 @@ export default function TreatmentByRegisterChart({
           bars={bars}
           height={CHART_HEIGHT}
           maxBarSize={64}
-          isAnimationActive={false}
+          animationDuration={CHART_ANIMATION_MS}
           margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
           yAxis={{ show: true }}
         />

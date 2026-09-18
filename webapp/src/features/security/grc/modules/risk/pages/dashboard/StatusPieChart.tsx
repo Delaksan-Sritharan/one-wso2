@@ -18,7 +18,7 @@ import { PieChart } from "@wso2/oxygen-ui-charts-react";
 import { Typography } from "@wso2/oxygen-ui";
 import type { JSX } from "react";
 import type { RiskStatusSummary } from "../../api/riskApi";
-import { CLOSED_COLOR, OPEN_COLOR, type OnDrillDown } from "./constants";
+import { CHART_ANIMATION_MS, CLOSED_COLOR, OPEN_COLOR, type OnDrillDown } from "./constants";
 
 interface StatusPieChartProps {
   summary: RiskStatusSummary;
@@ -46,7 +46,7 @@ export default function StatusPieChart({ summary, onDrillDown, registerId }: Sta
       data={data}
       height={320}
       colors={[OPEN_COLOR, CLOSED_COLOR]}
-      isAnimationActive={false}
+      animationDuration={CHART_ANIMATION_MS}
       pies={[
         {
           dataKey: "value",

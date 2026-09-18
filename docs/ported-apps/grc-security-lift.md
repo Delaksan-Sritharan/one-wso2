@@ -172,6 +172,23 @@ So refreshing is a three-step merge, not a copy:
 
 `AddRisk.tsx` has now been through this once (§4.5) and it worked.
 
+### 3b. Forward-ported: ahead of the pin, not deviations
+
+Two changes were written in grc-tools and copied here **before** they merged
+there, so 14 Risk files are currently AHEAD of the pin rather than equal to it.
+A drift check will flag them; that is expected, and the entry disappears once
+grc-tools merges them and the pin moves. Neither needs re-applying on a refresh
+— unlike E1–E8, the source will already contain them.
+
+| Change | Files |
+|---|---|
+| **Chart animation at 400ms.** `CHART_ANIMATION_MS` in `dashboard/constants.ts`, replacing `isAnimationActive={false}` at all 14 of its sites with `animationDuration` at 13 — `RegisterTrendChart` set it per line AND chart-wide, and the wrapper already falls back (`line.animationDuration ?? animationDuration`). The charts had animation switched off entirely, which made Risk the only perspective here whose charts never moved | `dashboard/constants.ts` + 12 chart files under `dashboard/` and `analytics/` |
+| **Residual Level filter widened** 130 → 170, so the unshrunk label clears the select's arrow (measured: they overlapped by 3px) | `RiskRegisters.tsx` |
+
+If grc-tools changes either of them before merging, re-copy from source rather
+than reconciling by hand — these files carry no E-deviation, so a plain refresh
+is safe for them.
+
 ## 4. Issues the lift surfaced
 
 The brief was to list what lifting found that a rewrite would also have found.
