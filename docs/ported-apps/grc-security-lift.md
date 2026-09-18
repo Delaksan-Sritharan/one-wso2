@@ -176,18 +176,26 @@ So refreshing is a three-step merge, not a copy:
 
 Two changes were written in grc-tools and copied here **before** they merged
 there, so 14 Risk files are currently AHEAD of the pin rather than equal to it.
-A drift check will flag them; that is expected, and the entry disappears once
-grc-tools merges them and the pin moves. Neither needs re-applying on a refresh
-— unlike E1–E8, the source will already contain them.
+A drift check will flag them; that is expected, and §4.5 excepts them by name.
+
+**Until grc-tools merges them, treat them exactly like an E-deviation.** The pin
+`8c002b9` does not contain them, so re-lifting any of these 14 files from the
+pinned source silently reverts them — the §3a failure, with nothing failing to
+announce it. Re-apply from the table below, or copy from a grc-tools revision
+that already carries them.
+
+Once grc-tools merges them and the pin moves, this section is deleted: the
+source will contain them, the files match again, and there is nothing to
+re-apply.
 
 | Change | Files |
 |---|---|
 | **Chart animation at 400ms.** `CHART_ANIMATION_MS` in `dashboard/constants.ts`, replacing `isAnimationActive={false}` at all 14 of its sites with `animationDuration` at 13 — `RegisterTrendChart` set it per line AND chart-wide, and the wrapper already falls back (`line.animationDuration ?? animationDuration`). The charts had animation switched off entirely, which made Risk the only perspective here whose charts never moved | `dashboard/constants.ts` + 12 chart files under `dashboard/` and `analytics/` |
 | **Residual Level filter widened** 130 → 170, so the unshrunk label clears the select's arrow (measured: they overlapped by 3px) | `RiskRegisters.tsx` |
 
-If grc-tools changes either of them before merging, re-copy from source rather
-than reconciling by hand — these files carry no E-deviation, so a plain refresh
-is safe for them.
+None of these 14 files carries an E1–E8 deviation, so re-applying is the whole
+of the merge for them: refresh from source, then re-add the change from this
+table.
 
 ## 4. Issues the lift surfaced
 
@@ -364,8 +372,14 @@ Only a diff finds it, so repeat this one while both apps are live: for each file
 under `features/security/grc`, reverse the alias rewrite (`@features/security/grc/…`
 back to `@modules/`, `@components/`, and the two `shim/` paths to `@config/apiConfig`
 and `@hooks/useAuthApiClient`) and compare against the same path under
-`grc-tools/apps/grc-platform/webapp/src`. Everything should match except the
-files listed in §3 — those carry E1–E8. Anything else is drift.
+`grc-tools/apps/grc-platform/webapp/src`. Everything should match except:
+
+- the files listed in §3, which carry E1–E8; and
+- the 14 files listed in §3b, which are forward-ported and therefore AHEAD of
+  the pin until grc-tools merges them — at which point §3b goes away and this
+  exception with it.
+
+Anything else is drift.
 
 ### 4.6 What the Audit Hub lift got right that the others did not
 
