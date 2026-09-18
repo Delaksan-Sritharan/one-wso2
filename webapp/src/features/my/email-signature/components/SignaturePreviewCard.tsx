@@ -89,15 +89,17 @@ export default function SignaturePreviewCard({ data }: { data: SignatureData }) 
             Email preview
           </Typography>
         </Box>
-        <Box sx={{ bgcolor: "background.paper", p: 3, minHeight: 150 }}>
+        {/* Hardcoded white, not `background.paper`: this simulates an email
+            client's canvas, which is always light regardless of app theme,
+            and the signature HTML's text colors are hardcoded to match. */}
+        <Box sx={{ bgcolor: "#ffffff", p: 3, minHeight: 150 }}>
           {hasContent ? (
             <div dangerouslySetInnerHTML={{ __html: signatureHTML }} />
           ) : (
             <Typography
               variant="body2"
-              color="text.secondary"
+              sx={{ color: "rgba(0, 0, 0, 0.6)", fontStyle: "italic", pt: 5 }}
               align="center"
-              sx={{ fontStyle: "italic", pt: 5 }}
             >
               Fill in your name or designation to see a preview.
             </Typography>
