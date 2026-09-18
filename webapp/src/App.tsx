@@ -31,7 +31,11 @@ import MySubscriptionsPage from "@features/subscriptions/pages/MySubscriptionsPa
 import ManageSubscriptionsPage from "@features/subscriptions/pages/ManageSubscriptionsPage";
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
-import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par/pages/ParGroupPage";
+import ParGroupPage, {
+  ParGroupIndex,
+  ParRequiresActiveCycleRoute,
+  ParRequiresLeadRoute,
+} from "@features/par/pages/ParGroupPage";
 import ParLeadGroupPage, { ParLeadGroupIndex, ParRequiresTeamLeadRoute } from "@features/par/pages/ParLeadGroupPage";
 // Lazy on purpose, same reasoning as the leave report tabs below —
 // react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
@@ -355,33 +359,41 @@ export default function App() {
               {/* Employee Feedback and Request 360° are hidden from a leadless
                   employee entirely in the source (OngoingCycleView.tsx), not
                   merely disabled — ParRequiresLeadRoute enforces that at the
-                  route, the same way the tab bar itself is filtered. */}
+                  route, the same way the tab bar itself is filtered.
+                  ParRequiresActiveCycleRoute wraps every tab but History:
+                  none of them has anything to act on once the cycle closes. */}
               <Route
                 path="employee-feedback"
                 element={
-                  <ParRequiresLeadRoute>
-                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                      <ParEmployeeFeedbackTab />
-                    </Suspense>
-                  </ParRequiresLeadRoute>
+                  <ParRequiresActiveCycleRoute>
+                    <ParRequiresLeadRoute>
+                      <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                        <ParEmployeeFeedbackTab />
+                      </Suspense>
+                    </ParRequiresLeadRoute>
+                  </ParRequiresActiveCycleRoute>
                 }
               />
               <Route
                 path="request-360"
                 element={
-                  <ParRequiresLeadRoute>
-                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                      <ParRequestFeedbackTab />
-                    </Suspense>
-                  </ParRequiresLeadRoute>
+                  <ParRequiresActiveCycleRoute>
+                    <ParRequiresLeadRoute>
+                      <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                        <ParRequestFeedbackTab />
+                      </Suspense>
+                    </ParRequiresLeadRoute>
+                  </ParRequiresActiveCycleRoute>
                 }
               />
               <Route
                 path="provide-360"
                 element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParProvideFeedbackTab />
-                  </Suspense>
+                  <ParRequiresActiveCycleRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParProvideFeedbackTab />
+                    </Suspense>
+                  </ParRequiresActiveCycleRoute>
                 }
               />
               {/* F2F is leadless-gated too — OngoingCycleView.tsx's leadless
@@ -390,11 +402,13 @@ export default function App() {
               <Route
                 path="f2f"
                 element={
-                  <ParRequiresLeadRoute>
-                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                      <ParF2fTab />
-                    </Suspense>
-                  </ParRequiresLeadRoute>
+                  <ParRequiresActiveCycleRoute>
+                    <ParRequiresLeadRoute>
+                      <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                        <ParF2fTab />
+                      </Suspense>
+                    </ParRequiresLeadRoute>
+                  </ParRequiresActiveCycleRoute>
                 }
               />
               <Route

@@ -94,6 +94,27 @@ export function useParIsTeamLead(workEmail: string | undefined, enabled = true) 
   };
 }
 
+/**
+ * Whether the signed-in employee currently has an OPEN par cycle — drives
+ * ParGroupPage.tsx's tab-set gate down to just PAR History when there isn't
+ * one, since every other tab (Employee Feedback, Request/Provide 360°, F2F)
+ * only makes sense inside a running cycle.
+ *
+ * Fails OPEN, same reasoning and shape as useParHasLead: true unless the
+ * fetch has actually succeeded and come back with no OPEN cycles. A slow or
+ * failed fetch must never hide tabs that would otherwise be available.
+ */
+export function useParHasActiveCycle(
+  workEmail: string | undefined,
+  workEmailLoading: boolean,
+): { isActive: boolean; isLoading: boolean } {
+  const cycles = useActiveParCycle(workEmail);
+  return {
+    isActive: !(cycles.isSuccess && cycles.data.length === 0),
+    isLoading: workEmailLoading,
+  };
+}
+
 // Returns the caller's currently-OPEN par cycle (if any). Non-lead/non-admin
 // callers can only query their own email; backend enforces that.
 export function useActiveParCycle(workEmail: string | undefined) {
