@@ -30,7 +30,7 @@ import {
 } from "@wso2/oxygen-ui";
 import { humanizeHttpError } from "@api/http";
 import type { PromotionHistoryEntry, PromotionType } from "../api/types";
-import { formatDate } from "../api/derive";
+import { formatDate, sortPromotionsByBand } from "../api/derive";
 import { usePromotionHistory } from "../api/usePromotionHistory";
 
 // "View promotion history" popup. Fetches on open only (query gated by
@@ -49,18 +49,14 @@ export default function PromotionHistoryDialog({
 }) {
   const query = usePromotionHistory(workEmail, open);
 
-  // Newest first — backend order isn't guaranteed. Fall back to id when
-  // updatedOn is missing (shouldn't happen, but a defensive sort key
-  // keeps rendering stable).
-  const entries = useMemo<PromotionHistoryEntry[]>(() => {
-    const list = query.data?.promotionRequests ?? [];
-    return [...list].sort((a, b) => {
-      const ta = a.updatedOn ? Date.parse(a.updatedOn) : 0;
-      const tb = b.updatedOn ? Date.parse(b.updatedOn) : 0;
-      if (tb !== ta) return tb - ta;
-      return b.id - a.id;
-    });
-  }, [query.data]);
+  // Newest first — backend order isn't guaranteed. Ordered by job band
+  // rather than updatedOn so this list agrees with the "Last promotion"
+  // line on the profile card, which names entries[0]; see
+  // sortPromotionsByBand for why the band is the reliable sort key.
+  const entries = useMemo<PromotionHistoryEntry[]>(
+    () => sortPromotionsByBand(query.data?.promotionRequests ?? []),
+    [query.data],
+  );
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
