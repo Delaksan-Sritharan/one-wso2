@@ -106,12 +106,15 @@ export default function ParEmployeeHistoryView({
 
   // "No record" wording stays deliberately vague: the backend can't tell "no
   // rating exists for this cycle" apart from a genuine fetch error here.
-  const realCycleNotAvailable = isRealCycle && (rating.isError || reviews.isError || (rating.isSuccess && !rating.data));
+  // Scoped to `rating` alone — a failed or still-loading `reviews` fetch is
+  // its own, separate state handled inside the 360° feedback section below,
+  // not a reason to hide the PAR record itself.
+  const realCycleNotAvailable = isRealCycle && (rating.isError || (rating.isSuccess && !rating.data));
   const legacyCycleNotAvailable = isLegacyCycle && legacyHistory.isSuccess && !selectedLegacyRecord;
 
-  const showRealDetails = isRealCycle && rating.isSuccess && Boolean(rating.data) && reviews.isSuccess;
+  const showRealDetails = isRealCycle && rating.isSuccess && Boolean(rating.data);
   const showLegacyDetails = isLegacyCycle && Boolean(selectedLegacyRecord);
-  const isLoadingSelection = (isRealCycle && (rating.isLoading || reviews.isLoading)) || (isLegacyCycle && legacyHistory.isLoading);
+  const isLoadingSelection = (isRealCycle && rating.isLoading) || (isLegacyCycle && legacyHistory.isLoading);
 
   return (
     <Stack spacing={2}>
@@ -198,12 +201,9 @@ export default function ParEmployeeHistoryView({
 
           <Divider />
 
-          {/* Both accordions share one combined condition: disabled only
-              when BOTH sides are empty, expanded only when BOTH have
-              content. */}
           <Accordion
-            disabled={!legacyEmployeeContent && !legacyLeadContent}
-            defaultExpanded={Boolean(legacyEmployeeContent) && Boolean(legacyLeadContent)}
+            disabled={!legacyEmployeeContent}
+            defaultExpanded={Boolean(legacyEmployeeContent)}
             sx={{ mt: 1 }}
           >
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Employee PAR</AccordionSummary>
@@ -213,8 +213,8 @@ export default function ParEmployeeHistoryView({
             </AccordionDetails>
           </Accordion>
           <Accordion
-            disabled={!legacyEmployeeContent && !legacyLeadContent}
-            defaultExpanded={Boolean(legacyEmployeeContent) && Boolean(legacyLeadContent)}
+            disabled={!legacyLeadContent}
+            defaultExpanded={Boolean(legacyLeadContent)}
             sx={{ mt: 1 }}
           >
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Lead's Feedback</AccordionSummary>
@@ -266,8 +266,8 @@ export default function ParEmployeeHistoryView({
           <Divider />
 
           <Accordion
-            disabled={!rating.data.parEmployeeComment?.trim() && !rating.data.parLeadComment?.trim()}
-            defaultExpanded={Boolean(rating.data.parEmployeeComment?.trim()) && Boolean(rating.data.parLeadComment?.trim())}
+            disabled={!rating.data.parEmployeeComment?.trim()}
+            defaultExpanded={Boolean(rating.data.parEmployeeComment?.trim())}
             sx={{ mt: 1 }}
           >
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Employee PAR</AccordionSummary>
@@ -277,8 +277,8 @@ export default function ParEmployeeHistoryView({
             </AccordionDetails>
           </Accordion>
           <Accordion
-            disabled={!rating.data.parEmployeeComment?.trim() && !rating.data.parLeadComment?.trim()}
-            defaultExpanded={Boolean(rating.data.parEmployeeComment?.trim()) && Boolean(rating.data.parLeadComment?.trim())}
+            disabled={!rating.data.parLeadComment?.trim()}
+            defaultExpanded={Boolean(rating.data.parLeadComment?.trim())}
             sx={{ mt: 1 }}
           >
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Lead's Feedback</AccordionSummary>
@@ -290,7 +290,15 @@ export default function ParEmployeeHistoryView({
 
           <Divider />
 
-          <ParHistoryReviewSection reviews={reviews.data ?? []} />
+          {reviews.isLoading ? (
+            <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 1.5 }} />
+          ) : reviews.isError ? (
+            <ErrorNotice error={reviews.error} onRetry={() => reviews.refetch()} retrying={reviews.isFetching}>
+              Couldn't load this employee's 360° feedback.
+            </ErrorNotice>
+          ) : (
+            <ParHistoryReviewSection reviews={reviews.data ?? []} />
+          )}
         </Stack>
       )}
     </Stack>

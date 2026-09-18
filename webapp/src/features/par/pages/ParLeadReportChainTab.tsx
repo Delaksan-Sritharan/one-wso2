@@ -137,6 +137,7 @@ export default function ParLeadReportChainTab() {
           <Box
             role="button"
             tabIndex={0}
+            aria-label={`Open review for ${params.row.parEmployeeName}`}
             onClick={() => setReviewEmployeeEmail(params.row.parEmployeeEmail)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
