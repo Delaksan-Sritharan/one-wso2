@@ -85,3 +85,46 @@ export function utilizationPercent(percentUsed: number): number {
 export function claimLimitOf(rows: OpdUtilizationRow[]): number | null {
   return rows.length > 0 ? rows[0].claimLimit : null;
 }
+
+/**
+ * The response, made safe to render.
+ *
+ * `authedGet<OpdDashboardSummary>` only parses JSON — the type parameter is a
+ * claim about the body, not a check on it. A response that omits `utilization`,
+ * or sends it as null, would reach `claimLimitOf`, which reads `.length` and
+ * throws before anything renders: a blank screen for a missing field.
+ *
+ * So every field is coerced at the boundary. A missing count becomes 0 and a
+ * missing list becomes empty, both of which the screen already knows how to
+ * draw, rather than a figure invented to look plausible.
+ */
+export function normalizeDashboardSummary(raw: unknown): OpdDashboardSummary {
+  const body = (raw ?? {}) as Partial<Record<keyof OpdDashboardSummary, unknown>>;
+  const count = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0);
+  const rows = Array.isArray(body.utilization) ? (body.utilization as unknown[]) : [];
+
+  return {
+    claimsProcessed: count(body.claimsProcessed),
+    claimsPending: count(body.claimsPending),
+    valueProcessed: count(body.valueProcessed),
+    valuePending: count(body.valuePending),
+    employeesSubmittedThisYear: count(body.employeesSubmittedThisYear),
+    employeesSubmittedLastYear: count(body.employeesSubmittedLastYear),
+    employeesFullyUtilizedThisYear: count(body.employeesFullyUtilizedThisYear),
+    employeesFullyUtilizedLastYear: count(body.employeesFullyUtilizedLastYear),
+    // A row with no email is dropped: it is the table's key, and two of them
+    // would collide. Names are optional — `utilizationName` falls back to the
+    // email — but an unidentifiable row says nothing to anyone.
+    utilization: rows
+      .map((row) => (row ?? {}) as Partial<Record<keyof OpdUtilizationRow, unknown>>)
+      .filter((row): row is Record<string, unknown> => typeof row.employeeEmail === "string" && row.employeeEmail !== "")
+      .map((row) => ({
+        employeeEmail: String(row.employeeEmail),
+        firstName: typeof row.firstName === "string" ? row.firstName : "",
+        lastName: typeof row.lastName === "string" ? row.lastName : "",
+        submittedAmount: count(row.submittedAmount),
+        claimLimit: count(row.claimLimit),
+        percentUsed: count(row.percentUsed),
+      })),
+  };
+}

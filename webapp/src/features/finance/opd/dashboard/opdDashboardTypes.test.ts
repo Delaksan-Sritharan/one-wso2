@@ -17,6 +17,7 @@
 import { describe, it, expect } from "vitest";
 import {
   claimLimitOf,
+  normalizeDashboardSummary,
   utilizationName,
   utilizationPercent,
   utilizationTone,
@@ -99,5 +100,81 @@ describe("the limit quoted beside the title", () => {
   // figure on screen the backend never said.
   it("is absent when nobody has claimed", () => {
     expect(claimLimitOf([])).toBeNull();
+  });
+});
+
+// authedGet's type parameter is a claim about the body, not a check on it. A
+// missing `utilization` reached claimLimitOf, which reads `.length`, and took
+// the screen down rather than rendering an empty table.
+describe("making the response safe to render", () => {
+  it("survives a body with nothing in it", () => {
+    const summary = normalizeDashboardSummary({});
+    expect(summary.utilization).toEqual([]);
+    expect(summary.claimsProcessed).toBe(0);
+    expect(claimLimitOf(summary.utilization)).toBeNull();
+  });
+
+  it("survives a null body", () => {
+    expect(normalizeDashboardSummary(null).utilization).toEqual([]);
+  });
+
+  it("treats a null utilization as no rows", () => {
+    expect(normalizeDashboardSummary({ utilization: null }).utilization).toEqual([]);
+  });
+
+  it("keeps the figures it was actually given", () => {
+    const summary = normalizeDashboardSummary({
+      claimsProcessed: 6,
+      valuePending: 172342.2,
+      utilization: [
+        { employeeEmail: "a@wso2.com", firstName: "A", lastName: "B", submittedAmount: 10, claimLimit: 40000, percentUsed: 0.025 },
+      ],
+    });
+    expect(summary.claimsProcessed).toBe(6);
+    expect(summary.valuePending).toBe(172342.2);
+    expect(summary.utilization).toHaveLength(1);
+  });
+
+  it("drops a row with no email, since that is the table's key", () => {
+    const summary = normalizeDashboardSummary({
+      utilization: [{ firstName: "No" }, { employeeEmail: "a@wso2.com" }],
+    });
+    expect(summary.utilization.map((r) => r.employeeEmail)).toEqual(["a@wso2.com"]);
+  });
+
+  it("fills in a row's missing names and numbers rather than dropping it", () => {
+    const [row] = normalizeDashboardSummary({
+      utilization: [{ employeeEmail: "a@wso2.com" }],
+    }).utilization;
+    expect(row).toEqual({
+      employeeEmail: "a@wso2.com",
+      firstName: "",
+      lastName: "",
+      submittedAmount: 0,
+      claimLimit: 0,
+      percentUsed: 0,
+    });
+  });
+
+  it("refuses a non-finite figure", () => {
+    expect(normalizeDashboardSummary({ claimsPending: Infinity }).claimsPending).toBe(0);
+    expect(normalizeDashboardSummary({ claimsPending: "51" }).claimsPending).toBe(0);
+  });
+});
+
+// The colour band has to classify the number on screen, not the raw one: 89.6
+// prints as 90%, and banding the raw value coloured it amber beside a figure
+// reading 90.
+describe("the band matches the figure shown", () => {
+  it("bands 89.6 the way it is printed", () => {
+    const percent = utilizationPercent(89.6);
+    expect(percent).toBe(90);
+    expect(utilizationTone(percent)).toBe("high");
+  });
+
+  it("bands a non-finite value as the 0% it prints", () => {
+    const percent = utilizationPercent(Infinity);
+    expect(percent).toBe(0);
+    expect(utilizationTone(percent)).toBe("normal");
   });
 });

@@ -21,7 +21,7 @@ import { foldIdentityError, useAsgardeoSub } from "@hooks/useAsgardeoSub";
 import { isOpdBackendConfigured, opdServiceUrls } from "@config/apiConfig";
 import { authedGet } from "@api/http";
 import { financeRetry } from "../../util/financeError";
-import type { OpdDashboardSummary } from "./opdDashboardTypes";
+import { normalizeDashboardSummary, type OpdDashboardSummary } from "./opdDashboardTypes";
 
 /**
  * GET /dashboard-summary — the whole analytics screen in one request.
@@ -44,7 +44,11 @@ export function useOpdDashboardSummary(enabled = true) {
     enabled: enabled && isSignedIn && configured && Boolean(userSub),
     queryFn: async () => {
       const accessToken = await getAccessToken();
-      return authedGet<OpdDashboardSummary>(opdServiceUrls.dashboardSummary, accessToken);
+      // Coerced here rather than trusted: the type parameter on `authedGet` is
+      // a claim about the body, not a check on it, and a missing `utilization`
+      // would take the screen down rather than render empty.
+      const body = await authedGet<unknown>(opdServiceUrls.dashboardSummary, accessToken);
+      return normalizeDashboardSummary(body);
     },
     staleTime: 5 * 60 * 1000,
     retry: financeRetry,

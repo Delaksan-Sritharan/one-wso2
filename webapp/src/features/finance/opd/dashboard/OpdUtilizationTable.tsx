@@ -53,7 +53,15 @@ const TONE_COLOR = {
 export function OpdUtilizationTable({ rows }: { rows: OpdUtilizationRow[] }) {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(ROWS_PER_PAGE_OPTIONS[0]);
-  const paged = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  // Clamped at render rather than corrected in an effect. A refetch can return
+  // fewer rows than the page the reader is standing on — somebody's claims were
+  // withdrawn, or a filter narrowed upstream — and the stored page would then
+  // slice past the end and show an empty table under a non-zero row count.
+  // Doing it here means no second render and no setState during an effect.
+  const lastPage = Math.max(0, Math.ceil(rows.length / rowsPerPage) - 1);
+  const safePage = Math.min(page, lastPage);
+  const paged = rows.slice(safePage * rowsPerPage, safePage * rowsPerPage + rowsPerPage);
 
   return (
     <>
@@ -75,6 +83,9 @@ export function OpdUtilizationTable({ rows }: { rows: OpdUtilizationRow[] }) {
               </TableRow>
             ) : (
               paged.map((row) => {
+                // Banded on the value the reader sees, not the raw one: 89.6
+                // prints as 90%, and a band read off 89.6 would colour it amber
+                // while the figure beside it says 90.
                 const percent = utilizationPercent(row.percentUsed);
                 return (
                   <TableRow key={row.employeeEmail} hover>
@@ -91,7 +102,7 @@ export function OpdUtilizationTable({ rows }: { rows: OpdUtilizationRow[] }) {
                         ...CELL_SX,
                         fontWeight: 600,
                         fontVariantNumeric: "tabular-nums",
-                        color: TONE_COLOR[utilizationTone(row.percentUsed)],
+                        color: TONE_COLOR[utilizationTone(percent)],
                       }}
                       align="right"
                     >
@@ -110,7 +121,7 @@ export function OpdUtilizationTable({ rows }: { rows: OpdUtilizationRow[] }) {
         <TablePagination
           component="div"
           count={rows.length}
-          page={page}
+          page={safePage}
           onPageChange={(_e, next) => setPage(next)}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={(e) => {
