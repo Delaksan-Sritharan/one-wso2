@@ -82,6 +82,12 @@ export interface ParRating {
   parRatingId: number;
   parCycleId: number;
   parEmployeeEmail: string;
+  // The employee's display name. Required in the source app's own ParRating
+  // (par-app/webapp/src/utils/types.ts), so the wire does carry it — optional
+  // here for the same reason parBusinessUnit and the rest below are: this
+  // backend omits fields in some states, and the only reader already falls
+  // back to the email.
+  parEmployeeName?: string;
   parLeadEmail?: string;
   // Present on the wire but unused until now — the History tab's "Team"
   // info row (EmployeeHistoryView.tsx's own parTeam/parDepartment) and

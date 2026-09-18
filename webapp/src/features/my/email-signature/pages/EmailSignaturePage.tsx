@@ -15,8 +15,7 @@
 // under the License.
 
 import { useState } from "react";
-import { Box, Chip, Typography } from "@wso2/oxygen-ui";
-import { SignatureIcon } from "@wso2/oxygen-ui-icons-react";
+import { Box, Typography } from "@wso2/oxygen-ui";
 import { useUserInfo } from "@api/useUserInfo";
 import SignatureFieldsForm from "../components/SignatureFieldsForm";
 import SignaturePreviewCard from "../components/SignaturePreviewCard";
@@ -26,17 +25,6 @@ import { EMPTY_SIGNATURE_DATA, type SignatureData } from "../util/signatureGener
 // unlike display:none/visibility:hidden, this keeps it in the accessibility
 // tree, so assistive tech still sees it while sighted users don't. Same
 // pattern as OrgChartShell / EmailGroupsShell.
-const visuallyHidden = {
-  border: 0,
-  clip: "rect(0 0 0 0)",
-  height: "1px",
-  margin: "-1px",
-  overflow: "hidden",
-  padding: 0,
-  position: "absolute",
-  width: "1px",
-} as const;
-
 // A WSO2 email signature, built and previewed entirely client-side — there
 // is no backend here at all, unlike every other screen under Me. Ported from
 // the standalone Email Group Manager app's second tab (its group-subscription
@@ -87,20 +75,16 @@ export default function EmailSignaturePage() {
 
   return (
     <Box>
-      <Chip
-        icon={<SignatureIcon size={14} />}
-        label="Email Signature"
-        color="primary"
-        variant="outlined"
-        size="small"
-        sx={{ mb: 0.5 }}
-      />
-      {/* Visually hidden rather than dropped: the eyebrow Chip above already
-          shows the page's name, so a second, visible heading directly under
-          it read as a duplicate — but removing the h1 outright would leave
-          the page with no heading at all for assistive tech, since the Chip
-          (a div) contributes none. */}
-      <Typography component="h1" variant="h5" sx={visuallyHidden}>
+      {/* A real, VISIBLE h1. This used to be visually hidden with a Chip above
+          it carrying the same words — the duplicate was real, but hiding the
+          heading fixed the wrong half of it. The rail is collapsible, and
+          collapsing sets every label to `opacity: 0; width: 0`, so with it
+          collapsed this title is the only text naming where you are. The chip
+          was the redundant half, and it is gone.
+
+          A parent chip earns its place only above a title that would not
+          identify the screen alone — "Dashboard", "History", "Settings". */}
+      <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
         Email Signature
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, mb: 2.25, maxWidth: "70ch" }}>

@@ -97,3 +97,27 @@ describe("the UMT perspective", () => {
     }
   });
 });
+
+describe("perspectives whose landing forwards to the first rail item", () => {
+  // The flag is only meaningful on a perspective that HAS a landing route and
+  // HAS rows to forward to. Set on one without sections it would mean everyone
+  // sees "Nothing here for you yet", permanently, with no way to tell that
+  // from a privilege problem.
+  it("only ever sits on a perspective with a route and sections", async () => {
+    const { PERSPECTIVES } = await load({ par: true, umt: true });
+    const forwarding = PERSPECTIVES.filter((p) => p.forwardsToFirstItem);
+    expect(forwarding.length).toBeGreaterThan(0);
+    for (const p of forwarding) {
+      expect(p.path, `${p.key} forwards but has no route`).toBeTruthy();
+      expect(p.sections?.length, `${p.key} forwards but has no sections`).toBeTruthy();
+    }
+  });
+
+  // Me's landing is the person's own profile — a page someone stops and reads,
+  // so it keeps its Overview row. This fails if a later pass sweeps it up with
+  // the rest.
+  it("leaves Me alone", async () => {
+    const { PERSPECTIVES } = await load({ par: true, umt: true });
+    expect(PERSPECTIVES.find((p) => p.key === "me")?.forwardsToFirstItem).toBeUndefined();
+  });
+});

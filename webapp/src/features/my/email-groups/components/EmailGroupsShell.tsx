@@ -14,38 +14,24 @@
 // specific language governing permissions and limitations
 // under the License.
 import type { ReactNode } from "react";
-import { Alert, Box, Chip, Typography } from "@wso2/oxygen-ui";
-import type { LucideIcon } from "@wso2/oxygen-ui-icons-react";
+import { Alert, Box, Typography } from "@wso2/oxygen-ui";
 
 // Shrinks an element to a 1x1px clipped box instead of hiding it outright —
 // unlike display:none/visibility:hidden, this keeps it in the accessibility
 // tree, so assistive tech still sees it while sighted users don't. Same
 // pattern as OrgChartShell.
-const visuallyHidden = {
-  border: 0,
-  clip: "rect(0 0 0 0)",
-  height: "1px",
-  margin: "-1px",
-  overflow: "hidden",
-  padding: 0,
-  position: "absolute",
-  width: "1px",
-} as const;
-
 // Page frame: eyebrow chip, title, subtitle, and the one place the "backend
 // not connected" state is rendered. Same shape as MenuShell/FinanceShell —
 // see MenuShell's comment for why each feature carries its own copy rather
 // than sharing one: small enough that a shared abstraction would cost more
 // to thread props through than it saves.
 export default function EmailGroupsShell({
-  eyebrow,
   title,
   subtitle,
   configured,
   configKey,
   children,
 }: {
-  eyebrow: { icon: LucideIcon; label: string };
   title: string;
   subtitle?: string;
   configured: boolean;
@@ -54,23 +40,16 @@ export default function EmailGroupsShell({
 }) {
   return (
     <Box>
-      <Chip
-        icon={<eyebrow.icon size={14} />}
-        label={eyebrow.label}
-        color="primary"
-        // Outlined, not filled: white-on-orange at chip text sizes is ~3.6:1 and
-        // fails WCAG AA. Outlined routes through the a11y overlay, which shifts
-        // the label and border to primary.dark in light mode.
-        variant="outlined"
-        size="small"
-        sx={{ mb: 0.5 }}
-      />
-      {/* Visually hidden rather than dropped: the eyebrow Chip above already
-          shows the page's name, so a second, visible heading directly under
-          it read as a duplicate — but removing the h1 outright would leave
-          the page with no heading at all for assistive tech, since the Chip
-          (a div) contributes none. */}
-      <Typography component="h1" variant="h5" sx={visuallyHidden}>
+      {/* A real, VISIBLE h1. This used to be visually hidden with a Chip above
+          it carrying the same words — the duplicate was real, but hiding the
+          heading fixed the wrong half of it. The rail is collapsible, and
+          collapsing sets every label to `opacity: 0; width: 0`, so with it
+          collapsed this title is the only text naming where you are. The chip
+          was the redundant half, and it is gone.
+
+          A parent chip earns its place only above a title that would not
+          identify the screen alone — "Dashboard", "History", "Settings". */}
+      <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
         {title}
       </Typography>
       {subtitle && (
