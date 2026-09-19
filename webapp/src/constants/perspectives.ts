@@ -168,6 +168,13 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
               label: "Lead Portal",
               path: "/people-ops/performance/lead",
             },
+            // Same treatment as Lead Portal above: gated via
+            // PAR_ADMIN_PORTAL_ITEM_ID / useParIsAdmin, not `requires`.
+            {
+              id: "par-admin-portal",
+              label: "Admin Portal",
+              path: "/people-ops/performance/admin",
+            },
           ],
         },
       ]
@@ -262,6 +269,9 @@ export const SUBSCRIPTION_ITEM_IDS: ReadonlySet<string> = new Set([
  * on the section itself, above.
  */
 export const PAR_LEAD_PORTAL_ITEM_ID = "par-lead-portal";
+
+/** Same idea, for the Admin Portal — gated via useParIsAdmin. */
+export const PAR_ADMIN_PORTAL_ITEM_ID = "par-admin-portal";
 
 // Marketing Ops. Built from the registry now so the rail is ready, but the
 // perspective itself stays locked (`access: false` below) until Phase 1

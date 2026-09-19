@@ -16,6 +16,7 @@
 
 import { useMemo } from "react";
 import {
+  PAR_ADMIN_PORTAL_ITEM_ID,
   PAR_LEAD_PORTAL_ITEM_ID,
   SRI_LANKA_ONLY_ITEM_IDS,
   SUBSCRIPTION_ITEM_IDS,
@@ -35,6 +36,7 @@ import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligence
 import { useSecurityGate } from "@features/security/api/useSecurityGate";
 import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
 import { useParIsTeamLead } from "@features/par/api/useParData";
+import { useParIsAdmin } from "@features/par/api/useParIsAdmin";
 import { isSriLankaWorkLocation } from "@utils/locationGate";
 import { visibleLeavesOf } from "./railActive";
 
@@ -153,6 +155,10 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // same as `isTeamLead` itself already does for the route guard.
   const parLeadPortalGate = useParIsTeamLead(userInfo.data?.workEmail, isPeopleOps);
 
+  // Admin Portal's own gate — a JWT decode, not a backend call, so unlike
+  // every gate above there's no per-perspective fetch to avoid by disabling it.
+  const parAdminPortalGate = useParIsAdmin();
+
   // Both services are a Colombo-office perk, so both screens are Sri-Lanka-only
   // — see isSriLankaWorkLocation. They now sit in different perspectives (self
   // service under Me, manage-on-behalf under People Ops), which is why the ids
@@ -193,6 +199,7 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
     if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
     if (s.id === PAR_LEAD_PORTAL_ITEM_ID) return parLeadPortalGate.isTeamLead;
+    if (s.id === PAR_ADMIN_PORTAL_ITEM_ID) return parAdminPortalGate.isAdmin;
     if (isMarketingOps) return marketingOpsGate.canSee(s.id);
     return sectionAllowed(s.requires, caps);
   };
@@ -215,7 +222,8 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     dueDiligenceGate.isResolving ||
     securityGate.isResolving ||
     subscriptionGate.isResolving ||
-    parLeadPortalGate.isLoading;
+    parLeadPortalGate.isLoading ||
+    parAdminPortalGate.isLoading;
 
   const isError =
     userInfo.isError ||
