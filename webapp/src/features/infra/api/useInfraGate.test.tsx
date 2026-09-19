@@ -22,7 +22,12 @@ import { renderHook } from "@testing-library/react";
 // fetches. The gate has to read the second one, or a caller that switched it
 // off would be told forever that it is mid-flight.
 const userInfo: { data?: unknown; isPending?: boolean; isLoading?: boolean } = {};
-vi.mock("./useInfraUserInfo", () => ({ useInfraUserInfo: () => userInfo }));
+const backend = { configured: true };
+
+vi.mock("./useInfraUserInfo", () => ({
+  useInfraUserInfo: () => userInfo,
+  isInfraBackendConfigured: () => backend.configured,
+}));
 
 const { useInfraGate } = await import("./useInfraGate");
 const { INFRA_PRIVILEGE } = await import("./infraTypes");
@@ -137,5 +142,20 @@ describe("while identity is still resolving", () => {
     const gate = renderHook(() => useInfraGate()).result.current;
     expect(gate.isResolving).toBe(true);
     expect(gate.canSee("infra-github-review-requests")).toBe(false);
+  });
+
+  it("is inert when the Infra backend is unconfigured", () => {
+    backend.configured = false;
+    userInfo.data = undefined;
+    userInfo.isPending = true;
+  
+    const gate = renderHook(() => useInfraGate()).result.current;
+  
+    expect(gate.isResolving).toBe(false);
+    expect(gate.isForbidden).toBe(false);
+    expect(gate.isError).toBe(false);
+    expect(gate.errorMessage).toBeUndefined();
+  
+    backend.configured = true;
   });
 });
