@@ -74,31 +74,41 @@ export const ME_FINANCE_APPS: readonly MenuApp[] = [
  * dashboard sits behind a group you open to file or reconcile something, which
  * is not what you came for when you wanted the numbers.
  *
- * One entry today. The OPD and expense dashboards belong here too.
+ * One entry today. The OPD and expense dashboards belong here too. Held back
+ * as a whole behind its own preview flag: this is new ground and has not run
+ * against a real account yet.
  */
-export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = [
-  {
-    key: "finance-overview",
-    name: "Overview",
-    icon: LayoutDashboardIcon,
-    purpose: "How the company's card spend and claim allowances are being used.",
-    // One item today and it will not stay that way; collapsing to a leaf now
-    // would teach the wrong shape and make the entry vanish as a concept the
-    // day a second one lands.
-    alwaysGroup: true,
-    items: [
+export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = isPreviewEnabled("financeOverview")
+  ? [
       {
-        // The id is unchanged, so `useFinanceGate`, the rail's active-item
-        // matching and anyone's saved favourite all keep working. Only where it
-        // is listed has moved; the route is the same screen it always was.
-        id: "cc-dashboard",
-        label: "Credit Card Expenses",
-        desc: "Unsubmitted spend, how long it has been sitting, and what has been claimed.",
-        path: `${CC_PATH}/dashboard`,
+        key: "finance-overview",
+        name: "Overview",
+        icon: LayoutDashboardIcon,
+        purpose: "How the company's card spend and claim allowances are being used.",
+        // One item today and it will not stay that way; collapsing to a leaf now
+        // would teach the wrong shape and make the entry vanish as a concept the
+        // day a second one lands.
+        alwaysGroup: true,
+        items: [
+          {
+            // The id is unchanged, so `useFinanceGate`, the rail's active-item
+            // matching and anyone's saved favourite all keep working. Only where
+            // it is listed has moved; the route is the same screen it always was.
+            id: "cc-dashboard",
+            label: "Credit Card Expenses",
+            desc: "Unsubmitted spend, how long it has been sitting, and what has been claimed.",
+            // Not a coarse capability: forces useFinanceGate to answer for the
+            // id — see its `cc-dashboard` case — so the group's own flag is
+            // enforced even if something one day asks the gate by hand,
+            // bypassing this registry entry the way the Finance overview
+            // pattern already does for other items.
+            requires: ["employee"],
+            path: `${CC_PATH}/dashboard`,
+          },
+        ],
       },
-    ],
-  },
-];
+    ]
+  : [];
 
 export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
   {

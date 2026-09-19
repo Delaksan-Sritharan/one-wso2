@@ -204,3 +204,26 @@ describe("a preview-gated item", () => {
     expect(gate().canSee("expense-new")).toBe(true);
   });
 });
+
+// The Overview dashboard tile has no backend role of its own — it is
+// everyone's own numbers — so its group's preview flag is the only gate.
+describe("the Finance Overview dashboard", () => {
+  const originalConfig = window.config;
+  afterEach(() => {
+    window.config = originalConfig;
+  });
+
+  it("is refused when the group's flag is absent", () => {
+    window.config = { ...(window.config ?? {}) } as Window["config"];
+    delete (window.config as { ONE_WSO2_PREVIEW_FEATURES?: unknown }).ONE_WSO2_PREVIEW_FEATURES;
+    expect(gate().canSee("cc-dashboard")).toBe(false);
+  });
+
+  it("is allowed when the group's flag is on", () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { financeOverview: true },
+    } as Window["config"];
+    expect(gate().canSee("cc-dashboard")).toBe(true);
+  });
+});

@@ -298,7 +298,12 @@ export default function App() {
             path="finance/expense-claims/finance-approvals"
             element={<ExpenseApprovalsScreen stage="FINANCE" />}
           />
-          <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
+          {/* Behind the same preview flag as its menu entry under Overview.
+              Hiding only the entry would leave the page reachable by anyone
+              with the URL. */}
+          {isPreviewEnabled("financeOverview") && (
+            <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
+          )}
           <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
           <Route path="finance/cc/pending" element={<CcPendingPage />} />
           <Route path="finance/cc/approve" element={<CcApprovePage />} />

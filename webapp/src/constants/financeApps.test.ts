@@ -25,7 +25,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  */
 type FinanceApps = typeof import("./financeApps");
 
-async function load(preview: { expenseSubmitter?: boolean } = {}): Promise<FinanceApps> {
+async function load(
+  preview: { expenseSubmitter?: boolean; financeOverview?: boolean } = {},
+): Promise<FinanceApps> {
   vi.resetModules();
   window.config = {
     ...(window.config ?? {}),
@@ -106,7 +108,7 @@ describe("where each finance app lives", () => {
   it("puts every app KEY in exactly one of the two", async () => {
     for (const preview of [{}, { expenseSubmitter: true }]) {
       const { FINANCE_APPS, ME_FINANCE_APPS, FINANCE_OVERVIEW_APPS, FINANCE_PERSPECTIVE_APPS } =
-        await load(preview);
+        await load({ ...preview, financeOverview: true });
       const financeSide = [...keys(FINANCE_OVERVIEW_APPS), ...keys(FINANCE_PERSPECTIVE_APPS)];
       const overlap = keys(ME_FINANCE_APPS).filter((k) => financeSide.includes(k));
       expect(overlap).toEqual([]);
@@ -150,5 +152,21 @@ describe("where each finance app lives", () => {
     expect(FINANCE_EYEBROW.claims.label).toBeTruthy();
     expect(FINANCE_EYEBROW.cc.label).toBeTruthy();
     expect(FINANCE_EYEBROW.expense.label).toBeTruthy();
+  });
+});
+
+// Finance Overview is new ground — a Credit Card Expenses dashboard moved out
+// of its own app — and has not run against a real account yet. The whole
+// group is held back, not the one item inside it.
+describe("the Finance Overview preview flag", () => {
+  it("hides the group when the flag is off", async () => {
+    const { FINANCE_OVERVIEW_APPS, FINANCE_APPS } = await load();
+    expect(keys(FINANCE_OVERVIEW_APPS)).toEqual([]);
+    expect(keys(FINANCE_APPS)).not.toContain("finance-overview");
+  });
+
+  it("shows it when the flag is on", async () => {
+    const { FINANCE_OVERVIEW_APPS } = await load({ financeOverview: true });
+    expect(keys(FINANCE_OVERVIEW_APPS)).toEqual(["finance-overview"]);
   });
 });

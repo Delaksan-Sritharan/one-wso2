@@ -95,6 +95,12 @@ export function useFinanceGate(enabled = true): FinanceGate {
         return ccLeadOrFinance;
       case "cc-settings":
         return ccFinance;
+      // Finance → Overview → Credit Card Expenses dashboard. `requires:
+      // ["employee"]` on the registry item exists only to force this case —
+      // it is everyone's own numbers to read, same as the dashboard always
+      // was; the group's own flag is the actual gate.
+      case "cc-dashboard":
+        return isPreviewEnabled("financeOverview");
       default:
         // Per-user views (New / Pending / History) are open; any other item
         // that declares `requires` but reaches here fails closed rather than
