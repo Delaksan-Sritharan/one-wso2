@@ -25,16 +25,20 @@ import ParLeadF2fPanel from "./ParLeadF2fPanel";
 import ParLeadHistoryModal from "./ParLeadHistoryModal";
 import type { ParCycle } from "../api/types";
 
-// par-app's Review.tsx, lead-only path (isAdminAuditViewOn/
-// isAdminHistoryViewOn branches left out — Admin Portal, out of scope).
+// par-app's Review.tsx. `isAdminView` threads through to ParLeadReviewPanel
+// for the Admin Portal's own "Review" action. The admin-only History
+// browsing and "Update Status" tab remain out of scope; unlike source, the
+// 360/F2F tabs and the Par History button stay visible in admin mode too.
 export default function ParLeadReviewTabs({
   cycle,
   employeeEmail,
   onBack,
+  isAdminView = false,
 }: {
   cycle: ParCycle;
   employeeEmail: string;
   onBack: () => void;
+  isAdminView?: boolean;
 }) {
   const rating = useParRating(cycle.parCycleId, employeeEmail);
   const thumbnails = useLeaveEmployees();
@@ -91,7 +95,7 @@ export default function ParLeadReviewTabs({
       </Box>
 
       <Box sx={{ p: "10px 10px 0px 10px" }}>
-        {tab === 0 && <ParLeadReviewPanel cycle={cycle} employeeEmail={employeeEmail} />}
+        {tab === 0 && <ParLeadReviewPanel cycle={cycle} employeeEmail={employeeEmail} isAdminView={isAdminView} />}
         {tab === 1 && (
           <ParLead360ReviewsTab
             cycle={cycle}

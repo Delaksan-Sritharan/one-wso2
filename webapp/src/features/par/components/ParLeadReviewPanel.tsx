@@ -38,7 +38,7 @@ import {
   Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
-import { FileDownIcon } from "@wso2/oxygen-ui-icons-react";
+import { FileDownIcon, PencilIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
@@ -57,15 +57,20 @@ import type { ParCycle } from "../api/types";
 
 const TOP_5_20_ENABLED_RATING = "Successful";
 
-// Ports LeadReviewPanel.tsx's lead-only path (Admin Portal view modes left
-// out). Not ported: evidence attachments (parPerformanceNoticeAck's Google
-// Drive picker — a capability nothing else in this app has).
+// Ports LeadReviewPanel.tsx's lead-only path, plus (via `isAdminView`) its
+// isAdminAuditViewOn branch used from the Admin Portal's Employee View/Team
+// View "Review" action. Not ported even in admin mode: the separate "Admin
+// Comment" field, editing the employee's own comment on their behalf,
+// evidence attachments, and the "Update Status" tab — out of scope for
+// this panel.
 export default function ParLeadReviewPanel({
   cycle,
   employeeEmail,
+  isAdminView = false,
 }: {
   cycle: ParCycle;
   employeeEmail: string;
+  isAdminView?: boolean;
 }) {
   const rating = useParRating(cycle.parCycleId, employeeEmail);
   const ratingUpdate = useLeadRatingUpdate(cycle.parCycleId);
@@ -79,6 +84,11 @@ export default function ParLeadReviewPanel({
   const [seededForId, setSeededForId] = useState<number | undefined>(undefined);
   const [autoSaved, setAutoSaved] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // An admin lands on this panel read-only by default — even for a
+  // still-in-progress DRAFT/PENDING record — and must explicitly unlock
+  // editing via the pencil icon below.
+  const [adminForceEdit, setAdminForceEdit] = useState(false);
+  const [adminEditConfirmOpen, setAdminEditConfirmOpen] = useState(false);
   const autoSaveTokenRef = useRef(0);
 
   const parRatingData = rating.data;
@@ -107,9 +117,11 @@ export default function ParLeadReviewPanel({
   // undefined (loading/error/not-found are handled further down, but hooks
   // must stay unconditional), so the submit/autosave logic guards on it
   // itself rather than relying on an early return to have already happened.
-  const deadlinePassed = isDeadlinePassed(cycle.parLeadDeadline);
+  // Admin edits are gated by the cycle's own closing date rather than the
+  // lead's feedback deadline.
+  const deadlinePassed = isDeadlinePassed(isAdminView ? cycle.parEvaluationEndDate : cycle.parLeadDeadline);
   const shared = parRatingData?.parLeadStatus === "SHARED";
-  const readOnly = shared || deadlinePassed;
+  const readOnly = isAdminView ? !adminForceEdit : shared || deadlinePassed;
   const savedLeadComment = decodeParComment(parRatingData?.parLeadComment);
 
   const submit = (
@@ -151,7 +163,8 @@ export default function ParLeadReviewPanel({
   };
 
   useEffect(() => {
-    if (!parRatingData || readOnly) return;
+    // No autosave in admin mode.
+    if (!parRatingData || readOnly || isAdminView) return;
     if (isEmptyHtml(leadComment) || leadComment.trim() === savedLeadComment.trim()) return;
     if (ratingUpdate.isPending) return;
     const timer = window.setTimeout(() => {
@@ -212,7 +225,10 @@ export default function ParLeadReviewPanel({
   // "Required" for a non-admin caller) — for a rating to be picked and the
   // comment to be non-empty. The backend doesn't enforce either, so this is
   // the only place that does.
-  const employeeHasStarted = parRatingData.parEmployeeStatus !== "PENDING";
+  // In admin mode, the "employee hasn't started yet" gate on Share is
+  // removed — an admin can force a rating through regardless of where the
+  // employee's own side is.
+  const employeeHasStarted = isAdminView || parRatingData.parEmployeeStatus !== "PENDING";
   const canSaveDraft = !readOnly && !deadlinePassed && !ratingUpdate.isPending && dirty;
   const canShare =
     !readOnly &&
@@ -234,6 +250,13 @@ export default function ParLeadReviewPanel({
               </Alert>
             )}
           </Box>
+          {isAdminView && readOnly && (
+            <Tooltip title="Edit PAR details">
+              <IconButton aria-label="edit" onClick={() => setAdminEditConfirmOpen(true)}>
+                <PencilIcon size={18} />
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title={reviews.isSuccess ? "Download PAR details" : "360° reviews are still loading"}>
             <span>
               <IconButton
@@ -358,7 +381,7 @@ export default function ParLeadReviewPanel({
                     Save draft
                   </Button>
                   <Button variant="contained" disabled={!canShare} onClick={() => setConfirming(true)}>
-                    Share
+                    {isAdminView ? "Save and Share" : "Share"}
                   </Button>
                 </Box>
               )}
@@ -407,6 +430,32 @@ export default function ParLeadReviewPanel({
             onClick={() => submit("SHARED", { onSuccess: () => setConfirming(false) })}
           >
             {ratingUpdate.isPending ? "Sharing…" : "Share"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Warns before an admin force-unlocks editing, worded differently
+          when the record is already shared. */}
+      <Dialog open={adminEditConfirmOpen} onClose={() => setAdminEditConfirmOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>{shared ? "Edit a Shared Review?" : "Edit PAR Details?"}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {shared
+              ? "This review has already been shared with the employee. Editing it will change what they see. Do you want to continue?"
+              : "This will let you edit the lead's feedback and rating on this employee's behalf. Do you want to continue?"}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setAdminEditConfirmOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color={shared ? "warning" : "primary"}
+            onClick={() => {
+              setAdminForceEdit(true);
+              setAdminEditConfirmOpen(false);
+            }}
+          >
+            Edit
           </Button>
         </DialogActions>
       </Dialog>
