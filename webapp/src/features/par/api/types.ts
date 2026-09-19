@@ -30,6 +30,8 @@ export interface ParEmployeeInfo {
   isTeamLead: boolean;
 }
 
+// No `isAdmin` field — the backend never returns one. See useParIsAdmin.ts.
+
 export type ParCycleStatus =
   | "PENDING"
   | "PENDING_QUOTA"
@@ -114,6 +116,9 @@ export interface ParRating {
   parF2fStatus: ParF2fStatus;
   parF2fDate?: string;
   parEmployeeAcceptanceStatus?: ParEmployeeAcceptanceStatus;
+  // Admin-only note, distinct from parLeadComment. Stripped from every
+  // non-admin response.
+  parAdminComment?: string;
 }
 
 // ---- 360° feedback ----------------------------------------------------------
@@ -396,4 +401,87 @@ export interface ParScheduleF2fRequest {
   startTime: string;
   endTime: string;
   date: string;
+}
+
+// ---- Admin Portal ----------------------------------------------------------
+//
+// Admin org-wide views reuse ParTeamSummary/ParParticipant above — same
+// backend record whether or not leadEmail was passed, only the row set differs.
+
+export interface ParCycleCreate {
+  parCycleName: string;
+  parCycleStartDate: string;
+  parCycleEndDate: string;
+  parEvaluationStartDate: string;
+  parEvaluationEndDate: string;
+  parSpecialRatingDeadline: string;
+  parThreeSixtyRatingDeadline: string;
+  parF2FDeadline: string;
+  parEmployeeDeadline: string;
+  parLeadDeadline: string;
+  parCycleConfigurations: ParCycleConfigurations;
+}
+
+export type ParCycleConfigurationsOptionalized = Partial<ParCycleConfigurations>;
+
+// The same PATCH body edits a cycle's settings and drives its OPEN/CLOSED
+// transitions. `Omit<...>` before re-adding parCycleConfigurations matters:
+// without it, intersecting with Partial<ParCycleCreate>'s own (full-shape)
+// field collapses back to fully-required whenever the key is present,
+// defeating the whole point of the Optionalized variant.
+export type ParCycleModify = Omit<Partial<ParCycleCreate>, "parCycleConfigurations"> & {
+  parCycleConfigurations?: ParCycleConfigurationsOptionalized;
+  parCycleStatus?: ParCycleStatus;
+};
+
+export interface ParSpecialRatingQuota {
+  specialRatingQuotaId: number;
+  top5pQuota: number;
+  top20pQuota: number;
+}
+
+export interface ParSpecialRatingGroupWithHeadCount {
+  parCycleId: number;
+  specialRatingGroupId: number;
+  businessUnit: string;
+  department: string;
+  team: string;
+  subTeam?: string;
+  headCount: number;
+  // Absent until an admin assigns this team to a quota group.
+  specialRatingQuota?: ParSpecialRatingQuota;
+}
+
+// GET .../special-rating-groups-quota (with or without leadEmail) returns
+// SpecialRatingAllocation[] — reuse ParSpecialRatingAllocation for that.
+// This type is a different shape, only ever SENT (one element of the POST
+// body below), never received.
+export interface ParSpecialRatingQuotaWithName extends ParSpecialRatingQuota {
+  specialRatingQuotaName: string;
+  allocatedLeads: string[];
+}
+
+export interface ParSpecialRatingGroup {
+  parCycleId: number;
+  specialRatingGroupId: number;
+  businessUnit: string;
+  department: string;
+  team: string;
+  specialRatingQuotaId: number;
+}
+
+// Every ungrouped team must end up in exactly one group — the backend
+// rejects a partial assignment.
+export interface ParSpecialRatingGroupQuota {
+  parSpecialRatingGroups: ParSpecialRatingGroup[];
+  specialRatingQuotas: ParSpecialRatingQuotaWithName[];
+}
+
+// A declined/withdrawn 360 review, restorable back to PENDING. Names aren't
+// on the wire — resolve them against the cycle's participants.
+export interface ParRejectedReview {
+  employeeEmail: string;
+  reviewerEmail: string;
+  // Literal "offered" | "requested", not a boolean.
+  isOfferedFeedback: string;
 }

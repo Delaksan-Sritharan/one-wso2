@@ -60,6 +60,10 @@ declare global {
       // absent, the Performance & growth review row falls back to a
       // "not configured" state.
       ONE_WSO2_PAR_BACKEND_URL?: string;
+      // Asgardeo group name gating the PAR Admin Portal route. Optional —
+      // absent means nobody sees the Admin Portal (fails closed); every
+      // admin data call is re-checked server-side regardless.
+      ONE_WSO2_PAR_ADMIN_GROUP?: string;
       // Base URL for the digiops-hr banking-app backend. Optional — when
       // absent, the Bank accounts card in Connected apps shows a
       // "not configured" state.
