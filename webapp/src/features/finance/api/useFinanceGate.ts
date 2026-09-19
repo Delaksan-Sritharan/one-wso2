@@ -85,22 +85,25 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // No lead stage exists for OPD — the backend grants role 555 or nothing.
       case "claim-approval-opd":
         return opdFinance;
-      // Behind a preview flag until the Finance and Me new-claim entry points
-      // are reconciled. Answered here as well as by removing the registry
-      // entry, because the Finance overview builds its tiles by hand and asks
-      // the gate by id — a registry-only change would leave that tile offering
-      // a route that no longer exists.
+      // Behind two flags: the group's own, and — on top of that — the one on
+      // the New Claim item itself, held back until the Finance and Me
+      // new-claim entry points are reconciled. Answered here as well as by
+      // removing the registry entry, because the Finance overview builds its
+      // tiles by hand and asks the gate by id — a registry-only change would
+      // leave that tile offering a route that no longer exists.
       case "expense-new":
-        return isPreviewEnabled("expenseSubmitter");
+        return isPreviewEnabled("expenseClaims") && isPreviewEnabled("expenseSubmitter");
       // Approving expense claims, beside filing them. One entry per stage, each
-      // on its own flag — `appDataSlice.ts:104-109` decides which of the source
-      // app's two sidebar entries exist the same way. Both cases are required,
-      // not optional: each item declares `requires`, so an unmapped id falls
-      // through to the default and fails closed for everyone.
+      // on its own backend flag — `appDataSlice.ts:104-109` decides which of
+      // the source app's two sidebar entries exist the same way — but both
+      // sit behind the group's own flag first, same as expense-new above.
+      // Both cases are required, not optional: each item declares `requires`,
+      // so an unmapped id falls through to the default and fails closed for
+      // everyone.
       case "expense-lead-approvals":
-        return expenseLead;
+        return isPreviewEnabled("expenseClaims") && expenseLead;
       case "expense-finance-approvals":
-        return expenseFinance;
+        return isPreviewEnabled("expenseClaims") && expenseFinance;
       // OPD Claims → Claim History, in the Finance perspective. The submitter
       // role, not the approver one: this is your own history, the same claims
       // the Me-side OPD tab shows.
@@ -113,10 +116,13 @@ export function useFinanceGate(enabled = true): FinanceGate {
         // own error notice and a retry, which is a better place to find out
         // than a menu entry that quietly is not there.
         return opdSubmitter || Boolean(opdUnknown);
+      // Both sit behind the group's own flag first, same as the expense
+      // entries above — the backend role decides nothing while the app
+      // itself is held back.
       case "cc-approve":
-        return ccLeadOrFinance;
+        return isPreviewEnabled("creditCardExpenses") && ccLeadOrFinance;
       case "cc-settings":
-        return ccFinance;
+        return isPreviewEnabled("creditCardExpenses") && ccFinance;
       default:
         // Per-user views (New / Pending / History) are open; any other item
         // that declares `requires` but reaches here fails closed rather than

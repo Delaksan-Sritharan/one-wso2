@@ -26,7 +26,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 type FinanceApps = typeof import("./financeApps");
 
 async function load(
-  preview: { expenseSubmitter?: boolean; opdClaims?: boolean } = {},
+  preview: {
+    expenseSubmitter?: boolean;
+    opdClaims?: boolean;
+    expenseClaims?: boolean;
+    creditCardExpenses?: boolean;
+  } = {},
 ): Promise<FinanceApps> {
   vi.resetModules();
   window.config = {
@@ -62,32 +67,41 @@ describe("where each finance app lives", () => {
   // keeps its own registry key, distinct from "claims", which is what the other
   // invariants below actually depend on.
   it("keeps claims with the person, and both the card and expense claims with finance", async () => {
-    const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load({ opdClaims: true });
+    const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load({
+      opdClaims: true,
+      expenseClaims: true,
+      creditCardExpenses: true,
+    });
     expect(keys(ME_FINANCE_APPS)).toEqual(["claims"]);
     expect(keys(FINANCE_PERSPECTIVE_APPS)).toEqual(["expense", "opd", "cc"]);
   });
 
   // The flag gates the New Claim ITEM, not the whole app. New Claim duplicates
   // Me → Claims; Claim History and Finance Approvals have no such duplicate, and
-  // hiding the app would take them with it.
+  // hiding the app would take them with it. Both loads carry expenseClaims so
+  // the app itself is present either way — otherwise a false result here would
+  // be ambiguous between "the item is gated" and "the app is gated".
   it("adds New Claim only when the preview flag is on", async () => {
-    const off = await load({ expenseSubmitter: false });
+    const off = await load({ expenseClaims: true, expenseSubmitter: false });
     expect(itemIds(off.FINANCE_PERSPECTIVE_APPS)).not.toContain("expense-new");
 
-    const on = await load({ expenseSubmitter: true });
+    const on = await load({ expenseClaims: true, expenseSubmitter: true });
     expect(itemIds(on.FINANCE_PERSPECTIVE_APPS)).toContain("expense-new");
   });
 
   it("hides New Claim on an absent flag, not only on an explicit false", async () => {
     // Production ships no entry at all; safety must not depend on remembering
     // to write `false`.
-    const { FINANCE_PERSPECTIVE_APPS } = await load();
+    const { FINANCE_PERSPECTIVE_APPS } = await load({ expenseClaims: true });
     expect(itemIds(FINANCE_PERSPECTIVE_APPS)).not.toContain("expense-new");
   });
 
-  // The shipped entries stand on their own; only New Claim waits on the flag.
+  // The shipped entries stand on their own; only New Claim waits on its own flag.
   it("keeps history and both approval entries whatever the flag says", async () => {
-    for (const preview of [{}, { expenseSubmitter: true }]) {
+    for (const preview of [
+      { expenseClaims: true },
+      { expenseClaims: true, expenseSubmitter: true },
+    ]) {
       const { FINANCE_PERSPECTIVE_APPS } = await load(preview);
       expect(itemIds(FINANCE_PERSPECTIVE_APPS)).toContain("expense-history");
       expect(itemIds(FINANCE_PERSPECTIVE_APPS)).toContain("expense-lead-approvals");
@@ -98,7 +112,7 @@ describe("where each finance app lives", () => {
   // The order a claim travels, and the order the source app's sidebar lists
   // them in: file it, look it up, then the two review stages in sequence.
   it("lists the approval entries lead-before-finance", async () => {
-    const { FINANCE_PERSPECTIVE_APPS } = await load();
+    const { FINANCE_PERSPECTIVE_APPS } = await load({ expenseClaims: true });
     const ids = itemIds(FINANCE_PERSPECTIVE_APPS);
     expect(ids.indexOf("expense-lead-approvals")).toBeLessThan(
       ids.indexOf("expense-finance-approvals"),
@@ -110,6 +124,8 @@ describe("where each finance app lives", () => {
       const { FINANCE_APPS, ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load({
         ...preview,
         opdClaims: true,
+        expenseClaims: true,
+        creditCardExpenses: true,
       });
       const overlap = keys(ME_FINANCE_APPS).filter((k) =>
         keys(FINANCE_PERSPECTIVE_APPS).includes(k),
@@ -142,14 +158,17 @@ describe("where each finance app lives", () => {
     }
   });
 
-  // Hiding the entry must not take the whole app down: FINANCE_EYEBROW is built
-  // at module load by looking apps up in the registry, and an absent app used to
-  // throw there before anything rendered.
-  it("still builds its eyebrows when the expense app is hidden", async () => {
+  // Hiding an app must not take the whole registry down. FINANCE_EYEBROW.claims
+  // is built by looking its app up in the registry — an absent app used to
+  // throw there before anything rendered. .cc, .expense and .opd are literals
+  // precisely because all three CAN be hidden by a flag while their routes
+  // stay reachable by URL, so they must keep a real label either way.
+  it("still builds every eyebrow when cc, expense and opd are all hidden", async () => {
     const { FINANCE_EYEBROW } = await load();
     expect(FINANCE_EYEBROW.claims.label).toBeTruthy();
     expect(FINANCE_EYEBROW.cc.label).toBeTruthy();
     expect(FINANCE_EYEBROW.expense.label).toBeTruthy();
+    expect(FINANCE_EYEBROW.opd.label).toBeTruthy();
   });
 });
 
@@ -165,5 +184,36 @@ describe("the OPD Claims preview flag", () => {
   it("shows it when the flag is on", async () => {
     const { FINANCE_PERSPECTIVE_APPS } = await load({ opdClaims: true });
     expect(keys(FINANCE_PERSPECTIVE_APPS)).toContain("opd");
+  });
+});
+
+// Expense Claims — New Claim, Claim History and both Approvals stages — is
+// held back from the Finance rail as one group, the same way OPD Claims is.
+describe("the Expense Claims preview flag", () => {
+  it("hides the group when the flag is off", async () => {
+    const { FINANCE_PERSPECTIVE_APPS, FINANCE_APPS } = await load();
+    expect(keys(FINANCE_PERSPECTIVE_APPS)).not.toContain("expense");
+    expect(keys(FINANCE_APPS)).not.toContain("expense");
+  });
+
+  it("shows it when the flag is on", async () => {
+    const { FINANCE_PERSPECTIVE_APPS } = await load({ expenseClaims: true });
+    expect(keys(FINANCE_PERSPECTIVE_APPS)).toContain("expense");
+  });
+});
+
+// Credit Card Expenses — Dashboard, Pending Submissions, Pending Approvals,
+// Approve Submissions and History — is held back from the Finance rail as one
+// group, the same way OPD Claims and Expense Claims are.
+describe("the Credit Card Expenses preview flag", () => {
+  it("hides the group when the flag is off", async () => {
+    const { FINANCE_PERSPECTIVE_APPS, FINANCE_APPS } = await load();
+    expect(keys(FINANCE_PERSPECTIVE_APPS)).not.toContain("cc");
+    expect(keys(FINANCE_APPS)).not.toContain("cc");
+  });
+
+  it("shows it when the flag is on", async () => {
+    const { FINANCE_PERSPECTIVE_APPS } = await load({ creditCardExpenses: true });
+    expect(keys(FINANCE_PERSPECTIVE_APPS)).toContain("cc");
   });
 });

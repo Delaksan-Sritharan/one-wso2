@@ -68,6 +68,19 @@ export type PreviewFeature =
    */
   | "opdClaims"
   /**
+   * Finance → Expense Claims, the whole app — New Claim, Claim History, and
+   * Lead/Finance Approvals. Held back from the Finance rail as a group rather
+   * than item by item: this is one section going away, not one route inside
+   * it becoming unavailable while the rest stays reachable.
+   */
+  | "expenseClaims"
+  /**
+   * Finance → Credit Card Expenses, the whole app — Dashboard, Pending
+   * Submissions, Pending Approvals, Approve Submissions and History. Held
+   * back from the Finance rail as a group, the same way Expense Claims is.
+   */
+  | "creditCardExpenses"
+  /**
    * People Ops → Performance, par-app's Employee Portal ported in #61. Held back until
    * the Lead Portal, Admin Portal, Report Chain and F2F follow it over — see
    * docs/ported-apps/par-app.md §7.

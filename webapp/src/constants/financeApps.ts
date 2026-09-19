@@ -67,27 +67,24 @@ export const ME_FINANCE_APPS: readonly MenuApp[] = [
  * needs; it sits with the other finance operations instead.
  */
 export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
-  {
+  // Held back as a whole: New Claim, Claim History and both Approvals stages
+  // all disappear together, not one route at a time.
+  ...(isPreviewEnabled("expenseClaims")
+    ? ([{
     key: "expense",
     name: "Expense Claims",
     icon: ReceiptTextIcon,
     purpose: "File an expense claim, track the ones you submitted, and decide on the ones waiting on you.",
     items: [
-      // New Claim is held behind a preview flag: Me → Claims already offers a
-      // new-claim flow, and showing a second entry point under Finance before
-      // the two are reconciled would leave people with two ways in and no way
-      // to tell which one they want.
-      //
-      // Spread in rather than filtered out, so with the flag off the item does
-      // not exist at all — the rail sections and favourites both derive from
-      // this list. It is NOT the whole story: the Finance overview builds its
-      // tiles by hand and asks `useFinanceGate` by item id, so that surface is
-      // gated there too.
-      //
-      // The flag is on the ITEM, not the app. Claim History has no duplicate
-      // under Me to reconcile — the Me-side history is a different screen on a
-      // different route — so hiding the whole app would hold back something
-      // that is ready.
+      // New Claim carries its own flag on top of the app's: Me → Claims
+      // already offers a new-claim flow, and showing a second entry point
+      // under Finance before the two are reconciled would leave people with
+      // two ways in and no way to tell which one they want. Spread in rather
+      // than filtered out, so with the flag off the item does not exist at
+      // all — the rail sections and favourites both derive from this list.
+      // It is NOT the whole story: the Finance overview builds its tiles by
+      // hand and asks `useFinanceGate` by item id, so that surface is gated
+      // there too.
       ...(isPreviewEnabled("expenseSubmitter")
         ? [
             { id: "expense-new", label: "New Claim", desc: "File a new expense claim.", path: expenseFinancePaths.new },
@@ -113,7 +110,8 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
         path: expenseFinancePaths.financeApprovals,
       },
     ],
-  },
+    }] as MenuApp[])
+    : []),
   ...(isPreviewEnabled("opdClaims")
     ? ([{
     // OPD has been a tab under Me → Claims and nothing else, which is right for
@@ -144,7 +142,10 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
     ],
     }] as MenuApp[])
     : []),
-  {
+  // Held back as a whole, the same way Expense Claims is: every item
+  // disappears together rather than one route at a time.
+  ...(isPreviewEnabled("creditCardExpenses")
+    ? ([{
     key: "cc",
     name: "Credit Card Expenses",
     icon: CreditCardIcon,
@@ -157,7 +158,8 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
       { id: "cc-history", label: "History", desc: "Your submitted past card transactions.", path: `${CC_PATH}/history` },
       { id: "cc-settings", label: "Settings", desc: "Upload and reconcile bank statements (finance).", requires: ["admin"], path: `${CC_PATH}/settings` },
     ],
-  },
+    }] as MenuApp[])
+    : []),
 ];
 
 /** Every finance-domain app, wherever it is surfaced. */
@@ -195,11 +197,10 @@ export const FINANCE_EYEBROW = {
   // Both claim forms wear the Claims eyebrow: they are two ways into one app
   // now, and their own titles say which type is being filed.
   claims: eyebrowFor("claims"),
-  cc: eyebrowFor("cc"),
-  expense: eyebrowFor("expense"),
-  // OPD's screens wear the claim app's own name and icon, which is what says
-  // which claims they are about. A literal rather than eyebrowFor("opd"): the
-  // app is behind a preview flag, and with it off the lookup would fall back to
-  // the generic "Finance" chip.
+  // Literals rather than eyebrowFor(...): all three sit behind a preview
+  // flag, and with it off the lookup would fall back to the generic
+  // "Finance" chip — wrong for a route still reachable directly by URL.
+  cc: { icon: CreditCardIcon, label: "Credit Card Expenses" },
+  expense: { icon: ReceiptTextIcon, label: "Expense Claims" },
   opd: { icon: StethoscopeIcon, label: "OPD Claims" },
 } as const;

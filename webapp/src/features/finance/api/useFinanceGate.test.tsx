@@ -122,8 +122,20 @@ describe("the expense tab", () => {
 });
 
 // Under Finance → Expense Claims, one entry per review stage — the source
-// app's own two sidebar entries, each on its own backend flag.
+// app's own two sidebar entries, each on its own backend flag, on top of the
+// group's own preview flag (Expense Claims is held back as a whole).
 describe("the expense approval entries", () => {
+  const originalConfig = window.config;
+  beforeEach(() => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { expenseClaims: true },
+    } as Window["config"];
+  });
+  afterEach(() => {
+    window.config = originalConfig;
+  });
+
   it("shows a lead only the lead entry", () => {
     roles.expenseLead = true;
     expect(gate().canSee("expense-lead-approvals")).toBe(true);
@@ -149,14 +161,44 @@ describe("the expense approval entries", () => {
     expect(gate().canSee("expense-lead-approvals")).toBe(false);
     expect(gate().canSee("expense-finance-approvals")).toBe(false);
   });
+
+  // The group's own flag outranks the backend role: holding the role means
+  // nothing while Expense Claims itself is hidden.
+  it("withholds both when the group's own flag is off, role or not", () => {
+    window.config = { ...(window.config ?? {}) } as Window["config"];
+    delete (window.config as { ONE_WSO2_PREVIEW_FEATURES?: unknown }).ONE_WSO2_PREVIEW_FEATURES;
+    roles.expenseLead = true;
+    roles.expenseFinance = true;
+    expect(gate().canSee("expense-lead-approvals")).toBe(false);
+    expect(gate().canSee("expense-finance-approvals")).toBe(false);
+  });
 });
 
 // The entries that stayed under Me keep the rules they had.
 describe("what stayed behind", () => {
+  const originalConfig = window.config;
+  beforeEach(() => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { creditCardExpenses: true },
+    } as Window["config"];
+  });
+  afterEach(() => {
+    window.config = originalConfig;
+  });
+
   it("still gates credit card approval on its own privileges", () => {
     expect(gate().canSee("cc-approve")).toBe(false);
     roles.cc = ["lead"];
     expect(gate().canSee("cc-approve")).toBe(true);
+  });
+
+  // The group's own flag outranks the backend role, same as expense above.
+  it("withholds cc-approve when the group's own flag is off, role or not", () => {
+    window.config = { ...(window.config ?? {}) } as Window["config"];
+    delete (window.config as { ONE_WSO2_PREVIEW_FEATURES?: unknown }).ONE_WSO2_PREVIEW_FEATURES;
+    roles.cc = ["lead"];
+    expect(gate().canSee("cc-approve")).toBe(false);
   });
 
   it("leaves the per-user views open", () => {
@@ -196,10 +238,20 @@ describe("a preview-gated item", () => {
     expect(gate().canSee("expense-new")).toBe(false);
   });
 
-  it("is allowed when the preview flag is on", () => {
+  // Two flags stack here: the group's own (Expense Claims as a whole) and the
+  // item's own (New Claim on top of that). Both have to be on.
+  it("is refused when only the item's own flag is on", () => {
     window.config = {
       ...(window.config ?? {}),
       ONE_WSO2_PREVIEW_FEATURES: { expenseSubmitter: true },
+    } as Window["config"];
+    expect(gate().canSee("expense-new")).toBe(false);
+  });
+
+  it("is allowed when both flags are on", () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { expenseClaims: true, expenseSubmitter: true },
     } as Window["config"];
     expect(gate().canSee("expense-new")).toBe(true);
   });
