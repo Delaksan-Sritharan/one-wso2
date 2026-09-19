@@ -116,13 +116,10 @@ export function useFinanceGate(enabled = true): FinanceGate {
         // own error notice and a retry, which is a better place to find out
         // than a menu entry that quietly is not there.
         return opdSubmitter || Boolean(opdUnknown);
-      // Both sit behind the group's own flag first, same as the expense
-      // entries above — the backend role decides nothing while the app
-      // itself is held back.
       case "cc-approve":
-        return isPreviewEnabled("creditCardExpenses") && ccLeadOrFinance;
+        return ccLeadOrFinance;
       case "cc-settings":
-        return isPreviewEnabled("creditCardExpenses") && ccFinance;
+        return ccFinance;
       default:
         // Per-user views (New / Pending / History) are open; any other item
         // that declares `requires` but reaches here fails closed rather than

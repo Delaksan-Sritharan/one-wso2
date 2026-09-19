@@ -311,20 +311,12 @@ export default function App() {
               />
             </>
           )}
-          {/* Behind the same preview flag as the group's own menu entry, same
-              reasoning as Expense Claims above: hiding only the entry would
-              leave every one of these pages reachable by anyone with the
-              URL. */}
-          {isPreviewEnabled("creditCardExpenses") && (
-            <>
-              <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
-              <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
-              <Route path="finance/cc/pending" element={<CcPendingPage />} />
-              <Route path="finance/cc/approve" element={<CcApprovePage />} />
-              <Route path="finance/cc/history" element={<CcHistoryPage />} />
-              <Route path="finance/cc/settings" element={<CcSettingsPage />} />
-            </>
-          )}
+          <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
+          <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
+          <Route path="finance/cc/pending" element={<CcPendingPage />} />
+          <Route path="finance/cc/approve" element={<CcApprovePage />} />
+          <Route path="finance/cc/history" element={<CcHistoryPage />} />
+          <Route path="finance/cc/settings" element={<CcSettingsPage />} />
           <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported

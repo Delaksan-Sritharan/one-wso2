@@ -176,29 +176,10 @@ describe("the expense approval entries", () => {
 
 // The entries that stayed under Me keep the rules they had.
 describe("what stayed behind", () => {
-  const originalConfig = window.config;
-  beforeEach(() => {
-    window.config = {
-      ...(window.config ?? {}),
-      ONE_WSO2_PREVIEW_FEATURES: { creditCardExpenses: true },
-    } as Window["config"];
-  });
-  afterEach(() => {
-    window.config = originalConfig;
-  });
-
   it("still gates credit card approval on its own privileges", () => {
     expect(gate().canSee("cc-approve")).toBe(false);
     roles.cc = ["lead"];
     expect(gate().canSee("cc-approve")).toBe(true);
-  });
-
-  // The group's own flag outranks the backend role, same as expense above.
-  it("withholds cc-approve when the group's own flag is off, role or not", () => {
-    window.config = { ...(window.config ?? {}) } as Window["config"];
-    delete (window.config as { ONE_WSO2_PREVIEW_FEATURES?: unknown }).ONE_WSO2_PREVIEW_FEATURES;
-    roles.cc = ["lead"];
-    expect(gate().canSee("cc-approve")).toBe(false);
   });
 
   it("leaves the per-user views open", () => {

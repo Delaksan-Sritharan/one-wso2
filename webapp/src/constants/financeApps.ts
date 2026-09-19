@@ -142,10 +142,7 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
     ],
     }] as MenuApp[])
     : []),
-  // Held back as a whole, the same way Expense Claims is: every item
-  // disappears together rather than one route at a time.
-  ...(isPreviewEnabled("creditCardExpenses")
-    ? ([{
+  {
     key: "cc",
     name: "Credit Card Expenses",
     icon: CreditCardIcon,
@@ -158,8 +155,7 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
       { id: "cc-history", label: "History", desc: "Your submitted past card transactions.", path: `${CC_PATH}/history` },
       { id: "cc-settings", label: "Settings", desc: "Upload and reconcile bank statements (finance).", requires: ["admin"], path: `${CC_PATH}/settings` },
     ],
-    }] as MenuApp[])
-    : []),
+  },
 ];
 
 /** Every finance-domain app, wherever it is surfaced. */
@@ -197,10 +193,10 @@ export const FINANCE_EYEBROW = {
   // Both claim forms wear the Claims eyebrow: they are two ways into one app
   // now, and their own titles say which type is being filed.
   claims: eyebrowFor("claims"),
-  // Literals rather than eyebrowFor(...): all three sit behind a preview
+  cc: eyebrowFor("cc"),
+  // Literal rather than eyebrowFor(...): this app sits behind a preview
   // flag, and with it off the lookup would fall back to the generic
   // "Finance" chip — wrong for a route still reachable directly by URL.
-  cc: { icon: CreditCardIcon, label: "Credit Card Expenses" },
   expense: { icon: ReceiptTextIcon, label: "Expense Claims" },
   opd: { icon: StethoscopeIcon, label: "OPD Claims" },
 } as const;

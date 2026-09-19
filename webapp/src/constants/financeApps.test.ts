@@ -26,12 +26,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 type FinanceApps = typeof import("./financeApps");
 
 async function load(
-  preview: {
-    expenseSubmitter?: boolean;
-    opdClaims?: boolean;
-    expenseClaims?: boolean;
-    creditCardExpenses?: boolean;
-  } = {},
+  preview: { expenseSubmitter?: boolean; opdClaims?: boolean; expenseClaims?: boolean } = {},
 ): Promise<FinanceApps> {
   vi.resetModules();
   window.config = {
@@ -70,7 +65,6 @@ describe("where each finance app lives", () => {
     const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load({
       opdClaims: true,
       expenseClaims: true,
-      creditCardExpenses: true,
     });
     expect(keys(ME_FINANCE_APPS)).toEqual(["claims"]);
     expect(keys(FINANCE_PERSPECTIVE_APPS)).toEqual(["expense", "opd", "cc"]);
@@ -125,7 +119,6 @@ describe("where each finance app lives", () => {
         ...preview,
         opdClaims: true,
         expenseClaims: true,
-        creditCardExpenses: true,
       });
       const overlap = keys(ME_FINANCE_APPS).filter((k) =>
         keys(FINANCE_PERSPECTIVE_APPS).includes(k),
@@ -159,11 +152,11 @@ describe("where each finance app lives", () => {
   });
 
   // Hiding an app must not take the whole registry down. FINANCE_EYEBROW.claims
-  // is built by looking its app up in the registry — an absent app used to
-  // throw there before anything rendered. .cc, .expense and .opd are literals
-  // precisely because all three CAN be hidden by a flag while their routes
+  // and .cc are built by looking their app up in the registry — an absent app
+  // used to throw there before anything rendered. .expense and .opd are
+  // literals precisely because they CAN be hidden by a flag while their routes
   // stay reachable by URL, so they must keep a real label either way.
-  it("still builds every eyebrow when cc, expense and opd are all hidden", async () => {
+  it("still builds every eyebrow when expense and opd are both hidden", async () => {
     const { FINANCE_EYEBROW } = await load();
     expect(FINANCE_EYEBROW.claims.label).toBeTruthy();
     expect(FINANCE_EYEBROW.cc.label).toBeTruthy();
@@ -199,21 +192,5 @@ describe("the Expense Claims preview flag", () => {
   it("shows it when the flag is on", async () => {
     const { FINANCE_PERSPECTIVE_APPS } = await load({ expenseClaims: true });
     expect(keys(FINANCE_PERSPECTIVE_APPS)).toContain("expense");
-  });
-});
-
-// Credit Card Expenses — Dashboard, Pending Submissions, Pending Approvals,
-// Approve Submissions and History — is held back from the Finance rail as one
-// group, the same way OPD Claims and Expense Claims are.
-describe("the Credit Card Expenses preview flag", () => {
-  it("hides the group when the flag is off", async () => {
-    const { FINANCE_PERSPECTIVE_APPS, FINANCE_APPS } = await load();
-    expect(keys(FINANCE_PERSPECTIVE_APPS)).not.toContain("cc");
-    expect(keys(FINANCE_APPS)).not.toContain("cc");
-  });
-
-  it("shows it when the flag is on", async () => {
-    const { FINANCE_PERSPECTIVE_APPS } = await load({ creditCardExpenses: true });
-    expect(keys(FINANCE_PERSPECTIVE_APPS)).toContain("cc");
   });
 });
