@@ -81,31 +81,35 @@ export const ME_FINANCE_APPS: readonly MenuApp[] = [
  * they would sit behind a group you open to file something.
  *
  * One entry today. The credit-card and expense dashboards belong here too when
- * somebody moves them.
+ * somebody moves them. Held back as a whole behind its own preview flag: this
+ * is new ground and has not run against a real account yet.
  */
-export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = [
-  {
-    key: "finance-overview",
-    name: "Overview",
-    icon: LayoutDashboardIcon,
-    purpose: "How the company's claim allowances are being used.",
-    // One item today and it will not stay that way; collapsing to a leaf now
-    // would teach the wrong shape.
-    alwaysGroup: true,
-    items: [
+export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = isPreviewEnabled("financeOverview")
+  ? [
       {
-        id: "opd-dashboard",
-        label: "OPD Claims",
-        desc: "Claims processed and pending, and how much of each employee's OPD limit is used.",
-        // Not a coarse capability: the OPD backend decides this, and the source
-        // puts the screen behind its finance view. `requires` only forces
-        // useFinanceGate to answer for the id — see its `opd-dashboard` case.
-        requires: ["admin"],
-        path: opdFinancePaths.dashboard,
+        key: "finance-overview",
+        name: "Overview",
+        icon: LayoutDashboardIcon,
+        purpose: "How the company's claim allowances are being used.",
+        // One item today and it will not stay that way; collapsing to a leaf now
+        // would teach the wrong shape.
+        alwaysGroup: true,
+        items: [
+          {
+            id: "opd-dashboard",
+            label: "OPD Claims",
+            desc: "Claims processed and pending, and how much of each employee's OPD limit is used.",
+            // Not a coarse capability: the OPD backend decides this, and the
+            // source puts the screen behind its finance view. `requires` only
+            // forces useFinanceGate to answer for the id — see its
+            // `opd-dashboard` case.
+            requires: ["admin"],
+            path: opdFinancePaths.dashboard,
+          },
+        ],
       },
-    ],
-  },
-];
+    ]
+  : [];
 
 export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
   {

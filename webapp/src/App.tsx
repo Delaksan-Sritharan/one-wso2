@@ -307,7 +307,12 @@ export default function App() {
           <Route path="finance/cc/approve" element={<CcApprovePage />} />
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
-          <Route path="finance/opd/dashboard" element={<OpdDashboardScreen />} />
+          {/* Behind the same preview flag as its menu entry under Overview.
+              Hiding only the entry would leave the page reachable by anyone
+              with the URL. */}
+          {isPreviewEnabled("financeOverview") && (
+            <Route path="finance/opd/dashboard" element={<OpdDashboardScreen />} />
+          )}
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
               from the standalone org-chart app. Unlike every other People Ops

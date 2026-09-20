@@ -101,7 +101,7 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // with nothing on screen to say why. The screen behind it carries its own
       // error notice and a retry.
       case "opd-dashboard":
-        return opdFinance || opd.isError;
+        return isPreviewEnabled("financeOverview") && (opdFinance || opd.isError);
       case "cc-approve":
         return ccLeadOrFinance;
       case "cc-settings":

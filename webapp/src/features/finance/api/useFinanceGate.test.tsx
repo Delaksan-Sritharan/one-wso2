@@ -204,3 +204,29 @@ describe("a preview-gated item", () => {
     expect(gate().canSee("expense-new")).toBe(true);
   });
 });
+
+// The Overview dashboard tile has its own backend role too, but the group's
+// preview flag comes first: holding the role means nothing while Overview
+// itself is hidden.
+describe("the Finance Overview dashboard", () => {
+  const originalConfig = window.config;
+  afterEach(() => {
+    window.config = originalConfig;
+  });
+
+  it("is refused when the group's flag is absent, role or not", () => {
+    window.config = { ...(window.config ?? {}) } as Window["config"];
+    delete (window.config as { ONE_WSO2_PREVIEW_FEATURES?: unknown }).ONE_WSO2_PREVIEW_FEATURES;
+    roles.opd = [555];
+    expect(gate().canSee("opd-dashboard")).toBe(false);
+  });
+
+  it("is allowed when the group's flag is on and the role is held", () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { financeOverview: true },
+    } as Window["config"];
+    roles.opd = [555];
+    expect(gate().canSee("opd-dashboard")).toBe(true);
+  });
+});
