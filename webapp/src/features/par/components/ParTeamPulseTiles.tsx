@@ -62,6 +62,7 @@ export default function ParTeamPulseTiles({ tiles }: { tiles: ParPulseTileDef[] 
               variant="determinate"
               value={pct}
               color={tile.color}
+              aria-label={`${tile.label}: ${tile.completed} of ${tile.total}`}
               sx={{ height: 5, borderRadius: 3 }}
             />
           </Box>

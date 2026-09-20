@@ -121,9 +121,14 @@ export function useParCanSeeLeadPortal(workEmail: string | undefined, enabled = 
  * one, since every other tab (Employee Feedback, Request/Provide 360°, F2F)
  * only makes sense inside a running cycle.
  *
- * Fails OPEN, same reasoning and shape as useParHasLead: true unless the
- * fetch has actually succeeded and come back with no OPEN cycles. A slow or
- * failed fetch must never hide tabs that would otherwise be available.
+ * `isActive` fails OPEN, same reasoning as useParHasLead: true unless the
+ * fetch has actually succeeded and come back with no OPEN cycles — a failed
+ * fetch must never hide tabs that would otherwise be available. Unlike
+ * useParHasLead, `isLoading` also waits on this hook's own query (not just
+ * the caller's profile fetch): the fail-open default is only safe to hand a
+ * route guard once the cycle check has actually settled (success or error),
+ * otherwise a route can render its cycle-only children for one tick and
+ * then yank them away the moment the query resolves to "no cycle".
  */
 export function useParHasActiveCycle(
   workEmail: string | undefined,
@@ -132,7 +137,7 @@ export function useParHasActiveCycle(
   const cycles = useActiveParCycle(workEmail);
   return {
     isActive: !(cycles.isSuccess && cycles.data.length === 0),
-    isLoading: workEmailLoading,
+    isLoading: workEmailLoading || cycles.isLoading,
   };
 }
 
