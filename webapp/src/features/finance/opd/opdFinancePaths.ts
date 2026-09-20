@@ -18,11 +18,15 @@
  * Where the OPD Claims app lives under the Finance perspective.
  *
  * Named here rather than written out in the registry and the router
- * separately: those two disagreeing is a 404 nobody notices until somebody
+ * separately: those two disagreeing is a 404 nobody notices until someone
  * clicks the menu item.
+ *
+ * Distinct from the OPD tab under Me → Claims, which is a different screen on
+ * a different route and is left alone.
  */
 export const OPD_FINANCE_PATH = "/finance/opd";
 
 export const opdFinancePaths = {
   dashboard: `${OPD_FINANCE_PATH}/dashboard`,
+  history: `${OPD_FINANCE_PATH}/history`,
 } as const;

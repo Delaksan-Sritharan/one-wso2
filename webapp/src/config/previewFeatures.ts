@@ -61,6 +61,20 @@ export type PreviewFeature =
    */
   | "expenseSubmitter"
   /**
+   * Finance → OPD Claims, the app's own front door under the Finance
+   * perspective. Only Claim History is migrated so far, and it has never run
+   * against the real OPD backend — the development account is refused by it —
+   * so the group is held back as a whole rather than screen by screen.
+   */
+  | "opdClaims"
+  /**
+   * Finance → Expense Claims, the whole app — New Claim, Claim History, and
+   * Lead/Finance Approvals. Held back from the Finance rail as a group rather
+   * than item by item: this is one section going away, not one route inside
+   * it becoming unavailable while the rest stays reachable.
+   */
+  | "expenseClaims"
+  /**
    * Finance → Overview, the new dashboards section above the claim apps.
    * Held back as a whole: it is new ground (an OPD Claims dashboard, with
    * Credit Card Expenses and expense dashboards to follow), and it has not
