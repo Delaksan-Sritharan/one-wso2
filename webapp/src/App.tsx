@@ -103,6 +103,9 @@ const SabbaticalReportTab = lazy(
 import SabbaticalApplyTab from "@features/leave/pages/LeaveSabbaticalPage";
 import ClaimsPage, { ClaimsIndex } from "@features/finance/claims/ClaimsPage";
 import OpdNewClaimPage from "@features/finance/opd/pages/OpdNewClaimPage";
+// OPD Claims as its own Finance app — a different screen on a different route
+// from the OPD tab under Me → Claims above, which is left alone.
+import OpdClaimHistoryScreen from "@features/finance/opd/history/OpdClaimHistoryScreen";
 import OpdClaimsTab from "@features/finance/opd/pages/OpdHistoryPage";
 import OpdApprovalsTab from "@features/finance/opd/pages/OpdApprovalsPage";
 import CcDashboardPage from "@features/finance/cc/pages/CcDashboardPage";
@@ -280,34 +283,45 @@ export default function App() {
               </SriLankaRoute>
             }
           />
-          {/* Behind the same preview flag as its menu entry. Hiding only the
-              entry would leave the page reachable by anyone with the URL, which
-              is not what "not released yet" means. */}
-          {isPreviewEnabled("expenseSubmitter") && (
-            <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
+          {/* Behind the same preview flag as the group's own menu entry.
+              Hiding only the entry would leave every one of these pages
+              reachable by anyone with the URL, which is not what "not
+              released yet" means. */}
+          {isPreviewEnabled("expenseClaims") && (
+            <>
+              {/* New Claim carries a second, narrower flag on top of the
+                  group's: it holds back a SECOND way to file a claim until it
+                  is reconciled with Me → Claims, which is a different
+                  question from whether Expense Claims is released at all. */}
+              {isPreviewEnabled("expenseSubmitter") && (
+                <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
+              )}
+              <Route
+                path="finance/expense-claims/history"
+                element={<ExpenseClaimHistoryPage />}
+              />
+              {/* Approving sits beside filing, where the source app's sidebar
+                  keeps it — one entry per stage, on the source's own two
+                  URLs. Each screen also gates itself on its own backend role,
+                  so a typed URL is no more revealing than the menu entry it
+                  belongs to. */}
+              <Route
+                path="finance/expense-claims/lead-approvals"
+                element={<ExpenseLeadApprovalsScreen />}
+              />
+              <Route
+                path="finance/expense-claims/finance-approvals"
+                element={<ExpenseApprovalsScreen stage="FINANCE" />}
+              />
+            </>
           )}
-          {/* Not behind that flag. The preview holds back a SECOND way to file
-              a claim until it is reconciled with Me → Claims; reading what you
-              have already filed has no such duplicate to reconcile. */}
-          <Route path="finance/expense-claims/history" element={<ExpenseClaimHistoryPage />} />
-          {/* Approving sits beside filing, where the source app's sidebar keeps
-              it — one entry per stage, on the source's own two URLs. Each screen
-              gates itself on its own flag, so a typed URL is no more revealing
-              than the menu entry it belongs to. */}
-          <Route
-            path="finance/expense-claims/lead-approvals"
-            element={<ExpenseLeadApprovalsScreen />}
-          />
-          <Route
-            path="finance/expense-claims/finance-approvals"
-            element={<ExpenseApprovalsScreen stage="FINANCE" />}
-          />
           <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
           <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
           <Route path="finance/cc/pending" element={<CcPendingPage />} />
           <Route path="finance/cc/approve" element={<CcApprovePage />} />
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
+          <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
               from the standalone org-chart app. Unlike every other People Ops
