@@ -16,8 +16,7 @@
 
 import type { ReactNode } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
-import { Box, Stack, Typography } from "@wso2/oxygen-ui";
-import { UsersIcon } from "@wso2/oxygen-ui-icons-react";
+import { Box } from "@wso2/oxygen-ui";
 import RoutedTabs, { type RoutedTabDef } from "@components/routed-tabs/RoutedTabs";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useMeProfile } from "@features/my/api/useMeProfile";
@@ -78,11 +77,10 @@ export default function ParLeadGroupPage() {
   const needsActiveCycle = currentSegment !== "" && currentSegment !== "employee-history";
 
   return (
-    <ParShell>
-      <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
-        <UsersIcon size={32} />
-        <Typography variant="h4">Lead Portal</Typography>
-      </Stack>
+    <ParShell
+      title="Lead Portal"
+      subtitle="Review and rate your reports' PAR, manage their 360° feedback and F2F and see their record from past cycles."
+    >
       <RoutedTabs
         basePath={BASE_PATH}
         tabs={employeeInfo.isTeamLead ? TABS : HISTORY_ONLY_TABS}

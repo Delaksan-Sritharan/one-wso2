@@ -16,8 +16,7 @@
 
 import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router";
-import { Skeleton, Stack, Typography } from "@wso2/oxygen-ui";
-import { GaugeIcon } from "@wso2/oxygen-ui-icons-react";
+import { Skeleton, Typography } from "@wso2/oxygen-ui";
 import RoutedTabs, { type RoutedTabDef } from "@components/routed-tabs/RoutedTabs";
 import { useMeProfile } from "@features/my/api/useMeProfile";
 import ParShell from "../components/ParShell";
@@ -51,11 +50,10 @@ const HISTORY_ONLY_TABS: RoutedTabDef[] = [{ segment: "history", label: "PAR His
 // One page frame for everything an employee does with their own PAR — the
 // shell, the tab bar, and an <Outlet /> for whichever tab the URL names.
 export default function ParGroupPage() {
-  // OngoingCycleView.tsx's own header: an icon before the cycle's name,
-  // falling back to "Employee Portal" when there's no active cycle.
   const profile = useMeProfile();
   const workEmail = profile.data?.userInfo.workEmail;
   const activeCycles = useActiveParCycle(workEmail);
+  // Unset while there's no active cycle to name.
   const cycleName = activeCycles.data?.[0]?.parCycleName;
   const { hasLead, isLoading } = useParHasLead(workEmail, profile.isLoading);
   const { isActive, isLoading: isActiveLoading } = useParHasActiveCycle(workEmail, profile.isLoading);
@@ -63,11 +61,17 @@ export default function ParGroupPage() {
   const tabs = !isActive ? HISTORY_ONLY_TABS : hasLead ? FULL_TABS : LEADLESS_TABS;
 
   return (
-    <ParShell>
-      <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
-        <GaugeIcon size={32} />
-        <Typography variant="h4">{cycleName || "Employee Portal"}</Typography>
-      </Stack>
+    <ParShell
+      title="Employee Portal"
+      subtitle="Complete your own feedback, request and give 360° feedback and see your record from past cycles."
+    >
+      {/* The active cycle's own name/period, not the page's title — this
+          page is "Employee Portal" regardless of which cycle is running. */}
+      {cycleName && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600 }}>
+          Current cycle: {cycleName}
+        </Typography>
+      )}
       {isLoading || isActiveLoading ? (
         <Skeleton variant="rectangular" height={36} sx={{ borderRadius: 1, mb: 2, maxWidth: 640 }} />
       ) : (

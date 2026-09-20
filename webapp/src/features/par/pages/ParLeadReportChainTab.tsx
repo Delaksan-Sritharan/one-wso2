@@ -52,11 +52,22 @@ import { calculateCycleActiveStep } from "../util/parCycleActiveStep";
 import ParCycleDatesStepper from "../components/ParCycleDatesStepper";
 import ParStatusChip from "../components/ParStatusChip";
 import ParLeadReviewTabs from "../components/ParLeadReviewTabs";
+import type { ReactNode } from "react";
 import type { ParChainReport } from "../api/types";
 
 interface BreadcrumbEntry {
   email: string;
   name: string;
+}
+
+// Belt-and-suspenders alongside each column's own align/headerAlign, so a
+// narrow icon or chip never sticks to one edge of a much wider column.
+function CenteredCell({ children }: { children: ReactNode }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
+      {children}
+    </Box>
+  );
 }
 
 // People Ops → Performance → Lead Portal → Report Chain: par-app's
@@ -199,51 +210,66 @@ export default function ParLeadReportChainTab() {
       field: "parEmployeeStatus",
       headerName: "Employee PAR",
       flex: 0.8,
-      renderCell: (params) => <ParStatusChip content={params.row.parEmployeeStatus} />,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parEmployeeStatus} /></CenteredCell>,
     },
     {
       field: "par360ReviewStatus",
       headerName: "360° Feedback",
       flex: 0.9,
+      align: "center",
+      headerAlign: "center",
       renderCell: (params) => (
-        <ParStatusChip
-          content={params.row.par360ReviewStatus}
-          countDetails={{
-            completed: params.row.par360ReviewCounts.sharedReviewCount,
-            total: params.row.par360ReviewCounts.requestedReviewCount,
-          }}
-        />
+        <CenteredCell>
+          <ParStatusChip
+            content={params.row.par360ReviewStatus}
+            countDetails={{
+              completed: params.row.par360ReviewCounts.sharedReviewCount,
+              total: params.row.par360ReviewCounts.requestedReviewCount,
+            }}
+          />
+        </CenteredCell>
       ),
     },
     {
       field: "parLeadStatus",
       headerName: "Lead's PAR",
       flex: 0.8,
-      renderCell: (params) => <ParStatusChip content={params.row.parLeadStatus} />,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parLeadStatus} /></CenteredCell>,
     },
     {
       field: "parRating",
       headerName: "Rating",
       flex: 0.8,
-      renderCell: (params) => <ParStatusChip content={params.row.parRating ?? ""} />,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parRating ?? ""} /></CenteredCell>,
     },
     {
       field: "parSpecialRating",
       headerName: "Top 5%/20% Rating",
       flex: 0.9,
-      renderCell: (params) => <ParStatusChip content={params.row.parSpecialRating ?? ""} />,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parSpecialRating ?? ""} /></CenteredCell>,
     },
     {
       field: "parF2fStatus",
       headerName: "F2F",
       flex: 0.6,
-      renderCell: (params) => <ParStatusChip content={params.row.parF2fStatus} />,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parF2fStatus} /></CenteredCell>,
     },
     {
       field: "actions",
       headerName: "",
       sortable: false,
       flex: 0.7,
+      align: "center",
       renderCell: (params) => (
         <Stack direction="row">
           <Tooltip title={params.row.parLeadStatus === "SHARED" ? "View" : "Review"} arrow>

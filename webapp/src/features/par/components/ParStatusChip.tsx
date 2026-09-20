@@ -29,6 +29,10 @@ const PENDING_VALUES = new Set(["PENDING"]);
 // code, or an empty value) renders as a coloured text chip — reusing
 // employeeChipLabel for the rating-code half, since that mapping already
 // exists for EmployeePar.tsx's own chips.
+// Same compact outlined-chip treatment "My Team" uses for its own status
+// column (features/my/my-team/components/MyTeamTable.tsx).
+const CHIP_SX = { height: 20, fontSize: 10.5, fontWeight: 600, borderWidth: 1.5, minWidth: 72 };
+
 export default function ParStatusChip({
   content,
   countDetails,
@@ -41,9 +45,10 @@ export default function ParStatusChip({
     return (
       <Chip
         size="small"
+        variant="outlined"
         color={COMPLETED_VALUES.has(content) ? "success" : color}
         label={`${countDetails.completed}/${countDetails.total}`}
-        sx={{ minWidth: 72 }}
+        sx={CHIP_SX}
       />
     );
   }
@@ -51,8 +56,8 @@ export default function ParStatusChip({
   if (COMPLETED_VALUES.has(content)) {
     return (
       <Tooltip title="Completed" arrow>
-        <Avatar sx={{ width: 24, height: 24, bgcolor: "success.main", color: "success.contrastText" }}>
-          <CheckIcon size={14} />
+        <Avatar sx={{ width: 20, height: 20, bgcolor: "success.main", color: "success.contrastText" }}>
+          <CheckIcon size={12} />
         </Avatar>
       </Tooltip>
     );
@@ -60,19 +65,19 @@ export default function ParStatusChip({
   if (PENDING_VALUES.has(content)) {
     return (
       <Tooltip title="Pending" arrow>
-        <Avatar sx={{ width: 24, height: 24, bgcolor: "warning.main", color: "warning.contrastText" }}>
-          <HourglassIcon size={14} />
+        <Avatar sx={{ width: 20, height: 20, bgcolor: "warning.main", color: "warning.contrastText" }}>
+          <HourglassIcon size={12} />
         </Avatar>
       </Tooltip>
     );
   }
   if (content === "REJECTED") {
-    return <Chip size="small" color="error" label="Rejected" sx={{ minWidth: 72 }} />;
+    return <Chip size="small" variant="outlined" color="error" label="Rejected" sx={CHIP_SX} />;
   }
   if (content === "DRAFT") {
-    return <Chip size="small" color="info" label="Draft" sx={{ minWidth: 72 }} />;
+    return <Chip size="small" variant="outlined" color="info" label="Draft" sx={CHIP_SX} />;
   }
 
   const { label, color } = employeeChipLabel(content || "NOT_ASSIGNED");
-  return <Chip size="small" color={color} label={label} sx={{ minWidth: 72 }} />;
+  return <Chip size="small" variant="outlined" color={color} label={label} sx={CHIP_SX} />;
 }

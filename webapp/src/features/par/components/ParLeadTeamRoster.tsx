@@ -26,7 +26,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  Grid,
   IconButton,
   InputAdornment,
   Link,
@@ -46,10 +45,57 @@ import { useSend360Reminder } from "../api/useLeadReminders";
 import { useLeadRatingUpdate } from "../api/useLeadRatingUpdate";
 import { calculateCycleActiveStep } from "../util/parCycleActiveStep";
 import { resolveGridSelectedIds } from "../util/parGridSelection";
-import ParCompletionStatusCard from "./ParCompletionStatusCard";
 import ParCycleDatesStepper from "./ParCycleDatesStepper";
 import ParStatusChip from "./ParStatusChip";
+import ParTeamPulseTiles from "./ParTeamPulseTiles";
+import type { ReactNode } from "react";
 import type { ParCycle, ParRatingMinimal, ParTeamSummary } from "../api/types";
+
+// Belt-and-suspenders alongside each column's own align/headerAlign, so a
+// narrow icon or chip never sticks to one edge of a much wider column.
+function CenteredCell({ children }: { children: ReactNode }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
+      {children}
+    </Box>
+  );
+}
+
+// Shared "done" vocabulary across employee/lead/360 status fields (mirrors
+// ParStatusChip's own COMPLETED_VALUES) — used for each row's
+// stage-completion count.
+const DONE_STATUSES = new Set(["SHARED", "SHARED_BLOCKED", "COMPLETED"]);
+
+// How many of the five review stages this employee has finished — the same
+// journey the roster used to spread across five unconnected chip columns,
+// now also a single completion bar under their name.
+function countCompletedStages(row: ParRatingMinimal): number {
+  let n = 0;
+  if (DONE_STATUSES.has(row.parEmployeeStatus)) n++;
+  if (DONE_STATUSES.has(row.par360ReviewStatus)) n++;
+  if (DONE_STATUSES.has(row.parLeadStatus)) n++;
+  if (row.parRating && row.parRating !== "NOT_ASSIGNED") n++;
+  if (row.parF2fStatus === "COMPLETED") n++;
+  return n;
+}
+
+// This row's own progress through the same five stages the columns to the
+// right break out individually — one glance at whether this person's
+// review is moving at all.
+function StageProgress({ row }: { row: ParRatingMinimal }) {
+  const done = countCompletedStages(row);
+  return (
+    <Box sx={{ width: 120, height: 4, borderRadius: 2, bgcolor: "action.hover", overflow: "hidden", mt: 0.5 }}>
+      <Box
+        sx={{
+          width: `${(done / 5) * 100}%`,
+          height: "100%",
+          bgcolor: done === 5 ? "success.main" : done === 0 ? "action.disabled" : "primary.main",
+        }}
+      />
+    </Box>
+  );
+}
 
 // Ports TeamSummary.tsx: one team's completion cards + member roster.
 // "Sync an Employee" (EmployeeSyncModal.tsx) isn't ported — source's own
@@ -225,6 +271,7 @@ export default function ParLeadTeamRoster({
                 </IconButton>
               </Tooltip>
             </Box>
+            <StageProgress row={params.row} />
           </Box>
         </Box>
       ),
@@ -233,51 +280,66 @@ export default function ParLeadTeamRoster({
       field: "parEmployeeStatus",
       headerName: "Employee PAR",
       flex: 0.8,
-      renderCell: (params) => <ParStatusChip content={params.row.parEmployeeStatus} />,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parEmployeeStatus} /></CenteredCell>,
     },
     {
       field: "par360ReviewStatus",
       headerName: "360° Feedback",
       flex: 0.9,
+      align: "center",
+      headerAlign: "center",
       renderCell: (params) => (
-        <ParStatusChip
-          content={params.row.par360ReviewStatus}
-          countDetails={{
-            completed: params.row.par360ReviewCounts.sharedReviewCount,
-            total: params.row.par360ReviewCounts.requestedReviewCount,
-          }}
-        />
+        <CenteredCell>
+          <ParStatusChip
+            content={params.row.par360ReviewStatus}
+            countDetails={{
+              completed: params.row.par360ReviewCounts.sharedReviewCount,
+              total: params.row.par360ReviewCounts.requestedReviewCount,
+            }}
+          />
+        </CenteredCell>
       ),
     },
     {
       field: "parLeadStatus",
       headerName: "Lead's PAR",
       flex: 0.8,
-      renderCell: (params) => <ParStatusChip content={params.row.parLeadStatus} />,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parLeadStatus} /></CenteredCell>,
     },
     {
       field: "parRating",
       headerName: "Rating",
       flex: 0.8,
-      renderCell: (params) => <ParStatusChip content={params.row.parRating ?? ""} />,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parRating ?? ""} /></CenteredCell>,
     },
     {
       field: "parSpecialRating",
       headerName: "Top 5%/20% Rating",
       flex: 0.9,
-      renderCell: (params) => <ParStatusChip content={params.row.parSpecialRating ?? ""} />,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parSpecialRating ?? ""} /></CenteredCell>,
     },
     {
       field: "parF2fStatus",
       headerName: "F2F",
       flex: 0.6,
-      renderCell: (params) => <ParStatusChip content={params.row.parF2fStatus} />,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parF2fStatus} /></CenteredCell>,
     },
     {
       field: "actions",
       headerName: "",
       sortable: false,
       flex: 0.5,
+      align: "center",
       renderCell: (params) => (
         <Tooltip title={params.row.parLeadStatus === "SHARED" ? "View" : "Review"} arrow>
           <IconButton onClick={() => onOpenReview(params.row.parEmployeeEmail)}>
@@ -318,30 +380,13 @@ export default function ParLeadTeamRoster({
         </Stack>
       </Stack>
 
-      <Card variant="outlined" sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1.5 }}>
-          Completion Status
-        </Typography>
-        <Grid container spacing={4}>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <ParCompletionStatusCard
-              name="Employee PAR"
-              completed={team.summary.employeeParCompletedCount}
-              total={team.numberOfTeamMembers}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <ParCompletionStatusCard
-              name="Lead's PAR"
-              completed={team.summary.leadsReviewCompletedCount}
-              total={team.numberOfTeamMembers}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <ParCompletionStatusCard name="F2F" completed={team.summary.f2fCompletedCount} total={team.numberOfTeamMembers} />
-          </Grid>
-        </Grid>
-      </Card>
+      <ParTeamPulseTiles
+        tiles={[
+          { label: "Employee PAR", completed: team.summary.employeeParCompletedCount, total: team.numberOfTeamMembers, color: "success" },
+          { label: "Lead's PAR", completed: team.summary.leadsReviewCompletedCount, total: team.numberOfTeamMembers, color: "primary" },
+          { label: "F2F", completed: team.summary.f2fCompletedCount, total: team.numberOfTeamMembers, color: "warning" },
+        ]}
+      />
 
       <Card variant="outlined" sx={{ p: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1} sx={{ mb: 1.5 }}>
