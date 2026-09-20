@@ -20,6 +20,9 @@ export interface ConfirmationContent {
   title: string;
   text: string;
   confirmAction: () => void;
+  /** Defaults to "Confirm" — override for a caller whose source dialog uses
+   * different wording (e.g. "Proceed"). */
+  confirmLabel?: string;
 }
 
 /**
@@ -53,7 +56,7 @@ export default function ConfirmationDialog({
             onClose();
           }}
         >
-          Confirm
+          {content.confirmLabel ?? "Confirm"}
         </Button>
       </DialogActions>
     </Dialog>
