@@ -37,6 +37,7 @@ interface RegisterStatusChartProps {
 }
 
 const CHART_HEIGHT = 280;
+import ChartDrillDown from "./ChartDrillDown";
 
 // Per-register risk-status chart: every non-cancelled risk bucketed by status
 // (closed, or an open risk's treatment strategy) on the x-axis, stacked by
@@ -82,7 +83,7 @@ export default function RegisterStatusChart({ data, onDrillDown, registerId }: R
       : undefined,
   }));
 
-  return (
+  const chart = (
     <Box sx={{ display: "flex", alignItems: "stretch", gap: 0.5 }}>
       <Box
         sx={{
@@ -115,5 +116,23 @@ export default function RegisterStatusChart({ data, onDrillDown, registerId }: R
         />
       </Box>
     </Box>
+  );
+
+  if (!onDrillDown) return chart;
+
+  return (
+    <ChartDrillDown what="status and risk level" onDrillDown={onDrillDown} targets={chartRows.flatMap((row, index) => {
+        const bucket = STATUS_BUCKET_ORDER[index];
+        return LEVEL_ORDER.filter((level) => row[level]).map((level) => ({
+          key: `${bucket}-${level}`,
+          label: `${LEVEL_LABELS[level] ?? level} risks under ${STATUS_BUCKET_LABELS[bucket]}`,
+          filter:
+            bucket === "CLOSED"
+              ? { closed: true, level, teamId: registerId }
+              : { treatment: bucket, level, teamId: registerId },
+        }));
+      })}>
+      {chart}
+    </ChartDrillDown>
   );
 }

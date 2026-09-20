@@ -174,8 +174,9 @@ So refreshing is a three-step merge, not a copy:
 
 ### 3b. Forward-ported: ahead of the pin, not deviations
 
-Two changes were written in grc-tools and copied here **before** they merged
-there, so 14 Risk files are currently AHEAD of the pin rather than equal to it.
+Three changes were written in grc-tools and copied here **before** they merged
+there, so 15 Risk files (one of them new) are currently AHEAD of the pin rather
+than equal to it.
 A drift check will flag them; that is expected, and §4.5 excepts them by name.
 
 **Until grc-tools merges them, treat them exactly like an E-deviation.** The pin
@@ -192,10 +193,12 @@ re-apply.
 |---|---|
 | **Chart animation at 400ms.** `CHART_ANIMATION_MS` in `dashboard/constants.ts`, replacing `isAnimationActive={false}` at all 14 of its sites with `animationDuration` at 13 — `RegisterTrendChart` set it per line AND chart-wide, and the wrapper already falls back (`line.animationDuration ?? animationDuration`). The charts had animation switched off entirely, which made Risk the only perspective here whose charts never moved | `dashboard/constants.ts` + 12 chart files under `dashboard/` and `analytics/` |
 | **Residual Level filter widened** 130 → 170, so the unshrunk label clears the select's arrow (measured: they overlapped by 3px) | `RiskRegisters.tsx` |
+| **Chart drill-down made keyboard operable.** The clickable bars and slices could be reached only with a mouse: recharts gives the `<svg>` one tab stop and leaves segments as bare `<path>`s with no tabIndex, role or name, and the Oxygen wrapper drops any `onKeyDown` passed to a series. `ChartDrillDown` renders one real `<button>` per populated segment beside the chart — off-screen until focused — and sets `cursor: pointer`, which the segments also lacked | `ChartDrillDown.tsx` (new) + `StatusPieChart`, `LevelCountChart`, `RegisterStatusChart`, `TreatmentByRegisterChart` |
 
-None of these 14 files carries an E1–E8 deviation, so re-applying is the whole
+None of these 15 files carries an E1–E8 deviation, so re-applying is the whole
 of the merge for them: refresh from source, then re-add the change from this
-table.
+table. `ChartDrillDown.tsx` has no counterpart in the pinned source at all, so a
+sweep will report it as extra until the pin moves.
 
 ## 4. Issues the lift surfaced
 
@@ -375,7 +378,7 @@ and `@hooks/useAuthApiClient`) and compare against the same path under
 `grc-tools/apps/grc-platform/webapp/src`. Everything should match except:
 
 - the files listed in §3, which carry E1–E8; and
-- the 14 files listed in §3b, which are forward-ported and therefore AHEAD of
+- the 15 files listed in §3b, which are forward-ported and therefore AHEAD of
   the pin until grc-tools merges them — at which point §3b goes away and this
   exception with it.
 

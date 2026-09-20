@@ -19,6 +19,7 @@ import { Typography } from "@wso2/oxygen-ui";
 import type { JSX } from "react";
 import type { RiskStatusSummary } from "../../api/riskApi";
 import { CHART_ANIMATION_MS, CLOSED_COLOR, OPEN_COLOR, type OnDrillDown } from "./constants";
+import ChartDrillDown from "./ChartDrillDown";
 
 interface StatusPieChartProps {
   summary: RiskStatusSummary;
@@ -41,7 +42,7 @@ export default function StatusPieChart({ summary, onDrillDown, registerId }: Sta
     { name: "Closed", value: summary.closed },
   ];
 
-  return (
+  const chart = (
     <PieChart
       data={data}
       height={320}
@@ -64,5 +65,21 @@ export default function StatusPieChart({ summary, onDrillDown, registerId }: Sta
       ]}
       legend={{ show: true, align: "center", verticalAlign: "bottom" }}
     />
+  );
+
+  if (!onDrillDown) return chart;
+
+  return (
+    <ChartDrillDown
+      what="open or closed"
+      onDrillDown={onDrillDown}
+      targets={data.map((d) => ({
+        key: d.name,
+        label: `${d.name.toLowerCase()} risks`,
+        filter: { closed: d.name === "Closed", teamId: registerId || undefined },
+      }))}
+    >
+      {chart}
+    </ChartDrillDown>
   );
 }

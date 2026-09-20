@@ -34,6 +34,7 @@ interface TreatmentByRegisterChartProps {
 }
 
 const CHART_HEIGHT = 320;
+import ChartDrillDown from "./ChartDrillDown";
 
 // Stacked bar of open risks per BU/register, segmented by treatment strategy.
 // Zero counts are left undefined so recharts skips the segment and its label.
@@ -84,7 +85,7 @@ export default function TreatmentByRegisterChart({
       : undefined,
   }));
 
-  return (
+  const chart = (
     <Box sx={{ display: "flex", alignItems: "stretch", gap: 0.5 }}>
       {/* Custom axis title, centered on the whole chart height (bars + legend)
           rather than recharts' internal plot-only centering, which reads too
@@ -120,5 +121,19 @@ export default function TreatmentByRegisterChart({
         />
       </Box>
     </Box>
+  );
+
+  if (!onDrillDown) return chart;
+
+  return (
+    <ChartDrillDown what="register and treatment strategy" onDrillDown={onDrillDown} targets={rowsArr.flatMap((row) =>
+        TREATMENT_ORDER.filter((strategy) => row[strategy]).map((strategy) => ({
+          key: `${String(row.registerId)}-${strategy}`,
+          label: `${TREATMENT_LABELS[strategy] ?? strategy} risks in ${String(row.register)}`,
+          filter: { treatment: strategy, teamId: row.registerId as number },
+        })),
+      )}>
+      {chart}
+    </ChartDrillDown>
   );
 }
