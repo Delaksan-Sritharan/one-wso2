@@ -16,19 +16,19 @@
 
 import { useState } from "react";
 import { Avatar, Box, Breadcrumbs, Button, Chip, Divider, IconButton, Link, Stack, Tab, Tabs, Tooltip } from "@wso2/oxygen-ui";
-import { ArrowLeftIcon, ClipboardListIcon, UsersIcon, UsersRoundIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArrowLeftIcon } from "@wso2/oxygen-ui-icons-react";
 import { useLeaveEmployees } from "@features/leave/api/useLeaveData";
 import { useParRating } from "../api/useParData";
 import ParLeadReviewPanel from "./ParLeadReviewPanel";
 import ParLead360ReviewsTab from "./ParLead360ReviewsTab";
 import ParLeadF2fPanel from "./ParLeadF2fPanel";
 import ParLeadHistoryModal from "./ParLeadHistoryModal";
+import ParUpdateStatusPanel from "./ParUpdateStatusPanel";
 import type { ParCycle } from "../api/types";
 
-// par-app's Review.tsx. `isAdminView` threads through to ParLeadReviewPanel
-// for the Admin Portal's own "Review" action. The admin-only History
-// browsing and "Update Status" tab remain out of scope; unlike source, the
-// 360/F2F tabs and the Par History button stay visible in admin mode too.
+// par-app's Review.tsx. In admin mode (isAdminAuditViewOn), source shows
+// ONLY "Lead's Feedback" and "Update Status" — 360 Reviews, F2F and the Par
+// History button are all hidden, not just de-emphasized.
 export default function ParLeadReviewTabs({
   cycle,
   employeeEmail,
@@ -85,34 +85,43 @@ export default function ParLeadReviewTabs({
 
       <Box sx={{ borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
         <Tabs value={tab} onChange={(_e, value) => setTab(value)} aria-label="employee review sections">
-          <Tab icon={<ClipboardListIcon size={16} />} iconPosition="start" label="Lead's Feedback" />
-          <Tab icon={<UsersIcon size={16} />} iconPosition="start" label="360 Reviews" />
-          <Tab icon={<UsersRoundIcon size={16} />} iconPosition="start" label="F2F" />
+          <Tab label="Lead's Feedback" />
+          {isAdminView ? (
+            <Tab label="Update Status" />
+          ) : (
+            [<Tab key="360" label="360 Reviews" />, <Tab key="f2f" label="F2F" />]
+          )}
         </Tabs>
-        <Button variant="contained" size="small" onClick={() => setHistoryOpen(true)}>
-          Par History
-        </Button>
+        {!isAdminView && (
+          <Button variant="contained" size="small" onClick={() => setHistoryOpen(true)}>
+            Par History
+          </Button>
+        )}
       </Box>
 
       <Box sx={{ p: "10px 10px 0px 10px" }}>
         {tab === 0 && <ParLeadReviewPanel cycle={cycle} employeeEmail={employeeEmail} isAdminView={isAdminView} />}
-        {tab === 1 && (
-          <ParLead360ReviewsTab
-            cycle={cycle}
-            employeeEmail={employeeEmail}
-            leadStatus={rating.data?.parLeadStatus}
-            leadStatusKnown={rating.isSuccess}
-          />
-        )}
-        {tab === 2 && <ParLeadF2fPanel cycle={cycle} employeeEmail={employeeEmail} />}
+        {isAdminView
+          ? tab === 1 && <ParUpdateStatusPanel cycle={cycle} employeeEmail={employeeEmail} />
+          : tab === 1 && (
+              <ParLead360ReviewsTab
+                cycle={cycle}
+                employeeEmail={employeeEmail}
+                leadStatus={rating.data?.parLeadStatus}
+                leadStatusKnown={rating.isSuccess}
+              />
+            )}
+        {!isAdminView && tab === 2 && <ParLeadF2fPanel cycle={cycle} employeeEmail={employeeEmail} />}
       </Box>
 
-      <ParLeadHistoryModal
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        employeeEmail={employeeEmail}
-        employeeName={employeeName}
-      />
+      {!isAdminView && (
+        <ParLeadHistoryModal
+          open={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          employeeEmail={employeeEmail}
+          employeeName={employeeName}
+        />
+      )}
     </Stack>
   );
 }

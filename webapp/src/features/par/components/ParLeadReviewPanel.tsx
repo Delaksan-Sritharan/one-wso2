@@ -16,6 +16,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -38,7 +41,7 @@ import {
   Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
-import { FileDownIcon, PencilIcon } from "@wso2/oxygen-ui-icons-react";
+import { ChevronDownIcon, FileDownIcon, PencilIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
@@ -59,9 +62,9 @@ const TOP_5_20_ENABLED_RATING = "Successful";
 
 // Ports LeadReviewPanel.tsx's lead-only path, plus (via `isAdminView`) its
 // isAdminAuditViewOn branch used from the Admin Portal's Employee View/Team
-// View "Review" action. Not ported even in admin mode: the separate "Admin
-// Comment" field, editing the employee's own comment on their behalf,
-// evidence attachments, and the "Update Status" tab — out of scope for
+// View "Review" action. Not ported even in admin mode: editing the
+// employee's own comment on their behalf, and evidence attachments — the
+// "Update Status" tab is a sibling tab (ParUpdateStatusPanel), not part of
 // this panel.
 export default function ParLeadReviewPanel({
   cycle,
@@ -78,6 +81,7 @@ export default function ParLeadReviewPanel({
   const { showSuccess, showError } = useNotifications();
 
   const [leadComment, setLeadComment] = useState("");
+  const [adminComment, setAdminComment] = useState("");
   const [parRatingValue, setParRatingValue] = useState("");
   const [specialRating, setSpecialRating] = useState<"NONE" | "TOP5P" | "TOP20P">("NONE");
   const [specialRatingConfirmed, setSpecialRatingConfirmed] = useState(false);
@@ -97,6 +101,7 @@ export default function ParLeadReviewPanel({
   if (parRatingData && parRatingData.parRatingId !== seededForId) {
     setSeededForId(parRatingData.parRatingId);
     setLeadComment(decodeParComment(parRatingData.parLeadComment));
+    setAdminComment(decodeParComment(parRatingData.parAdminComment));
     setParRatingValue(parRatingData.parRating && parRatingData.parRating !== "NOT_ASSIGNED" ? parRatingData.parRating : "");
     setSpecialRating((parRatingData.parSpecialRating as "TOP5P" | "TOP20P" | undefined) ?? "NONE");
     setSpecialRatingConfirmed(
@@ -119,10 +124,11 @@ export default function ParLeadReviewPanel({
   // itself rather than relying on an early return to have already happened.
   // Admin edits are gated by the cycle's own closing date rather than the
   // lead's feedback deadline.
-  const deadlinePassed = isDeadlinePassed(isAdminView ? cycle.parEvaluationEndDate : cycle.parLeadDeadline);
+  const deadlinePassed = isDeadlinePassed(isAdminView ? cycle.parCycleEndDate : cycle.parLeadDeadline);
   const shared = parRatingData?.parLeadStatus === "SHARED";
   const readOnly = isAdminView ? !adminForceEdit : shared || deadlinePassed;
   const savedLeadComment = decodeParComment(parRatingData?.parLeadComment);
+  const savedAdminComment = decodeParComment(parRatingData?.parAdminComment);
 
   const submit = (
     status: "DRAFT" | "SHARED",
@@ -148,6 +154,10 @@ export default function ParLeadReviewPanel({
                 ...(parRatingValue ? { parRating: parRatingValue } : {}),
                 parSpecialRating: specialRating,
               }),
+          // Only an admin caller may set this field — the backend rejects a
+          // non-empty value from anyone else, per checkForModifiableFields-
+          // ForLead/-ForSelf.
+          ...(isAdminView ? { parAdminComment: encodeParComment(adminComment) } : {}),
         },
       },
       {
@@ -201,6 +211,7 @@ export default function ParLeadReviewPanel({
 
   const dirty =
     leadComment.trim() !== savedLeadComment.trim() ||
+    (isAdminView && adminComment.trim() !== savedAdminComment.trim()) ||
     (parRatingValue !== (parRatingData.parRating ?? "") && parRatingValue !== "") ||
     specialRating !== (parRatingData.parSpecialRating ?? "NONE");
 
@@ -275,7 +286,7 @@ export default function ParLeadReviewPanel({
         <Card variant="outlined" sx={{ height: "100%" }}>
           <CardHeader title={<Typography variant="h6">Lead's Feedback</Typography>} />
           <CardContent>
-            <Stack spacing={2}>
+            <Stack spacing={2.5}>
               <Box sx={{ position: "relative" }}>
                 {readOnly ? (
                   shared ? (
@@ -299,91 +310,107 @@ export default function ParLeadReviewPanel({
                 )}
               </Box>
 
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                <Typography sx={{ flexShrink: 0 }}>Rating:</Typography>
-                {readOnly ? (
-                  parRatingData.parRating ? (
-                    <Chip size="small" label={parRatingData.parRating} />
-                  ) : (
-                    <Typography color="text.secondary">N/A</Typography>
-                  )
-                ) : (
-                  <TextField
-                    select
-                    label="Select Rating"
-                    size="small"
-                    fullWidth
-                    value={parRatingValue}
-                    onChange={(e) => setParRatingValue(e.target.value)}
-                    disabled={ratingUpdate.isPending}
-                  >
-                    {(cycle.parCycleConfigurations?.parRatings ?? []).map((r) => (
-                      <MenuItem key={r} value={r}>
-                        {r}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                )}
-              </Box>
-
-              {!readOnly && parRatingValue === TOP_5_20_ENABLED_RATING && (
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={specialRatingConfirmed}
-                      onChange={(e) => setSpecialRatingConfirmed(e.target.checked)}
-                      disabled={ratingUpdate.isPending}
-                    />
-                  }
-                  label="The Top 5% / 20% rating decision was discussed and finalized with the functional lead"
-                />
-              )}
-
-              {parRatingValue === TOP_5_20_ENABLED_RATING && (
+              {/* Rating + special-rating + who-shared, grouped in one shaded
+                  block rather than loose rows — these three are all "the
+                  verdict", distinct from the comment above and the actions
+                  below. */}
+              <Stack spacing={1.5} sx={{ p: 1.75, borderRadius: 1.5, bgcolor: "action.hover" }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <Typography sx={{ flexShrink: 0 }}>Top 5%/20% Rating:</Typography>
+                  <Typography variant="body2" sx={{ flexShrink: 0, minWidth: 96 }} color="text.secondary">
+                    Rating
+                  </Typography>
                   {readOnly ? (
-                    <Chip size="small" label={specialRating} />
+                    parRatingData.parRating ? (
+                      <Chip size="small" label={parRatingData.parRating} />
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        N/A
+                      </Typography>
+                    )
                   ) : (
                     <TextField
                       select
-                      label="Select Top 5%/20% Rating"
+                      label="Select Rating"
                       size="small"
                       fullWidth
-                      value={specialRating}
-                      onChange={(e) => setSpecialRating(e.target.value as typeof specialRating)}
-                      disabled={!specialRatingConfirmed || ratingUpdate.isPending}
+                      value={parRatingValue}
+                      onChange={(e) => setParRatingValue(e.target.value)}
+                      disabled={ratingUpdate.isPending}
                     >
-                      <MenuItem value="NONE">N/A</MenuItem>
-                      <MenuItem value="TOP5P">Top 5%</MenuItem>
-                      <MenuItem value="TOP20P">Top 20%</MenuItem>
+                      {(cycle.parCycleConfigurations?.parRatings ?? []).map((r) => (
+                        <MenuItem key={r} value={r}>
+                          {r}
+                        </MenuItem>
+                      ))}
                     </TextField>
                   )}
                 </Box>
-              )}
 
-              {readOnly && parRatingData.parRatingSharedBy && (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <Typography sx={{ flexShrink: 0 }}>PAR shared by:</Typography>
-                  <Chip size="small" label={parRatingData.parRatingSharedBy} />
-                </Box>
-              )}
+                {parRatingValue === TOP_5_20_ENABLED_RATING && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Typography variant="body2" sx={{ flexShrink: 0, minWidth: 96 }} color="text.secondary">
+                      Top 5%/20%
+                    </Typography>
+                    {readOnly ? (
+                      <Chip size="small" label={specialRating} />
+                    ) : (
+                      <TextField
+                        select
+                        label="Select Top 5%/20% Rating"
+                        size="small"
+                        fullWidth
+                        value={specialRating}
+                        onChange={(e) => setSpecialRating(e.target.value as typeof specialRating)}
+                        disabled={!specialRatingConfirmed || ratingUpdate.isPending}
+                      >
+                        <MenuItem value="NONE">N/A</MenuItem>
+                        <MenuItem value="TOP5P">Top 5%</MenuItem>
+                        <MenuItem value="TOP20P">Top 20%</MenuItem>
+                      </TextField>
+                    )}
+                  </Box>
+                )}
 
-              {!readOnly && !employeeHasStarted && (
-                <Typography color="warning.main" textAlign="right" sx={{ mb: 1 }}>
-                  * Sharing lead's feedback is disabled until employee PAR is shared
-                </Typography>
-              )}
+                {!readOnly && parRatingValue === TOP_5_20_ENABLED_RATING && (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={specialRatingConfirmed}
+                        onChange={(e) => setSpecialRatingConfirmed(e.target.checked)}
+                        disabled={ratingUpdate.isPending}
+                      />
+                    }
+                    label="The Top 5% / 20% rating decision was discussed and finalized with the functional lead"
+                    sx={{ "& .MuiFormControlLabel-label": { fontSize: "0.8rem" } }}
+                  />
+                )}
+
+                {readOnly && parRatingData.parRatingSharedBy && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Typography variant="body2" sx={{ flexShrink: 0, minWidth: 96 }} color="text.secondary">
+                      Shared by
+                    </Typography>
+                    <Chip size="small" label={parRatingData.parRatingSharedBy} />
+                  </Box>
+                )}
+              </Stack>
 
               {!readOnly && (
-                <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5 }}>
-                  <Button variant="outlined" disabled={!canSaveDraft} onClick={() => submit("DRAFT")}>
-                    Save draft
-                  </Button>
-                  <Button variant="contained" disabled={!canShare} onClick={() => setConfirming(true)}>
-                    {isAdminView ? "Save and Share" : "Share"}
-                  </Button>
-                </Box>
+                <>
+                  {!employeeHasStarted && (
+                    <Alert severity="warning" sx={{ py: 0.25 }}>
+                      Sharing is disabled until the employee's own PAR is shared.
+                    </Alert>
+                  )}
+                  <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, pt: 1, borderTop: 1, borderColor: "divider" }}>
+                    <Button variant="outlined" disabled={!canSaveDraft} onClick={() => submit("DRAFT")}>
+                      Save draft
+                    </Button>
+                    <Button variant="contained" disabled={!canShare} onClick={() => setConfirming(true)}>
+                      {isAdminView ? "Save and Share" : "Share"}
+                    </Button>
+                  </Box>
+                </>
               )}
             </Stack>
           </CardContent>
@@ -402,6 +429,27 @@ export default function ParLeadReviewPanel({
           </CardContent>
         </Card>
       </Grid>
+
+      {isAdminView && (
+        <Grid size={12}>
+          <Accordion defaultExpanded={Boolean(savedAdminComment)}>
+            <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>
+              <Typography variant="h6">Admin Comment</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              {readOnly ? (
+                savedAdminComment ? (
+                  <ParCommentView html={savedAdminComment} />
+                ) : (
+                  <ParEmptyState text="Admin comment unavailable" />
+                )
+              ) : (
+                <ParRichTextField value={adminComment} onChange={setAdminComment} placeholder="Enter your comment here" />
+              )}
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
+      )}
 
       <Grid size={12}>
         {reviews.isLoading ? (
