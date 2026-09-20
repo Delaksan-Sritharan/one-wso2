@@ -97,6 +97,10 @@ export interface ParRating {
   parBusinessUnit?: string;
   parTeam?: string;
   parDepartment?: string;
+  // Present on the wire; source's own Report.tsx hides both by default
+  // (toggleable via its column selector) rather than omitting them.
+  parCompany?: string;
+  parLocation?: string;
   parSubTeam?: string;
   // Base64 of a UTF-8-encoded string (par-app's NONE_EMPTY_BASE64_STRING_REGEX
   // constraint) — decode with decodeParComment before rendering. Absent until
@@ -207,6 +211,9 @@ export interface ParRatingModify {
   parSpecialRating?: string;
   parLeadComment?: string;
   parLeadStatus?: ParLeadStatus;
+  // Admin-only — both checkForModifiableFieldsForLead and -ForSelf reject a
+  // non-empty value here, so only an admin caller may actually set it.
+  parAdminComment?: string;
 }
 
 // ---- Lead Portal ---------------------------------------------------------
