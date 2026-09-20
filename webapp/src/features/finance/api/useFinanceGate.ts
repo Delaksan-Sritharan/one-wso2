@@ -55,6 +55,16 @@ export function useFinanceGate(enabled = true): FinanceGate {
   const ccLeadOrFinance = ccHasAccess(cc.data, "lead") || ccHasAccess(cc.data, "finance");
   const ccFinance = ccHasAccess(cc.data, "finance");
   const opdFinance = opdHasRole(opd.data, OPD_ROLE.FINANCE_APPROVER);
+  // Filing an OPD claim is its own role and not one everybody holds: the
+  // backend refuses the whole app to anyone without it, so the menu must not
+  // offer a screen whose every request comes back 403.
+  const opdSubmitter = opdHasRole(opd.data, OPD_ROLE.CLAIM_SUBMITTER);
+  // A lookup that FAILED is not the same answer as one that came back without
+  // the role: `opd.data` is undefined either way, and `isResolving` is false
+  // once the retries give up. Treating the two alike would silently drop OPD
+  // out of the menu whenever its backend had a bad minute, with nothing on
+  // screen to say why or to retry.
+  const opdUnknown = opd.isError;
   const expenseLead = Boolean(expense.data?.enableLeadView);
   const expenseFinance = Boolean(expense.data?.enableFinanceView);
 
@@ -75,22 +85,37 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // No lead stage exists for OPD — the backend grants role 555 or nothing.
       case "claim-approval-opd":
         return opdFinance;
-      // Behind a preview flag until the Finance and Me new-claim entry points
-      // are reconciled. Answered here as well as by removing the registry
-      // entry, because the Finance overview builds its tiles by hand and asks
-      // the gate by id — a registry-only change would leave that tile offering
-      // a route that no longer exists.
+      // Behind two flags: the group's own, and — on top of that — the one on
+      // the New Claim item itself, held back until the Finance and Me
+      // new-claim entry points are reconciled. Answered here as well as by
+      // removing the registry entry, because the Finance overview builds its
+      // tiles by hand and asks the gate by id — a registry-only change would
+      // leave that tile offering a route that no longer exists.
       case "expense-new":
-        return isPreviewEnabled("expenseSubmitter");
+        return isPreviewEnabled("expenseClaims") && isPreviewEnabled("expenseSubmitter");
       // Approving expense claims, beside filing them. One entry per stage, each
-      // on its own flag — `appDataSlice.ts:104-109` decides which of the source
-      // app's two sidebar entries exist the same way. Both cases are required,
-      // not optional: each item declares `requires`, so an unmapped id falls
-      // through to the default and fails closed for everyone.
+      // on its own backend flag — `appDataSlice.ts:104-109` decides which of
+      // the source app's two sidebar entries exist the same way — but both
+      // sit behind the group's own flag first, same as expense-new above.
+      // Both cases are required, not optional: each item declares `requires`,
+      // so an unmapped id falls through to the default and fails closed for
+      // everyone.
       case "expense-lead-approvals":
-        return expenseLead;
+        return isPreviewEnabled("expenseClaims") && expenseLead;
       case "expense-finance-approvals":
-        return expenseFinance;
+        return isPreviewEnabled("expenseClaims") && expenseFinance;
+      // OPD Claims → Claim History, in the Finance perspective. The submitter
+      // role, not the approver one: this is your own history, the same claims
+      // the Me-side OPD tab shows.
+      case "opd-history":
+        // Behind the same flag as the group it sits in: answered here as well
+        // as by dropping the registry entry, because the Finance overview
+        // builds its tiles by hand and asks the gate by id.
+        if (!isPreviewEnabled("opdClaims")) return false;
+        // Shown while the answer is unknown: the screen behind it carries its
+        // own error notice and a retry, which is a better place to find out
+        // than a menu entry that quietly is not there.
+        return opdSubmitter || Boolean(opdUnknown);
       case "cc-approve":
         return ccLeadOrFinance;
       case "cc-settings":
