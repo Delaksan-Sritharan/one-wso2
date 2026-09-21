@@ -153,7 +153,8 @@ function HistoryRow({ entry }: { entry: PromotionHistoryEntry }) {
   );
 }
 
-// The band jump, set as the row's headline. The label sits above the
+// The band jump. Both bands are set at the same size — weight and colour
+// mark the one reached, rather than scale. The label sits above the
 // numbers rather than below them: underneath it read as a caption on the
 // pair, which the arrow already covers, so it introduces the line instead.
 function BandJump({ from, to }: { from: number; to: number }) {
@@ -179,10 +180,8 @@ function BandJump({ from, to }: { from: number; to: number }) {
         <Box sx={{ fontSize: 11.5, color: "text.disabled" }}>→</Box>
         <Typography
           sx={{
-            fontSize: 21,
-            fontWeight: 650,
-            letterSpacing: "-0.02em",
-            lineHeight: 1.1,
+            fontSize: 12.5,
+            fontWeight: 700,
             color: "primary.main",
             fontVariantNumeric: "tabular-nums",
           }}
