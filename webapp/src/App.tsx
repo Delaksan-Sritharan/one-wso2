@@ -325,7 +325,16 @@ export default function App() {
           <Route path="finance/cc/approve" element={<CcApprovePage />} />
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
-          <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
+          {/* Behind the same preview flag as its menu entry. Hiding only the
+              entry would leave the page reachable by anyone with the URL —
+              not what "not released yet" means. Me → Claims → OPD stays
+              open regardless: that one was never behind this flag, filing
+              and reading your own claims is open to everyone
+              (claimsTabs.ts:22-24); this is specifically the Finance
+              perspective's own OPD Claims front door. */}
+          {isPreviewEnabled("opdClaims") && (
+            <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
+          )}
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
               from the standalone org-chart app. Unlike every other People Ops
