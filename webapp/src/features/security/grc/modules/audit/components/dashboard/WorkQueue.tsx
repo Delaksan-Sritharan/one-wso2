@@ -49,6 +49,7 @@ import { useGetTeams } from "@features/security/grc/modules/audit/api/useGetTeam
 import { useGetUsers } from "@features/security/grc/modules/audit/api/useGetUsers";
 import { useGetAudits } from "@features/security/grc/modules/audit/api/useGetAudits";
 import { dueInfo } from "./dueDate";
+import { auditPaths } from "@features/security/grc/modules/audit/paths";
 
 function actionLabel(status: string, canApprove: boolean): string {
   switch (status) {
@@ -479,11 +480,11 @@ function TabPanel({ tab, canApprove, canSubmit, emptyText }: TabPanelProps): JSX
                 <TableRow
                   key={item.controlId}
                   hover tabIndex={0} sx={{ cursor: "pointer" }}
-                  onClick={() => void navigate(`/security/audit/audits/${item.auditId}?control=${item.controlId}`)}
+                  onClick={() => void navigate(auditPaths.detail(item.auditId, item.controlId))}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      void navigate(`/security/audit/audits/${item.auditId}?control=${item.controlId}`);
+                      void navigate(auditPaths.detail(item.auditId, item.controlId));
                     }
                   }}
                 >

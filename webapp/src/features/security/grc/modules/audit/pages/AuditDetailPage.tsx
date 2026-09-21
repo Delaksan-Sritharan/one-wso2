@@ -58,6 +58,7 @@ import {
 } from "@features/security/grc/modules/audit/utils/controlFilters";
 import { CONTROL_STATUS_LABELS } from "@features/security/grc/modules/audit/utils/controlStatus";
 import type { AuditControl, ControlStatus } from "@features/security/grc/modules/audit/types/audit";
+import { auditPaths } from "@features/security/grc/modules/audit/paths";
 
 // ── Active filter chip helpers ────────────────────────────────────────────────
 
@@ -234,7 +235,7 @@ export default function AuditDetailPage(): JSX.Element {
   // always dropping back to the top-level framework overview — the audit's
   // own framework id is already loaded, so no navigation state needs threading.
   const handleBack = () =>
-    void navigate(audit ? `/security/audit/audits?framework=${audit.framework.id}` : "/security/audit/audits");
+    void navigate(auditPaths.list(audit?.framework.id));
 
   // Days-left pill for active audits.
   const remaining = audit?.status === "ACTIVE" ? daysLeft(audit.periodEnd) : null;
@@ -320,7 +321,7 @@ export default function AuditDetailPage(): JSX.Element {
                   <Button
                     variant="outlined"
                     startIcon={<History size={16} />}
-                    onClick={() => void navigate(`/security/audit/audits/${auditId}/activity`)}
+                    onClick={() => void navigate(auditPaths.activity(auditId))}
                     sx={{ textTransform: "none" }}
                   >
                     Activity Log
