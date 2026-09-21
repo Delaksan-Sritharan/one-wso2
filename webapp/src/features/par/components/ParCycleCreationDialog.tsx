@@ -170,7 +170,12 @@ export default function ParCycleCreationDialog({
       value={value}
       onChange={(_e, newValue) => setValue(newValue as string[])}
       renderTags={(tagValue, getTagProps) =>
-        tagValue.map((option, index) => <Chip variant="outlined" label={option} {...getTagProps({ index })} />)
+        tagValue.map((option, index) => {
+          const { key, ...tagProps } = getTagProps({ index });
+          return (
+            <Chip key={key} variant="outlined" label={option} {...tagProps} />
+          );
+        })
       }
       renderInput={(params) => <TextField {...params} label={label} size="small" aria-label={ariaLabel} />}
     />

@@ -70,7 +70,11 @@ export default function ParEditQuotaDialog({
       setGroup({ ...group, allocated20Slots: capped20, allocated5Slots: adjusted5 });
     } else {
       const capped5 = Math.min(value, group.default5Slots);
-      setGroup({ ...group, allocated5Slots: Math.min(capped5, group.allocated20Slots) });
+      // A small group's single combined slot (default20Slots === 0) must not
+      // be capped down to 0 by an already-zero 20% bound — legacy's
+      // EditQuotaDialog.tsx has this exact bug; not reproduced here.
+      const bound = group.default20Slots === 0 ? capped5 : Math.min(capped5, group.allocated20Slots);
+      setGroup({ ...group, allocated5Slots: bound });
     }
   };
 

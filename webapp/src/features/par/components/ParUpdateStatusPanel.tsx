@@ -40,7 +40,10 @@ export default function ParUpdateStatusPanel({ cycle, employeeEmail }: { cycle: 
 
   const [employeeStatus, setEmployeeStatus] = useState<ParEmployeeStatus>("PENDING");
   const [leadStatus, setLeadStatus] = useState<ParLeadStatus>("PENDING");
-  const [f2fStatus, setF2fStatus] = useState<"PENDING" | "COMPLETED">("PENDING");
+  // The real value, not collapsed to the two options the dropdown below
+  // offers (matches legacy's UpdateStatusPanel.tsx) — otherwise a save that
+  // doesn't touch this field would overwrite a SCHEDULED record with PENDING.
+  const [f2fStatus, setF2fStatus] = useState<ParF2fStatus>("PENDING");
   const [f2fDate, setF2fDate] = useState("");
   const [seededForId, setSeededForId] = useState<number | undefined>(undefined);
 
@@ -52,7 +55,7 @@ export default function ParUpdateStatusPanel({ cycle, employeeEmail }: { cycle: 
     setSeededForId(parRatingData.parRatingId);
     setEmployeeStatus(parRatingData.parEmployeeStatus);
     setLeadStatus(parRatingData.parLeadStatus);
-    setF2fStatus(parRatingData.parF2fStatus === "COMPLETED" ? "COMPLETED" : "PENDING");
+    setF2fStatus(parRatingData.parF2fStatus);
     setF2fDate(parRatingData.parF2fDate ?? "");
   }
 
@@ -79,7 +82,7 @@ export default function ParUpdateStatusPanel({ cycle, employeeEmail }: { cycle: 
   const dirty =
     employeeStatus !== parRatingData.parEmployeeStatus ||
     leadStatus !== parRatingData.parLeadStatus ||
-    f2fStatus !== (parRatingData.parF2fStatus === "COMPLETED" ? "COMPLETED" : "PENDING") ||
+    f2fStatus !== parRatingData.parF2fStatus ||
     f2fDate !== (parRatingData.parF2fDate ?? "");
 
   const handleSave = () => {
@@ -104,7 +107,7 @@ export default function ParUpdateStatusPanel({ cycle, employeeEmail }: { cycle: 
   const handleCancel = () => {
     setEmployeeStatus(parRatingData.parEmployeeStatus);
     setLeadStatus(parRatingData.parLeadStatus);
-    setF2fStatus(parRatingData.parF2fStatus === "COMPLETED" ? "COMPLETED" : "PENDING");
+    setF2fStatus(parRatingData.parF2fStatus);
     setF2fDate(parRatingData.parF2fDate ?? "");
   };
 
@@ -168,7 +171,7 @@ export default function ParUpdateStatusPanel({ cycle, employeeEmail }: { cycle: 
                   fullWidth
                   value={f2fStatus}
                   disabled={f2fDisabled || ratingUpdate.isPending}
-                  onChange={(e) => setF2fStatus(e.target.value as ParF2fStatus & ("PENDING" | "COMPLETED"))}
+                  onChange={(e) => setF2fStatus(e.target.value as ParF2fStatus)}
                 >
                   <MenuItem value="PENDING">Pending</MenuItem>
                   <MenuItem value="COMPLETED">Completed</MenuItem>

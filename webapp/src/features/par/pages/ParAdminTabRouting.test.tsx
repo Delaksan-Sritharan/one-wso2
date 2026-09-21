@@ -69,7 +69,7 @@ function show(initial = "/people-ops/performance/admin") {
     <MemoryRouter initialEntries={[initial]}>
       <UrlProbe />
       <Routes>
-        <Route path="/people-ops/performance" element={<div data-testid="employee-portal" />} />
+        <Route path="/me/performance" element={<div data-testid="employee-portal" />} />
         <Route
           path="/people-ops/performance/admin"
           element={
@@ -105,13 +105,13 @@ describe("someone who isn't a PAR admin", () => {
 
   it("is redirected to the Employee Portal", async () => {
     show();
-    expect(await screen.findByTestId("url")).toHaveTextContent("/people-ops/performance");
+    expect(await screen.findByTestId("url")).toHaveTextContent("/me/performance");
     expect(screen.queryByTestId("tab-body")).not.toBeInTheDocument();
   });
 
   it("is redirected away even when deep-linking straight to a tab", async () => {
     show("/people-ops/performance/admin/ongoing");
-    expect(await screen.findByTestId("url")).toHaveTextContent("/people-ops/performance");
+    expect(await screen.findByTestId("url")).toHaveTextContent("/me/performance");
   });
 });
 

@@ -239,7 +239,9 @@ export default function ParOrgSummary({ cycle }: { cycle: ParCycle }) {
         </DialogContent>
       </Dialog>
 
-      <ParCycleSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} cycle={cycle} />
+      {/* Conditionally rendered, like ParEditQuotaDialog, so a fresh instance
+          (and fresh form state) mounts each time it's opened. */}
+      {settingsOpen && <ParCycleSettingsDialog open onClose={() => setSettingsOpen(false)} cycle={cycle} />}
       <ParBulkReminderDialog open={bulkReminderOpen} onClose={() => setBulkReminderOpen(false)} />
       <ParSyncEmployeeDialog open={syncEmployeeOpen} onClose={() => setSyncEmployeeOpen(false)} cycle={cycle} />
       <ParViewReportsDialog open={viewReportsOpen} onClose={() => setViewReportsOpen(false)} cycle={cycle} />

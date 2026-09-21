@@ -56,6 +56,8 @@ export function ParRequiresAdminRoute({ children }: { children: ReactNode }) {
       </Box>
     );
   }
-  if (!admin.isAdmin) return <Navigate to="/people-ops/performance" replace />;
+  // /people-ops/performance has no route of its own — the Employee Portal
+  // moved to /me/performance — same fallback ParRequiresTeamLeadRoute uses.
+  if (!admin.isAdmin) return <Navigate to="/me/performance" replace />;
   return <>{children}</>;
 }

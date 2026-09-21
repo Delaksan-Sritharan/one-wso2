@@ -124,7 +124,8 @@ export default function ParLeadReviewPanel({
   // itself rather than relying on an early return to have already happened.
   // Admin edits are gated by the cycle's own closing date rather than the
   // lead's feedback deadline.
-  const deadlinePassed = isDeadlinePassed(isAdminView ? cycle.parCycleEndDate : cycle.parLeadDeadline);
+  const deadlineDate = isAdminView ? cycle.parCycleEndDate : cycle.parLeadDeadline;
+  const deadlinePassed = isDeadlinePassed(deadlineDate);
   const shared = parRatingData?.parLeadStatus === "SHARED";
   const readOnly = isAdminView ? !adminForceEdit : shared || deadlinePassed;
   const savedLeadComment = decodeParComment(parRatingData?.parLeadComment);
@@ -221,11 +222,16 @@ export default function ParLeadReviewPanel({
     </Alert>
   ) : parRatingData.parLeadStatus === "DRAFT" ? (
     <Alert severity="warning">
-      You have saved your PAR as a draft Please share on or before the deadline: {formatShortDate(cycle.parLeadDeadline)}.
+      You have saved your PAR as a draft.{" "}
+      {isAdminView
+        ? `Please share before the cycle ends: ${formatShortDate(deadlineDate)}.`
+        : `Please share on or before the deadline: ${formatShortDate(deadlineDate)}.`}
     </Alert>
   ) : (
     <Alert severity="info">
-      Please share the lead's feedback before the deadline: {formatShortDate(cycle.parLeadDeadline)}.
+      {isAdminView
+        ? `Please share the lead's feedback before the cycle ends: ${formatShortDate(deadlineDate)}.`
+        : `Please share the lead's feedback before the deadline: ${formatShortDate(deadlineDate)}.`}
     </Alert>
   );
 
@@ -257,7 +263,8 @@ export default function ParLeadReviewPanel({
             {statusAlert}
             {deadlinePassed && !shared && (
               <Alert severity="error" sx={{ mt: 1.5 }}>
-                Lead's feedback deadline is passed on: {formatShortDate(cycle.parLeadDeadline)}.
+                {isAdminView ? "The cycle ended on" : "Lead's feedback deadline is passed on"}:{" "}
+                {formatShortDate(deadlineDate)}.
               </Alert>
             )}
           </Box>

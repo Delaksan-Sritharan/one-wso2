@@ -98,6 +98,9 @@ export default function ParAssignQuota({ cycle }: { cycle: ParCycle }) {
   });
   const [confirmContent, setConfirmContent] = useState<ConfirmationContent | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Set once the quota POST has succeeded, so a retry after only the status
+  // update fails doesn't re-POST the same grouping a second time.
+  const [quotaPosted, setQuotaPosted] = useState(false);
 
   if (teamsQuery.isLoading) {
     return <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 1.5 }} />;
@@ -226,6 +229,15 @@ export default function ParAssignQuota({ cycle }: { cycle: ParCycle }) {
   };
 
   const handleSaveConfirmed = () => {
+    setSaveError(null);
+
+    // A prior attempt already got the grouping saved — only the status flip
+    // failed, so retry just that instead of re-POSTing the same groups.
+    if (quotaPosted) {
+      setStatus.mutate("OPEN", { onError: (err) => setSaveError(describeError(err)) });
+      return;
+    }
+
     const payload = formatGroupsToQuotaPayload(groups, cycle.parCycleId);
     const payloadErrors = validateQuotaPayload(payload);
     if (payloadErrors.length > 0) {
@@ -234,9 +246,9 @@ export default function ParAssignQuota({ cycle }: { cycle: ParCycle }) {
       return;
     }
 
-    setSaveError(null);
     postQuota.mutate(payload, {
       onSuccess: () => {
+        setQuotaPosted(true);
         setStatus.mutate("OPEN", { onError: (err) => setSaveError(describeError(err)) });
       },
       onError: (err) => setSaveError(describeError(err)),
