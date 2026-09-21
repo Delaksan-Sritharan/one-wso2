@@ -21,6 +21,7 @@ import {
   prAnalysisStatusMessage,
   relativeJarPathError,
   umtSvnLocationRegex,
+  zipTargetDirectory,
 } from "./umtPrAnalysis";
 
 describe("GITHUB_PR_REGEX", () => {
@@ -177,6 +178,60 @@ describe("manualFileNameMatchesPath", () => {
 
   it("allows any file name when the path has no segments", () => {
     expect(manualFileNameMatchesPath("bundle.jar", "")).toBe(true);
+  });
+
+  it("always allows zip files, regardless of the path's last segment", () => {
+    // A zip is a container unpacked client-side; the archive's own name has
+    // nothing to do with `relativePath`, which for a zip is the directory
+    // its entries extract into. Forcing the archive's name to appear as the
+    // path's last segment is what turned it into a stored directory segment.
+    expect(manualFileNameMatchesPath("patch.zip", "repository/components/dropins")).toBe(true);
+    expect(manualFileNameMatchesPath("patch.zip", "repository/components/dropins/patch.zip")).toBe(true);
+    expect(manualFileNameMatchesPath("patch.zip", "repository/components/dropins/unrelated.jar")).toBe(true);
+    expect(manualFileNameMatchesPath("PATCH.ZIP", "repository/components/dropins")).toBe(true);
+    expect(manualFileNameMatchesPath("patch.zip", "")).toBe(true);
+  });
+});
+
+describe("zipTargetDirectory", () => {
+  it("strips the archive's own name off the end of the path", () => {
+    expect(zipTargetDirectory("repository/components/dropins/patch.zip", "patch.zip")).toBe(
+      "repository/components/dropins",
+    );
+  });
+
+  it("matches the archive name case-insensitively", () => {
+    expect(zipTargetDirectory("repository/components/dropins/PATCH.ZIP", "patch.zip")).toBe(
+      "repository/components/dropins",
+    );
+  });
+
+  it("leaves a plain directory path alone", () => {
+    expect(zipTargetDirectory("repository/components/dropins", "patch.zip")).toBe(
+      "repository/components/dropins",
+    );
+  });
+
+  it("does not strip a different archive name that happens to be last", () => {
+    expect(zipTargetDirectory("repository/components/dropins/other.zip", "patch.zip")).toBe(
+      "repository/components/dropins/other.zip",
+    );
+  });
+
+  it("ignores trailing slashes", () => {
+    expect(zipTargetDirectory("repository/components/dropins/patch.zip/", "patch.zip")).toBe(
+      "repository/components/dropins",
+    );
+    expect(zipTargetDirectory("repository/components/dropins/", "patch.zip")).toBe(
+      "repository/components/dropins",
+    );
+  });
+
+  // Only a name preceded by a separator is treated as a stray archive segment.
+  // A bare "patch.zip" is left as-is: with no directory part there is nothing
+  // to distinguish "the archive name typed by habit" from a real target.
+  it("leaves a bare archive name untouched", () => {
+    expect(zipTargetDirectory("patch.zip", "patch.zip")).toBe("patch.zip");
   });
 });
 

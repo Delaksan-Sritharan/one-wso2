@@ -214,6 +214,11 @@ export default function UmtProductAnalysisStep({ id, update }: { id: string; upd
       updateNo: id,
       compatibleProducts,
       applicableProducts: mergedApplicableProducts,
+      // Deliberately empty/false: these three are analysis metadata the
+      // WUM-files service recomputes. UpdateManager.updateProductAnalysis
+      // persists and returns `paResponse` (the recomputed answer), not the
+      // request, and the GET reads back that same `paResponseJson` — so
+      // whatever is sent here is forwarded and then discarded.
       ignoredFilePathsDuringPartialProductAnalysis: [],
       ignoredPartiallyApplicableProducts: [],
       partiallyApplicableProductIgnoredReason: {
@@ -336,7 +341,18 @@ export default function UmtProductAnalysisStep({ id, update }: { id: string; upd
               {ignoredProducts.length > 0 ? (
                 <List>
                   {ignoredProducts.map((product, index) => (
-                    <Typography key={index} variant="body2">
+                    // Content plus index, matching the rowKey shape used across
+                    // the feature: the backend types this as a plain List<String>
+                    // (ApplicableProductsResponse), so two identical entries are
+                    // possible and a content-only key would collide.
+                    <Typography
+                      key={`ignored-${
+                        typeof product === "string"
+                          ? product
+                          : productKey(product.productName, product.baseVersion)
+                      }-${index}`}
+                      variant="body2"
+                    >
                       {typeof product === "string"
                         ? product
                         : `${product.productName ?? "Unknown product"}${product.baseVersion ? ` - ${product.baseVersion}` : ""}`}

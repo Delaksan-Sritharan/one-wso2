@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   Box,
   Button,
@@ -102,45 +102,91 @@ export default function UmtUpdateBranchTab({
     publicRepoUrl: false,
   });
 
-  const branchRows = branches.data ?? [];
-  const componentRows: BranchGridRow[] = branchRows
-    .filter((branch) => branch.branchType === "ComponentBranch")
-    .map((branch, index) => ({ ...branch, id: branchRowId(branch, index) }));
-  const createdProductRows: ProductBranchRow[] = branchRows
-    .filter((branch) => branch.branchType === "ProductBranch")
-    .map((branch, index) => ({ ...branch, id: branchRowId(branch, index) }));
-  const initialProductRows: ProductBranchRow[] = (update.products ?? []).map((updateProduct, index) => {
-      const productName = updateProduct.product?.name ?? "N/A";
-      const rawVersion = updateProduct.product?.version ?? "N/A";
-      const version = rawVersion.endsWith(".full") ? rawVersion.slice(0, -5) : rawVersion;
-      const metadata = products[productName]?.find((product) => product.version === rawVersion);
+  // New GridColDef objects (with new renderCell closures) read to DataGrid as a
+  // columns change and re-run its column pipeline, which can drop the user's
+  // resizing. None of this depends on the Create Branch form, so keep the rows
+  // and columns off the keystroke path.
+  const branchRows = useMemo(() => branches.data ?? [], [branches.data]);
+  const componentRows: BranchGridRow[] = useMemo(
+    () =>
+      branchRows
+        .filter((branch) => branch.branchType === "ComponentBranch")
+        .map((branch, index) => ({ ...branch, id: branchRowId(branch, index) })),
+    [branchRows],
+  );
+  const createdProductRows: ProductBranchRow[] = useMemo(
+    () =>
+      branchRows
+        .filter((branch) => branch.branchType === "ProductBranch")
+        .map((branch, index) => ({ ...branch, id: branchRowId(branch, index) })),
+    [branchRows],
+  );
+  const initialProductRows: ProductBranchRow[] = useMemo(
+    () =>
+      (update.products ?? []).map((updateProduct, index) => {
+        const productName = updateProduct.product?.name ?? "N/A";
+        const rawVersion = updateProduct.product?.version ?? "N/A";
+        const version = rawVersion.endsWith(".full") ? rawVersion.slice(0, -5) : rawVersion;
+        const metadata = products[productName]?.find((product) => product.version === rawVersion);
 
-      return {
-        id: String(updateProduct.productId ?? updateProduct.product?.id ?? `${productName}-${index}`),
-        productName,
-        version,
-        releaseTag: version,
-        supportRepoUrl: metadata?.supportRepoUrl ?? "N/A",
-        publicRepoUrl: metadata?.publicRepoUrl ?? "N/A",
-        branchUrl: "N/A",
-        jenkinsJobUrl: "N/A",
-        status: "Not Created",
-        sourceProduct: updateProduct,
-      };
-    });
-  const productRows = createdProductRows.length > 0 ? createdProductRows : initialProductRows;
+        return {
+          id: String(updateProduct.productId ?? updateProduct.product?.id ?? `${productName}-${index}`),
+          productName,
+          version,
+          releaseTag: version,
+          supportRepoUrl: metadata?.supportRepoUrl ?? "N/A",
+          publicRepoUrl: metadata?.publicRepoUrl ?? "N/A",
+          branchUrl: "N/A",
+          jenkinsJobUrl: "N/A",
+          status: "Not Created",
+          sourceProduct: updateProduct,
+        };
+      }),
+    [update.products, products],
+  );
+  // A ProductBranch is created one product at a time (the backend takes a
+  // single product per call), so "some created, some not" is the normal
+  // intermediate state for a multi-product update. Merge the two lists by
+  // product rather than choosing one, so the remaining products keep their
+  // Create action.
+  const productRows: ProductBranchRow[] = useMemo(() => {
+    const createdByProduct = new Map(
+      createdProductRows.map((row) => [
+        branchProductKey(row.productName, row.version ?? row.releaseTag),
+        row,
+      ]),
+    );
+    return [
+      ...initialProductRows.map(
+        (row) => createdByProduct.get(branchProductKey(row.productName, row.version)) ?? row,
+      ),
+      // Branches the backend reports that don't correspond to a current update
+      // product (e.g. a product dropped from the update after branching).
+      ...createdProductRows.filter(
+        (row) =>
+          !initialProductRows.some(
+            (product) =>
+              branchProductKey(product.productName, product.version) ===
+              branchProductKey(row.productName, row.version ?? row.releaseTag),
+          ),
+      ),
+    ];
+  }, [createdProductRows, initialProductRows]);
   const compatibleInitialProduct = update.products?.find((product) => product.type === "CompatibleInitial");
 
-  const submitBranch = async (request: UmtBranchCreationRequest, successMessage: string) => {
-    try {
-      await createBranch.mutateAsync(withHotfixFields(request, update));
-      showSuccess(successMessage);
-      return true;
-    } catch (error) {
-      showError(`Branch creation failed. ${describeError(error)}`);
-      return false;
-    }
-  };
+  const submitBranch = useCallback(
+    async (request: UmtBranchCreationRequest, successMessage: string) => {
+      try {
+        await createBranch.mutateAsync(toBranchCreationPayload(request, update));
+        showSuccess(successMessage);
+        return true;
+      } catch (error) {
+        showError(`Branch creation failed. ${describeError(error)}`);
+        return false;
+      }
+    },
+    [createBranch, update, showSuccess, showError],
+  );
 
   const handleCreateComponentBranch = async () => {
     setBranchFormSubmitted(true);
@@ -162,19 +208,22 @@ export default function UmtUpdateBranchTab({
     }
   };
 
-  const handleCreateProductBranch = async (row: ProductBranchRow) => {
-    await submitBranch(
-      {
-        publicRepoUrl: displayValue(row.publicRepoUrl),
-        releaseTag: displayValue(row.version ?? row.releaseTag),
-        channel: "full",
-        productName: displayValue(row.productName),
-        branchType: "ProductBranch",
-        productVersion: displayValue(row.version ?? row.productVersion),
-      },
-      `Product branch requested for ${displayValue(row.productName)}`,
-    );
-  };
+  const handleCreateProductBranch = useCallback(
+    async (row: ProductBranchRow) => {
+      await submitBranch(
+        {
+          publicRepoUrl: displayValue(row.publicRepoUrl),
+          releaseTag: displayValue(row.version ?? row.releaseTag),
+          channel: "full",
+          productName: displayValue(row.productName),
+          branchType: "ProductBranch",
+          productVersion: displayValue(row.version ?? row.productVersion),
+        },
+        `Product branch requested for ${displayValue(row.productName)}`,
+      );
+    },
+    [submitBranch],
+  );
 
   const handleFindUpdateLevel = async () => {
     setUpdateLevelSubmitted(true);
@@ -190,11 +239,19 @@ export default function UmtUpdateBranchTab({
     }
   };
 
-  const componentColumns = branchColumns(false, createBranch.isPending, handleCreateProductBranch);
-  const productColumns = branchColumns(
-    createdProductRows.length === 0,
-    createBranch.isPending,
-    handleCreateProductBranch,
+  const componentColumns = useMemo(
+    () =>
+      branchColumns(false, createBranch.isPending, handleCreateProductBranch).filter(
+        (column) => column.field !== "productName" && column.field !== "action",
+      ),
+    [createBranch.isPending, handleCreateProductBranch],
+  );
+  // Unconditionally include the Action column: the cell renderer already emits
+  // "N/A" for a created row and the Create button otherwise, so the column set
+  // no longer appears and disappears as branches are created.
+  const productColumns = useMemo(
+    () => branchColumns(true, createBranch.isPending, handleCreateProductBranch),
+    [createBranch.isPending, handleCreateProductBranch],
   );
 
   return (
@@ -248,9 +305,7 @@ export default function UmtUpdateBranchTab({
       )}
       <BranchGrid
         ariaLabel="Component branches"
-        columns={componentColumns.filter(
-          (column) => column.field !== "productName" && column.field !== "action",
-        )}
+        columns={componentColumns}
         loading={branches.isPending}
         rows={componentRows}
       />
@@ -523,7 +578,12 @@ function UpdateLevelDialog({
   );
 }
 
-function withHotfixFields(request: UmtBranchCreationRequest, update: UmtUpdateSummary): UmtBranchCreationRequest {
+// The non-hotfix endpoint binds `BranchCreationRequest`, which declares exactly
+// these five fields; `productVersion`/`jiraId`/`wso2CaseId` only exist on
+// `HotfixBranchCreationRequest`. This is a projection onto the backend
+// contract, not a trim of "extra" fields — sending productVersion to the
+// non-hotfix branch endpoint is a no-op the backend discards.
+function toBranchCreationPayload(request: UmtBranchCreationRequest, update: UmtUpdateSummary): UmtBranchCreationRequest {
   if (!update.isHotfix) {
     return {
       branchType: request.branchType,
@@ -539,6 +599,10 @@ function withHotfixFields(request: UmtBranchCreationRequest, update: UmtUpdateSu
     wso2CaseId: update.wso2CaseId ?? "",
     productVersion: request.productVersion ?? "",
   };
+}
+
+function branchProductKey(name: string | null | undefined, version: string | null | undefined): string {
+  return JSON.stringify([name ?? "", version ?? ""]);
 }
 
 function branchRowId(branch: UmtUpdateBranch, index: number): string {

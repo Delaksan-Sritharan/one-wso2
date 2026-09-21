@@ -20,7 +20,7 @@ import { httpRetry } from "@api/errors";
 import { authedPost, authedPut, fetchWithReauth, HttpError } from "@api/http";
 import { isUmtBackendConfigured, umtServiceUrls } from "@config/apiConfig";
 import { useAccessToken } from "@hooks/useAccessToken";
-import { useAsgardeoSub } from "@hooks/useAsgardeoSub";
+import { foldIdentityError, useAsgardeoSub } from "@hooks/useAsgardeoSub";
 import { UMT_PR_ANALYSIS_STATUS } from "./umtTypes";
 import type { UmtPullRequestAnalysisRequest } from "./umtUpdates";
 
@@ -61,14 +61,14 @@ export function useUmtPrAnalysisStatus(
 ) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
-  const { state: subState } = useAsgardeoSub();
+  const { state: subState, retry: retryIdentity } = useAsgardeoSub();
   const queryClient = useQueryClient();
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const baseEnabled =
     /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
   const queryKey = ["umt-update-pr-analysis-status", userSub, id];
 
-  return useQuery<string>({
+  const query = useQuery<string>({
     queryKey,
     enabled: baseEnabled && enabled,
     initialData: initialStatus ?? undefined,
@@ -94,6 +94,8 @@ export function useUmtPrAnalysisStatus(
     },
     retry: httpRetry,
   });
+
+  return foldIdentityError(query, subState, retryIdentity);
 }
 
 export function useUmtStartPullRequestAnalysis(id: string) {

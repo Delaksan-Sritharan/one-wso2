@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
 vi.mock("@hooks/useAsgardeoSub", () => ({
   useAsgardeoSub: () => ({ state: { status: "ready", sub: "user-under-test" }, retry: () => {} }),
+  foldIdentityError: (query: unknown) => query,
 }));
 vi.mock("@hooks/useAccessToken", () => ({ useAccessToken: () => async () => "token" }));
 
@@ -103,27 +104,22 @@ describe("useUmtStagingTestResults", () => {
     expect(authedGet).toHaveBeenCalledWith(umtServiceUrls.updateIntegrationTestStaging("42"), "token");
   });
 
-  it("also invalidates umt-update while in a state that's still actively polling", async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const invalidateQueries = vi.spyOn(client, "invalidateQueries");
-    renderHook(() => useUmtStagingTestResults("42", "TestingEnvironmentRequested"), { wrapper: wrapper(client) });
-    await act(async () => {
-      await client.refetchQueries({ queryKey: ["umt-update-staging-test-results", "user-under-test", "42"] });
-    });
-    const invalidatedKeys = invalidateQueries.mock.calls.map((call) => call[0]?.queryKey?.[0]);
-    expect(invalidatedKeys).toEqual(expect.arrayContaining(["umt-update"]));
-  });
-
-  it("does not invalidate umt-update once Staging is reached and polling has stopped", async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const invalidateQueries = vi.spyOn(client, "invalidateQueries");
-    renderHook(() => useUmtStagingTestResults("42", "Staging"), { wrapper: wrapper(client) });
-    await act(async () => {
-      await client.refetchQueries({ queryKey: ["umt-update-staging-test-results", "user-under-test", "42"] });
-    });
-    const invalidatedKeys = invalidateQueries.mock.calls.map((call) => call[0]?.queryKey?.[0]);
-    expect(invalidatedKeys).not.toEqual(expect.arrayContaining(["umt-update"]));
-  });
+  // The update resource polls itself (useUmtUpdate's own refetchInterval reads
+  // its own lifecycleState), so this queryFn stays a pure fetch — it must not
+  // reach into the cache on any tick, polling or not.
+  it.each(["TestingEnvironmentRequested", "Staging"])(
+    "never invalidates another query from its own queryFn (%s)",
+    async (lifecycleState) => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const invalidateQueries = vi.spyOn(client, "invalidateQueries");
+      renderHook(() => useUmtStagingTestResults("42", lifecycleState), { wrapper: wrapper(client) });
+      await act(async () => {
+        await client.refetchQueries({ queryKey: ["umt-update-staging-test-results", "user-under-test", "42"] });
+      });
+      const invalidatedKeys = invalidateQueries.mock.calls.map((call) => call[0]?.queryKey?.[0]);
+      expect(invalidatedKeys).not.toEqual(expect.arrayContaining(["umt-update"]));
+    },
+  );
 });
 
 describe("useUmtSaveTestingResults", () => {

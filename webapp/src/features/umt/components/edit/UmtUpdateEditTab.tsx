@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Box, Stack, Typography } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
@@ -79,14 +79,19 @@ export default function UmtUpdateEditTab({
   const [localStepOverride, setLocalStepOverride] = useState<UmtEditStepId | null>(
     () => readPersistedEditStep(id) as UmtEditStepId | null,
   );
-  const applyLocalStepOverride = (next: UmtEditStepId | null) => {
-    setLocalStepOverride(next);
-    writePersistedEditStep(id, next);
-  };
+  // Persist from an effect, not from the setter: two of the four call sites run
+  // during render (the backend-step resync below and the stale-override
+  // discard), and a localStorage write is a side effect render isn't allowed to
+  // perform — it re-runs under StrictMode's double-invoke and on any render
+  // React replays.
+  useEffect(() => {
+    writePersistedEditStep(id, localStepOverride);
+  }, [id, localStepOverride]);
+
   const [lastBackendActiveId, setLastBackendActiveId] = useState(backendActiveId);
   if (backendActiveId !== lastBackendActiveId) {
     setLastBackendActiveId(backendActiveId);
-    applyLocalStepOverride(null);
+    setLocalStepOverride(null);
   }
   // See resolveUmtEditActiveIndex: a persisted override behind the
   // backend-derived step is stale (the update moved on without this
@@ -94,7 +99,7 @@ export default function UmtUpdateEditTab({
   const activeIndex = resolveUmtEditActiveIndex(steps, backendActiveIndex, localStepOverride);
   const overrideIndex = localStepOverride ? steps.findIndex((step) => step.id === localStepOverride) : -1;
   const isOverrideStale = overrideIndex !== -1 && overrideIndex < backendActiveIndex;
-  if (isOverrideStale) applyLocalStepOverride(null);
+  if (isOverrideStale) setLocalStepOverride(null);
   const currentStep = steps[activeIndex];
 
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -154,7 +159,7 @@ export default function UmtUpdateEditTab({
   const canGoBack = isIntegrationTests || isSecurityAdvisory || isValidate || isFileApproval;
   const handleBack = () => {
     const prevStep = steps[activeIndex - 1];
-    if (prevStep) applyLocalStepOverride(prevStep.id);
+    if (prevStep) setLocalStepOverride(prevStep.id);
   };
 
   const demoteActions = computeUmtDemoteActions(
@@ -176,7 +181,7 @@ export default function UmtUpdateEditTab({
     if (!currentStep.proceedWired || !roleAllowed || !stepReady) return;
     if (currentStep.advancesLocallyToNextStep) {
       const nextStep = steps[activeIndex + 1];
-      if (nextStep) applyLocalStepOverride(nextStep.id);
+      if (nextStep) setLocalStepOverride(nextStep.id);
       return;
     }
     if (isReleasedVerifying) {

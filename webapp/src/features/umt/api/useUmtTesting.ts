@@ -20,7 +20,7 @@ import { httpRetry } from "@api/errors";
 import { authedGet, authedPut } from "@api/http";
 import { isUmtBackendConfigured, umtServiceUrls } from "@config/apiConfig";
 import { useAccessToken } from "@hooks/useAccessToken";
-import { useAsgardeoSub } from "@hooks/useAsgardeoSub";
+import { foldIdentityError, useAsgardeoSub } from "@hooks/useAsgardeoSub";
 import { UMT_TESTING_LIFECYCLE_STATES, umtShouldPollStagingTestResults } from "../lib/umtTesting";
 import type { UmtStagingTestResultRecord, UmtStagingTestResultRequest } from "./umtUpdates";
 
@@ -32,34 +32,26 @@ import type { UmtStagingTestResultRecord, UmtStagingTestResultRequest } from "./
 export function useUmtStagingTestResults(id: string, lifecycleState: string | null | undefined) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
-  const { state: subState } = useAsgardeoSub();
-  const queryClient = useQueryClient();
+  const { state: subState, retry: retryIdentity } = useAsgardeoSub();
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const baseEnabled =
     /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
   const enabled =
     baseEnabled && (UMT_TESTING_LIFECYCLE_STATES as readonly (string | null | undefined)[]).includes(lifecycleState);
 
-  return useQuery<UmtStagingTestResultRecord[]>({
+  const query = useQuery<UmtStagingTestResultRecord[]>({
     queryKey: ["umt-update-staging-test-results", userSub, id],
     enabled,
-    queryFn: async () => {
-      const result = await authedGet<UmtStagingTestResultRecord[]>(
+    queryFn: async () =>
+      authedGet<UmtStagingTestResultRecord[]>(
         umtServiceUrls.updateIntegrationTestStaging(id),
         await getAccessToken(),
-      );
-      // While actively polling, also refresh the update resource itself —
-      // otherwise a backend lifecycle transition (e.g. into Staging or
-      // TestingEnvironmentFailed) goes unnoticed until something unrelated
-      // happens to refetch it, leaving Next disabled/enabled on stale state.
-      if (umtShouldPollStagingTestResults(lifecycleState)) {
-        void queryClient.invalidateQueries({ queryKey: ["umt-update"] });
-      }
-      return result;
-    },
+      ),
     refetchInterval: () => (umtShouldPollStagingTestResults(lifecycleState) ? 3000 : false),
     retry: httpRetry,
   });
+
+  return foldIdentityError(query, subState, retryIdentity);
 }
 
 export class UmtPartialTestingSaveError extends Error {

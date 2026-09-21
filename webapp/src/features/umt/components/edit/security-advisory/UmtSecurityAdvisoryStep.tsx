@@ -22,6 +22,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   IconButton,
   InputAdornment,
@@ -39,6 +40,14 @@ import { useUmtSaveSecurityAdvisories, useUmtValidateSecurityAdvisory } from "..
 import { umtSecurityAdvisoryFormatValid } from "../../../lib/umtSecurityAdvisory";
 
 const { DataGrid: DataGridComponent } = DataGrid;
+
+// The backend reports APPROVED / PRE_PUBLISHED / PUBLISHED and treats all three
+// as valid, but they are not equivalent: attaching an advisory that is already
+// released is a decision the user has to make explicitly. The Java tool prompts
+// and records the answer in `userConsentFlag`, so `userConsentFlag: false`
+// means "not released, nothing to consent to" — it must not be sent for a
+// released advisory the user never saw a prompt for.
+const RELEASED_ADVISORY_STATES = new Set(["PRE_PUBLISHED", "PUBLISHED"]);
 
 export default function UmtSecurityAdvisoryStep({ id, update }: { id: string; update: UmtUpdateSummary }) {
   const { showSuccess, showError } = useNotifications();
@@ -79,9 +88,17 @@ export default function UmtSecurityAdvisoryStep({ id, update }: { id: string; up
   // the field currently shows.
   const isAdvisoryValid = formatValid && validation.data?.valid === true && trimmedName === debouncedName;
 
+  const [pendingReleasedAdvisory, setPendingReleasedAdvisory] = useState<string | null>(null);
+
   function closeAddModal() {
     setIsAddModalOpen(false);
     setAdvisoryName("");
+  }
+
+  function addAdvisory(name: string, userConsentFlag: boolean) {
+    setRows((prev) => [...prev, { securityAdvisoryName: name, userConsentFlag }]);
+    setIsDirty(true);
+    closeAddModal();
   }
 
   function handleAdd() {
@@ -90,9 +107,11 @@ export default function UmtSecurityAdvisoryStep({ id, update }: { id: string; up
       closeAddModal();
       return;
     }
-    setRows((prev) => [...prev, { securityAdvisoryName: debouncedName, userConsentFlag: false }]);
-    setIsDirty(true);
-    closeAddModal();
+    if (RELEASED_ADVISORY_STATES.has(validation.data?.state ?? "")) {
+      setPendingReleasedAdvisory(debouncedName);
+      return;
+    }
+    addAdvisory(debouncedName, false);
   }
 
   async function handleSave() {
@@ -200,6 +219,32 @@ export default function UmtSecurityAdvisoryStep({ id, update }: { id: string; up
           <Button onClick={closeAddModal}>Cancel</Button>
           <Button variant="contained" disabled={!isAdvisoryValid} onClick={handleAdd}>
             Add
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={pendingReleasedAdvisory !== null}
+        onClose={() => setPendingReleasedAdvisory(null)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>This security advisory is already released</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to proceed with {pendingReleasedAdvisory}?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingReleasedAdvisory(null)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (pendingReleasedAdvisory) addAdvisory(pendingReleasedAdvisory, true);
+              setPendingReleasedAdvisory(null);
+            }}
+          >
+            Proceed
           </Button>
         </DialogActions>
       </Dialog>

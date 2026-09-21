@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Button,
   Dialog,
@@ -31,6 +31,11 @@ import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import type { UmtUpdateSummary } from "../../../api/umtUpdates";
 import { useUmtCompleteUpdate } from "../../../api/useUmtVerifying";
+
+interface NewPullRequestRow {
+  id: string;
+  value: string;
+}
 import { isCompleteUpdateValid } from "../../../lib/umtVerifying";
 
 // Existing public PRs are shown disabled, new ones can be appended, and the
@@ -51,16 +56,25 @@ export default function UmtCompleteUpdateDialog({
   const { showSuccess, showError } = useNotifications();
   const completeUpdate = useUmtCompleteUpdate(id);
   const existingPullRequests = update.publicPullRequests ?? [];
-  const [newPullRequests, setNewPullRequests] = useState<string[]>([""]);
+  // Rows carry a stable id so removing one from the middle doesn't reassign the
+  // React keys of the rows below it, which would move focus and caret position
+  // onto a different row's input. Counter ref rather than crypto.randomUUID()
+  // to match nextBundleEntryId in UmtAddManualFilesSection and avoid the
+  // secure-context dependency for what is only a key.
+  const nextRowId = useRef(1);
+  const [newPullRequests, setNewPullRequests] = useState<NewPullRequestRow[]>([
+    { id: "new-0", value: "" },
+  ]);
   const [reason, setReason] = useState("");
 
   function resetAndClose() {
-    setNewPullRequests([""]);
+    nextRowId.current = 1;
+    setNewPullRequests([{ id: "new-0", value: "" }]);
     setReason("");
     onClose();
   }
 
-  const allPullRequests = [...existingPullRequests, ...newPullRequests];
+  const allPullRequests = [...existingPullRequests, ...newPullRequests.map((row) => row.value)];
   const trimmedPullRequests = allPullRequests.map((pr) => pr.trim()).filter((pr) => pr !== "");
   const isValid = isCompleteUpdateValid({ publicPullRequests: allPullRequests, reason });
 
@@ -91,14 +105,16 @@ export default function UmtCompleteUpdateDialog({
             <TextField key={`existing-${index}`} label="Public Pull Request" value={pr} disabled fullWidth />
           ))}
 
-          {newPullRequests.map((pr, index) => (
-            <Stack key={`new-${index}`} direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          {newPullRequests.map((row) => (
+            <Stack key={row.id} direction="row" spacing={1} sx={{ alignItems: "center" }}>
               <TextField
                 label="Public Pull Request"
-                value={pr}
+                value={row.value}
                 onChange={(event) =>
                   setNewPullRequests((prev) =>
-                    prev.map((value, i) => (i === index ? event.target.value : value)),
+                    prev.map((current) =>
+                      current.id === row.id ? { ...current, value: event.target.value } : current,
+                    ),
                   )
                 }
                 fullWidth
@@ -107,7 +123,9 @@ export default function UmtCompleteUpdateDialog({
                 <IconButton
                   aria-label="Remove pull request"
                   size="small"
-                  onClick={() => setNewPullRequests((prev) => prev.filter((_, i) => i !== index))}
+                  onClick={() =>
+                    setNewPullRequests((prev) => prev.filter((current) => current.id !== row.id))
+                  }
                 >
                   <TrashIcon size={16} />
                 </IconButton>
@@ -120,7 +138,12 @@ export default function UmtCompleteUpdateDialog({
             size="small"
             startIcon={<PlusIcon size={16} />}
             sx={{ alignSelf: "flex-start" }}
-            onClick={() => setNewPullRequests((prev) => [...prev, ""])}
+            onClick={() =>
+              setNewPullRequests((prev) => [
+                ...prev,
+                { id: `new-${nextRowId.current++}`, value: "" },
+              ])
+            }
           >
             Add Another Pull Request
           </Button>

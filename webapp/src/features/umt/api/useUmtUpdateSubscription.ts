@@ -35,7 +35,10 @@ export function useUmtUpdateSubscription(id: string) {
         return;
       }
 
-      await authedPost<void>(url, accessToken, null);
+      // The endpoint takes no body (UpdateService#subscribeToUpdateWatchersList
+      // declares only @HeaderParam/@PathParam, so JAX-RS never reads one); `{}`
+      // matches every other no-payload POST in this codebase.
+      await authedPost<void>(url, accessToken, {});
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["umt-update"] });

@@ -56,6 +56,16 @@ describe("isValidCaseId", () => {
     expect(isValidCaseId("INC12345")).toBe(false);
     expect(isValidCaseId("")).toBe(false);
   });
+
+  // The backend matches this pattern with Java's full-string
+  // Pattern.matcher(...).matches(), so trailing text has to be rejected here
+  // too: otherwise the create succeeds and the case id is silently stored
+  // empty.
+  it("rejects trailing text after the case number", () => {
+    expect(isValidCaseId("CS12345-anything")).toBe(false);
+    expect(isValidCaseId("CS12345 apim")).toBe(false);
+    expect(isValidCaseId("CS12345/")).toBe(false);
+  });
 });
 
 describe("isValidEstimateDate", () => {

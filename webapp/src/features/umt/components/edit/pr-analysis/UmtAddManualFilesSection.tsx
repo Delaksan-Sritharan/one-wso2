@@ -26,9 +26,10 @@ import {
   DialogContentText,
   DialogTitle,
   Divider,
+  FormControl,
   FormControlLabel,
   IconButton,
-  Link,
+  InputLabel,
   MenuItem,
   Radio,
   RadioGroup,
@@ -44,17 +45,33 @@ import { useNotifications } from "@context/notifications/NotificationsContext";
 import {
   bundleInfoApplies,
   bundlesInfoPathError,
+  githubRawUrlError,
   isManualFileTooLarge,
   isZipDisallowedForPath,
   jarNameError,
   manualFileNameMatchesPath,
   relativeJarPathError,
   umtSvnLocationRegex,
+  zipTargetDirectory,
 } from "../../../lib/umtPrAnalysis";
 import type { UmtBundleInfoChange, UmtFileOperation } from "../../../api/umtUpdates";
 import { useUmtUploadPullRequestAnalysisFile } from "../../../api/useUmtPrAnalysis";
+import { renderLinkValue } from "../../umtViewSectionPrimitives";
 
 const { DataGrid: DataGridComponent } = DataGrid;
+
+class UmtPartialZipUploadError extends Error {
+  constructor(
+    public readonly uploadedRows: UmtFileOperation[],
+    public readonly failedEntry: string,
+    public readonly uploadCause: unknown,
+  ) {
+    super(
+      `Uploaded ${uploadedRows.length} entr${uploadedRows.length === 1 ? "y" : "ies"} before "${failedEntry}" failed.`,
+    );
+    this.name = "UmtPartialZipUploadError";
+  }
+}
 
 type UmtManualFileOperation = "Added" | "Modified" | "Removed";
 type UmtManualFileSource = "upload" | "svn" | "github";
@@ -80,7 +97,7 @@ export default function UmtAddManualFilesSection({
   onDirty,
 }: UmtAddManualFilesSectionProps) {
   const upload = useUmtUploadPullRequestAnalysisFile(updateId);
-  const { showError } = useNotifications();
+  const { showError, showWarning } = useNotifications();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -110,6 +127,23 @@ export default function UmtAddManualFilesSection({
     let id = cache.get(row);
     if (!id) {
       id = `bundle-${nextBundleEntryId.current++}`;
+      cache.set(row, id);
+    }
+    return id;
+  }
+  // Same reasoning, for the manual-files grid: a zip entry can legitimately
+  // land on a path an earlier add already produced, and `row.file` as a grid id
+  // collapses the two into one row while a value-based delete filter removes
+  // both. Ids only need to be stable within a session, so a WeakMap keyed on
+  // the row object is enough — `files` is replaced wholesale but the individual
+  // row objects are carried over by spread.
+  const fileEntryIdsRef = useRef(new WeakMap<UmtFileOperation, string>());
+  const nextFileEntryId = useRef(0);
+  function fileEntryId(row: UmtFileOperation): string {
+    const cache = fileEntryIdsRef.current;
+    let id = cache.get(row);
+    if (!id) {
+      id = `manual-file-${nextFileEntryId.current++}`;
       cache.set(row, id);
     }
     return id;
@@ -185,9 +219,12 @@ export default function UmtAddManualFilesSection({
         return;
       }
     }
-    if (source === "github" && !githubTrimmed) {
-      setFormError("Provide the GitHub raw source URL.");
-      return;
+    if (source === "github") {
+      const githubError = githubRawUrlError(githubTrimmed);
+      if (githubError) {
+        setFormError(githubError);
+        return;
+      }
     }
 
     if (needsBundleInfo) {
@@ -217,12 +254,39 @@ export default function UmtAddManualFilesSection({
     // uploaded instead of the URL-only placeholder those sources expect.
     const fileForUpload = source === "upload" ? selectedFile : null;
 
+    // The Java tool rejects a duplicate manual path *before* uploading anything
+    // ("<path> file is already added to the uploading file list"), so do the
+    // same here for a single file, whose resolved path is known up front. A
+    // zip's entries aren't known until it is unpacked and uploaded, so that
+    // case can only be reported afterwards — see below.
+    const isZip = Boolean(fileForUpload?.name.toLowerCase().endsWith(".zip"));
+    if (!isZip) {
+      const filePath = singleEntryFilePath(fileForUpload, relativePath, sourceFilePath);
+      if (files.some((row) => row.file === filePath)) {
+        setFormError(`"${filePath}" has already been added.`);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
-      const newRows =
-        fileForUpload && fileForUpload.name.toLowerCase().endsWith(".zip")
-          ? await addZipEntries(fileForUpload, relativePath, operation, sourceFilePath)
-          : await addSingleEntry(fileForUpload, relativePath, operation, sourceFilePath);
+      const newRows = isZip
+        ? await addZipEntries(fileForUpload as File, relativePath, operation, sourceFilePath)
+        : await addSingleEntry(fileForUpload, relativePath, operation, sourceFilePath);
+
+      // Zip entries are already on the server by now, so refusing them would
+      // orphan the uploads (the failure mode #14 fixed). The stable row ids
+      // above make a duplicate path addressable instead — both rows render and
+      // either can be deleted — so add them and say which ones collided.
+      const existingPaths = new Set(files.map((row) => row.file));
+      const collisions = newRows.filter((row) => existingPaths.has(row.file));
+      if (collisions.length > 0) {
+        showWarning(
+          collisions.length === 1
+            ? `"${collisions[0].file}" was already in the list and has been added again. Delete whichever entry you don't want.`
+            : `${collisions.length} of these files were already in the list (e.g. "${collisions[0].file}") and have been added again. Delete whichever entries you don't want.`,
+        );
+      }
 
       onFilesChange([...files, ...newRows]);
       if (needsBundleInfo) {
@@ -241,7 +305,19 @@ export default function UmtAddManualFilesSection({
       resetForm();
       setIsOpen(false);
     } catch (error) {
-      showError(`Upload failed. ${describeError(error)}`);
+      if (error instanceof UmtPartialZipUploadError) {
+        if (error.uploadedRows.length > 0) {
+          onFilesChange([...files, ...error.uploadedRows]);
+          onDirty();
+        }
+        // Deliberately leave the dialog open and the form populated so the user
+        // can see which zip failed and retry the remaining entries.
+        showError(
+          `${error.message} ${describeError(error.uploadCause)} Remove the listed files and retry the remaining ones.`,
+        );
+      } else {
+        showError(`Upload failed. ${describeError(error)}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -253,17 +329,12 @@ export default function UmtAddManualFilesSection({
     op: UmtManualFileOperation,
     sourceFilePath: string,
   ): Promise<UmtFileOperation[]> {
-    const fileName = file?.name ?? lastPathSegment(sourceFilePath);
     await upload.mutateAsync({
       relativePath: path,
       sourceFilePath,
       file: file ?? new Blob([], { type: "application/octet-stream" }),
     });
-    // `path` may already be the full file path — manualFileNameMatchesPath
-    // accepts a relativePath whose last segment equals the uploaded file's
-    // name — so only append fileName when path is still just the directory.
-    const filePath = path.endsWith(`/${fileName}`) ? path : `${path}/${fileName}`;
-    return [{ file: filePath, operation: op, sourceFilePath }];
+    return [{ file: singleEntryFilePath(file, path, sourceFilePath), operation: op, sourceFilePath }];
   }
 
   async function addZipEntries(
@@ -275,12 +346,22 @@ export default function UmtAddManualFilesSection({
     const zip = await JSZip.loadAsync(zipFile);
     const entries = Object.values(zip.files).filter((entry) => !entry.dir);
     const rows: UmtFileOperation[] = [];
+    // Resolve once: `path` may still carry the archive's own name on the end,
+    // which would otherwise become a directory segment in every entry's path.
+    const targetDir = zipTargetDirectory(path, zipFile.name);
 
     for (const entry of entries) {
       const blob = await entry.async("blob");
       const extractedFile = new File([blob], entry.name);
-      await upload.mutateAsync({ relativePath: path, sourceFilePath, file: extractedFile });
-      rows.push({ file: `${path}/${entry.name}`, operation: op, sourceFilePath });
+      try {
+        await upload.mutateAsync({ relativePath: targetDir, sourceFilePath, file: extractedFile });
+      } catch (error) {
+        // Entries already uploaded exist on the server. Hand them back so the
+        // caller can still list them — otherwise they're orphaned: invisible in
+        // the grid, undeletable, and re-uploaded if the user retries the zip.
+        throw new UmtPartialZipUploadError(rows, entry.name, error);
+      }
+      rows.push({ file: `${targetDir}/${entry.name}`, operation: op, sourceFilePath });
     }
 
     return rows;
@@ -288,7 +369,7 @@ export default function UmtAddManualFilesSection({
 
   function confirmDeleteFile() {
     if (!deleteTarget) return;
-    onFilesChange(files.filter((row) => row.file !== deleteTarget));
+    onFilesChange(files.filter((row) => fileEntryId(row) !== deleteTarget));
     onDirty();
     setDeleteTarget(null);
   }
@@ -316,7 +397,7 @@ export default function UmtAddManualFilesSection({
           disableColumnMenu
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
-          getRowId={(row: UmtFileOperation) => row.file ?? ""}
+          getRowId={(row: UmtFileOperation) => fileEntryId(row)}
           hideFooter
           rows={files}
           sx={{ mt: 2, ...denseDataGridSx }}
@@ -348,17 +429,15 @@ export default function UmtAddManualFilesSection({
               headerName: "Source",
               flex: 2,
               sortable: false,
-              renderCell: (params: { row: UmtFileOperation }) => {
-                const source = params.row.sourceFilePath;
-                if (!source) return <Stack sx={{ justifyContent: "center", minHeight: "100%", py: 0.75 }}>N/A</Stack>;
-                return (
-                  <Stack sx={{ justifyContent: "center", minHeight: "100%", py: 0.75, width: "100%" }}>
-                    <Link href={source} target="_blank" rel="noopener noreferrer" underline="hover">
-                      {source}
-                    </Link>
-                  </Stack>
-                );
-              },
+              // renderLinkValue never emits an href for a non-http(s) value.
+              // Input validation only covers rows this UI creates; rows loaded
+              // from the backend (including ones written by the legacy tool)
+              // bypass it entirely, so the guard has to be here too.
+              renderCell: (params: { row: UmtFileOperation }) => (
+                <Stack sx={{ justifyContent: "center", minHeight: "100%", py: 0.75, width: "100%" }}>
+                  {renderLinkValue(params.row.sourceFilePath)}
+                </Stack>
+              ),
             },
             {
               field: "delete",
@@ -370,7 +449,7 @@ export default function UmtAddManualFilesSection({
                   <IconButton
                     aria-label="Delete file"
                     size="small"
-                    onClick={() => setDeleteTarget(params.row.file ?? null)}
+                    onClick={() => setDeleteTarget(fileEntryId(params.row))}
                   >
                     <TrashIcon size={16} />
                   </IconButton>
@@ -472,18 +551,19 @@ export default function UmtAddManualFilesSection({
               value={relativePath}
               onChange={(e) => setRelativePath(e.target.value)}
             />
-            <Select
-              displayEmpty
-              value={operation}
-              onChange={(e) => setOperation(e.target.value as UmtManualFileOperation)}
-            >
-              <MenuItem value="" disabled>
-                Operation
-              </MenuItem>
-              <MenuItem value="Added">Added</MenuItem>
-              <MenuItem value="Modified">Modified</MenuItem>
-              <MenuItem value="Removed">Removed</MenuItem>
-            </Select>
+            <FormControl fullWidth>
+              <InputLabel id="manual-file-operation-label">Operation</InputLabel>
+              <Select
+                labelId="manual-file-operation-label"
+                label="Operation"
+                value={operation}
+                onChange={(e) => setOperation(e.target.value as UmtManualFileOperation)}
+              >
+                <MenuItem value="Added">Added</MenuItem>
+                <MenuItem value="Modified">Modified</MenuItem>
+                <MenuItem value="Removed">Removed</MenuItem>
+              </Select>
+            </FormControl>
 
             <RadioGroup
               row
@@ -566,11 +646,19 @@ export default function UmtAddManualFilesSection({
                   error={Boolean(relativeJarPath) && Boolean(relativeJarPathError(relativeJarPath))}
                   helperText={relativeJarPath ? relativeJarPathError(relativeJarPath) : undefined}
                 />
-                <Select value={entryType} onChange={(e) => setEntryType(e.target.value as UmtBundleEntryType)}>
-                  <MenuItem value="New">New</MenuItem>
-                  <MenuItem value="Update">Update</MenuItem>
-                  <MenuItem value="Delete">Delete</MenuItem>
-                </Select>
+                <FormControl fullWidth>
+                  <InputLabel id="bundle-info-change-type-label">Change Type</InputLabel>
+                  <Select
+                    labelId="bundle-info-change-type-label"
+                    label="Change Type"
+                    value={entryType}
+                    onChange={(e) => setEntryType(e.target.value as UmtBundleEntryType)}
+                  >
+                    <MenuItem value="New">New</MenuItem>
+                    <MenuItem value="Update">Update</MenuItem>
+                    <MenuItem value="Delete">Delete</MenuItem>
+                  </Select>
+                </FormControl>
               </>
             )}
 
@@ -627,6 +715,15 @@ const denseDataGridSx = {
     overflowWrap: "anywhere",
   },
 } as const;
+
+// `path` may already be the full file path — manualFileNameMatchesPath accepts
+// a relativePath whose last segment equals the uploaded file's name — so only
+// append fileName when path is still just the directory. Resolved without the
+// upload so handleAdd can check for a duplicate before sending anything.
+function singleEntryFilePath(file: File | null, path: string, sourceFilePath: string): string {
+  const fileName = file?.name ?? lastPathSegment(sourceFilePath);
+  return path.endsWith(`/${fileName}`) ? path : `${path}/${fileName}`;
+}
 
 function lastPathSegment(url: string): string {
   const withoutQuery = url.split("?")[0] ?? url;

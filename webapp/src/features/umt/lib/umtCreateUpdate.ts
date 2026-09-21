@@ -53,7 +53,14 @@ export function isValidGithubIssueUrl(value: string): boolean {
 
 // A case id must match this format whenever one is present (required
 // unless the update is proactive).
-const CASE_ID_REGEX = /^CS[0-9]+/;
+//
+// Anchored at both ends deliberately: the backend applies this same pattern
+// with Pattern.matcher(...).matches(), which is full-string in Java, unlike
+// JS .test(). An unanchored client check lets "CS12345-x" through, and
+// UpdateManager#createUpdateEntry then skips its case-ID block entirely and
+// stores an EMPTY caseId/sysId/wso2CaseId with the ServiceNow lookup never
+// run — a 201 with the case reference silently dropped, not a rejection.
+const CASE_ID_REGEX = /^CS[0-9]+$/;
 
 export function isValidCaseId(value: string): boolean {
   return CASE_ID_REGEX.test(value.trim());

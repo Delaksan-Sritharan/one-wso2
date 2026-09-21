@@ -44,7 +44,6 @@ import { useUmtUpdate } from "../api/useUmtUpdate";
 import { useUmtMarkAsDuplicate, useUmtOnHoldUpdate } from "../api/useUmtUpdateActions";
 import { useUmtUpdateSubscription } from "../api/useUmtUpdateSubscription";
 import { useUmtUserInfo } from "../api/useUmtUserInfo";
-import { UMT_ROLE_ID } from "../api/umtTypes";
 import { readPersistedSelectedTab, writePersistedSelectedTab } from "../lib/umtLocalState";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import UmtShell from "../components/UmtShell";
@@ -61,14 +60,18 @@ const UPDATE_VIEW_CHIP_SX = {
   fontSize: 13,
 } as const;
 
-const UMT_EDIT_ROLE_IDS = new Set<number>(Object.values(UMT_ROLE_ID));
-
 export default function UmtUpdateView() {
   const { id } = useParams<{ id: string }>();
 
   return (
     <UmtShell title="Update Information" backTo="/umt/updates">
-      <UmtUpdateBody id={id} />
+      {/* React Router reuses this element across a params-only change (Back /
+          Forward between two detail pages, an edited URL, or the list's own
+          openUpdateOnTab while already on a detail page), so every piece of
+          per-update local state below — the selected tab, and the On Hold /
+          Mark as Duplicate dialog drafts — would otherwise carry over to a
+          different update. Keying on `id` remounts the body instead. */}
+      <UmtUpdateBody key={id} id={id} />
     </UmtShell>
   );
 }
@@ -122,11 +125,15 @@ function UmtUpdateBody({ id }: { id: string | undefined }) {
     workEmail && update.data?.watcherList?.includes(workEmail),
   );
   const subscriptionAction = isSubscribed ? "unsubscribe" : "subscribe";
-  const hasEditRole = Boolean(
-    userInfo.data?.roles?.some((role) => UMT_EDIT_ROLE_IDS.has(role)),
-  );
-  const canEditDevelopmentFields =
-    hasEditRole && update.data?.lifecycleState === "Development";
+  // Editing Assigned To / Developed By / Worst Case Date is gated on lifecycle
+  // state only, not on role: the backend applies these fields in any state for
+  // any caller (UpdateManager.modifyUpdate — its only role check is on a
+  // lifecycle transition). Any role that passes useUmtGate's isAuthorized can
+  // reach this page, so an "edit role" set built from every UMT role would
+  // always match; it's omitted rather than written as a check that can't fail.
+  // Genuine role gates live where they belong: admin-only deletes in
+  // UmtUpdateViewSections and File Approval in the Edit tab.
+  const canEditDevelopmentFields = update.data?.lifecycleState === "Development";
   // Mark as Duplicate and On Hold are only offered before the update has
   // left early triage.
   const canUseEarlyActionRow = ["Development", "PRAnalyzed", "ProductAnalyzed"].includes(

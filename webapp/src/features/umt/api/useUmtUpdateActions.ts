@@ -64,9 +64,15 @@ export function useUmtMarkAsDuplicate(id: string) {
       });
     },
     onSuccess: async () => {
+      // Marking a dependency Duplicate is a lifecycle change server-side:
+      // UpdateRepository.addDependency sets lifecyclestate = DUPLICATE and
+      // appends an UpdateStateTransition, so the list and the history tab go
+      // stale too.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["umt-update"] }),
         queryClient.invalidateQueries({ queryKey: ["umt-update-dependencies"] }),
+        queryClient.invalidateQueries({ queryKey: ["umt-updates"] }),
+        queryClient.invalidateQueries({ queryKey: ["umt-update-lifecycle-history"] }),
       ]);
     },
   });

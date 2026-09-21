@@ -194,6 +194,13 @@ export default function UmtPrAnalysisStep({ id, update }: { id: string; update: 
 
   // Warns before proceeding that added/modified files will be copied into
   // all applicable products during the next step.
+  //
+  // Deliberately `additionalFileOperations` (manually added files) only, not
+  // `identifiedFileOperations`. The dialog tells the user UMT will copy these
+  // into every applicable product and that the remedy is to remove them and
+  // make a separate update — a remedy that only applies to files the user
+  // added by hand. PR-identified files are already attributed to their source
+  // components and have no delete control anywhere in the UI.
   const hasAddedOrModifiedFiles = (pullRequestAnalysis.data?.additionalFileOperations ?? []).some(
     (op) => op.operation?.toLowerCase() === "added" || op.operation?.toLowerCase() === "modified",
   );

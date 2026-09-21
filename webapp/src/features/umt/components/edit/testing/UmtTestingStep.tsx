@@ -15,7 +15,21 @@
 // under the License.
 
 import { useState } from "react";
-import { Alert, Box, Button, Divider, FormControlLabel, Paper, Radio, RadioGroup, Stack, TextField, Typography } from "@wso2/oxygen-ui";
+import {
+  Alert,
+  Box,
+  Button,
+  Divider,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Paper,
+  Radio,
+  RadioGroup,
+  Stack,
+  TextField,
+  Typography,
+} from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import type { UmtStagingTestResultRecord, UmtStagingTestResultRequest, UmtUpdateSummary } from "../../../api/umtUpdates";
@@ -85,14 +99,21 @@ export default function UmtTestingStep({ id, update }: { id: string; update: Umt
 
   function updateDraft(row: UmtStagingTestResultRecord, patch: Partial<Draft>) {
     const productId = String(row.productId);
-    setDrafts((prev) => ({
-      ...prev,
-      [productId]: {
+    setDrafts((prev) => {
+      const next = {
         result: prev[productId]?.result ?? row.manualTestResult ?? "",
         comment: prev[productId]?.comment ?? row.manualTestComment ?? "",
         ...patch,
-      },
-    }));
+      };
+      // A result that doesn't require a comment hides the field, so the user
+      // can no longer see or clear whatever is in it. Drop it rather than
+      // submitting text that belongs to the previous result — including one
+      // seeded from the backend, which the user never typed.
+      if (patch.result !== undefined && !umtTestingResultRequiresComment(next.result)) {
+        next.comment = "";
+      }
+      return { ...prev, [productId]: next };
+    });
   }
 
   const touchedProductIds = Object.keys(drafts);
@@ -152,6 +173,7 @@ export default function UmtTestingStep({ id, update }: { id: string; update: Umt
           const draft = drafts[key];
           const currentResult = draft?.result ?? row.manualTestResult ?? "";
           const currentComment = draft?.comment ?? row.manualTestComment ?? "";
+          const groupLabelId = `manual-test-result-${key}`;
           return (
             <Paper key={key} variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={1.5}>
@@ -172,16 +194,28 @@ export default function UmtTestingStep({ id, update }: { id: string; update: Umt
                   />
                   <Typography variant="body2">{umtAutomatedTestResultLabel(row.automatedTestResult)}</Typography>
                 </Stack>
-                <RadioGroup row value={currentResult} onChange={(event) => updateDraft(row, { result: event.target.value })}>
-                  {UMT_TESTING_RESULT_OPTIONS.map((option) => (
-                    <FormControlLabel
-                      key={option.value}
-                      value={option.value}
-                      control={<Radio size="small" />}
-                      label={option.label}
-                    />
-                  ))}
-                </RadioGroup>
+                <FormControl>
+                  <FormLabel id={groupLabelId}>Manual Test Result</FormLabel>
+                  <RadioGroup
+                    row
+                    // A multi-product update renders one of these per product,
+                    // so a static name would leave several identically-named
+                    // groups; the product heading disambiguates them.
+                    aria-labelledby={groupLabelId}
+                    aria-label={`Manual test result for ${row.productName ?? "this product"}`}
+                    value={currentResult}
+                    onChange={(event) => updateDraft(row, { result: event.target.value })}
+                  >
+                    {UMT_TESTING_RESULT_OPTIONS.map((option) => (
+                      <FormControlLabel
+                        key={option.value}
+                        value={option.value}
+                        control={<Radio size="small" />}
+                        label={option.label}
+                      />
+                    ))}
+                  </RadioGroup>
+                </FormControl>
                 {umtTestingResultRequiresComment(currentResult) && (
                   <TextField
                     label="Comment"

@@ -16,6 +16,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { SIGNING_OUT_EVENT } from "@constants/appEvents";
 
 const userInfo: {
   data?: { roles: number[] };
@@ -139,16 +140,18 @@ describe("remount smoothing (the /umt <-> /umt/updates navigation flash)", () =>
     expect(result.isUser).toBe(true);
   });
 
-  it("clears the cached decision on sign-out, so a new sign-in resolves fresh", () => {
+  // AuthGuard swaps <Outlet/> for a spinner in the same commit that isSignedIn
+  // flips false, so the hook is unmounted before it could observe the
+  // transition. The module-level SIGNING_OUT_EVENT listener is what clears the
+  // cache, independently of the React tree.
+  it("clears the cached decision on SIGNING_OUT_EVENT, so a new sign-in resolves fresh", () => {
     userInfo.data = { roles: [555] };
     expect(gate().isAdmin).toBe(true);
 
-    asgardeo.isSignedIn = false;
+    window.dispatchEvent(new Event(SIGNING_OUT_EVENT));
+
     userInfo.isPending = true;
     userInfo.data = undefined;
-    gate(); // sign-out render clears the cache
-
-    asgardeo.isSignedIn = true;
     const result = gate();
     expect(result.isResolving).toBe(true);
     expect(result.isAdmin).toBe(false);

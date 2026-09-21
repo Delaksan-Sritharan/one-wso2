@@ -15,8 +15,8 @@
 // under the License.
 
 import { useEffect } from "react";
-import { useAsgardeo } from "@asgardeo/react";
 import { describeError } from "@api/errors";
+import { SIGNING_OUT_EVENT } from "@constants/appEvents";
 import { UMT_ROLE_ID, type UmtRole } from "./umtTypes";
 import { useUmtUserInfo } from "./useUmtUserInfo";
 
@@ -57,9 +57,22 @@ function umtRolesFromIds(roleIds: readonly number[] | undefined): Set<UmtRole> {
 // useUmtUserInfo's query key and makes it look unresolved again even though
 // the real answer was already known a moment ago on the page just left.
 // Remembering the last real role set here — surviving the remount — avoids
-// re-flashing "Checking your UMT access..." on every navigation. Cleared on
-// sign-out so a different account in the same tab can never see it.
+// re-flashing "Checking your UMT access..." on every navigation. The
+// SIGNING_OUT_EVENT listener below clears it so a different account in the
+// same tab can never see it.
 let lastKnownRoles: Set<UmtRole> | null = null;
+
+// Registered at module load rather than inside the hook: AuthGuard swaps
+// <Outlet/> for a spinner in the same commit that `isSignedIn` flips false, so
+// this hook is unmounted before it could ever observe the transition itself.
+// Same mechanism (and same reasoning) as pinnedStore.ts. SIGNING_OUT_EVENT is
+// dispatched only by a deliberate sign-out, never by a silent re-auth, so the
+// anti-flicker cache survives a token refresh as intended.
+if (typeof window !== "undefined") {
+  window.addEventListener(SIGNING_OUT_EVENT, () => {
+    lastKnownRoles = null;
+  });
+}
 
 export function __resetUmtGateCacheForTests(): void {
   lastKnownRoles = null;
@@ -72,7 +85,6 @@ export function __resetUmtGateCacheForTests(): void {
 // This deliberately does not read People capabilities. UMT owns a separate
 // role vocabulary, returned by its own /update/user-info endpoint.
 export function useUmtGate(enabled = true): UmtGate {
-  const { isSignedIn } = useAsgardeo();
   const userInfo = useUmtUserInfo(enabled);
   const roleIds = userInfo.data?.roles;
   // TanStack keeps the last successful `data` in the cache through a failed
@@ -86,9 +98,7 @@ export function useUmtGate(enabled = true): UmtGate {
   // may render this hook more than once per commit) — the read below is
   // still a plain, pure read of whatever a *previous* commit last wrote.
   useEffect(() => {
-    if (!isSignedIn) {
-      lastKnownRoles = null;
-    } else if (hasData) {
+    if (hasData) {
       lastKnownRoles = umtRolesFromIds(roleIds);
     } else if (userInfo.isError) {
       // A failed check that has never returned real data must never leave a
@@ -96,7 +106,7 @@ export function useUmtGate(enabled = true): UmtGate {
       // and back while /update/user-info is still erroring) to resurrect.
       lastKnownRoles = null;
     }
-  }, [isSignedIn, hasData, roleIds, userInfo.isError]);
+  }, [hasData, roleIds, userInfo.isError]);
 
   // `lastKnownRoles` exists only to smooth over a remount while the SAME
   // decision is still in flight (see the comment above the module variable);

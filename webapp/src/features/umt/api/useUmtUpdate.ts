@@ -21,6 +21,7 @@ import { httpRetry } from "@api/errors";
 import { isUmtBackendConfigured, umtServiceUrls } from "@config/apiConfig";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { foldIdentityError, useAsgardeoSub } from "@hooks/useAsgardeoSub";
+import { umtShouldPollStagingTestResults } from "../lib/umtTesting";
 import type { UmtUpdateSummary } from "./umtUpdates";
 
 export function useUmtUpdate(id: string | undefined) {
@@ -42,6 +43,12 @@ export function useUmtUpdate(id: string | undefined) {
         umtServiceUrls.update(id as string),
         await getAccessToken(),
       ),
+    // The testing-environment states are transient and change server-side with
+    // no client action: the Edit tab's Proceed gate and the Testing step both
+    // read lifecycleState, so the update resource has to notice the transition
+    // itself. Mirrors useUmtPrAnalysisStatus's self-terminating poll.
+    refetchInterval: (query) =>
+      umtShouldPollStagingTestResults(query.state.data?.lifecycleState) ? 3000 : false,
     retry: httpRetry,
   });
 

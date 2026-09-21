@@ -5,7 +5,15 @@
 // in compliance with the License. You may obtain a copy at
 // http://www.apache.org/licenses/LICENSE-2.0
 
-import { useMemo, useState, type MouseEvent, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { useNavigate } from "react-router";
 import {
   Badge,
@@ -118,6 +126,38 @@ const STATUS_COLORS: Record<string, string> = {
 
 const { DataGrid: DataGridComponent } = DataGrid;
 
+// The open-menu row id lives in context rather than being closed over by the
+// column definitions: new GridColDef objects read to DataGrid as a columns
+// change and re-run its column pipeline, which can drop the user's resizing and
+// horizontal scroll on what is deliberately a wide table.
+const OpenActionsRowContext = createContext<number | null>(null);
+
+function UmtUpdateActionsCell({
+  row,
+  onOpen,
+}: {
+  row: UmtUpdateSummary;
+  onOpen: (event: MouseEvent<HTMLElement>, row: UmtUpdateSummary) => void;
+}) {
+  const isOpen = useContext(OpenActionsRowContext) === row.id;
+  return (
+    <Box sx={{ ...gridCellContentSx, justifyContent: "center" }}>
+      <Tooltip title={`Actions for update ${row.id}`}>
+        <IconButton
+          aria-controls={isOpen ? "umt-update-actions" : undefined}
+          aria-expanded={isOpen ? true : undefined}
+          aria-haspopup="menu"
+          aria-label={`Actions for update ${row.id}`}
+          onClick={(event) => onOpen(event, row)}
+          size="small"
+        >
+          <EllipsisVertical size={18} />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+}
+
 export default function UmtUpdatesPage() {
   return (
     <UmtShell title="Updates">
@@ -146,7 +186,10 @@ function UmtUpdatesBody() {
   const rows = search.data?.updates ?? [];
   const totalPages = search.data?.totalPages ?? 0;
   const activeFilters = activeUmtFilterCount(filters);
-  const displayedColumns = COLUMNS.filter((column) => visibleColumns.includes(column.key));
+  const displayedColumns = useMemo(
+    () => COLUMNS.filter((column) => visibleColumns.includes(column.key)),
+    [visibleColumns],
+  );
 
   const applyFilters = (next: UmtUpdateFilters) => {
     setFilters(next);
@@ -154,11 +197,11 @@ function UmtUpdatesBody() {
     setFilterOpen(false);
   };
 
-  const openActions = (event: MouseEvent<HTMLElement>, row: UmtUpdateSummary) => {
+  const openActions = useCallback((event: MouseEvent<HTMLElement>, row: UmtUpdateSummary) => {
     event.stopPropagation();
     setActionAnchor(event.currentTarget);
     setActionRow(row);
-  };
+  }, []);
 
   const closeActions = () => {
     setActionAnchor(null);
@@ -180,44 +223,34 @@ function UmtUpdatesBody() {
     navigate(`/umt/updates/${id}`);
   };
 
-  const gridColumns: DataGrid.GridColDef<UmtUpdateSummary>[] = [
-    ...displayedColumns.map((column) => ({
-      field: column.key,
-      headerName: column.label,
-      minWidth: column.minWidth,
-      width: column.minWidth,
-      renderCell: (params: DataGrid.GridRenderCellParams<UmtUpdateSummary>) => (
-        <Box sx={gridCellContentSx}>{renderCell(params.row, column.key)}</Box>
-      ),
-    })),
-    {
-      field: "actions",
-      filterable: false,
-      headerName: "Actions",
-      headerAlign: "center",
-      align: "center",
-      minWidth: 80,
-      resizable: false,
-      sortable: false,
-      width: 80,
-      renderCell: (params: DataGrid.GridRenderCellParams<UmtUpdateSummary>) => (
-        <Box sx={{ ...gridCellContentSx, justifyContent: "center" }}>
-          <Tooltip title={`Actions for update ${params.row.id}`}>
-            <IconButton
-              aria-controls={actionAnchor && actionRow?.id === params.row.id ? "umt-update-actions" : undefined}
-              aria-expanded={actionAnchor && actionRow?.id === params.row.id ? true : undefined}
-              aria-haspopup="menu"
-              aria-label={`Actions for update ${params.row.id}`}
-              onClick={(event) => openActions(event, params.row)}
-              size="small"
-            >
-              <EllipsisVertical size={18} />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      ),
-    },
-  ];
+  const gridColumns = useMemo<DataGrid.GridColDef<UmtUpdateSummary>[]>(
+    () => [
+      ...displayedColumns.map((column) => ({
+        field: column.key,
+        headerName: column.label,
+        minWidth: column.minWidth,
+        width: column.minWidth,
+        renderCell: (params: DataGrid.GridRenderCellParams<UmtUpdateSummary>) => (
+          <Box sx={gridCellContentSx}>{renderCell(params.row, column.key)}</Box>
+        ),
+      })),
+      {
+        field: "actions",
+        filterable: false,
+        headerName: "Actions",
+        headerAlign: "center",
+        align: "center",
+        minWidth: 80,
+        resizable: false,
+        sortable: false,
+        width: 80,
+        renderCell: (params: DataGrid.GridRenderCellParams<UmtUpdateSummary>) => (
+          <UmtUpdateActionsCell row={params.row} onOpen={openActions} />
+        ),
+      },
+    ],
+    [displayedColumns, openActions],
+  );
 
   const exportCurrentPage = () => {
     const headings = displayedColumns.map((column) => column.label);
@@ -272,18 +305,20 @@ function UmtUpdatesBody() {
       <Paper variant="outlined" sx={{ minWidth: 0, overflow: "hidden", position: "relative" }}>
         {search.isFetching && !search.isPending && <LinearProgress sx={{ left: 0, position: "absolute", right: 0, top: 0, zIndex: 4 }} />}
         <Box sx={{ height: { xs: "calc(100dvh - 360px)", md: "calc(100dvh - 310px)" }, minHeight: 240 }}>
-          <DataGridComponent
-            columnHeaderHeight={40}
-            columns={gridColumns}
-            disableRowSelectionOnClick
-            getRowHeight={() => "auto"}
-            hideFooter
-            loading={search.isPending}
-            onRowClick={(params) => navigate(`/umt/updates/${params.row.id}`)}
-            rows={rows}
-            slots={{ noRowsOverlay: UpdatesEmptyState }}
-            sx={updatesGridSx}
-          />
+          <OpenActionsRowContext.Provider value={actionAnchor ? (actionRow?.id ?? null) : null}>
+            <DataGridComponent
+              columnHeaderHeight={40}
+              columns={gridColumns}
+              disableRowSelectionOnClick
+              getRowHeight={() => "auto"}
+              hideFooter
+              loading={search.isPending}
+              onRowClick={(params) => navigate(`/umt/updates/${params.row.id}`)}
+              rows={rows}
+              slots={{ noRowsOverlay: UpdatesEmptyState }}
+              sx={updatesGridSx}
+            />
+          </OpenActionsRowContext.Provider>
         </Box>
 
         <Box sx={{ alignItems: "center", borderTop: 1, borderColor: "divider", display: "flex", flexWrap: "wrap", gap: 1.5, justifyContent: "space-between", px: 2, py: 1.25 }}>

@@ -173,6 +173,10 @@ export default function UmtCreateUpdateDialog({
   const isChecking = checkDuplicates.isPending;
   const isCreating = createUpdate.isPending;
   const isBusy = isChecking || isCreating;
+  // The create payload is snapshotted before the duplicate pre-check runs and
+  // is held across the confirmation dialog, so any edit made after that point
+  // would be silently discarded. Freeze the form while the snapshot is live.
+  const isFormFrozen = isBusy || pendingRequest !== null;
 
   // Shared by handleClose and the Hotfix toggle: resets all three estimates
   // to next-Thursday/+7/+14 whenever Hotfix turns off, so a date typed or
@@ -270,203 +274,212 @@ export default function UmtCreateUpdateDialog({
           </ErrorNotice>
         )}
 
-        <Tabs
-          value={isProactive ? "proactive" : "customer"}
-          onChange={(_event, value) => setIsProactive(value === "proactive")}
-          variant="fullWidth"
-          aria-label="Update source"
-          sx={{ mb: 3 }}
+        <Box
+          component="fieldset"
+          disabled={isFormFrozen}
+          sx={{ border: 0, m: 0, p: 0, minInlineSize: 0 }}
         >
-          <Tab label="Customer Reported" value="customer" />
-          <Tab label="Proactive" value="proactive" />
-        </Tabs>
+          <Tabs
+            value={isProactive ? "proactive" : "customer"}
+            onChange={(_event, value) => setIsProactive(value === "proactive")}
+            variant="fullWidth"
+            aria-label="Update source"
+            sx={{ mb: 3 }}
+          >
+            <Tab label="Customer Reported" value="customer" disabled={isFormFrozen} />
+            <Tab label="Proactive" value="proactive" disabled={isFormFrozen} />
+          </Tabs>
 
-        <Stack spacing={2.25}>
-          {submitError && <Alert severity="error">{submitError}</Alert>}
+          <Stack spacing={2.25}>
+            {submitError && <Alert severity="error">{submitError}</Alert>}
 
-          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr auto" } }}>
+            <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr auto" } }}>
+              <TextField
+                label="Case ID"
+                required={!isProactive}
+                disabled={isProactive}
+                size="small"
+                value={caseId}
+                onChange={(event) => setCaseId(event.target.value)}
+                error={!isProactive && caseId.trim().length > 0 && !isValidCaseId(caseId)}
+                helperText={
+                  !isProactive && caseId.trim().length > 0 && !isValidCaseId(caseId)
+                    ? "Invalid Case ID."
+                    : undefined
+                }
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    size="small"
+                    checked={isHotfix}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setIsHotfix(checked);
+                      if (!checked) resetEstimatesToNextThursday();
+                    }}
+                  />
+                }
+                label="Hotfix"
+                disabled={isProactive}
+                sx={{ m: 0, alignSelf: "center" }}
+              />
+            </Box>
+
+            <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
+              <TextField
+                select
+                label="Update Type"
+                size="small"
+                value={updateType}
+                onChange={(event) => {
+                  setUpdateType(event.target.value as UmtCreateUpdateType);
+                  setProduct(null);
+                  setVersion(null);
+                }}
+              >
+                <MenuItem value="regular">Regular</MenuItem>
+                <MenuItem value="security">Security</MenuItem>
+                <MenuItem value="cloud-support">Cloud Support</MenuItem>
+              </TextField>
+              <TextField
+                select
+                label="Issue Type"
+                size="small"
+                value={issueType}
+                onChange={(event) => setIssueType(event.target.value as UmtCreateIssueType)}
+              >
+                <MenuItem value="bug">Bug</MenuItem>
+                <MenuItem value="improvement">Improvement</MenuItem>
+                <MenuItem value="new-feature">New Feature</MenuItem>
+              </TextField>
+            </Box>
+
             <TextField
-              label="Case ID"
-              required={!isProactive}
-              disabled={isProactive}
+              label={isSecurityUpdate ? "Security Internal Git Issue" : "Public Git Issue"}
+              required
               size="small"
-              value={caseId}
-              onChange={(event) => setCaseId(event.target.value)}
-              error={!isProactive && caseId.trim().length > 0 && !isValidCaseId(caseId)}
+              value={publicOrSecurityGitIssue}
+              onChange={(event) => setPublicOrSecurityGitIssue(event.target.value)}
+              error={publicOrSecurityGitIssue.length > 0 && !isValidGithubIssueUrl(publicOrSecurityGitIssue)}
               helperText={
-                !isProactive && caseId.trim().length > 0 && !isValidCaseId(caseId)
-                  ? "Invalid Case ID."
+                publicOrSecurityGitIssue.length > 0 && !isValidGithubIssueUrl(publicOrSecurityGitIssue)
+                  ? "Must be a WSO2 GitHub issue URL."
                   : undefined
               }
             />
-            <FormControlLabel
-              control={
-                <Switch
-                  size="small"
-                  checked={isHotfix}
-                  onChange={(event) => {
-                    const checked = event.target.checked;
-                    setIsHotfix(checked);
-                    if (!checked) resetEstimatesToNextThursday();
-                  }}
-                />
-              }
-              label="Hotfix"
-              disabled={isProactive}
-              sx={{ m: 0, alignSelf: "center" }}
-            />
-          </Box>
-
-          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
             <TextField
-              select
-              label="Update Type"
+              label="Internal Git Issue"
+              required
               size="small"
-              value={updateType}
-              onChange={(event) => {
-                setUpdateType(event.target.value as UmtCreateUpdateType);
-                setProduct(null);
-                setVersion(null);
-              }}
-            >
-              <MenuItem value="regular">Regular</MenuItem>
-              <MenuItem value="security">Security</MenuItem>
-              <MenuItem value="cloud-support">Cloud Support</MenuItem>
-            </TextField>
-            <TextField
-              select
-              label="Issue Type"
-              size="small"
-              value={issueType}
-              onChange={(event) => setIssueType(event.target.value as UmtCreateIssueType)}
-            >
-              <MenuItem value="bug">Bug</MenuItem>
-              <MenuItem value="improvement">Improvement</MenuItem>
-              <MenuItem value="new-feature">New Feature</MenuItem>
-            </TextField>
-          </Box>
-
-          <TextField
-            label={isSecurityUpdate ? "Security Internal Git Issue" : "Public Git Issue"}
-            required
-            size="small"
-            value={publicOrSecurityGitIssue}
-            onChange={(event) => setPublicOrSecurityGitIssue(event.target.value)}
-            error={publicOrSecurityGitIssue.length > 0 && !isValidGithubIssueUrl(publicOrSecurityGitIssue)}
-            helperText={
-              publicOrSecurityGitIssue.length > 0 && !isValidGithubIssueUrl(publicOrSecurityGitIssue)
-                ? "Must be a WSO2 GitHub issue URL."
-                : undefined
-            }
-          />
-          <TextField
-            label="Internal Git Issue"
-            required
-            size="small"
-            value={internalGitIssue}
-            onChange={(event) => setInternalGitIssue(event.target.value)}
-            error={internalGitIssue.length > 0 && !isValidGithubIssueUrl(internalGitIssue)}
-            helperText={
-              internalGitIssue.length > 0 && !isValidGithubIssueUrl(internalGitIssue)
-                ? "Must be a WSO2 GitHub issue URL."
-                : undefined
-            }
-          />
-
-          <Autocomplete
-            options={productOptions}
-            value={product}
-            loading={meta.isPending}
-            disabled={meta.isError}
-            onChange={(_event, selected) => {
-              setProduct(selected);
-              setVersion(null);
-              setShowAllVersions(false);
-            }}
-            renderInput={(params) => <TextField {...params} label="Product" required size="small" />}
-          />
-
-          <Box>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={showAllVersions}
-                  onChange={(event) => {
-                    setShowAllVersions(event.target.checked);
-                    setVersion(null);
-                  }}
-                  disabled={!product || isCloudSupportUpdate}
-                />
+              value={internalGitIssue}
+              onChange={(event) => setInternalGitIssue(event.target.value)}
+              error={internalGitIssue.length > 0 && !isValidGithubIssueUrl(internalGitIssue)}
+              helperText={
+                internalGitIssue.length > 0 && !isValidGithubIssueUrl(internalGitIssue)
+                  ? "Must be a WSO2 GitHub issue URL."
+                  : undefined
               }
-              label="Show all versions"
             />
+
             <Autocomplete
-              options={versionOptions}
-              value={version}
+              options={productOptions}
+              value={product}
               loading={meta.isPending}
-              disabled={!product || isCloudSupportUpdate || meta.isError}
-              onChange={(_event, selected) => setVersion(selected)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Version"
-                  required={!isCloudSupportUpdate}
-                  size="small"
-                />
-              )}
+              disabled={isFormFrozen || meta.isError}
+              onChange={(_event, selected) => {
+                setProduct(selected);
+                setVersion(null);
+                setShowAllVersions(false);
+              }}
+              renderInput={(params) => <TextField {...params} label="Product" required size="small" />}
             />
-          </Box>
 
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              label="Best Case Estimate"
-              value={bestCaseEstimate}
-              onChange={setBestCaseEstimate}
-              disablePast
-              shouldDisableDate={(date) => !isHotfix && date.getDay() !== 4}
-              slotProps={{
-                textField: {
-                  required: true,
-                  size: "small",
-                  error: Boolean(bestCaseEstimateError),
-                  helperText: bestCaseEstimateError,
-                },
-              }}
-            />
-            <DatePicker
-              label="Most Likely Estimate"
-              value={mostLikelyEstimate}
-              onChange={setMostLikelyEstimate}
-              disablePast
-              minDate={bestCaseEstimate ?? undefined}
-              shouldDisableDate={(date) => !isHotfix && date.getDay() !== 4}
-              slotProps={{
-                textField: {
-                  required: true,
-                  size: "small",
-                  error: Boolean(mostLikelyEstimateError),
-                  helperText: mostLikelyEstimateError,
-                },
-              }}
-            />
-            <DatePicker
-              label="Worst Case Estimate"
-              value={worstCaseEstimate}
-              onChange={setWorstCaseEstimate}
-              disablePast
-              minDate={mostLikelyEstimate ?? undefined}
-              shouldDisableDate={(date) => !isHotfix && date.getDay() !== 4}
-              slotProps={{
-                textField: {
-                  required: true,
-                  size: "small",
-                  error: Boolean(worstCaseEstimateError),
-                  helperText: worstCaseEstimateError,
-                },
-              }}
-            />
-          </LocalizationProvider>
-        </Stack>
+            <Box>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={showAllVersions}
+                    onChange={(event) => {
+                      setShowAllVersions(event.target.checked);
+                      setVersion(null);
+                    }}
+                    disabled={isFormFrozen || !product || isCloudSupportUpdate}
+                  />
+                }
+                label="Show all versions"
+              />
+              <Autocomplete
+                options={versionOptions}
+                value={version}
+                loading={meta.isPending}
+                disabled={isFormFrozen || !product || isCloudSupportUpdate || meta.isError}
+                onChange={(_event, selected) => setVersion(selected)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Version"
+                    required={!isCloudSupportUpdate}
+                    size="small"
+                  />
+                )}
+              />
+            </Box>
+
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Best Case Estimate"
+                value={bestCaseEstimate}
+                onChange={setBestCaseEstimate}
+                disabled={isFormFrozen}
+                disablePast
+                shouldDisableDate={(date) => !isHotfix && date.getDay() !== 4}
+                slotProps={{
+                  textField: {
+                    required: true,
+                    size: "small",
+                    error: Boolean(bestCaseEstimateError),
+                    helperText: bestCaseEstimateError,
+                  },
+                }}
+              />
+              <DatePicker
+                label="Most Likely Estimate"
+                value={mostLikelyEstimate}
+                onChange={setMostLikelyEstimate}
+                disabled={isFormFrozen}
+                disablePast
+                minDate={bestCaseEstimate ?? undefined}
+                shouldDisableDate={(date) => !isHotfix && date.getDay() !== 4}
+                slotProps={{
+                  textField: {
+                    required: true,
+                    size: "small",
+                    error: Boolean(mostLikelyEstimateError),
+                    helperText: mostLikelyEstimateError,
+                  },
+                }}
+              />
+              <DatePicker
+                label="Worst Case Estimate"
+                value={worstCaseEstimate}
+                onChange={setWorstCaseEstimate}
+                disabled={isFormFrozen}
+                disablePast
+                minDate={mostLikelyEstimate ?? undefined}
+                shouldDisableDate={(date) => !isHotfix && date.getDay() !== 4}
+                slotProps={{
+                  textField: {
+                    required: true,
+                    size: "small",
+                    error: Boolean(worstCaseEstimateError),
+                    helperText: worstCaseEstimateError,
+                  },
+                }}
+              />
+            </LocalizationProvider>
+          </Stack>
+        </Box>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>
@@ -519,7 +532,7 @@ function UmtDuplicateUpdatesDialog({
   onProceed: () => void;
 }) {
   return (
-    <Dialog open={open} onClose={onCancel} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={busy ? undefined : onCancel} fullWidth maxWidth="sm">
       <DialogTitle>Existing updates found</DialogTitle>
       <DialogContent>
         <DialogContentText sx={{ mb: 2 }}>

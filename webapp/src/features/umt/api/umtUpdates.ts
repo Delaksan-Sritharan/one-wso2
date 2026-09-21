@@ -376,6 +376,9 @@ export const EMPTY_UMT_UPDATE_FILTER_DRAFT: UmtUpdateFilterDraft = Object.fromEn
   FILTER_KEYS.map((key) => [key, ""]),
 ) as UmtUpdateFilterDraft;
 
+// All three are `java.util.Date` on the backend's UpdatesRequest.Filters —
+// `releasedWithoutPublicPR` reads like a flag but means "released without a
+// public PR as of this date", and is rendered as a date input in the drawer.
 const DATE_FILTERS = new Set<keyof UmtUpdateFilters>([
   "releasedWithoutPublicPR", "releasedDate", "lastUpdatedTimestampAfter",
 ]);

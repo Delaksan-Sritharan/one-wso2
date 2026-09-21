@@ -181,6 +181,18 @@ function EditableUserField({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string | null>(value ?? null);
 
+  // The lifecycle state can move off Development (a background refetch, another
+  // user's transition) while a field is open for editing. Close the editor
+  // rather than leaving a Save that no longer reflects an allowed action.
+  const [lastCanEdit, setLastCanEdit] = useState(canEdit);
+  if (canEdit !== lastCanEdit) {
+    setLastCanEdit(canEdit);
+    if (!canEdit) {
+      setEditing(false);
+      setDraft(value ?? null);
+    }
+  }
+
   const cancel = () => {
     setDraft(value ?? null);
     setEditing(false);
@@ -273,6 +285,16 @@ function EditableWorstCaseDate({
   const [logOpen, setLogOpen] = useState(false);
   const [draft, setDraft] = useState<Date | null>(() => parseDate(value));
   const etaLog = useUmtWorstCaseEstimateLog(id, logOpen);
+
+  // Same reasoning as EditableUserField above.
+  const [lastCanEdit, setLastCanEdit] = useState(canEdit);
+  if (canEdit !== lastCanEdit) {
+    setLastCanEdit(canEdit);
+    if (!canEdit) {
+      setEditing(false);
+      setDraft(parseDate(value));
+    }
+  }
 
   const cancel = () => {
     setDraft(parseDate(value));
@@ -402,7 +424,14 @@ function EtaLogDialog({
               disableRowSelectionOnClick
               getRowHeight={() => "auto"}
               hideFooter
-              rows={entries.map((entry, index) => ({ id: `${entry.updateId}-${entry.timestamp ?? index}`, ...entry }))}
+              rows={entries.map((entry, index) => ({
+                // `index` unconditionally, not just as a fallback: two log
+                // entries can share a non-null timestamp (second-precision
+                // collisions, a batch backfill), and duplicate DataGrid ids
+                // silently drop a row.
+                id: `${entry.updateId}-${entry.timestamp ?? "unknown"}-${index}`,
+                ...entry,
+              }))}
               slots={{ noRowsOverlay: EtaLogEmptyState }}
               sx={etaLogGridSx}
             />
@@ -547,15 +576,30 @@ function GitHubIssueLink({ value }: { value: string | null | undefined }) {
   );
 }
 
+// The backend models these as java.util.Date and serialises them as UTC
+// midnight instants (e.g. "2026-10-01T00:00:00.000Z"), but they MEAN a calendar
+// date. Read and write them in UTC; formatting them in the viewer's zone moves
+// the day backwards at every negative UTC offset. Deliberately not applied to
+// formatTimestamp — reportedDate and the like are genuine instants, and showing
+// those in the reader's own zone is correct.
 function formatDate(value: string | null | undefined): string {
-  return formatDateValue(value, { day: "2-digit", month: "short", year: "numeric" });
+  return formatDateValue(value, {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+    year: "numeric",
+  });
 }
 
+// Rebuild the UTC calendar day as a local-midnight Date: the DatePicker and
+// `shouldDisableDate` both read local fields, so the day-of-week check and the
+// displayed day have to agree with the UTC day the backend stored.
 function parseDate(value: string | null | undefined): Date | null {
   const normalizedValue = displayValue(value);
   if (normalizedValue === "N/A") return null;
-  const date = new Date(normalizedValue);
-  return Number.isNaN(date.getTime()) ? null : date;
+  const parsed = new Date(normalizedValue);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
 }
 
 function toDateInputValue(date: Date): string {

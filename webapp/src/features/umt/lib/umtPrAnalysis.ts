@@ -17,11 +17,31 @@
 import { UMT_PR_ANALYSIS_STATUS, isUmtPrAnalysisFailed, type UmtUpdateType } from "../api/umtTypes";
 import type { UmtFileOperation } from "../api/umtUpdates";
 
-export const GITHUB_PR_REGEX = /^https:\/\/github\.com\/([^/]*\/){2}pull\/[0-9]*/;
+// `[0-9]+` not `[0-9]*` (a missing PR number is not a PR link) and anchored at
+// both ends (trailing path segments point at a diff/file view, not the PR).
+// This is the only client-side gate before the link is sent for analysis, and
+// the backend only checks that it parses as a URL, so a malformed link would
+// otherwise fail deep inside the analyser as an opaque praStatus.
+export const GITHUB_PR_REGEX = /^https:\/\/github\.com\/([^/]*\/){2}pull\/[0-9]+\/?$/;
 export const PREFERRED_VERSION_REGEX = /(^$)|(^\d+\.\d+\.(\d+|\d+-wso2v\d+)(\.\d+|\.\d+-.*-hotfix-\d+)$)/;
 
 export function umtSvnLocationRegex(updateId: string): RegExp {
   return new RegExp(`^(https?://).*(/svn/largefileSVN/${updateId}/).*`);
+}
+
+// Anchored the same way umtSvnLocationRegex anchors the SVN location: this
+// value is persisted as `sourceFilePath` and later rendered as an href in both
+// the Edit tab's Manual Files grid and the View tab's file tables, so a
+// `javascript:`/`data:` value would become a live link for every viewer.
+const GITHUB_RAW_URL_REGEX = /^https?:\/\/[^\s]+$/i;
+
+export function githubRawUrlError(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return "Provide the GitHub raw source URL.";
+  if (!GITHUB_RAW_URL_REGEX.test(trimmed)) {
+    return "The GitHub raw source URL must start with http:// or https://.";
+  }
+  return undefined;
 }
 
 const MAX_MANUAL_FILE_BYTES = 50 * 1024 * 1024;
@@ -101,7 +121,31 @@ export function isZipDisallowedForPath(fileName: string, relativePath: string): 
   return fileName.toLowerCase().endsWith(".zip") && relativePath.includes("/plugins/");
 }
 
+// `relativePath` is the DIRECTORY an archive's entries unpack into. Users type
+// the archive's own name at the end of it because both this port and the legacy
+// React app rejected a zip otherwise (manualFileNameMatchesPath compared the
+// path's last segment against the archive name), so drop it rather than
+// creating a literal `.zip` directory segment inside the product pack. The
+// Java tool never had this problem — there the user types the directory and the
+// server unpacks.
+export function zipTargetDirectory(path: string, zipName: string): string {
+  const trimmed = path.replace(/\/+$/, "");
+  return trimmed.toLowerCase().endsWith(`/${zipName.toLowerCase()}`)
+    ? trimmed.slice(0, -(zipName.length + 1))
+    : trimmed;
+}
+
 export function manualFileNameMatchesPath(fileName: string, relativePath: string): boolean {
+  // A zip is a container that gets unpacked client-side — its entries, not
+  // the archive itself, are what land in the pack — so the archive's own
+  // name is never the target file name and has nothing to do with
+  // `relativePath`, which for a zip is purely the directory its entries
+  // extract into. Applying this check to zips is what forced users to type
+  // the archive's own name onto the end of the path (the only way to pass
+  // the check), which `addZipEntries` then reused as-is for both the upload
+  // target and the row prefix — turning the zip's own name into a literal
+  // directory segment in the stored path.
+  if (fileName.toLowerCase().endsWith(".zip")) return true;
   const expectedFileName = relativePath.split("/").filter(Boolean).pop();
   return !expectedFileName || expectedFileName === fileName;
 }

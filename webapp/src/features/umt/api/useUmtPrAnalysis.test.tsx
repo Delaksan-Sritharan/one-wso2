@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
 vi.mock("@hooks/useAsgardeoSub", () => ({
   useAsgardeoSub: () => ({ state: { status: "ready", sub: "user-under-test" }, retry: () => {} }),
+  foldIdentityError: (query: unknown) => query,
 }));
 vi.mock("@hooks/useAccessToken", () => ({ useAccessToken: () => async () => "token" }));
 

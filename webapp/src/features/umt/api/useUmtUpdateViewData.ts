@@ -20,7 +20,7 @@ import { httpRetry } from "@api/errors";
 import { authedGet } from "@api/http";
 import { isUmtBackendConfigured, umtServiceUrls } from "@config/apiConfig";
 import { useAccessToken } from "@hooks/useAccessToken";
-import { useAsgardeoSub } from "@hooks/useAsgardeoSub";
+import { foldIdentityError, useAsgardeoSub } from "@hooks/useAsgardeoSub";
 import type {
   UmtHotfixInfo,
   UmtProductAnalysis,
@@ -40,7 +40,7 @@ export function useUmtPullRequestAnalysis(
 ) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
-  const { state: subState } = useAsgardeoSub();
+  const { state: subState, retry: retryIdentity } = useAsgardeoSub();
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const enabled =
     /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
@@ -51,7 +51,7 @@ export function useUmtPullRequestAnalysis(
   // Development, so it passes `alwaysEnabled` to fetch there too.
   const analysisEnabled = enabled && (options?.alwaysEnabled || lifecycleState !== "Development");
 
-  return useQuery<UmtPullRequestAnalysis>({
+  const query = useQuery<UmtPullRequestAnalysis>({
     queryKey: ["umt-update-pull-request-analysis", userSub, id],
     enabled: analysisEnabled,
     queryFn: async () =>
@@ -61,6 +61,8 @@ export function useUmtPullRequestAnalysis(
       ),
     retry: httpRetry,
   });
+
+  return foldIdentityError(query, subState, retryIdentity);
 }
 
 // Extracted for the same reason as useUmtPullRequestAnalysis above: the Edit
@@ -74,7 +76,7 @@ export function useUmtProductAnalysis(
 ) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
-  const { state: subState } = useAsgardeoSub();
+  const { state: subState, retry: retryIdentity } = useAsgardeoSub();
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const enabled =
     /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
@@ -82,7 +84,7 @@ export function useUmtProductAnalysis(
   // Development, same as pull-request analysis above.
   const analysisEnabled = enabled && (options?.alwaysEnabled || lifecycleState !== "Development");
 
-  return useQuery<UmtProductAnalysis>({
+  const query = useQuery<UmtProductAnalysis>({
     queryKey: ["umt-update-product-analysis", userSub, id],
     enabled: analysisEnabled,
     queryFn: async () =>
@@ -92,6 +94,8 @@ export function useUmtProductAnalysis(
       ),
     retry: httpRetry,
   });
+
+  return foldIdentityError(query, subState, retryIdentity);
 }
 
 export function useUmtUpdateViewData(
@@ -101,7 +105,7 @@ export function useUmtUpdateViewData(
 ) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
-  const { state: subState } = useAsgardeoSub();
+  const { state: subState, retry: retryIdentity } = useAsgardeoSub();
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const enabled =
     /^\d+$/.test(id) && isSignedIn && isUmtBackendConfigured() && Boolean(userSub);
@@ -131,5 +135,11 @@ export function useUmtUpdateViewData(
     retry: httpRetry,
   });
 
-  return { dependencies, hotfixInfo, productAnalysis, pullRequestAnalysis };
+  return {
+    dependencies: foldIdentityError(dependencies, subState, retryIdentity),
+    hotfixInfo: foldIdentityError(hotfixInfo, subState, retryIdentity),
+    // Already folded inside their own hooks.
+    productAnalysis,
+    pullRequestAnalysis,
+  };
 }
