@@ -70,8 +70,14 @@ export default function PreviewDialog({
 }) {
   const [device, setDevice] = useState<"desktop" | "mobile" | "custom">("desktop");
   const [dark, setDark] = useState(false);
+  // customW/customH are always-valid (clamped) and are what actually sizes the iframe. The draft
+  // strings track exactly what's typed — which can be transiently empty or out-of-range while
+  // editing — so the iframe doesn't collapse to 0 or balloon past the limit until the field is
+  // committed (blurred). See onBlur below for where a draft becomes the real dimension.
   const [customW, setCustomW] = useState(414);
   const [customH, setCustomH] = useState(736);
+  const [customWDraft, setCustomWDraft] = useState(String(customW));
+  const [customHDraft, setCustomHDraft] = useState(String(customH));
   const shown = renderPreviewHtml(html, dark ? "dark" : "light");
 
   function openInNewTab() {
@@ -124,9 +130,13 @@ export default function PreviewDialog({
             <OutlinedInput
               size="small"
               type="number"
-              value={customW}
-              onChange={(e) => setCustomW(Number(e.target.value))}
-              onBlur={(e) => setCustomW(clampCustom(Number(e.target.value)))}
+              value={customWDraft}
+              onChange={(e) => setCustomWDraft(e.target.value)}
+              onBlur={(e) => {
+                const clamped = clampCustom(Number(e.target.value));
+                setCustomW(clamped);
+                setCustomWDraft(String(clamped));
+              }}
               inputProps={{ min: CUSTOM_MIN, max: CUSTOM_MAX, "aria-label": "Preview width in pixels" }}
               sx={{ width: 80, fontSize: 13 }}
             />
@@ -134,9 +144,13 @@ export default function PreviewDialog({
             <OutlinedInput
               size="small"
               type="number"
-              value={customH}
-              onChange={(e) => setCustomH(Number(e.target.value))}
-              onBlur={(e) => setCustomH(clampCustom(Number(e.target.value)))}
+              value={customHDraft}
+              onChange={(e) => setCustomHDraft(e.target.value)}
+              onBlur={(e) => {
+                const clamped = clampCustom(Number(e.target.value));
+                setCustomH(clamped);
+                setCustomHDraft(String(clamped));
+              }}
               inputProps={{ min: CUSTOM_MIN, max: CUSTOM_MAX, "aria-label": "Preview height in pixels" }}
               sx={{ width: 80, fontSize: 13 }}
             />
