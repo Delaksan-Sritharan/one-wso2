@@ -220,7 +220,14 @@ export default function UmtCreateUpdateDialog({
       if (newId) navigate(`/umt/updates/${newId}`);
     } catch (error) {
       setSubmitError(describeError(error));
+      // Drop the snapshot as well as the dialog: `isFormFrozen` keys off
+      // `pendingRequest`, so leaving it set would hold the form disabled with
+      // the error on screen and no way to correct the request short of closing
+      // the dialog and losing everything. Matches the duplicate dialog's own
+      // Cancel handler, which clears all three.
       setDuplicateDialogOpen(false);
+      setPendingRequest(null);
+      setDuplicateResults([]);
     }
   }
 
