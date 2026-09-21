@@ -180,7 +180,7 @@ than equal to it.
 A drift check will flag them; that is expected, and §4.5 excepts them by name.
 
 **Until grc-tools merges them, treat them exactly like an E-deviation.** The pin
-`8c002b9` does not contain them, so re-lifting any of these 14 files from the
+`8c002b9` does not contain them, so re-lifting any of these 15 files from the
 pinned source silently reverts them — the §3a failure, with nothing failing to
 announce it. Re-apply from the table below, or copy from a grc-tools revision
 that already carries them.
