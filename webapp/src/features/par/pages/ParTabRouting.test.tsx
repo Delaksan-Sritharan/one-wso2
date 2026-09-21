@@ -25,9 +25,19 @@ const employeeInfo: { isSuccess: boolean; data?: { leadEmail: string | null } } 
   isSuccess: false,
 };
 
+// ParRequiresActiveCycleRoute/useParHasActiveCycle's own query — GET
+// /par-cycles?email=&status=OPEN via useActiveParCycle, keyed "par-cycles-open".
+// Unresolved (isSuccess false) fails OPEN, same shape as employeeInfo above.
+const openCycles: { isSuccess: boolean; data?: unknown[] } = {
+  isSuccess: false,
+};
+
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: ({ queryKey }: { queryKey: unknown[] }) =>
-    queryKey[0] === "par-employee-info" ? employeeInfo : { data: undefined },
+  useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
+    if (queryKey[0] === "par-employee-info") return employeeInfo;
+    if (queryKey[0] === "par-cycles-open") return openCycles;
+    return { data: undefined };
+  },
 }));
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
 vi.mock("@hooks/useAccessToken", () => ({ useAccessToken: () => async () => "token" }));
@@ -39,7 +49,7 @@ vi.mock("../components/ParShell", () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-const { default: ParGroupPage, ParGroupIndex, ParRequiresLeadRoute } = await import(
+const { default: ParGroupPage, ParGroupIndex, ParRequiresLeadRoute, ParRequiresActiveCycleRoute } = await import(
   "./ParGroupPage"
 );
 
@@ -56,12 +66,19 @@ function Tab({ name }: { name: string }) {
 beforeEach(() => {
   employeeInfo.isSuccess = false;
   employeeInfo.data = undefined;
+  openCycles.isSuccess = false;
+  openCycles.data = undefined;
   profile.isLoading = false;
 });
 
 function hasLead(leadEmail: string | null) {
   employeeInfo.isSuccess = true;
   employeeInfo.data = { leadEmail };
+}
+
+function hasNoActiveCycle() {
+  openCycles.isSuccess = true;
+  openCycles.data = [];
 }
 
 /** The group, wired the way App.tsx wires it. */
@@ -75,26 +92,39 @@ function show(initial = "/me/performance") {
           <Route
             path="employee-feedback"
             element={
-              <ParRequiresLeadRoute>
-                <Tab name="Employee Feedback" />
-              </ParRequiresLeadRoute>
+              <ParRequiresActiveCycleRoute>
+                <ParRequiresLeadRoute>
+                  <Tab name="Employee Feedback" />
+                </ParRequiresLeadRoute>
+              </ParRequiresActiveCycleRoute>
             }
           />
           <Route
             path="request-360"
             element={
-              <ParRequiresLeadRoute>
-                <Tab name="Request 360" />
-              </ParRequiresLeadRoute>
+              <ParRequiresActiveCycleRoute>
+                <ParRequiresLeadRoute>
+                  <Tab name="Request 360" />
+                </ParRequiresLeadRoute>
+              </ParRequiresActiveCycleRoute>
             }
           />
-          <Route path="provide-360" element={<Tab name="Provide 360" />} />
+          <Route
+            path="provide-360"
+            element={
+              <ParRequiresActiveCycleRoute>
+                <Tab name="Provide 360" />
+              </ParRequiresActiveCycleRoute>
+            }
+          />
           <Route
             path="f2f"
             element={
-              <ParRequiresLeadRoute>
-                <Tab name="F2F" />
-              </ParRequiresLeadRoute>
+              <ParRequiresActiveCycleRoute>
+                <ParRequiresLeadRoute>
+                  <Tab name="F2F" />
+                </ParRequiresLeadRoute>
+              </ParRequiresActiveCycleRoute>
             }
           />
           <Route path="history" element={<Tab name="History" />} />
@@ -161,6 +191,29 @@ describe("an employee with no lead", () => {
   it("still reaches the tabs they do have", async () => {
     show("/me/performance/history");
     expect(await screen.findByTestId("tab-body")).toHaveTextContent("History");
+  });
+});
+
+describe("an employee with an active lead but no open PAR cycle", () => {
+  beforeEach(() => {
+    hasLead("lead@wso2.com");
+    hasNoActiveCycle();
+  });
+
+  it("sees only the PAR History tab", async () => {
+    show();
+    await screen.findByRole("tab", { name: "PAR History" });
+    expect(screen.getAllByRole("tab")).toHaveLength(1);
+  });
+
+  it("lands on PAR History, so the group URL is never blank", async () => {
+    show();
+    expect(await screen.findByTestId("url")).toHaveTextContent("/me/performance/history");
+  });
+
+  it("is redirected to PAR History when deep-linking straight to a cycle-scoped tab", async () => {
+    show("/me/performance/f2f");
+    expect(await screen.findByTestId("url")).toHaveTextContent("/me/performance/history");
   });
 });
 

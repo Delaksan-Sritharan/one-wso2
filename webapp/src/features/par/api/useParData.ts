@@ -112,6 +112,11 @@ export function useParCanSeeLeadPortal(workEmail: string | undefined, enabled = 
   return {
     canSee: employeeInfo.isTeamLead || (directReports.isSuccess && directReports.data.length > 0),
     isLoading: employeeInfo.isLoading || (!employeeInfo.isTeamLead && directReports.isLoading),
+    // Exposed so callers needing distinct error UI for each fetch (e.g.
+    // ParRequiresTeamLeadRoute) don't have to re-derive this same
+    // loading-guarded fallback query themselves.
+    employeeInfo,
+    directReports,
   };
 }
 

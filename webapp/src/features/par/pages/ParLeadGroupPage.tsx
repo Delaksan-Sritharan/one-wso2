@@ -21,8 +21,7 @@ import RoutedTabs, { type RoutedTabDef } from "@components/routed-tabs/RoutedTab
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useMeProfile } from "@features/my/api/useMeProfile";
 import ParShell from "../components/ParShell";
-import { useParIsTeamLead } from "../api/useParData";
-import { useParLeadEmployees } from "../api/useLeadHistory";
+import { useParCanSeeLeadPortal, useParIsTeamLead } from "../api/useParData";
 
 const BASE_PATH = "/people-ops/performance/lead";
 
@@ -117,9 +116,9 @@ export function ParLeadGroupIndex() {
 export function ParRequiresTeamLeadRoute({ children }: { children: ReactNode }) {
   const profile = useMeProfile();
   const workEmail = profile.data?.userInfo.workEmail;
-  const employeeInfo = useParIsTeamLead(workEmail);
-  const directReports = useParLeadEmployees(employeeInfo.isTeamLead ? undefined : workEmail);
-  if (profile.isLoading || employeeInfo.isLoading) return null;
+  const gate = useParCanSeeLeadPortal(workEmail);
+  const { employeeInfo, directReports } = gate;
+  if (profile.isLoading || gate.isLoading) return null;
   // A failed lookup must not read as "not a lead" — that would silently
   // redirect an actual team lead away with no indication anything went
   // wrong, the same mistake the fail-closed default above already guards
@@ -147,7 +146,6 @@ export function ParRequiresTeamLeadRoute({ children }: { children: ReactNode }) 
     );
   }
   if (employeeInfo.isTeamLead) return <>{children}</>;
-  if (directReports.isLoading) return null;
   if (directReports.isError) {
     return (
       <Box sx={{ p: 2 }}>
@@ -161,7 +159,7 @@ export function ParRequiresTeamLeadRoute({ children }: { children: ReactNode }) 
       </Box>
     );
   }
-  if (!directReports.data || directReports.data.length === 0) {
+  if (!gate.canSee) {
     return <Navigate to="/me/performance" replace />;
   }
   return <>{children}</>;

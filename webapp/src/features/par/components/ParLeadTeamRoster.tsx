@@ -213,7 +213,7 @@ export default function ParLeadTeamRoster({
       headerName: "Team Member",
       flex: 1.5,
       renderCell: (params) => (
-        <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+        <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%" }}>
           <Box
             role="button"
             tabIndex={0}
@@ -225,52 +225,39 @@ export default function ParLeadTeamRoster({
                 onOpenReview(params.row.parEmployeeEmail);
               }
             }}
-            sx={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+            sx={{ cursor: "pointer", display: "flex", alignItems: "center", width: "fit-content" }}
           >
             <Avatar
               src={thumbnailByEmail.get(params.row.parEmployeeEmail) || undefined}
               slotProps={{ img: { referrerPolicy: "no-referrer" } }}
               sx={{ mr: 1.5, height: "2.2rem", width: "2.2rem" }}
             />
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {params.row.parEmployeeName}
+            </Typography>
           </Box>
-          <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <Box
-              role="button"
-              tabIndex={0}
-              onClick={() => onOpenReview(params.row.parEmployeeEmail)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onOpenReview(params.row.parEmployeeEmail);
-                }
-              }}
-              sx={{ cursor: "pointer", width: "fit-content" }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {params.row.parEmployeeName}
-              </Typography>
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                {params.row.parEmployeeEmail}
-              </Typography>
-              <Tooltip title="Copy Email" arrow>
-                <IconButton
-                  size="small"
-                  aria-label="Copy Email"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(params.row.parEmployeeEmail);
-                      showSuccess("Email copied");
-                    } catch (err) {
-                      showError(describeError(err));
-                    }
-                  }}
-                >
-                  <CopyIcon size={13} />
-                </IconButton>
-              </Tooltip>
-            </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: "2.95rem" }}>
+            <Typography variant="caption" color="text.secondary">
+              {params.row.parEmployeeEmail}
+            </Typography>
+            <Tooltip title="Copy Email" arrow>
+              <IconButton
+                size="small"
+                aria-label="Copy Email"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(params.row.parEmployeeEmail);
+                    showSuccess("Email copied");
+                  } catch (err) {
+                    showError(describeError(err));
+                  }
+                }}
+              >
+                <CopyIcon size={13} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Box sx={{ ml: "2.95rem" }}>
             <StageProgress row={params.row} />
           </Box>
         </Box>
