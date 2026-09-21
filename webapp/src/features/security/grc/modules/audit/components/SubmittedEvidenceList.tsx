@@ -27,6 +27,8 @@ import { BACKEND_BASE_URL } from "@features/security/grc/shim/apiConfig";
 import { formatTimestamp } from "@features/security/grc/modules/audit/utils/format";
 import { downloadBlob, viewOrDownloadBlob } from "@features/security/grc/modules/audit/utils/fileView";
 import { extractErrorMessage } from "@features/security/grc/modules/audit/api/apiError";
+import { ROUND_STATUS_COLORS, ROUND_STATUS_LABELS } from "@features/security/grc/modules/audit/utils/controlStatus";
+import type { RoundStatus } from "@features/security/grc/modules/audit/types/audit";
 
 function sizeLabel(bytes: number | null): string {
   if (bytes === null) return "";
@@ -35,23 +37,6 @@ function sizeLabel(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// Round status (distinct from the control's status) — tells a rejected round
-// apart from the resubmission that replaced it.
-const ROUND_STATUS_LABELS: Record<string, string> = {
-  SUBMITTED:           "Submitted",
-  COMPLIANCE_APPROVED: "Approved (Internal)",
-  COMPLIANCE_REJECTED: "Rejected (Internal)",
-  APPROVED:            "Approved",
-  AUDITOR_REJECTED:    "Rejected (Auditor)",
-};
-const ROUND_STATUS_COLORS: Record<string, string> = {
-  SUBMITTED:           "#6366F1", // indigo — awaiting review
-  COMPLIANCE_APPROVED:  "#10B981", // emerald
-  COMPLIANCE_REJECTED:  "#EF4444", // red
-  APPROVED:             "#10B981", // emerald
-  AUDITOR_REJECTED:     "#EF4444", // red
-};
-
 /**
  * One "<label> <when> · <who>" line above a group of files, with the round's
  * status chip. The chip repeats on every batch header in a round because the
@@ -59,27 +44,25 @@ const ROUND_STATUS_COLORS: Record<string, string> = {
  * SUBMITTED, so anything added later was already there when it was decided,
  * and a reader looking at the later group needs to see that verdict too.
  */
-function renderHeader(label: string, at: string, byName: string, status: string, spaced = false): JSX.Element {
+function renderHeader(label: string, at: string, byName: string, status: RoundStatus, spaced = false): JSX.Element {
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, ...(spaced ? { mt: 0.25 } : {}) }}>
       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
         {label} {formatTimestamp(at)}{byName ? ` · ${byName}` : ""}
       </Typography>
-      {ROUND_STATUS_LABELS[status] && (
-        <Chip
-          label={ROUND_STATUS_LABELS[status]}
-          size="small"
-          variant="outlined"
-          sx={{
-            height: 18,
-            fontSize: "0.65rem",
-            fontWeight: 600,
-            color: ROUND_STATUS_COLORS[status],
-            borderColor: ROUND_STATUS_COLORS[status],
-            "& .MuiChip-label": { px: 0.75 },
-          }}
-        />
-      )}
+      <Chip
+        label={ROUND_STATUS_LABELS[status]}
+        size="small"
+        variant="outlined"
+        sx={{
+          height: 18,
+          fontSize: "0.65rem",
+          fontWeight: 600,
+          color: ROUND_STATUS_COLORS[status],
+          borderColor: ROUND_STATUS_COLORS[status],
+          "& .MuiChip-label": { px: 0.75 },
+        }}
+      />
     </Box>
   );
 }
