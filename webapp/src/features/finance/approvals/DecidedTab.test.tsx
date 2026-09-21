@@ -73,6 +73,9 @@ vi.mock("../expense/useExpense", () => ({
       error: new Error("expense backend down"),
     };
   },
+  // Only feeds the review screen's name resolver, which falls back to the
+  // bare email with nothing here — nothing under test cares which name shows.
+  useExpenseEmployees: () => ({ data: [], isLoading: false, isError: false }),
 }));
 
 vi.mock("../opd/useOpd", () => ({
@@ -93,13 +96,33 @@ vi.mock("../opd/useOpd", () => ({
   },
 }));
 
-vi.mock("../expense/ExpenseClaimDetailsDialog", () => ({
-  ExpenseClaimDetailsDialog: ({ claim }: { claim: unknown }) =>
-    claim ? <div data-testid="expense-dialog" /> : null,
+// A decided expense claim now takes over the whole tab — the app's own
+// Lead/Finance Approvals review screen, read-only here — rather than opening
+// in a dialog. Stubbed the same way OPD's dialog is: this file cares about
+// WHICH claim opened it, not the review screen's own internals.
+vi.mock("../expense/approvals/ExpenseApprovalReview", () => ({
+  ExpenseApprovalReview: ({
+    claim,
+    stage,
+    pending,
+  }: {
+    claim: { id: string };
+    stage: string;
+    pending: boolean;
+  }) => (
+    <div data-testid="expense-review" data-stage={stage} data-pending={String(pending)}>
+      {claim.id}
+    </div>
+  ),
 }));
-vi.mock("../opd/OpdClaimDetailsDialog", () => ({
-  OpdClaimDetailsDialog: ({ claim }: { claim: unknown }) =>
-    claim ? <div data-testid="opd-dialog" /> : null,
+// OPD now takes over the tab the same way expense does — its own review
+// screen, tested in its own file — rather than opening in a dialog.
+vi.mock("../opd/approvals/OpdApprovalReview", () => ({
+  OpdApprovalReview: ({ claim, pending }: { claim: { id: string }; pending: boolean }) => (
+    <div data-testid="opd-review" data-pending={String(pending)}>
+      {claim.id}
+    </div>
+  ),
 }));
 
 const { default: DecidedTab } = await import("./DecidedTab");
@@ -329,6 +352,58 @@ describe("opening a record without a mouse", () => {
     const row = (await screen.findByText("OPD-1")).closest("tr")!;
     within(row).getByRole("button", { name: "View" }).focus();
     await user.keyboard("{Enter}");
-    expect(screen.getByTestId("opd-dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("opd-review")).toBeInTheDocument();
+  });
+});
+
+// A decided OPD claim replaces the whole tab with the app's own review
+// screen, `pending={false}` — the record of what was decided.
+describe("opening an OPD claim", () => {
+  it("replaces the queue with the review screen, read-only", async () => {
+    data.opd = [opdClaim({ id: "OPD-DONE" })];
+    show();
+    const row = (await screen.findByText("OPD-DONE")).closest("tr")!;
+    within(row).getByRole("button", { name: "View" }).click();
+    const review = await screen.findByTestId("opd-review");
+    expect(review).toHaveTextContent("OPD-DONE");
+    expect(review).toHaveAttribute("data-pending", "false");
+    expect(screen.queryByRole("button", { name: "View" })).not.toBeInTheDocument();
+  });
+});
+
+// An expense claim replaces the whole tab with the app's own Lead/Finance
+// Approvals review screen, `pending={false}` — the record of what was
+// decided, not the decision offered again.
+describe("opening an expense claim", () => {
+  it("replaces the queue with the review screen, read-only", async () => {
+    data.finance = [expenseClaim({ id: "EXP-DONE" })];
+    show();
+    const row = (await screen.findByText("EXP-DONE")).closest("tr")!;
+    within(row).getByRole("button", { name: "View" }).click();
+    const review = await screen.findByTestId("expense-review");
+    expect(review).toHaveTextContent("EXP-DONE");
+    expect(review).toHaveAttribute("data-pending", "false");
+    // Gone, not merely covered: the review screen took the tab's place.
+    expect(screen.queryByRole("button", { name: "View" })).not.toBeInTheDocument();
+  });
+
+  // Only the stage decides whether Print shows, even read-only — so it has
+  // to be right on a decided claim too, not just a pending one.
+  it("reads the stage off a lead decision, not finance", async () => {
+    data.lead = [expenseClaim({ id: "EXP-LEAD-REJ", statusDetails: { status: "LEAD_REJECTED" } })];
+    show();
+    const row = (await screen.findByText("EXP-LEAD-REJ")).closest("tr")!;
+    within(row).getByRole("button", { name: "View" }).click();
+    const review = await screen.findByTestId("expense-review");
+    expect(review).toHaveAttribute("data-stage", "LEAD");
+  });
+
+  it("reads the stage off a finance decision", async () => {
+    data.finance = [expenseClaim({ id: "EXP-FIN-APP", statusDetails: { status: "APPROVED" } })];
+    show();
+    const row = (await screen.findByText("EXP-FIN-APP")).closest("tr")!;
+    within(row).getByRole("button", { name: "View" }).click();
+    const review = await screen.findByTestId("expense-review");
+    expect(review).toHaveAttribute("data-stage", "FINANCE");
   });
 });
