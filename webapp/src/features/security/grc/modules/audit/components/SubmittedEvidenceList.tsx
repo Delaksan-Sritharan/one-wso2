@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { Alert, Box, Button, Chip, CircularProgress, IconButton, Skeleton, Typography } from "@wso2/oxygen-ui";
+import { Alert, Box, Button, CircularProgress, IconButton, Skeleton, Typography } from "@wso2/oxygen-ui";
 import { Download, ExternalLink, FileText, RotateCcw, Trash2 } from "@wso2/oxygen-ui-icons-react";
 import { Fragment, useState, type JSX } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -27,7 +27,7 @@ import { BACKEND_BASE_URL } from "@features/security/grc/shim/apiConfig";
 import { formatTimestamp } from "@features/security/grc/modules/audit/utils/format";
 import { downloadBlob, viewOrDownloadBlob } from "@features/security/grc/modules/audit/utils/fileView";
 import { extractErrorMessage } from "@features/security/grc/modules/audit/api/apiError";
-import { ROUND_STATUS_COLORS, ROUND_STATUS_LABELS } from "@features/security/grc/modules/audit/utils/controlStatus";
+import RoundStatusChip from "@features/security/grc/modules/audit/components/RoundStatusChip";
 import type { RoundStatus } from "@features/security/grc/modules/audit/types/audit";
 
 function sizeLabel(bytes: number | null): string {
@@ -50,19 +50,7 @@ function renderHeader(label: string, at: string, byName: string, status: RoundSt
       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
         {label} {formatTimestamp(at)}{byName ? ` · ${byName}` : ""}
       </Typography>
-      <Chip
-        label={ROUND_STATUS_LABELS[status]}
-        size="small"
-        variant="outlined"
-        sx={{
-          height: 18,
-          fontSize: "0.65rem",
-          fontWeight: 600,
-          color: ROUND_STATUS_COLORS[status],
-          borderColor: ROUND_STATUS_COLORS[status],
-          "& .MuiChip-label": { px: 0.75 },
-        }}
-      />
+      <RoundStatusChip status={status} />
     </Box>
   );
 }
