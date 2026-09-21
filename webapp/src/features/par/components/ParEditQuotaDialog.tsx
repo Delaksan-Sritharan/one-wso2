@@ -56,25 +56,20 @@ export default function ParEditQuotaDialog({
 
   const handleClose = () => onClose();
 
-  // 20% is the outer bound and 5% must sit inside it (calculateDefaultQuotaValues
-  // already subtracts 5% out of the 20% default for the same reason) — pulling
-  // 20% below the current 5% allocation drags 5% down with it, and the 5%
-  // field is capped at whatever 20% currently allows.
+  // 5% and 20% are independent, additive bands (calculateDefaultQuotaValues
+  // already excludes the 5% band from default20Slots), so each field is
+  // capped only against its own default — legacy's EditQuotaDialog.tsx
+  // cross-caps one band by the other's current allocation; not reproduced
+  // here, since that silently truncates a valid entry in one band whenever
+  // the other happens to be set lower.
   const handleSlotsChange = (kind: "5" | "20", raw: string) => {
     const parsed = raw === "" ? 0 : parseInt(raw, 10);
     const value = Number.isNaN(parsed) ? 0 : Math.max(parsed, 0);
 
     if (kind === "20") {
-      const capped20 = Math.min(value, group.default20Slots);
-      const adjusted5 = Math.min(group.allocated5Slots, capped20);
-      setGroup({ ...group, allocated20Slots: capped20, allocated5Slots: adjusted5 });
+      setGroup({ ...group, allocated20Slots: Math.min(value, group.default20Slots) });
     } else {
-      const capped5 = Math.min(value, group.default5Slots);
-      // A small group's single combined slot (default20Slots === 0) must not
-      // be capped down to 0 by an already-zero 20% bound — legacy's
-      // EditQuotaDialog.tsx has this exact bug; not reproduced here.
-      const bound = group.default20Slots === 0 ? capped5 : Math.min(capped5, group.allocated20Slots);
-      setGroup({ ...group, allocated5Slots: bound });
+      setGroup({ ...group, allocated5Slots: Math.min(value, group.default5Slots) });
     }
   };
 
