@@ -27,9 +27,10 @@
 // Each app's own backend still enforces its real role scheme; these
 // capability gates just decide what shows in the rail.
 
-import { CreditCardIcon, ReceiptTextIcon } from "@wso2/oxygen-ui-icons-react";
+import { CreditCardIcon, ReceiptTextIcon, StethoscopeIcon } from "@wso2/oxygen-ui-icons-react";
 import { CC_PATH } from "@features/finance/cc/ccPaths";
 import { expenseFinancePaths } from "@features/finance/expense/expenseFinancePaths";
+import { opdFinancePaths } from "@features/finance/opd/opdFinancePaths";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import type { MenuApp } from "@constants/appMenu";
 
@@ -66,27 +67,24 @@ export const ME_FINANCE_APPS: readonly MenuApp[] = [
  * needs; it sits with the other finance operations instead.
  */
 export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
-  {
+  // Held back as a whole: New Claim, Claim History and both Approvals stages
+  // all disappear together, not one route at a time.
+  ...(isPreviewEnabled("expenseClaims")
+    ? ([{
     key: "expense",
     name: "Expense Claims",
     icon: ReceiptTextIcon,
     purpose: "File an expense claim, track the ones you submitted, and decide on the ones waiting on you.",
     items: [
-      // New Claim is held behind a preview flag: Me → Claims already offers a
-      // new-claim flow, and showing a second entry point under Finance before
-      // the two are reconciled would leave people with two ways in and no way
-      // to tell which one they want.
-      //
-      // Spread in rather than filtered out, so with the flag off the item does
-      // not exist at all — the rail sections and favourites both derive from
-      // this list. It is NOT the whole story: the Finance overview builds its
-      // tiles by hand and asks `useFinanceGate` by item id, so that surface is
-      // gated there too.
-      //
-      // The flag is on the ITEM, not the app. Claim History has no duplicate
-      // under Me to reconcile — the Me-side history is a different screen on a
-      // different route — so hiding the whole app would hold back something
-      // that is ready.
+      // New Claim carries its own flag on top of the app's: Me → Claims
+      // already offers a new-claim flow, and showing a second entry point
+      // under Finance before the two are reconciled would leave people with
+      // two ways in and no way to tell which one they want. Spread in rather
+      // than filtered out, so with the flag off the item does not exist at
+      // all — the rail sections and favourites both derive from this list.
+      // It is NOT the whole story: the Finance overview builds its tiles by
+      // hand and asks `useFinanceGate` by item id, so that surface is gated
+      // there too.
       ...(isPreviewEnabled("expenseSubmitter")
         ? [
             { id: "expense-new", label: "New Claim", desc: "File a new expense claim.", path: expenseFinancePaths.new },
@@ -112,7 +110,38 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
         path: expenseFinancePaths.financeApprovals,
       },
     ],
-  },
+    }] as MenuApp[])
+    : []),
+  ...(isPreviewEnabled("opdClaims")
+    ? ([{
+    // OPD has been a tab under Me → Claims and nothing else, which is right for
+    // filing your own but left the app with no front door of its own the way
+    // Expense Claims has. Only Claim History lives here today; New Claim stays
+    // under Me until the two are reconciled, so there is one way in and no
+    // guessing which.
+    key: "opd",
+    name: "OPD Claims",
+    icon: StethoscopeIcon,
+    purpose: "Track the outpatient medical claims you have submitted.",
+    // One screen today and it will not stay that way. Collapsing to a leaf now
+    // would teach the wrong shape and make the item vanish as a concept the day
+    // a second one lands.
+    alwaysGroup: true,
+    items: [
+      {
+        id: "opd-history",
+        label: "Claim History",
+        desc: "OPD claims you have submitted, and where each one has got to.",
+        // Not a coarse capability: the OPD backend decides this, and refuses
+        // the whole app to anyone holding neither of its roles. `requires` only
+        // forces useFinanceGate to answer for the id — see its `opd-history`
+        // case, which asks the OPD backend rather than people-app.
+        requires: ["employee"],
+        path: opdFinancePaths.history,
+      },
+    ],
+    }] as MenuApp[])
+    : []),
   {
     key: "cc",
     name: "Credit Card Expenses",
@@ -165,5 +194,9 @@ export const FINANCE_EYEBROW = {
   // now, and their own titles say which type is being filed.
   claims: eyebrowFor("claims"),
   cc: eyebrowFor("cc"),
-  expense: eyebrowFor("expense"),
+  // Literal rather than eyebrowFor(...): this app sits behind a preview
+  // flag, and with it off the lookup would fall back to the generic
+  // "Finance" chip — wrong for a route still reachable directly by URL.
+  expense: { icon: ReceiptTextIcon, label: "Expense Claims" },
+  opd: { icon: StethoscopeIcon, label: "OPD Claims" },
 } as const;
