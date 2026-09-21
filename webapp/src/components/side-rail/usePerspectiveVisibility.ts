@@ -35,7 +35,7 @@ import { useMarketingOpsGate } from "@features/marketing-ops/api/useMarketingOps
 import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
 import { useSecurityGate } from "@features/security/api/useSecurityGate";
 import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
-import { useParIsTeamLead } from "@features/par/api/useParData";
+import { useParCanSeeLeadPortal } from "@features/par/api/useParData";
 import { useParIsAdmin } from "@features/par/api/useParIsAdmin";
 import { isSriLankaWorkLocation } from "@utils/locationGate";
 import { visibleLeavesOf } from "./railActive";
@@ -150,10 +150,12 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // PAR's Lead Portal is the same shape of problem once more: its
   // `isTeamLead` comes from par-app's own backend, PAR-cycle-scoped, and
   // bears no fixed relationship to people-app's generic "lead" privilege
-  // `caps` is built from — the two can disagree in either direction. Only
-  // fetched while People Ops is active. Fails closed while resolving,
-  // same as `isTeamLead` itself already does for the route guard.
-  const parLeadPortalGate = useParIsTeamLead(userInfo.data?.workEmail, isPeopleOps);
+  // `caps` is built from — the two can disagree in either direction.
+  // useParCanSeeLeadPortal also ORs in the org-chart signal so the item
+  // stays visible once a lead's cycle closes, matching
+  // ParRequiresTeamLeadRoute (the route guard that actually enforces this).
+  // Only fetched while People Ops is active; fails closed while resolving.
+  const parLeadPortalGate = useParCanSeeLeadPortal(userInfo.data?.workEmail, isPeopleOps);
 
   // Admin Portal's own gate — a JWT decode, not a backend call, so unlike
   // every gate above there's no per-perspective fetch to avoid by disabling it.
@@ -198,7 +200,7 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     if (FINANCE_ITEM_IDS.has(s.id)) return financeGate.canSee(s.id);
     if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
     if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
-    if (s.id === PAR_LEAD_PORTAL_ITEM_ID) return parLeadPortalGate.isTeamLead;
+    if (s.id === PAR_LEAD_PORTAL_ITEM_ID) return parLeadPortalGate.canSee;
     if (s.id === PAR_ADMIN_PORTAL_ITEM_ID) return parAdminPortalGate.isAdmin;
     if (isMarketingOps) return marketingOpsGate.canSee(s.id);
     return sectionAllowed(s.requires, caps);

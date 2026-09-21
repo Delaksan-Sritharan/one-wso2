@@ -16,8 +16,7 @@
 
 import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router";
-import { Box, Stack, Typography } from "@wso2/oxygen-ui";
-import { ShieldIcon } from "@wso2/oxygen-ui-icons-react";
+import { Box } from "@wso2/oxygen-ui";
 import RoutedTabs, { type RoutedTabDef } from "@components/routed-tabs/RoutedTabs";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import ParShell from "../components/ParShell";
@@ -28,11 +27,10 @@ const TABS: RoutedTabDef[] = [{ segment: "ongoing", label: "Ongoing" }];
 
 export default function ParAdminGroupPage() {
   return (
-    <ParShell>
-      <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
-        <ShieldIcon size={32} />
-        <Typography variant="h4">Admin Portal</Typography>
-      </Stack>
+    <ParShell
+      title="Admin Portal"
+      subtitle="Create and manage PAR cycles, assign special-rating quotas, and monitor completion across the organization."
+    >
       <RoutedTabs basePath="/people-ops/performance/admin" tabs={TABS} ariaLabel="Admin Portal sections" />
       <Outlet />
     </ParShell>

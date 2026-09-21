@@ -399,7 +399,7 @@ export default function ParLeadReviewPanel({
                 <>
                   {!employeeHasStarted && (
                     <Alert severity="warning" sx={{ py: 0.25 }}>
-                      Sharing is disabled until the employee's own PAR is shared.
+                      Sharing is disabled until the employee's own PAR is started.
                     </Alert>
                   )}
                   <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, pt: 1, borderTop: 1, borderColor: "divider" }}>
