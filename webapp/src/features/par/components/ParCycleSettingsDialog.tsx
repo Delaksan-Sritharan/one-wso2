@@ -19,7 +19,7 @@ import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divid
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import ParDateField from "./ParDateField";
-import ConfirmationDialog, { type ConfirmationContent } from "@features/due-diligence/shared/components/ConfirmationDialog";
+import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useUpdateParCycle } from "../api/useParMutations";
 import type { ParCycle } from "../api/types";
 

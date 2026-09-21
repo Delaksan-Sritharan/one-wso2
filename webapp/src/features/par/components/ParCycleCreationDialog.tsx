@@ -32,7 +32,7 @@ import {
 } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import ParDateField from "./ParDateField";
-import ConfirmationDialog, { type ConfirmationContent } from "@features/due-diligence/shared/components/ConfirmationDialog";
+import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useParGlobalConfig } from "../api/useParAdmin";
 import { useCreateParCycle } from "../api/useParMutations";
 import type { ParCycleCreate } from "../api/types";

@@ -46,7 +46,7 @@ import { ChevronDownIcon, FilterIcon, MoreVerticalIcon, PencilIcon, RotateCcwIco
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
-import ConfirmationDialog, { type ConfirmationContent } from "@features/due-diligence/shared/components/ConfirmationDialog";
+import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { formatShortDate } from "../util/parDate";
 import { resolveGridSelectedIds } from "../util/parGridSelection";
 import {

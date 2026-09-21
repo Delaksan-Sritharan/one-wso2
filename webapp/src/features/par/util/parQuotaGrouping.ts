@@ -62,9 +62,7 @@ export function calculateDefaultQuotaValues(totalHeadCount: number): {
   if (default20Slots < 1) {
     default20Slots = 1;
   }
-  if (default20Slots - default5Slots >= 0) {
-    default20Slots -= default5Slots;
-  }
+  default20Slots -= default5Slots;
 
   return { default5Slots, default20Slots };
 }
@@ -125,16 +123,11 @@ export function validateGroup(group: ParQuotaGroup): string[] {
 
 // A group is "under served" once its allocated slots fall short of its
 // default — a warning, not a blocker; the confirm dialog names the affected
-// groups so the admin can back out and top them up first.
+// groups so the admin can back out and top them up first. A default of 0
+// (a legitimately empty 20% band for small groups) is not itself a shortfall.
 export function getUnderServedGroupNames(groups: ParQuotaGroup[]): string[] {
   return groups
-    .filter(
-      (g) =>
-        g.allocated5Slots === 0 ||
-        g.allocated5Slots < g.default5Slots ||
-        g.allocated20Slots === 0 ||
-        g.allocated20Slots < g.default20Slots,
-    )
+    .filter((g) => g.allocated5Slots < g.default5Slots || g.allocated20Slots < g.default20Slots)
     .map((g) => g.name);
 }
 

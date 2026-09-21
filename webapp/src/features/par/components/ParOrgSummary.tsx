@@ -35,7 +35,7 @@ import {
 import { describeError } from "@api/errors";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useNotifications } from "@context/notifications/NotificationsContext";
-import ConfirmationDialog, { type ConfirmationContent } from "@features/due-diligence/shared/components/ConfirmationDialog";
+import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { formatShortDate } from "../util/parDate";
 import { calculateCycleActiveStep } from "../util/parCycleActiveStep";
 import { calculateTeamsCompletionTotals } from "../util/parTeamsSummary";
