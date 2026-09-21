@@ -1,10 +1,10 @@
 # Updates Manager (UMT) — functional specification
 
 **Status:** written during a staged port, from the source implementation rather than from a prior
-specification. Only the Dashboard is currently mounted in One WSO2. Its summaries are functional; its Create,
-View updates, View pending, and View released actions intentionally show an unavailable notice. The
-update-creation dialog is presentational only. Updates, Product Management, Release Chunks, and
-Statistics are not currently routed or implemented. Their sections below define the behaviour to
+specification. Updated as the port has progressed: Updates and Product Management are now routed and
+implemented (§2.2, §2.3). On the Dashboard, Create and View updates are now live actions; View pending
+and View released still intentionally show an unavailable/maintenance notice. Release Chunks and
+Statistics are not currently routed or implemented; their sections below define the behaviour to
 preserve when the port continues.
 
 **Source of truth for behaviour:** the Updates Manager service contract and verified backend
@@ -83,9 +83,9 @@ The detail routes belong to this feature and must be ported with it:
 Do not reduce this screen to a client-side table over `GET /update`. Its pagination and filtering
 contract is server-side.
 
-### 2.3 Product Management — future `/umt/products`
+### 2.3 Product Management — `/umt/products`
 
-**Not yet ported. Admin only.** The source screen lists base products with name, version, active
+**Ported. Admin only.** The screen lists base products with name, version, active
 state, creator, creation date, and deprecation date.
 
 An administrator can add a product and deprecate an existing product after confirmation. Creating a
@@ -195,9 +195,9 @@ All calls use the shared authenticated request layer and the base URL
 | `GET /update/releaseChunk?states=released` | Released release chunks. | Not yet ported |
 | `POST /update/releaseChunk` | Create chunks from selected update ids. | Not yet ported |
 | `GET /update/releaseChunk/{id}` | One chunk and its status. | Not yet ported |
-| `GET /update/base-product` | Base products. | Not yet ported |
-| `POST /update/product` | Add a base product. | Not yet ported |
-| `PUT /update/product/deprecate` | Deprecate a base product. | Not yet ported |
+| `GET /update/base-product` | Base products. | Ported |
+| `POST /update/product` | Add a base product. | Ported |
+| `PUT /update/product/deprecate` | Deprecate a base product. | Ported |
 
 The update-detail and release-build workflows use additional subresources. Add each URL to the
 central UMT service map as its screen is ported; do not scatter base-URL concatenation through
@@ -279,8 +279,8 @@ should remain equivalent to the source.
 | 1 | The standalone header, drawer, theme provider, authentication provider, and router are not ported. | One WSO2 owns those application-wide concerns. |
 | 2 | MUI components and bespoke presentation assets are replaced by Oxygen UI components, icons, charts, and theme tokens. | House convention and consistent light/dark behaviour. |
 | 3 | Redux async slices are replaced by subject-scoped TanStack Query hooks. | The data is remote server state; this repository's feature convention already provides caching, request state, and invalidation. |
-| 4 | UMT has one shared shell and one role gate. | Missing configuration, loading, failure, and denial must behave consistently on every UMT route. |
-| 5 | Future Product Management will be admin-only. | This preserves the source route policy when the feature is mounted. |
+| 4 | UMT has one shared shell and one role gate, with an optional admin-only requirement. | Missing configuration, loading, failure, and denial must behave consistently on every UMT route; Product Management opts into the stricter check rather than inventing a second shell. |
+| 5 | Product Management is admin-only, enforced at both the rail item and the route. | This preserves the source route policy; hiding the rail item alone is not an authorization boundary. |
 | 6 | Future Release Chunks will use a query parameter beneath one route. | This preserves refreshable pending/released links without creating duplicate rail entries. |
 | 7 | Source routes are namespaced beneath `/umt`. | UMT is one perspective inside One WSO2, not a standalone root application. |
 

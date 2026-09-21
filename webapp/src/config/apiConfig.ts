@@ -454,6 +454,13 @@ export const umtServiceUrls = {
   // PUT — replaces an update's product list (distinct from product-analysis
   // results, which live at updateProductAnalysis above).
   updateProducts: (id: string | number) => `${umtBackendUrl}/update/${encodeURIComponent(id)}/products`,
+  // GET — the admin-only Product Management screen's base product catalog,
+  // distinct from the per-update product lists above.
+  baseProducts: `${umtBackendUrl}/update/base-product`,
+  // POST — adds a base product (name/version/lead+ED email/FTP connection details).
+  createBaseProduct: `${umtBackendUrl}/update/product`,
+  // PUT — deprecates an existing base product by name+version.
+  deprecateBaseProduct: `${umtBackendUrl}/update/product/deprecate`,
   // PUT — per-product description/instruction update (only these 3 keys are
   // ever sent), distinct from updateProducts's whole-list replace above.
   updateProductsDetails: (id: string | number) =>

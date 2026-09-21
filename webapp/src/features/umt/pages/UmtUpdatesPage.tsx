@@ -55,6 +55,8 @@ import {
   type UmtUpdateSummary,
 } from "../api/umtUpdates";
 import { useUmtUpdates } from "../api/useUmtUpdates";
+import { formatDate } from "../lib/umtDates";
+import { gridCellContentSx } from "../lib/umtGrid";
 import { writePersistedSelectedTab } from "../lib/umtLocalState";
 import UmtCreateUpdateDialog from "../components/UmtCreateUpdateDialog";
 import UmtShell from "../components/UmtShell";
@@ -401,14 +403,6 @@ const updatesGridSx = {
     boxShadow: "-2px 0 4px rgba(0, 0, 0, 0.15)",
   },
 } as const;
-const gridCellContentSx = {
-  alignItems: "center",
-  display: "flex",
-  minHeight: "100%",
-  py: 0.75,
-  width: "100%",
-} as const;
-
 function renderCell(row: UmtUpdateSummary, key: ColumnKey): ReactNode {
   switch (key) {
     case "id": return <Typography variant="body2" sx={{ fontWeight: 700 }}>{row.id}</Typography>;
@@ -519,13 +513,6 @@ function Artifacts({ values }: { values: string[] }) {
       )}
     </Stack>
   );
-}
-
-function formatDate(value?: string | null): string {
-  if (!value) return "N/A";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "N/A";
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function humanize(value: string): string {

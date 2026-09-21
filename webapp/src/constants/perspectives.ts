@@ -20,6 +20,7 @@
 import { csmUrl, isCsmConfigured, isIsacConfigured, isacUrl } from "@config/apiConfig";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import {
+  Box as BoxIcon,
   CheckCheckIcon,
   ClipboardCheckIcon,
   DatabaseIcon,
@@ -294,7 +295,23 @@ const ME_SECTIONS: PerspectiveSection[] = [
 
 const UMT_SECTIONS: PerspectiveSection[] = [
   { id: "umt-updates", label: "Updates", icon: RefreshCcw, path: "/umt/updates" },
+  // Admin-only. `requires` speaks the people-app capability vocabulary, which
+  // UMT's own numeric roles have nothing to do with — this is filtered by
+  // UMT_ADMIN_ITEM_IDS below instead, the same way Finance/Leave/Subscriptions
+  // items are (see the comment above SUBSCRIPTION_ITEM_IDS).
+  { id: "umt-products", label: "Product Management", icon: BoxIcon, path: "/umt/products" },
 ];
+
+/**
+ * UMT rail ids whose visibility must be decided by UMT's own /update/user-info
+ * roles, not the people-app capability vocabulary `requires` speaks — the same
+ * shape of problem as SUBSCRIPTION_ITEM_IDS/FINANCE_ITEM_IDS/LEAVE_ITEM_IDS
+ * above. Product Management is UMT_ADMIN-only; reading that against people-app
+ * capabilities would show it to a people-app admin who isn't a UMT admin, and
+ * hide it from a UMT admin who isn't one. Whatever renders these sections must
+ * ask useUmtGate directly rather than reading `requires` for them.
+ */
+export const UMT_ADMIN_ITEM_IDS: ReadonlySet<string> = new Set(["umt-products"]);
 
 export interface PerspectiveDef {
   key: string;

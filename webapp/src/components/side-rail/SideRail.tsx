@@ -19,7 +19,7 @@ import { Box, Link, Sidebar, Typography } from "@wso2/oxygen-ui";
 import { ExternalLinkIcon, SettingsIcon } from "@wso2/oxygen-ui-icons-react";
 import { Link as RouterLink, matchPath, useLocation, useNavigate } from "react-router";
 import { useActivePerspective } from "@context/perspective/PerspectiveContext";
-import { SUBSCRIPTION_ITEM_IDS, type PerspectiveSection } from "@constants/perspectives";
+import { SUBSCRIPTION_ITEM_IDS, UMT_ADMIN_ITEM_IDS, type PerspectiveSection } from "@constants/perspectives";
 import { capabilitiesFromPrivileges, type Capability } from "@constants/appMenu";
 import { FINANCE_ITEM_IDS } from "@constants/financeApps";
 import { LEAVE_ITEM_IDS } from "@constants/meApps";
@@ -37,6 +37,7 @@ import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligence
 import { useSecurityGate } from "@features/security/api/useSecurityGate";
 import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
 import { isSriLankaWorkLocation } from "@features/subscriptions/util/locationGate";
+import { useUmtGate } from "@features/umt/api/useUmtGate";
 
 // Context-sensitive left rail, built on Oxygen's compound `Sidebar`.
 //
@@ -171,6 +172,13 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
   // while that gate is still resolving too: showing it first and withdrawing
   // it a moment later reads as the rail flickering, and failing CLOSED is the
   // right default for an admin entry point either way.
+  // UMT is the same shape of problem again: Product Management is
+  // UMT_ADMIN-only, decided by UMT's own /update/user-info roles, which bear
+  // no relation to the people-app privilege numbers `caps` is built from.
+  // Only fetched while UMT is the active perspective.
+  const isUmt = active.key === "umt";
+  const umtGate = useUmtGate(isUmt);
+
   const isSriLankaEmployee = isSriLankaWorkLocation(userInfo.data?.workLocation);
   const subscriptionCanSee = (id: string): boolean => {
     if (!isSriLankaEmployee) return false;
@@ -185,6 +193,7 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
     if (FINANCE_ITEM_IDS.has(s.id)) return financeGate.canSee(s.id);
     if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
     if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
+    if (UMT_ADMIN_ITEM_IDS.has(s.id)) return umtGate.isAdmin && !umtGate.isResolving;
     if (isMarketingOps) return marketingOpsGate.canSee(s.id);
     return sectionAllowed(s.requires, caps);
   };
