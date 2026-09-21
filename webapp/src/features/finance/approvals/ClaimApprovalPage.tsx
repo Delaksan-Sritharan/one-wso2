@@ -17,7 +17,7 @@
  */
 
 import type { ReactNode } from "react";
-import { Navigate, Outlet } from "react-router";
+import { Navigate, Outlet, useLocation } from "react-router";
 import { Alert, Box, Skeleton, Typography } from "@wso2/oxygen-ui";
 import RoutedTabs from "@components/routed-tabs/RoutedTabs";
 import { useFinanceGate } from "../api/useFinanceGate";
@@ -28,6 +28,12 @@ import {
   type ClaimApprovalGateId,
 } from "./claimApprovalTabs";
 
+// FinanceShell's own fillColumn, verbatim: a tab that reuses a screen built
+// for that shell (the CC tab reuses the standalone Approve Submissions grid)
+// needs the same bounded-height ancestor that shell gives it, or the grid has
+// nothing to size itself against.
+const fillColumn = { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" } as const;
+
 // One frame for every claim-approval view: the header, the tab bar, and an
 // <Outlet /> for whichever tab the URL names.
 //
@@ -37,9 +43,12 @@ import {
 export default function ClaimApprovalPage() {
   const gate = useFinanceGate();
   const visible = CLAIM_APPROVAL_TABS.filter((t) => gate.canSee(t.gateId));
+  const { pathname } = useLocation();
+  const activeTab = CLAIM_APPROVAL_TABS.find((t) => pathname.endsWith(`/${t.segment}`));
+  const fill = Boolean(activeTab?.fill);
 
   return (
-    <Box>
+    <Box sx={fill ? fillColumn : undefined}>
       {/* No chip. This is a bare section under the Finance perspective, not a
           screen inside an app, so there is no app name to put above the title —
           the chip said "Finance", which is the perspective the rail already
@@ -63,7 +72,13 @@ export default function ClaimApprovalPage() {
             tabs={visible}
             ariaLabel="Claim approval sections"
           />
-          <Outlet />
+          {fill ? (
+            <Box sx={fillColumn}>
+              <Outlet />
+            </Box>
+          ) : (
+            <Outlet />
+          )}
         </>
       )}
     </Box>

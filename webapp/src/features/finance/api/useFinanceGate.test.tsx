@@ -81,9 +81,13 @@ describe("the Claim approval entry", () => {
     expect(gate().canSee("claim-approval")).toBe(true);
   });
 
+  it("is offered to someone who only approves credit card submissions", () => {
+    roles.cc = ["lead"];
+    expect(gate().canSee("claim-approval")).toBe(true);
+  });
+
   it("is withheld from someone who approves no claims", () => {
     roles.opd = [444]; // can submit, cannot approve
-    roles.cc = ["lead", "finance"]; // credit card is not a claim type here
     expect(gate().canSee("claim-approval")).toBe(false);
   });
 });
@@ -102,6 +106,29 @@ describe("the OPD tab", () => {
     roles.expenseLead = true;
     roles.expenseFinance = true;
     expect(gate().canSee("claim-approval-opd")).toBe(false);
+  });
+});
+
+describe("the cc tab", () => {
+  it("opens on either privilege alone", () => {
+    roles.cc = ["lead"];
+    expect(gate().canSee("claim-approval-cc")).toBe(true);
+    roles.cc = ["finance"];
+    expect(gate().canSee("claim-approval-cc")).toBe(true);
+  });
+
+  it("is not opened by the OPD or expense roles", () => {
+    roles.opd = [555];
+    roles.expenseLead = true;
+    roles.expenseFinance = true;
+    expect(gate().canSee("claim-approval-cc")).toBe(false);
+  });
+
+  // Same privileges the standalone Approve Submissions screen checks — this
+  // tab reads the same queue, not a separate one.
+  it("matches cc-approve's own gate", () => {
+    roles.cc = ["lead"];
+    expect(gate().canSee("claim-approval-cc")).toBe(gate().canSee("cc-approve"));
   });
 });
 

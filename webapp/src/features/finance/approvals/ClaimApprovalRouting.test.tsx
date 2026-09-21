@@ -52,7 +52,12 @@ function UrlProbe() {
   return <div data-testid="url">{pathname}</div>;
 }
 
-const ALL = ["claim-approval", "claim-approval-expense", "claim-approval-opd"];
+const ALL = [
+  "claim-approval",
+  "claim-approval-expense",
+  "claim-approval-opd",
+  "claim-approval-cc",
+];
 
 beforeEach(() => {
   state.allow = new Set(ALL);
@@ -91,6 +96,14 @@ function show(initial = "/finance/claim-approval") {
             }
           />
           <Route
+            path="cc"
+            element={
+              <ClaimApprovalTabRoute gateId="claim-approval-cc">
+                <Here what="cc" />
+              </ClaimApprovalTabRoute>
+            }
+          />
+          <Route
             path="decided"
             element={
               <ClaimApprovalTabRoute gateId="claim-approval">
@@ -123,9 +136,9 @@ describe("landing on the screen", () => {
 // One flag of the three is enough to get in, and what you get is only what that
 // flag covers. A lead with no finance role has no OPD queue to look at.
 describe("who is let in", () => {
-  it("offers all four tabs to someone holding everything", async () => {
+  it("offers all five tabs to someone holding everything", async () => {
     show();
-    for (const name of ["Needs you", "Expense claims", "OPD claims", "Decided"]) {
+    for (const name of ["Needs you", "Expense claims", "OPD claims", "CC Expenses", "Decided"]) {
       expect(await screen.findByRole("tab", { name })).toBeInTheDocument();
     }
   });
@@ -145,6 +158,13 @@ describe("who is let in", () => {
     expect(screen.queryByRole("tab", { name: "Expense claims" })).not.toBeInTheDocument();
   });
 
+  it("withholds CC Expenses from someone who only approves OPD", async () => {
+    state.allow = new Set(["claim-approval", "claim-approval-opd"]);
+    show();
+    await screen.findByRole("tab", { name: "Needs you" });
+    expect(screen.queryByRole("tab", { name: "CC Expenses" })).not.toBeInTheDocument();
+  });
+
   it("says so plainly to someone who approves nothing", async () => {
     state.allow = new Set();
     show();
@@ -159,6 +179,11 @@ describe("reaching a tab by its URL", () => {
   it("serves it to someone allowed", async () => {
     show("/finance/claim-approval/opd");
     expect(await screen.findByTestId("tab")).toHaveAttribute("data-what", "opd");
+  });
+
+  it("serves the cc tab to someone allowed", async () => {
+    show("/finance/claim-approval/cc");
+    expect(await screen.findByTestId("tab")).toHaveAttribute("data-what", "cc");
   });
 
   it("redirects away from one they are not", async () => {

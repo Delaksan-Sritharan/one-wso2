@@ -121,6 +121,7 @@ import ClaimApprovalPage, {
 import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
+import CcApprovalsTab from "@features/finance/cc/pages/CcApprovalsTab";
 import { riskRoutes } from "@features/security/grc/modules/risk/routes";
 import { auditRoutes } from "@features/security/grc/modules/audit/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
@@ -540,6 +541,14 @@ export default function App() {
               element={
                 <ClaimApprovalTabRoute gateId="claim-approval-opd">
                   <OpdApprovalsTab />
+                </ClaimApprovalTabRoute>
+              }
+            />
+            <Route
+              path="cc"
+              element={
+                <ClaimApprovalTabRoute gateId="claim-approval-cc">
+                  <CcApprovalsTab />
                 </ClaimApprovalTabRoute>
               }
             />
