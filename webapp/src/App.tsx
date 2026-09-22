@@ -672,11 +672,11 @@ export default function App() {
           {/* RevOps — auto-recorded meetings. The meeting history ported from
               meet-app; scheduling stays in the calendar add-on and the
               analytics dashboard was out of scope. The preview gate below
-+              controls route registration; it is not an authorization guard.
-+              The meet-app backend refuses a caller in no authorised group on
-+              every endpoint, and RevOpsShell turns that 403 into an
-+              explanation, so someone reaching a registered URL gets an answer
-+              rather than a blank page. See docs/ported-apps/revops-meetings.md. */}
+              controls route registration; it is not an authorization guard.
+              The meet-app backend refuses a caller in no authorised group on
+              every endpoint, and RevOpsShell turns that 403 into an
+              explanation, so someone reaching a registered URL gets an answer
+              rather than a blank page. See docs/ported-apps/revops-meetings.md. */}
           {isPreviewEnabled("revops") && (
             <Route path="revops" element={<RevOpsMeetingsPage />} />
           )}
