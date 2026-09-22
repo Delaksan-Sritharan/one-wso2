@@ -465,14 +465,20 @@ describe("while the people list is still loading", () => {
   it("greys the picker out rather than letting someone type into nothing", () => {
     state.employeesLoading = true;
     show();
-    expect(screen.getByPlaceholderText("Loading people…")).toBeDisabled();
+    // The placeholder no longer changes while loading — the disabled state and
+    // the spinner carry that, and a third signal only made the field flicker
+    // between two strings.
+    expect(screen.getByPlaceholderText("Add people to notify (optional)")).toBeDisabled();
     state.employeesLoading = false;
   });
 
   it("shows a spinner in the field, not only inside an unopened dropdown", () => {
     state.employeesLoading = true;
     show();
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    // Named: the field it sits in is disabled, and a disabled input is not in
+    // the tab order, so the spinner is the only cue left for anyone not
+    // looking at the screen.
+    expect(screen.getByRole("progressbar", { name: "Loading options" })).toBeInTheDocument();
     state.employeesLoading = false;
   });
 

@@ -564,7 +564,11 @@ function ApplyForm() {
           renderInput={(params) => (
             <TextField
               {...withLoadingAdornment(params, employees.isLoading)}
-              placeholder={employees.isLoading ? "Loading people…" : "Add people to notify (optional)"}
+              // One placeholder, not two. While loading the field is disabled
+              // and carries a spinner, so a third signal saying the same thing
+              // just made the field flicker between two strings. The source
+              // does swap it (NotifyPeople.tsx:193) — a deliberate deviation.
+              placeholder="Add people to notify (optional)"
             />
           )}
         />
