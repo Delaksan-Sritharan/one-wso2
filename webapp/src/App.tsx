@@ -53,6 +53,7 @@ const ParLeadEmployeeHistoryTab = lazy(() => import("@features/par/pages/ParLead
 const ParLeadAllocationTab = lazy(() => import("@features/par/pages/ParLeadAllocationTab"));
 const ParAdminOngoingTab = lazy(() => import("@features/par/pages/ParAdminOngoingTab"));
 const ParAdminHistoryTab = lazy(() => import("@features/par/pages/ParAdminHistoryTab"));
+const ParAdminGlobalConfigTab = lazy(() => import("@features/par/pages/ParAdminGlobalConfigTab"));
 import EmailGroupsPage from "@features/my/email-groups/pages/EmailGroupsPage";
 import EmailSignaturePage from "@features/my/email-signature/pages/EmailSignaturePage";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
@@ -542,9 +543,10 @@ export default function App() {
               />
             </Route>
           )}
-          {/* People Ops → PAR → Admin Portal. ParRequiresAdminRoute checks
-              the Asgardeo groups claim client-side rather than a backend
-              field, since par-app's backend never exposes an isAdmin flag. */}
+          {/* People Ops → PAR → Admin Portal. ParRequiresAdminRoute reads
+              isAdmin off the backend's own GET /employees/{workEmail}
+              self-lookup, the same adminLdapGroup check every admin
+              endpoint already enforces server-side. */}
           {isPreviewEnabled("par") && (
             <Route
               path="people-ops/performance/admin"
@@ -568,6 +570,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
                     <ParAdminHistoryTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="configurations"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParAdminGlobalConfigTab />
                   </Suspense>
                 }
               />
