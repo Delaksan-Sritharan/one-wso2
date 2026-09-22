@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Box, Button, Chip, DataGrid, IconButton, LinearProgress, Paper, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { InboxIcon, PlusIcon, Trash2Icon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
@@ -47,96 +47,103 @@ function UmtProductsBody() {
 
   const rows = baseProducts.data ?? [];
 
-  const columns: DataGrid.GridColDef<UmtBaseProduct>[] = [
-    {
-      field: "name",
-      headerName: "Name",
-      flex: 2,
-      minWidth: 160,
-      renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
-        <ProductCell>{params.row.name}</ProductCell>
-      ),
-    },
-    {
-      field: "version",
-      headerName: "Version",
-      flex: 1,
-      minWidth: 160,
-      renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
-        <ProductCell>{params.row.version}</ProductCell>
-      ),
-    },
-    {
-      field: "isActive",
-      headerName: "Active",
-      flex: 1,
-      minWidth: 120,
-      renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
-        <ProductCell>
-          <Chip
-            label={params.row.isActive ? "Active" : "Deprecated"}
-            size="small"
-            color={params.row.isActive ? "success" : "default"}
-            variant="outlined"
-          />
-        </ProductCell>
-      ),
-    },
-    {
-      field: "createdBy",
-      headerName: "Created By",
-      flex: 2,
-      minWidth: 200,
-      renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
-        <ProductCell>{params.row.createdBy}</ProductCell>
-      ),
-    },
-    {
-      field: "createdOn",
-      headerName: "Created On",
-      flex: 1,
-      minWidth: 150,
-      renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
-        <ProductCell>{formatDate(params.row.createdOn)}</ProductCell>
-      ),
-    },
-    {
-      field: "deprecatedOn",
-      headerName: "Deprecated On",
-      flex: 1,
-      minWidth: 150,
-      renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
-        <ProductCell>{formatDate(params.row.deprecatedOn)}</ProductCell>
-      ),
-    },
-    {
-      field: "action",
-      headerName: "Action",
-      filterable: false,
-      headerAlign: "center",
-      align: "center",
-      minWidth: 90,
-      resizable: false,
-      sortable: false,
-      renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => {
-        if (!params.row.isActive) return null;
-        return (
-          <ProductCell justify="center">
-            <Tooltip title={`Deprecate ${params.row.name} ${params.row.version}`}>
-              <IconButton
-                aria-label={`Deprecate ${params.row.name} ${params.row.version}`}
-                color="error"
-                size="small"
-                onClick={() => setDeprecateTarget(params.row)}
-              >
-                <Trash2Icon size={17} />
-              </IconButton>
-            </Tooltip>
-          </ProductCell>
-        );
+  const columns = useMemo<DataGrid.GridColDef<UmtBaseProduct>[]>(
+    () => [
+      {
+        field: "name",
+        headerName: "Name",
+        flex: 2,
+        minWidth: 160,
+        renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
+          <ProductCell>{params.row.name}</ProductCell>
+        ),
       },
-    },
-  ];
+      {
+        field: "version",
+        headerName: "Version",
+        flex: 1,
+        minWidth: 160,
+        renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
+          <ProductCell>{params.row.version}</ProductCell>
+        ),
+      },
+      {
+        field: "isActive",
+        headerName: "Active",
+        flex: 1,
+        minWidth: 120,
+        renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
+          <ProductCell>
+            <Chip
+              label={params.row.isActive ? "Active" : "Deprecated"}
+              size="small"
+              color={params.row.isActive ? "success" : "default"}
+              variant="outlined"
+            />
+          </ProductCell>
+        ),
+      },
+      {
+        field: "createdBy",
+        headerName: "Created By",
+        flex: 2,
+        minWidth: 200,
+        renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
+          <ProductCell>{params.row.createdBy}</ProductCell>
+        ),
+      },
+      {
+        field: "createdOn",
+        headerName: "Created On",
+        flex: 1,
+        minWidth: 150,
+        renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
+          <ProductCell>{formatDate(params.row.createdOn)}</ProductCell>
+        ),
+      },
+      {
+        field: "deprecatedOn",
+        headerName: "Deprecated On",
+        flex: 1,
+        minWidth: 150,
+        renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => (
+          <ProductCell>{formatDate(params.row.deprecatedOn)}</ProductCell>
+        ),
+      },
+      {
+        field: "action",
+        headerName: "Action",
+        filterable: false,
+        headerAlign: "center",
+        align: "center",
+        minWidth: 90,
+        resizable: false,
+        sortable: false,
+        renderCell: (params: DataGrid.GridRenderCellParams<UmtBaseProduct>) => {
+          if (!params.row.isActive) return null;
+          return (
+            <ProductCell justify="center">
+              <Tooltip title={`Deprecate ${params.row.name} ${params.row.version}`}>
+                <IconButton
+                  aria-label={`Deprecate ${params.row.name} ${params.row.version}`}
+                  color="error"
+                  size="small"
+                  onClick={() => setDeprecateTarget(params.row)}
+                >
+                  <Trash2Icon size={17} />
+                </IconButton>
+              </Tooltip>
+            </ProductCell>
+          );
+        },
+      },
+    ],
+    // setDeprecateTarget is a stable setState function; the grid's own
+    // guidance is that columns should keep a stable reference across
+    // renders, so this must not depend on addOpen/deprecateTarget toggling
+    // or baseProducts refetching.
+    [],
+  );
 
   return (
     <Stack spacing={2} sx={{ minWidth: 0, width: "100%" }}>
