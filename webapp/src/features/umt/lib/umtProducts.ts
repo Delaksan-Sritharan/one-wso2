@@ -7,10 +7,14 @@
 
 import type { UmtBaseProduct, UmtCreateProductRequest } from "../api/umtProducts";
 
-// Mirrors legacy's composite DataGrid row id (`${name}-${version}`) — base
-// products have no numeric id of their own.
+// Base products have no numeric id of their own, so the DataGrid row id is
+// composite. A plain `${name}-${version}` join is ambiguous when either field
+// contains a hyphen (e.g. name "foo-bar" + version "1" collides with name
+// "foo" + version "bar-1"), so the pair is JSON-encoded instead — the array
+// structure and JSON's own escaping keep every distinct (name, version) pair
+// unique.
 export function productRowId(product: UmtBaseProduct): string {
-  return `${product.name}-${product.version}`;
+  return JSON.stringify([product.name, product.version]);
 }
 
 export interface UmtCreateProductFormValues {

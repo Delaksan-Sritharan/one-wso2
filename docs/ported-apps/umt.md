@@ -1,11 +1,11 @@
 # Updates Manager (UMT) — functional specification
 
 **Status:** written during a staged port, from the source implementation rather than from a prior
-specification. Updated as the port has progressed: Updates and Product Management are now routed and
-implemented (§2.2, §2.3). On the Dashboard, Create and View updates are now live actions; View pending
-and View released still intentionally show an unavailable/maintenance notice. Release Chunks and
-Statistics are not currently routed or implemented; their sections below define the behaviour to
-preserve when the port continues.
+specification. Updated as the port has progressed: Product Management is now routed and implemented
+(§2.3). On the Dashboard, Create and View updates, View pending, and View released still intentionally
+show an unavailable/maintenance notice. Updates (§2.2), Release Chunks, and Statistics are not
+currently routed or implemented; their sections below define the behaviour to preserve when the port
+continues.
 
 **Source of truth for behaviour:** the Updates Manager service contract and verified backend
 responses. Backend responses are authoritative where display code and response data disagree.

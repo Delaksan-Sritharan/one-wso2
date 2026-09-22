@@ -43,7 +43,13 @@ function baseProduct(overrides: Partial<UmtBaseProduct> = {}): UmtBaseProduct {
 
 describe("productRowId", () => {
   it("combines name and version into a composite id", () => {
-    expect(productRowId(baseProduct())).toBe("wso2am-4.0.0.0.full");
+    expect(productRowId(baseProduct())).toBe(JSON.stringify(["wso2am", "4.0.0.0.full"]));
+  });
+
+  it("does not collide when a hyphen moves between name and version", () => {
+    const a = productRowId(baseProduct({ name: "foo-bar", version: "1.0.full" }));
+    const b = productRowId(baseProduct({ name: "foo", version: "bar-1.0.full" }));
+    expect(a).not.toBe(b);
   });
 });
 

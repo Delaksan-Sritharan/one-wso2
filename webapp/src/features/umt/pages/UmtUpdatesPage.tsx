@@ -55,7 +55,7 @@ import {
   type UmtUpdateSummary,
 } from "../api/umtUpdates";
 import { useUmtUpdates } from "../api/useUmtUpdates";
-import { formatDate } from "../lib/umtDates";
+import { formatCalendarDate, formatDate } from "../lib/umtDates";
 import { gridCellContentSx } from "../lib/umtGrid";
 import { writePersistedSelectedTab } from "../lib/umtLocalState";
 import UmtCreateUpdateDialog from "../components/UmtCreateUpdateDialog";
@@ -464,7 +464,7 @@ function EtaCell({ row }: { row: UmtUpdateSummary }) {
         <Tooltip title={label} key={label}>
           <Stack direction="row" spacing={1} sx={{ alignItems: "center", whiteSpace: "nowrap" }}>
             <Box sx={{ bgcolor: color, borderRadius: "50%", height: 8, width: 8 }} />
-            <Typography variant="body2">{formatDate(date)}</Typography>
+            <Typography variant="body2">{formatCalendarDate(date)}</Typography>
           </Stack>
         </Tooltip>
       ))}
@@ -539,7 +539,7 @@ function csvValue(row: UmtUpdateSummary, key: ColumnKey): string {
     case "isHotfix": return row.isHotfix ? "Hotfix" : "Update";
     case "lifecycleState": return row.lifecycleState ?? "";
     case "assignedTo": return row.assignedTo ?? "";
-    case "eta": return [row.bestCaseEstimate, row.mostLikelyEstimate, row.worstCaseEstimate].map(formatDate).join("; ");
+    case "eta": return [row.bestCaseEstimate, row.mostLikelyEstimate, row.worstCaseEstimate].map(formatCalendarDate).join("; ");
     case "issueType": return row.issueType ?? "";
     case "securityInternalGitIssue": return row.securityInternalGitIssue ?? "";
     case "lifecycle": return row.lifecycle ?? "";
