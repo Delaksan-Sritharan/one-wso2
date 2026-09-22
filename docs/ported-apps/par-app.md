@@ -2,9 +2,10 @@
 
 **Status:** the employee-facing half of par-app (all five tabs, including F2F) is ported and live under
 the Me perspective. The Lead Portal is fully ported (all five tabs) and lives under People Ops. The
-Admin Portal is fully ported (both Ongoing and History, §9) and lives under People Ops too. Written
-from the source and cross-checked against the running staging app (screenshots) — this is the
-reference for verifying the port and for writing test cases against it, not a proposal.
+Admin Portal is fully ported (Ongoing, History, and Configurations, §9) and lives under People Ops too.
+The only functional gap left is Lead Portal evidence attachments (§10). Written from the source and
+cross-checked against the running staging app (screenshots) — this is the reference for verifying the
+port and for writing test cases against it, not a proposal.
 
 **Source of truth for behaviour:** `digiops-hr/apps/par-app/webapp/src` — `OngoingCycleView.tsx` and
 its panels/components for the five tabs below (`views/ongoingCycleView/`, `components/common/
@@ -362,14 +363,14 @@ slot, not two.
 ## 9. Admin Portal
 
 **Source of truth:** `views/adminPortal/AdminPortal.tsx` and `panels/OngoingPanel.tsx`, gated in source
-by `invokerDetails.isAdmin` — a JWT `groups`-claim check server-side, with no `EmployeeInfo` field
-exposing it to the frontend the way `isTeamLead` is. This port reproduces source's OWN mechanism
-(`authSlice`'s `decodedIdToken.groups.includes(adminGroup)`) rather than inventing a backend call:
-`useParIsAdmin` decodes the signed-in user's Asgardeo `groups` claim and checks it against
-`ONE_WSO2_PAR_ADMIN_GROUP`. This is presentation only — every admin endpoint behind it re-derives
-`isAdmin` from the JWT server-side and 403s a caller who doesn't hold the group, so a stale or
-misconfigured group name can only hide the screen from a real admin, never grant access it shouldn't.
-Both `AdminPortal.tsx` tabs are ported: **Ongoing** (§9.1–9.6) and **History** (§9.7).
+by `invokerDetails.isAdmin` — a JWT `groups`-claim check server-side. `useParIsAdmin` reads that same
+check back from `GET /employees/{workEmail}`'s own `isAdmin` field on a self-lookup (`useParEmployeeInfo`),
+the same way `isTeamLead` is already read — not a separately configured group name reproduced
+client-side. This is presentation only — every admin endpoint still re-derives `isAdmin` from the JWT
+server-side and 403s a caller who doesn't hold the group, so a stale or slow fetch here can only hide
+the screen from a real admin, never grant access it shouldn't. Both `AdminPortal.tsx` tabs are ported —
+**Ongoing** (§9.1–9.6) and **History** (§9.7) — plus source's separate `/settings` route, folded in here
+as a third tab, **Configurations** (§9.8).
 
 ### 9.1 Ongoing — cycle lifecycle (`ParAdminOngoingTab.tsx`)
 
@@ -520,6 +521,20 @@ one `DataGrid`, latest end date first, each legacy row tagged with a "Legacy" ch
   of duplicating the accordion/chip/360-feedback wiring. Unlike source, every level here is a `DataGrid`
   rather than a plain table, matching how every other legacy-table screen in this port (e.g. Team View,
   §9.4) has already upgraded from source's plain tables.
+
+### 9.8 Configurations (`ParAdminGlobalConfigTab.tsx`)
+
+Ports `views/globalSettings/GlobalSettings.tsx`, source's own standalone `/settings` route — folded into
+the Admin Portal's tab bar here instead of a separate top-level route, since it's admin-only functionality
+that belongs alongside Ongoing/History rather than its own nav entry. Edits the org-wide defaults
+`ParCycleCreationDialog.tsx` (§9.2) prefills new cycles from — the employee/360° question text and the
+master PAR/360 rating-option lists — via `GET`/`PUT meta/configurations`; editing here never touches a
+cycle already created, only what the next one starts with. Field set, validation (both questions required,
+both rating lists non-empty), and the freeSolo multi-chip rating pickers are a direct reuse of
+`ParCycleCreationDialog.tsx`'s own "Cycle configuration" section. Save is confirmation-gated
+("Update global PAR configurations?"); on success, invalidating the same query key
+`ParCycleCreationDialog.tsx`'s `useParGlobalConfig()` call reads means the next cycle-creation dialog
+opened picks up the change immediately, with no separate wiring needed there.
 
 ## 10. Not yet ported
 
