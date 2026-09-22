@@ -42,7 +42,7 @@ The backend grants `LEAD` on having subordinates, so anyone leading a team holds
 
 ## 2. Screens
 
-### 2.1 Apply — `/me/leave/general/apply`
+### 2.1 Apply — `/me/leave/apply/general`
 
 Dates, leave type, day portion, people to notify, an optional comment. A live validation call
 (`isValidationOnlyMode=true`, debounced 400 ms) returns the working-day count for the range.
@@ -68,12 +68,12 @@ employees are not offerable.
 
 **Submitting** asks for confirmation first, naming the type, working days, range and portion.
 
-### 2.2 My History — `/me/leave/general/history`
+### 2.2 My History — `/me/leave/history/general`
 
 Cards for one year at a time, newest first, statuses `[APPROVED, PENDING]`. Cancel is offered until
 the leave started more than 30 days ago. The year list runs from the employment year to now.
 
-### 2.3 Reports — `/me/leave/general/reports`
+### 2.3 Reports — `/me/leave/reports/general`
 
 A DataGrid: six columns, sortable, paged at ten, with the filter panel, column visibility, density
 and CSV/print export the component provides. Filters are drafted and applied on **Fetch report**.

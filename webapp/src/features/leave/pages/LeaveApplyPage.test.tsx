@@ -46,11 +46,21 @@ const employeeList = [
 ];
 
 // Mutable so a test can move the employee and check what changes with them.
-const user = { location: "Sri Lanka" as string | null };
+// `privileges` feeds the REAL useLeaveGate — this file does not mock it — and
+// the gate is what decides whether a successful submit navigates to My history.
+// EMPLOYEE (987) can see it; a People-Ops-only account (789) cannot.
+const user = { location: "Sri Lanka" as string | null, privileges: [987] as number[] };
 
 vi.mock("../api/useLeaveData", () => ({
   useLeaveUserInfo: () => ({
-    data: { workEmail: "me@wso2.com", leadEmail: "lead@wso2.com", location: user.location },
+    data: {
+      workEmail: "me@wso2.com",
+      leadEmail: "lead@wso2.com",
+      location: user.location,
+      privileges: user.privileges,
+    },
+    isPending: false,
+    isError: false,
   }),
   useLeaveAppConfig: () => ({ data: appConfigData, isPending: false, isError: false }),
   useLeaveEmployees: () => ({
@@ -245,6 +255,42 @@ describe("the confirmation before posting", () => {
     expect(submitMutate).toHaveBeenCalledTimes(1);
   });
 
+  // Requested behaviour: show them the request they just made. Untested until
+  // now — the fixture carried no privileges, so the gate refused My history and
+  // the navigation silently never fired.
+  it("lands on My history after a successful submit", async () => {
+    const u = (await import("@testing-library/user-event")).default.setup();
+    show();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Submit Leave/ })).toBeEnabled());
+    await u.click(screen.getByRole("button", { name: /Submit Leave/ }));
+    await u.click(await screen.findByRole("button", { name: "Yes" }));
+    await waitFor(() => expect(submitMutate).toHaveBeenCalled());
+    submitMutate.mock.calls[0][1].onSuccess();
+    expect(await screen.findByText("my history")).toBeInTheDocument();
+  });
+
+  // A People-Ops-only account may APPLY for general leave but may not open My
+  // history (route.ts:58 lists them, route.ts:110 does not). Navigating them
+  // there would hand them to LeaveKindRoute's refusal and bounce them
+  // somewhere arbitrary, so the form stays put and the message is the feedback.
+  it("stays on the form when the visitor may not see My history", async () => {
+    user.privileges = [789];
+    const u = (await import("@testing-library/user-event")).default.setup();
+    show();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Submit Leave/ })).toBeEnabled());
+    await u.click(screen.getByRole("button", { name: /Submit Leave/ }));
+    await u.click(await screen.findByRole("button", { name: "Yes" }));
+    await waitFor(() => expect(submitMutate).toHaveBeenCalled());
+    submitMutate.mock.calls[0][1].onSuccess();
+    // waitFor + getBy, not findBy: findBy resolves the instant the element is
+    // there, which is before a navigation has had the chance to unmount it.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Submit Leave/ })).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("my history")).not.toBeInTheDocument();
+    user.privileges = [987];
+  });
+
   // THE bug. The source resets dates, type, portion and the comment after a
   // submit and deliberately leaves the recipients (GeneralLeave.tsx:150-155).
   // Clearing them here emptied more than the chips: `seeded` is a ref, so they
@@ -252,12 +298,15 @@ describe("the confirmation before posting", () => {
   // the backend stored that as the copyEmailList it later hands back as
   // optionalMails — so the suggestions disappeared for good.
   it("keeps the recipients after a submit, so the next one still carries them", async () => {
-    const user = (await import("@testing-library/user-event")).default.setup();
+    // People Ops, so the form is not navigated away from — the chips surviving
+    // is only observable on a screen that stays mounted.
+    user.privileges = [789];
+    const ue = (await import("@testing-library/user-event")).default.setup();
     show();
     await waitFor(() => expect(screen.getByText("buddy@wso2.com")).toBeInTheDocument());
     await waitFor(() => expect(screen.getByRole("button", { name: /Submit Leave/ })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: /Submit Leave/ }));
-    await user.click(await screen.findByRole("button", { name: "Yes" }));
+    await ue.click(screen.getByRole("button", { name: /Submit Leave/ }));
+    await ue.click(await screen.findByRole("button", { name: "Yes" }));
     await waitFor(() => expect(submitMutate).toHaveBeenCalled());
 
     const sent = submitMutate.mock.calls[0][0].emailRecipients;
@@ -269,6 +318,7 @@ describe("the confirmation before posting", () => {
     submitMutate.mock.calls[0][1].onSuccess();
     await waitFor(() => expect(screen.getByText("buddy@wso2.com")).toBeInTheDocument());
     expect(screen.getByText("scrum@wso2.com")).toBeInTheDocument();
+    user.privileges = [987];
   });
 
   // The sabbatical form had this call site and not this message, so it went
