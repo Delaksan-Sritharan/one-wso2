@@ -31,13 +31,14 @@ import {
 } from "@wso2/oxygen-ui";
 import { describeError } from "../util/financeError";
 import { money } from "../util/financeFormat";
-import { useExpenseAppData, useExpenseClaims } from "../expense/useExpense";
+import { useExpenseAppData, useExpenseClaims, useExpenseEmployees } from "../expense/useExpense";
 import { useOpdClaims, useOpdUserInfo } from "../opd/useOpd";
 import { opdStatusFilter, opdHasRole, OPD_ROLE } from "../opd/opdTypes";
 import type { ExpenseClaim } from "../expense/expenseTypes";
 import type { OpdClaim } from "../opd/opdTypes";
-import { ExpenseClaimDetailsDialog } from "../expense/ExpenseClaimDetailsDialog";
-import { OpdClaimDetailsDialog } from "../opd/OpdClaimDetailsDialog";
+import { ExpenseApprovalReview } from "../expense/approvals/ExpenseApprovalReview";
+import { makeNameResolver } from "../expense/approvals/expenseApprovalTypes";
+import { OpdApprovalReview } from "../opd/approvals/OpdApprovalReview";
 import { byLongestWait, daysWaiting, waitingLabel, waitingSince } from "./claimWaiting";
 
 // Everything waiting on the person looking, grouped by which app it came from.
@@ -58,6 +59,11 @@ export default function NeedsYouTab() {
   const canExpenseFinance = Boolean(expenseAppData.data?.enableFinanceView);
   const canOpd = opdHasRole(opdUserInfo.data, OPD_ROLE.FINANCE_APPROVER);
   const myEmail = expenseAppData.data?.userInfo.workEmail ?? undefined;
+
+  // For the review screen's name display — falls back to the bare email until
+  // this arrives, same as the standalone Lead/Finance Approvals screens do.
+  const employees = useExpenseEmployees();
+  const nameFor = useMemo(() => makeNameResolver(employees.data), [employees.data]);
 
   // Two independent flags, so a person can be waiting on both stages at once.
   // `leadEmail` scopes the lead queue to their own reports; the finance queue is
@@ -98,6 +104,44 @@ export default function NeedsYouTab() {
 
   if (loading) {
     return <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 1.5 }} />;
+  }
+
+  // Opening an expense claim replaces this whole tab with the same review
+  // screen Lead/Finance Approvals uses — the app's own decision, its own
+  // amounts-in-full, its own print and activity trail — rather than a
+  // shrunk-down copy in a dialog. Needs You has no tabs of its own, so
+  // `pending` is always true: everything reaching this tab is, by
+  // definition, still waiting on a decision.
+  if (expenseTarget) {
+    return (
+      <ExpenseApprovalReview
+        claim={expenseTarget}
+        stage={expenseTarget.statusDetails.status === "PENDING_LEAD" ? "LEAD" : "FINANCE"}
+        pending
+        nameFor={nameFor}
+        viewerEmail={myEmail}
+        onBack={() => setExpenseTarget(null)}
+        // Nothing to fade here, unlike the decided-tab UX this component also
+        // serves: a claim just decided drops out of the PENDING queue on its
+        // own once `useExpenseClaimStatus`'s onSuccess invalidates
+        // ["expense-claims"], which both leadQueue and financeQueue key off.
+        onDecided={() => {}}
+      />
+    );
+  }
+
+  // Same takeover for OPD, its own review screen in place of the dialog —
+  // `useOpdClaims`'s own invalidation on `["opd-claims"]` is what drops a
+  // decided claim out of the queue.
+  if (opdTarget) {
+    return (
+      <OpdApprovalReview
+        claim={opdTarget}
+        pending
+        onBack={() => setOpdTarget(null)}
+        onDecided={() => {}}
+      />
+    );
   }
 
   // One queue failing must not blank the other: a finance approver whose OPD
@@ -185,20 +229,6 @@ export default function NeedsYouTab() {
         </Box>
       )}
 
-      {/* The apps' own review dialogs, so a decision made here is the same
-          decision made on the per-type screens — one flow, not a copy. */}
-      <ExpenseClaimDetailsDialog
-        claim={expenseTarget}
-        onClose={() => setExpenseTarget(null)}
-        review={
-          expenseTarget?.statusDetails.status === "PENDING_LEAD"
-            ? "LEAD"
-            : expenseTarget
-              ? "FINANCE"
-              : undefined
-        }
-      />
-      <OpdClaimDetailsDialog claim={opdTarget} onClose={() => setOpdTarget(null)} review />
     </Box>
   );
 }

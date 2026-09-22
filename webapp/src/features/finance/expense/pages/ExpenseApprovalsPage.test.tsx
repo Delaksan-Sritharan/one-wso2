@@ -25,6 +25,8 @@ vi.mock("@hooks/useAccessToken", () => ({ useAccessToken: () => async () => "tok
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
 
 const payloads: Record<string, unknown>[] = [];
+// What the queue has to show, when a test wants a row to click.
+let claimsData: Record<string, unknown>[] = [];
 
 // Which stages this person holds. Independent flags, so all three combinations
 // are reachable and each renders a different screen.
@@ -53,7 +55,7 @@ vi.mock("../useExpense", () => ({
   }),
   useExpenseClaims: (payload: Record<string, unknown>) => {
     payloads.push(payload);
-    return { data: [], isLoading: false, isError: false, isSuccess: true };
+    return { data: claimsData, isLoading: false, isError: false, isSuccess: true };
   },
   useExpenseEmployees: () => ({ data: [], isLoading: false, isError: false }),
 }));
@@ -78,8 +80,21 @@ vi.mock("../../components/FinanceShell", () => ({
 const { default: ExpenseApprovalsTab } = await import("./ExpenseApprovalsPage");
 const { NotificationsProvider } = await import("@context/notifications/NotificationsContext");
 
+const claim = (over: Record<string, unknown>) => ({
+  id: "EXP-1",
+  transactions: [],
+  totalAmount: 100,
+  currencyCode: "USD",
+  employeeEmail: "kasun@wso2.com",
+  leadEmails: [],
+  createdDate: new Date(2026, 6, 20).toISOString(),
+  statusDetails: { status: "PENDING_LEAD", leadApprovedDate: null },
+  ...over,
+});
+
 beforeEach(() => {
   payloads.length = 0;
+  claimsData = [];
   flags.lead = true;
   flags.finance = true;
   configured.value = true;
@@ -200,6 +215,36 @@ describe("typing a claim id does not search on every keystroke", () => {
   });
 });
 
+
+// Clicking a row takes over this tab with the same review screen the
+// standalone Lead/Finance Approvals screen uses — the app's own decision,
+// not a shrunk-down copy in a dialog.
+describe("opening a claim", () => {
+  it("replaces the queue with the review screen on Pending", async () => {
+    claimsData = [claim({})];
+    show("LEAD");
+    fireEvent.click(await screen.findByRole("button", { name: "Review" }));
+    expect(await screen.findByText("EXP-1")).toBeInTheDocument();
+    // Pending: a decision is on offer.
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument();
+    // Gone, not merely covered: the review screen took the tab's place.
+    expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
+  });
+
+  it("opens read-only, with no decision on offer, on Approved", async () => {
+    claimsData = [claim({ id: "EXP-DONE", statusDetails: { status: "APPROVED" } })];
+    show("FINANCE");
+    // The Pending tab is the default; switch to Approved to reach this claim.
+    fireEvent.click(await screen.findByRole("tab", { name: /Approved/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "View" }));
+    // Two matches once open on FINANCE: the header, and the hidden
+    // print-only copy `canPrint` renders alongside it.
+    await waitFor(() => expect(screen.getAllByText("EXP-DONE").length).toBeGreaterThan(0));
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
+  });
+});
 
 // An unset backend URL disables the app-data query, so both capability flags
 // read false and the screen would tell the person they are not a finance

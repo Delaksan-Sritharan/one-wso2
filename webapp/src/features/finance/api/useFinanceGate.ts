@@ -77,7 +77,7 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // holding one flag of the three is enough to get a screen with one thing
       // in it. Each tab inside is gated by its own id at its own route.
       case "claim-approval":
-        return opdFinance || expenseLead || expenseFinance;
+        return opdFinance || expenseLead || expenseFinance || ccLeadOrFinance;
       // Either stage. userSlice-style independence: a person can hold both, or
       // just one, and the tab is the same screen either way.
       case "claim-approval-expense":
@@ -85,6 +85,10 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // No lead stage exists for OPD — the backend grants role 555 or nothing.
       case "claim-approval-opd":
         return opdFinance;
+      // Same privileges as "cc-approve" — this tab and the standalone screen
+      // under Me read the same queue.
+      case "claim-approval-cc":
+        return ccLeadOrFinance;
       // Behind two flags: the group's own, and — on top of that — the one on
       // the New Claim item itself, held back until the Finance and Me
       // new-claim entry points are reconciled. Answered here as well as by
@@ -131,6 +135,12 @@ export function useFinanceGate(enabled = true): FinanceGate {
         return ccLeadOrFinance;
       case "cc-settings":
         return ccFinance;
+      // Finance → Overview → Credit Card Expenses dashboard. `requires:
+      // ["employee"]` on the registry item exists only to force this case —
+      // it is everyone's own numbers to read, same as the dashboard always
+      // was; the group's own flag is the actual gate.
+      case "cc-dashboard":
+        return isPreviewEnabled("financeOverview");
       default:
         // Per-user views (New / Pending / History) are open; any other item
         // that declares `requires` but reaches here fails closed rather than

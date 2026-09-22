@@ -207,9 +207,9 @@ describe("the Expense Claims preview flag", () => {
   });
 });
 
-// Finance Overview is new ground — an OPD Claims dashboard, with more to
-// follow — and has not run against a real account yet. The whole group is
-// held back, not the one item inside it.
+// Finance Overview is new ground — a Credit Card Expenses dashboard moved out
+// of its own app, and an OPD Claims dashboard — and has not run against a
+// real account yet. The whole group is held back, not the items inside it.
 describe("the Finance Overview preview flag", () => {
   it("hides the group when the flag is off", async () => {
     const { FINANCE_OVERVIEW_APPS, FINANCE_APPS } = await load();

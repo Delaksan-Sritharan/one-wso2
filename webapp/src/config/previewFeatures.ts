@@ -76,9 +76,9 @@ export type PreviewFeature =
   | "expenseClaims"
   /**
    * Finance → Overview, the new dashboards section above the claim apps.
-   * Held back as a whole: it is new ground (an OPD Claims dashboard, with
-   * Credit Card Expenses and expense dashboards to follow), and it has not
-   * run against a real account yet.
+   * Held back as a whole: it is new ground (an OPD Claims dashboard and a
+   * Credit Card Expenses dashboard, with an expense dashboard to follow),
+   * and it has not run against a real account yet.
    */
   | "financeOverview"
   /**

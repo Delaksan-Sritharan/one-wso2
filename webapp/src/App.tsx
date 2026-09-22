@@ -126,6 +126,7 @@ import ClaimApprovalPage, {
 import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
+import CcApprovalsTab from "@features/finance/cc/pages/CcApprovalsTab";
 import { riskRoutes } from "@features/security/grc/modules/risk/routes";
 import { auditRoutes } from "@features/security/grc/modules/audit/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
@@ -324,7 +325,14 @@ export default function App() {
               />
             </>
           )}
-          <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
+          {/* Behind the same preview flag as its menu entry under Overview.
+              Hiding only the entry would leave the page reachable by anyone
+              with the URL. Moved here out of the plain cc routes below: this
+              is the same screen the "Dashboard" item used to point at when it
+              lived inside Credit Card Expenses. */}
+          {isPreviewEnabled("financeOverview") && (
+            <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
+          )}
           <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
           <Route path="finance/cc/pending" element={<CcPendingPage />} />
           <Route path="finance/cc/approve" element={<CcApprovePage />} />
@@ -336,7 +344,16 @@ export default function App() {
           {isPreviewEnabled("financeOverview") && (
             <Route path="finance/opd/dashboard" element={<OpdDashboardScreen />} />
           )}
-          <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
+          {/* Behind the same preview flag as its menu entry. Hiding only the
+              entry would leave the page reachable by anyone with the URL —
+              not what "not released yet" means. Me → Claims → OPD stays
+              open regardless: that one was never behind this flag, filing
+              and reading your own claims is open to everyone
+              (claimsTabs.ts:22-24); this is specifically the Finance
+              perspective's own OPD Claims front door. */}
+          {isPreviewEnabled("opdClaims") && (
+            <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
+          )}
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
               from the standalone org-chart app. Unlike every other People Ops
@@ -564,6 +581,14 @@ export default function App() {
               element={
                 <ClaimApprovalTabRoute gateId="claim-approval-opd">
                   <OpdApprovalsTab />
+                </ClaimApprovalTabRoute>
+              }
+            />
+            <Route
+              path="cc"
+              element={
+                <ClaimApprovalTabRoute gateId="claim-approval-cc">
+                  <CcApprovalsTab />
                 </ClaimApprovalTabRoute>
               }
             />

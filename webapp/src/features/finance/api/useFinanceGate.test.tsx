@@ -81,9 +81,13 @@ describe("the Claim approval entry", () => {
     expect(gate().canSee("claim-approval")).toBe(true);
   });
 
+  it("is offered to someone who only approves credit card submissions", () => {
+    roles.cc = ["lead"];
+    expect(gate().canSee("claim-approval")).toBe(true);
+  });
+
   it("is withheld from someone who approves no claims", () => {
     roles.opd = [444]; // can submit, cannot approve
-    roles.cc = ["lead", "finance"]; // credit card is not a claim type here
     expect(gate().canSee("claim-approval")).toBe(false);
   });
 });
@@ -102,6 +106,29 @@ describe("the OPD tab", () => {
     roles.expenseLead = true;
     roles.expenseFinance = true;
     expect(gate().canSee("claim-approval-opd")).toBe(false);
+  });
+});
+
+describe("the cc tab", () => {
+  it("opens on either privilege alone", () => {
+    roles.cc = ["lead"];
+    expect(gate().canSee("claim-approval-cc")).toBe(true);
+    roles.cc = ["finance"];
+    expect(gate().canSee("claim-approval-cc")).toBe(true);
+  });
+
+  it("is not opened by the OPD or expense roles", () => {
+    roles.opd = [555];
+    roles.expenseLead = true;
+    roles.expenseFinance = true;
+    expect(gate().canSee("claim-approval-cc")).toBe(false);
+  });
+
+  // Same privileges the standalone Approve Submissions screen checks — this
+  // tab reads the same queue, not a separate one.
+  it("matches cc-approve's own gate", () => {
+    roles.cc = ["lead"];
+    expect(gate().canSee("claim-approval-cc")).toBe(gate().canSee("cc-approve"));
   });
 });
 
@@ -238,23 +265,39 @@ describe("a preview-gated item", () => {
   });
 });
 
-// The Overview dashboard tile has its own backend role too, but the group's
-// preview flag comes first: holding the role means nothing while Overview
-// itself is hidden.
-describe("the Finance Overview dashboard", () => {
+// The Overview group has two dashboard tiles now, gated differently: Credit
+// Card Expenses has no backend role of its own — it is everyone's own
+// numbers — so its group's preview flag is the only gate. OPD Claims has its
+// own backend role too, but the group's preview flag comes first: holding
+// the role means nothing while Overview itself is hidden.
+describe("the Finance Overview dashboards", () => {
   const originalConfig = window.config;
   afterEach(() => {
     window.config = originalConfig;
   });
 
-  it("is refused when the group's flag is absent, role or not", () => {
+  it("refuses the credit card dashboard when the group's flag is absent", () => {
+    window.config = { ...(window.config ?? {}) } as Window["config"];
+    delete (window.config as { ONE_WSO2_PREVIEW_FEATURES?: unknown }).ONE_WSO2_PREVIEW_FEATURES;
+    expect(gate().canSee("cc-dashboard")).toBe(false);
+  });
+
+  it("allows the credit card dashboard when the group's flag is on", () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { financeOverview: true },
+    } as Window["config"];
+    expect(gate().canSee("cc-dashboard")).toBe(true);
+  });
+
+  it("refuses the OPD dashboard when the group's flag is absent, role or not", () => {
     window.config = { ...(window.config ?? {}) } as Window["config"];
     delete (window.config as { ONE_WSO2_PREVIEW_FEATURES?: unknown }).ONE_WSO2_PREVIEW_FEATURES;
     roles.opd = [555];
     expect(gate().canSee("opd-dashboard")).toBe(false);
   });
 
-  it("is allowed when the group's flag is on and the role is held", () => {
+  it("allows the OPD dashboard when the group's flag is on and the role is held", () => {
     window.config = {
       ...(window.config ?? {}),
       ONE_WSO2_PREVIEW_FEATURES: { financeOverview: true },

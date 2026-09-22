@@ -74,15 +74,16 @@ export const ME_FINANCE_APPS: readonly MenuApp[] = [
 /**
  * Overview — under **Finance**, above the apps.
  *
- * Reading how the company is spending is a different job from filing or
- * approving a claim: it is every employee's numbers rather than your own, and
- * the people who do it are finance rather than the person who filed. So the
- * dashboards live together here rather than one inside each claim app, where
- * they would sit behind a group you open to file something.
+ * Reading how money is being spent is a different job from spending it. These
+ * screens report across everyone rather than showing you your own work, and the
+ * people who read them are finance. Kept inside the app it reports on, a
+ * dashboard sits behind a group you open to file or reconcile something, which
+ * is not what you came for when you wanted the numbers.
  *
- * One entry today. The credit-card and expense dashboards belong here too when
- * somebody moves them. Held back as a whole behind its own preview flag: this
- * is new ground and has not run against a real account yet.
+ * Two entries today — Credit Card Expenses and OPD Claims. The expense
+ * dashboard belongs here too when somebody moves it. Held back as a whole
+ * behind its own preview flag: this is new ground and has not run against a
+ * real account yet.
  */
 export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = isPreviewEnabled("financeOverview")
   ? [
@@ -90,11 +91,27 @@ export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = isPreviewEnabled("finan
         key: "finance-overview",
         name: "Overview",
         icon: LayoutDashboardIcon,
-        purpose: "How the company's claim allowances are being used.",
-        // One item today and it will not stay that way; collapsing to a leaf now
-        // would teach the wrong shape.
+        purpose: "How the company's card spend and claim allowances are being used.",
+        // Two items today and it will not stay that way; collapsing to a leaf
+        // now would teach the wrong shape and make the entry vanish as a
+        // concept the day a third one lands.
         alwaysGroup: true,
         items: [
+          {
+            // The id is unchanged, so `useFinanceGate`, the rail's active-item
+            // matching and anyone's saved favourite all keep working. Only where
+            // it is listed has moved; the route is the same screen it always was.
+            id: "cc-dashboard",
+            label: "Credit Card Expenses",
+            desc: "Unsubmitted spend, how long it has been sitting, and what has been claimed.",
+            // Not a coarse capability: forces useFinanceGate to answer for the
+            // id — see its `cc-dashboard` case — so the group's own flag is
+            // enforced even if something one day asks the gate by hand,
+            // bypassing this registry entry the way the Finance overview
+            // pattern already does for other items.
+            requires: ["employee"],
+            path: `${CC_PATH}/dashboard`,
+          },
           {
             id: "opd-dashboard",
             label: "OPD Claims",
@@ -193,7 +210,6 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
     icon: CreditCardIcon,
     purpose: "Reconcile and submit corporate credit-card transactions for approval.",
     items: [
-      { id: "cc-dashboard", label: "Dashboard", desc: "Unsubmitted spend, how long it has been sitting, and what has been claimed.", path: `${CC_PATH}/dashboard` },
       { id: "cc-new", label: "Pending Submissions", desc: "Unsubmitted card transactions to categorise and submit.", path: `${CC_PATH}/new` },
       { id: "cc-pending", label: "Pending Approvals", desc: "Submissions awaiting approval.", path: `${CC_PATH}/pending` },
       { id: "cc-approve", label: "Approve Submissions", desc: "Review and approve your team's submitted card transactions.", requires: ["lead", "admin"], path: `${CC_PATH}/approve` },
