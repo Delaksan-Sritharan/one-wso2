@@ -381,6 +381,13 @@ export interface PerspectiveDef {
    *
    * Me is the one perspective that does not carry this: its landing is the
    * person's own profile, which is a page someone stops and reads.
+   *
+   * ALSO covers the near case where the landing does not forward because it
+   * already IS the first row's destination -- RevOps, whose Meetings row points
+   * at `/revops` itself. The reason differs (nothing bounces) but the rail
+   * problem is identical: two rows, one destination, and the reader has to work
+   * out that they are the same place. The name is kept rather than split into a
+   * second near-identical flag.
    */
   forwardsToFirstItem?: boolean;
   sections?: PerspectiveSection[];
@@ -488,6 +495,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
           icon: RadioIcon,
           access: true,
           externallyGated: true,
+          forwardsToFirstItem: true,
           path: "/revops",
           sections: REVOPS_SECTIONS,
         },

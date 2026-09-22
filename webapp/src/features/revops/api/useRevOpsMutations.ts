@@ -33,13 +33,7 @@ import { revOpsServiceUrls } from "@config/apiConfig";
  *
  * Invalidates every `echo-meetings` page rather than the current one: a
  * cancellation changes the row's status, and with server-side paging it can
- * also change what lands on other pages when the list is scoped to Past. The
- * prefix match covers all of them without the caller having to know its own
- * filter state.
- *
- * Deliberately NOT an optimistic update. The backend is the only thing that
- * knows whether this caller may cancel this meeting, so showing the row as
- * cancelled before it answers would be a lie in exactly the case that matters.
+ * also change what lands on other pages.
  */
 export function useCancelMeeting() {
   const getAccessToken = useAccessToken();

@@ -175,16 +175,13 @@ export function useMeetingAttachments(meetingId: number | null) {
  * A signed URL for streaming one meeting's recording.
  *
  * `enabled` on a non-null id, so nothing is requested until someone actually opens a
- * recording. Minting per row would hand out playback credentials for recordings nobody
- * watched, which is the kind of thing that looks harmless until it appears in a log.
+ * recording.
  *
  * `staleTime: 0` and no caching beyond the component's life: the URL expires, and a cached
  * one handed to a player an hour later is a token that fails on its first range request.
- * Re-minting is one cheap call; serving a dead URL costs a stalled video.
- *
+ 
  * `retry: false` on purpose. The failures here are 404 (playback not configured, or no
- * recording attached yet) and 403 (not your meeting) — all final answers, none improved by
- * asking again.
+ * recording attached yet) and 403 (not your meeting) 
  */
 export function useRecordingPlayback(meetingId: number | null) {
   const { getAccessToken, userSub, ready } = useRevOpsQueryBasis();
@@ -228,9 +225,7 @@ export function useMeeting(meetingId: number | null) {
 /**
  * The transcript, as timed lines.
  *
- * `enabled` on a non-null id so nothing is fetched until the tab is opened — a long call
- * runs to thousands of lines, and loading that for everyone who glances at a meeting would
- * be paid by everyone to benefit the few who read it.
+ * `enabled` on a non-null id so nothing is fetched until the tab is openedd.
  *
  * `retry: false`: the failures are 404 (no timed transcript for this meeting) and 403 (not
  * yours), both final.

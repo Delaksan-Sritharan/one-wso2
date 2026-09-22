@@ -15,15 +15,11 @@
 // under the License.
 
 // Who can do what in Echo, decided against meet-app's OWN privilege numbers
-// rather than the four One WSO2 capabilities derived from people-app. Same
-// arrangement as useFinanceGate and useLeaveGate: `requires` in the registry is
-// a coarse hint, and this is the real answer.
-//
+// 
 // Nothing here is access control. The meet-app backend enforces every rule
 // below on its own — it refuses a cancellation from anyone who is neither the
 // host nor an admin, and answers 403 on every endpoint for a caller in no
-// authorised group. This exists so the UI doesn't offer an action that is going
-// to be refused, which is a courtesy, not a control.
+// authorised group. 
 
 import { useMemo } from "react";
 import { REVOPS_PRIVILEGE, type Meeting } from "./revOpsTypes";
@@ -57,14 +53,6 @@ export function useRevOpsGate(): RevOpsGate {
       //   - a cancelled meeting cannot be cancelled again;
       //   - a meeting that has already happened cannot be called off;
       //   - and you must be its host, or an admin.
-      //
-      // `timeStatus` is the server's own verdict rather than a comparison
-      // against the browser clock, so a tab left open overnight cannot start
-      // offering to cancel yesterday's meetings.
-      //
-      // Fails CLOSED while /user-info is still in flight or has failed: with no
-      // identity there is no host to match and no admin flag, so the action is
-      // hidden rather than offered and then refused.
       canCancel: (meeting: Meeting): boolean => {
         if (meeting.meetingStatus === "CANCELLED") return false;
         if (meeting.timeStatus === "PAST") return false;
