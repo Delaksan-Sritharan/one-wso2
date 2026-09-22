@@ -250,3 +250,23 @@ export function parseLeavePath(pathname: string): {
   if (tab.kinds.length < 2) return { tab, kind: tab.kinds[0] };
   return { tab, kind: tab.kinds.find((k) => k.kind === kindSegment) };
 }
+
+/**
+ * Where a just-submitted request should land: its own history, when the
+ * person is allowed to see it.
+ *
+ * `undefined` means stay put. That is not a hypothetical — a People-Ops-only
+ * account may APPLY for general leave (route.ts:58 lists them) but may not see
+ * My history (route.ts:110 does not), so navigating them there would hand them
+ * straight to LeaveKindRoute's refusal and bounce them somewhere arbitrary. The
+ * form's own reset and the success message are the whole feedback in that case.
+ */
+export function historyPathAfterSubmit(
+  kind: LeaveKind,
+  canSee: (id: string) => boolean,
+): string | undefined {
+  const history = leaveTab("history");
+  const entry = history?.kinds.find((k) => k.kind === kind);
+  if (!history || !entry || !canSee(entry.gateId)) return undefined;
+  return leavePath(history, kind);
+}

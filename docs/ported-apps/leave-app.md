@@ -209,6 +209,19 @@ Group"). The backend sends neither, and a client-side copy is exactly what has a
 micro app's constant and the backend's configurable resolve to different addresses on staging today.
 The chip shows whatever address the backend sends.
 
+**A successful submit lands on My history.** Neither source app navigates — both reset the form and
+raise a snackbar. We do both and then go to that kind's history, so the request you just made is
+what you see. Guarded: a People-Ops-only account may apply for general leave but may not open My
+history (route.ts:58 lists them, route.ts:110 does not), so for them the navigation is skipped and
+the reset plus the message is the whole feedback. See `historyPathAfterSubmit`.
+
+**The recipients survive a submit.** `GeneralLeave.tsx:150-155` clears the dates, the type, the
+portion and the comment, and deliberately leaves `emailRecipients` alone. The port was also clearing
+the recipients, which emptied more than the chips: the seeding effect is guarded by a ref, so they
+were never re-seeded, the next submit sent an empty `emailRecipients`, and the backend stores that
+as the `copyEmailList` it later returns as `optionalMails` — one submit dropped the suggestions and a
+second erased them. Now matches the source.
+
 **Kept — the port is right and the source is wrong.** The source parses `new Date("2026-08-15")` as
 UTC midnight, so dates render a day early west of UTC; it renders "1 days"; it renders
 "Conges_payes Leave"; and its `SingleLeaveHistory` omits `status`, which the backend returns and the

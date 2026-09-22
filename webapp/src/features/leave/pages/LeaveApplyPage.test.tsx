@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { MemoryRouter, Route, Routes } from "react-router";
 
 const appConfigData = {
   cachedEmails: {
@@ -95,11 +96,18 @@ const { NotificationsProvider } = await import("@context/notifications/Notificat
 
 function show() {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <NotificationsProvider>
-        <LeaveApplyPage />
-      </NotificationsProvider>
-    </QueryClientProvider>,
+    // A Router because a successful submit navigates to My history — see the
+    // "where a submitted request lands" tests below.
+    <MemoryRouter initialEntries={["/me/leave/apply/general"]}>
+      <QueryClientProvider client={new QueryClient()}>
+        <NotificationsProvider>
+          <Routes>
+            <Route path="/me/leave/apply/general" element={<LeaveApplyPage />} />
+            <Route path="/me/leave/history/general" element={<div>my history</div>} />
+          </Routes>
+        </NotificationsProvider>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -235,6 +243,32 @@ describe("the confirmation before posting", () => {
     await user.click(screen.getByRole("button", { name: /Submit Leave/ }));
     await user.click(await screen.findByRole("button", { name: "Yes" }));
     expect(submitMutate).toHaveBeenCalledTimes(1);
+  });
+
+  // THE bug. The source resets dates, type, portion and the comment after a
+  // submit and deliberately leaves the recipients (GeneralLeave.tsx:150-155).
+  // Clearing them here emptied more than the chips: `seeded` is a ref, so they
+  // were never re-seeded, the NEXT submit sent an empty emailRecipients, and
+  // the backend stored that as the copyEmailList it later hands back as
+  // optionalMails — so the suggestions disappeared for good.
+  it("keeps the recipients after a submit, so the next one still carries them", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    show();
+    await waitFor(() => expect(screen.getByText("buddy@wso2.com")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: /Submit Leave/ })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: /Submit Leave/ }));
+    await user.click(await screen.findByRole("button", { name: "Yes" }));
+    await waitFor(() => expect(submitMutate).toHaveBeenCalled());
+
+    const sent = submitMutate.mock.calls[0][0].emailRecipients;
+    expect(sent).toContain("buddy@wso2.com");
+    expect(sent).toContain("scrum@wso2.com");
+
+    // Drive the success path the way React Query would, then check the chips
+    // survived it — a People-Ops account stays on this form afterwards.
+    submitMutate.mock.calls[0][1].onSuccess();
+    await waitFor(() => expect(screen.getByText("buddy@wso2.com")).toBeInTheDocument());
+    expect(screen.getByText("scrum@wso2.com")).toBeInTheDocument();
   });
 
   // The sabbatical form had this call site and not this message, so it went

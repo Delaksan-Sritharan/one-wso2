@@ -19,6 +19,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
 // The eligibility boundaries below were computed, not tuned until green: with
@@ -148,9 +149,12 @@ beforeEach(() => {
 // and who may reach them, is covered in LeaveTabRouting.test.tsx.
 function show(body: ReactNode = <SabbaticalApplyTab />) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <NotificationsProvider>{body}</NotificationsProvider>
-    </QueryClientProvider>,
+    // A Router because a successful submit navigates to My history.
+    <MemoryRouter initialEntries={["/me/leave/apply/sabbatical"]}>
+      <QueryClientProvider client={new QueryClient()}>
+        <NotificationsProvider>{body}</NotificationsProvider>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 

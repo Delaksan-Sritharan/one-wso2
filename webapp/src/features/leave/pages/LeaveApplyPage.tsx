@@ -73,6 +73,9 @@ import {
   SUBMIT_SUCCESS,
 } from "../util/leaveCopy";
 import { withLoadingAdornment } from "@components/picker-loading/pickerLoading";
+import { useLeaveGate } from "../api/useLeaveGate";
+import { historyPathAfterSubmit } from "../leaveTabs";
+import { useNavigate } from "react-router";
 
 type Portion = "full" | "first" | "second";
 
@@ -84,6 +87,8 @@ export default function GeneralApplyTab() {
 
 function ApplyForm() {
   const userInfo = useLeaveUserInfo();
+  const navigate = useNavigate();
+  const gate = useLeaveGate();
   const appConfig = useLeaveAppConfig();
   const employees = useLeaveEmployees();
   const validate = useValidateLeave();
@@ -330,12 +335,23 @@ function ApplyForm() {
     submit.mutate(payload, {
       onSuccess: () => {
         showSuccess(SUBMIT_SUCCESS);
-        // Reset to a clean single-day request.
+        // Reset to a clean single-day request — dates, type, portion and the
+        // comment, exactly what GeneralLeave.tsx:150-155 clears.
+        //
+        // NOT the recipients. The source deliberately leaves them, and clearing
+        // them here did more than empty the chips: `seeded` is a ref, so they
+        // were never re-seeded, the next submit sent an empty emailRecipients,
+        // and the backend stored that as the copyEmailList — which is the list
+        // it hands back as optionalMails. One submit cleared the suggestions;
+        // a second erased them for good.
         setComment("");
-        setRecipients([]);
         setPortion("full");
         setStartDate(today);
         setEndDate(today);
+        // Show them the request they just made. The snackbar survives the
+        // navigation — NotificationsProvider sits above the router.
+        const landing = historyPathAfterSubmit("general", gate.canSee);
+        if (landing) navigate(landing);
       },
       onError: (err) => showError(describeError(err)),
     });
