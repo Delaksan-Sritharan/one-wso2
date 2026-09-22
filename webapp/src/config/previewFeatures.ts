@@ -61,27 +61,19 @@ export type PreviewFeature =
    */
   | "expenseSubmitter"
   /**
-   * Finance → Claim Approval, rebuilt as its own section with the OPD queue
-   * under it. Held back because the queue has not run against the real OPD
-   * backend — the development account is refused by it — and because expense
-   * approving belongs in the same section before either is shown for real.
+   * Finance → OPD Claims, the app's own front door under the Finance
+   * perspective. Only Claim History is migrated so far, and it has never run
+   * against the real OPD backend — the development account is refused by it —
+   * so the group is held back as a whole rather than screen by screen.
    */
-  | "claimApproval"
+  | "opdClaims"
   /**
-   * Finance → Expense Claims, the whole app.
-   *
-   * NOTE: this app is already in production. Gating it holds it back from prod
-   * until the flag is set there, which is a deliberate decision rather than the
-   * usual "not ready yet" case the other keys describe.
+   * Finance → Expense Claims, the whole app — New Claim, Claim History, and
+   * Lead/Finance Approvals. Held back from the Finance rail as a group rather
+   * than item by item: this is one section going away, not one route inside
+   * it becoming unavailable while the rest stays reachable.
    */
   | "expenseClaims"
-  /**
-   * Finance → Credit Card Expenses, the whole app.
-   *
-   * NOTE: as with expenseClaims, this app is already in production and gating
-   * it holds it back from prod until the flag is set there.
-   */
-  | "creditCardExpenses"
   /**
    * People Ops → Performance, par-app's Employee Portal ported in #61. Held back until
    * the Lead Portal, Admin Portal, Report Chain and F2F follow it over — see

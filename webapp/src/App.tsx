@@ -31,11 +31,15 @@ import MySubscriptionsPage from "@features/subscriptions/pages/MySubscriptionsPa
 import ManageSubscriptionsPage from "@features/subscriptions/pages/ManageSubscriptionsPage";
 import EmployeeDetailPage from "@features/people-ops/pages/EmployeeDetailPage";
 import MyProfilePage from "@features/my/pages/MyProfilePage";
-import ParGroupPage, { ParGroupIndex, ParRequiresLeadRoute } from "@features/par/pages/ParGroupPage";
+import ParGroupPage, {
+  ParGroupIndex,
+  ParRequiresActiveCycleRoute,
+  ParRequiresLeadRoute,
+} from "@features/par/pages/ParGroupPage";
 import ParLeadGroupPage, { ParLeadGroupIndex, ParRequiresTeamLeadRoute } from "@features/par/pages/ParLeadGroupPage";
 // Lazy on purpose, same reasoning as the leave report tabs below —
 // react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
-// transitively, and only someone who opens /people-ops/performance needs them.
+// transitively, and only someone who opens /me/performance needs them.
 const ParEmployeeFeedbackTab = lazy(() => import("@features/par/pages/ParEmployeeFeedbackTab"));
 const ParRequestFeedbackTab = lazy(() => import("@features/par/pages/ParRequestFeedbackTab"));
 const ParProvideFeedbackTab = lazy(() => import("@features/par/pages/ParProvideFeedbackTab"));
@@ -99,9 +103,11 @@ const SabbaticalReportTab = lazy(
 import SabbaticalApplyTab from "@features/leave/pages/LeaveSabbaticalPage";
 import ClaimsPage, { ClaimsIndex } from "@features/finance/claims/ClaimsPage";
 import OpdNewClaimPage from "@features/finance/opd/pages/OpdNewClaimPage";
-// Claim approval, rebuilt under Finance: OPD first, expense to follow.
-import OpdApprovalsScreen from "@features/finance/opd/approvals/OpdApprovalsScreen";
+// OPD Claims as its own Finance app — a different screen on a different route
+// from the OPD tab under Me → Claims above, which is left alone.
+import OpdClaimHistoryScreen from "@features/finance/opd/history/OpdClaimHistoryScreen";
 import OpdClaimsTab from "@features/finance/opd/pages/OpdHistoryPage";
+import OpdApprovalsTab from "@features/finance/opd/pages/OpdApprovalsPage";
 import CcDashboardPage from "@features/finance/cc/pages/CcDashboardPage";
 import CcNewTransactionsPage from "@features/finance/cc/pages/CcNewTransactionsPage";
 import CcPendingPage from "@features/finance/cc/pages/CcPendingPage";
@@ -112,6 +118,13 @@ import ExpenseNewClaimPage from "@features/finance/expense/pages/ExpenseNewClaim
 import ExpenseSubmitterPage from "@features/finance/expense/submitter/ExpenseSubmitterPage";
 import ExpenseClaimHistoryPage from "@features/finance/expense/history/ExpenseClaimHistoryPage";
 import ExpenseClaimsTab from "@features/finance/expense/pages/ExpenseHistoryPage";
+import ClaimApprovalPage, {
+  ClaimApprovalIndex,
+  ClaimApprovalTabRoute,
+} from "@features/finance/approvals/ClaimApprovalPage";
+import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
+import DecidedTab from "@features/finance/approvals/DecidedTab";
+import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
 import { riskRoutes } from "@features/security/grc/modules/risk/routes";
 import { auditRoutes } from "@features/security/grc/modules/audit/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
@@ -129,6 +142,8 @@ import ViewImagePage from "@features/due-diligence/shared/pages/ViewImagePage";
 import ExpenseApprovalsScreen from "@features/finance/expense/approvals/ExpenseApprovalsScreen";
 import ExpenseLeadApprovalsScreen from "@features/finance/expense/approvals/ExpenseLeadApprovalsScreen";
 import UmtHomePage from "@features/umt/pages/UmtHomePage";
+import UmtUpdateView from "@features/umt/pages/UmtUpdateView";
+import UmtUpdatesPage from "@features/umt/pages/UmtUpdatesPage";
 import InfraHomePage from "@features/infra/pages/InfraHomePage";
 
 export default function App() {
@@ -140,10 +155,16 @@ export default function App() {
           <Route index element={<Navigate to={landingPath()} replace />} />
           {/* Me home — the full profile page including Connected apps. */}
           <Route path="me" element={<MyProfilePage />} />
-          {/* Only the UMT dashboard is mounted in this phase; UmtShell owns its role
-              gate. Behind the same preview flag as its perspective entry — hiding
-              only the rail/launcher tile would leave the route reachable by URL. */}
-          {isPreviewEnabled("umt") && <Route path="umt" element={<UmtHomePage />} />}
+          {/* UmtShell owns its role gate. Behind the same preview flag as its
+              perspective entry — hiding only the rail/launcher tile would leave
+              the routes reachable by URL. */}
+          {isPreviewEnabled("umt") && (
+            <>
+              <Route path="umt" element={<UmtHomePage />} />
+              <Route path="umt/updates" element={<UmtUpdatesPage />} />
+              <Route path="umt/updates/:id" element={<UmtUpdateView />} />
+            </>
+          )}
           {/* My Team — placeholder for now; the real subordinates view is on
               hold this iteration (mirrors people-app's lead-only nav item). */}
           {/* My Team — a lead's reporting chain, ported from people-app. The
@@ -271,35 +292,45 @@ export default function App() {
               </SriLankaRoute>
             }
           />
-          {/* Behind the same preview flag as its menu entry. Hiding only the
-              entry would leave the page reachable by anyone with the URL, which
-              is not what "not released yet" means. */}
-          {isPreviewEnabled("expenseSubmitter") && (
-            <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
+          {/* Behind the same preview flag as the group's own menu entry.
+              Hiding only the entry would leave every one of these pages
+              reachable by anyone with the URL, which is not what "not
+              released yet" means. */}
+          {isPreviewEnabled("expenseClaims") && (
+            <>
+              {/* New Claim carries a second, narrower flag on top of the
+                  group's: it holds back a SECOND way to file a claim until it
+                  is reconciled with Me → Claims, which is a different
+                  question from whether Expense Claims is released at all. */}
+              {isPreviewEnabled("expenseSubmitter") && (
+                <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
+              )}
+              <Route
+                path="finance/expense-claims/history"
+                element={<ExpenseClaimHistoryPage />}
+              />
+              {/* Approving sits beside filing, where the source app's sidebar
+                  keeps it — one entry per stage, on the source's own two
+                  URLs. Each screen also gates itself on its own backend role,
+                  so a typed URL is no more revealing than the menu entry it
+                  belongs to. */}
+              <Route
+                path="finance/expense-claims/lead-approvals"
+                element={<ExpenseLeadApprovalsScreen />}
+              />
+              <Route
+                path="finance/expense-claims/finance-approvals"
+                element={<ExpenseApprovalsScreen stage="FINANCE" />}
+              />
+            </>
           )}
-          {/* Not behind that flag. The preview holds back a SECOND way to file
-              a claim until it is reconciled with Me → Claims; reading what you
-              have already filed has no such duplicate to reconcile. */}
-          <Route path="finance/expense-claims/history" element={<ExpenseClaimHistoryPage />} />
-          {/* Approving sits beside filing, where the source app's sidebar keeps
-              it — one entry per stage, on the source's own two URLs. Each screen
-              gates itself on its own flag, so a typed URL is no more revealing
-              than the menu entry it belongs to. */}
-          <Route
-            path="finance/expense-claims/lead-approvals"
-            element={<ExpenseLeadApprovalsScreen />}
-          />
-          <Route
-            path="finance/expense-claims/finance-approvals"
-            element={<ExpenseApprovalsScreen stage="FINANCE" />}
-          />
           <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
           <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
           <Route path="finance/cc/pending" element={<CcPendingPage />} />
           <Route path="finance/cc/approve" element={<CcApprovePage />} />
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
-          <Route path="finance/claim-approval/opd" element={<OpdApprovalsScreen />} />
+          <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
               from the standalone org-chart app. Unlike every other People Ops
@@ -337,47 +368,55 @@ export default function App() {
               </SriLankaRoute>
             }
           />
-          {/* People Ops → PAR: the employee half of par-app, ported one screen
-              at a time. Tab names match par-app's own OngoingCycleView tab bar
+          {/* Me → PAR: the employee half of par-app, ported one screen at a
+              time. Tab names match par-app's own OngoingCycleView tab bar
               (Employee Feedback / Request 360° Feedback / Provide 360°
-              Feedback / F2F) rather than invented ones.
-              See docs/ported-apps/par-app.md. Not admin-gated — every employee
-              has their own PAR, same as Org Chart and Subscriptions above.
-              Behind the same preview flag as its rail entry — hiding only the
-              entry would leave every tab reachable by URL. */}
+              Feedback / F2F) rather than invented ones. See
+              docs/ported-apps/par-app.md. Not gated beyond signing in —
+              every employee has their own PAR. Behind the same preview flag
+              as its rail entry — hiding only the entry would leave every tab
+              reachable by URL. */}
           {isPreviewEnabled("par") && (
-            <Route path="people-ops/performance" element={<ParGroupPage />}>
+            <Route path="me/performance" element={<ParGroupPage />}>
               <Route index element={<ParGroupIndex />} />
               {/* Employee Feedback and Request 360° are hidden from a leadless
                   employee entirely in the source (OngoingCycleView.tsx), not
                   merely disabled — ParRequiresLeadRoute enforces that at the
-                  route, the same way the tab bar itself is filtered. */}
+                  route, the same way the tab bar itself is filtered.
+                  ParRequiresActiveCycleRoute wraps every tab but History:
+                  none of them has anything to act on once the cycle closes. */}
               <Route
                 path="employee-feedback"
                 element={
-                  <ParRequiresLeadRoute>
-                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                      <ParEmployeeFeedbackTab />
-                    </Suspense>
-                  </ParRequiresLeadRoute>
+                  <ParRequiresActiveCycleRoute>
+                    <ParRequiresLeadRoute>
+                      <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                        <ParEmployeeFeedbackTab />
+                      </Suspense>
+                    </ParRequiresLeadRoute>
+                  </ParRequiresActiveCycleRoute>
                 }
               />
               <Route
                 path="request-360"
                 element={
-                  <ParRequiresLeadRoute>
-                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                      <ParRequestFeedbackTab />
-                    </Suspense>
-                  </ParRequiresLeadRoute>
+                  <ParRequiresActiveCycleRoute>
+                    <ParRequiresLeadRoute>
+                      <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                        <ParRequestFeedbackTab />
+                      </Suspense>
+                    </ParRequiresLeadRoute>
+                  </ParRequiresActiveCycleRoute>
                 }
               />
               <Route
                 path="provide-360"
                 element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParProvideFeedbackTab />
-                  </Suspense>
+                  <ParRequiresActiveCycleRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParProvideFeedbackTab />
+                    </Suspense>
+                  </ParRequiresActiveCycleRoute>
                 }
               />
               {/* F2F is leadless-gated too — OngoingCycleView.tsx's leadless
@@ -386,11 +425,13 @@ export default function App() {
               <Route
                 path="f2f"
                 element={
-                  <ParRequiresLeadRoute>
-                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                      <ParF2fTab />
-                    </Suspense>
-                  </ParRequiresLeadRoute>
+                  <ParRequiresActiveCycleRoute>
+                    <ParRequiresLeadRoute>
+                      <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                        <ParF2fTab />
+                      </Suspense>
+                    </ParRequiresLeadRoute>
+                  </ParRequiresActiveCycleRoute>
                 }
               />
               <Route
@@ -404,10 +445,12 @@ export default function App() {
             </Route>
           )}
           {/* People Ops → PAR → Lead Portal: par-app's LeadPortal.tsx, ported
-              one tab at a time. Only Direct Reports exists so far — see
-              docs/ported-apps/par-app.md. Gated on the same preview flag as
-              the Employee Portal, plus ParRequiresTeamLeadRoute (par-app's
-              own Role.TEAM_LEAD gate on /lead-portal). */}
+              one tab at a time — all five tabs are now live. Reviewing and
+              rating your reports' PAR is People-Ops-team work, unlike the
+              employee half (now under Me — see docs/ported-apps/par-app.md).
+              Gated on the same preview flag as the employee portal, plus
+              ParRequiresTeamLeadRoute (par-app's own Role.TEAM_LEAD gate on
+              /lead-portal). */}
           {isPreviewEnabled("par") && (
             <Route
               path="people-ops/performance/lead"
@@ -487,6 +530,46 @@ export default function App() {
           {/* Finance perspective — skeleton "coming soon" tile; the actual
               claim apps are the me/claims routes above. */}
           <Route path="finance" element={<PerspectiveLanding />} />
+          {/* Finance → Claim approval. Approving is work you do for other
+              people, so it sits here rather than under Me with the things you
+              do for yourself; submitting and history stay there. Each tab is a
+              real route, gated by its own rule at the route rather than only
+              hidden from the bar. See features/finance/approvals. */}
+          <Route path="finance/claim-approval" element={<ClaimApprovalPage />}>
+            <Route index element={<ClaimApprovalIndex />} />
+            <Route
+              path="needs-you"
+              element={
+                <ClaimApprovalTabRoute gateId="claim-approval">
+                  <NeedsYouTab />
+                </ClaimApprovalTabRoute>
+              }
+            />
+            <Route
+              path="expense"
+              element={
+                <ClaimApprovalTabRoute gateId="claim-approval-expense">
+                  <ExpenseApprovalsTab />
+                </ClaimApprovalTabRoute>
+              }
+            />
+            <Route
+              path="opd"
+              element={
+                <ClaimApprovalTabRoute gateId="claim-approval-opd">
+                  <OpdApprovalsTab />
+                </ClaimApprovalTabRoute>
+              }
+            />
+            <Route
+              path="decided"
+              element={
+                <ClaimApprovalTabRoute gateId="claim-approval">
+                  <DecidedTab />
+                </ClaimApprovalTabRoute>
+              }
+            />
+          </Route>
           {/* Marketing Ops perspective — overview + the Phase 1 Utilities
               screens, ported from the Marketing Ops frontend. The remaining
               operations (Ad Campaigns, Email Workbench, Events, CRM Upload)

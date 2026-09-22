@@ -15,17 +15,17 @@
 // under the License.
 
 /**
- * Claim approval, under the Finance perspective.
+ * Where the OPD Claims app lives under the Finance perspective.
  *
- * Approving is work you do for other people, so it sits here rather than under
- * Me with the things you do for yourself; filing a claim and looking up your
- * own stay there.
+ * Named here rather than written out in the registry and the router
+ * separately: those two disagreeing is a 404 nobody notices until someone
+ * clicks the menu item.
  *
- * One app today, OPD. Expense belongs beside it when it is migrated, which is
- * why this is a path with room under it rather than a single route.
+ * Distinct from the OPD tab under Me → Claims, which is a different screen on
+ * a different route and is left alone.
  */
-export const CLAIM_APPROVAL_PATH = "/finance/claim-approval";
+export const OPD_FINANCE_PATH = "/finance/opd";
 
-export const claimApprovalPaths = {
-  opd: `${CLAIM_APPROVAL_PATH}/opd`,
+export const opdFinancePaths = {
+  history: `${OPD_FINANCE_PATH}/history`,
 } as const;

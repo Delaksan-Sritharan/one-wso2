@@ -20,6 +20,7 @@
 import { csmUrl, isCsmConfigured, isIsacConfigured, isacUrl } from "@config/apiConfig";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import {
+  CheckCheckIcon,
   ClipboardCheckIcon,
   DatabaseIcon,
   HouseIcon,
@@ -27,6 +28,7 @@ import {
   LayoutDashboard,
   MegaphoneIcon,
   NetworkIcon,
+  RefreshCcw,
   SatelliteDishIcon,
   ScaleIcon,
   ShieldIcon,
@@ -40,15 +42,13 @@ import {
   type LucideIcon,
 } from "@wso2/oxygen-ui-icons-react";
 import type { Capability, MenuApp } from "@constants/appMenu";
-import {
-  CLAIM_APPROVAL_APPS,
-  FINANCE_PERSPECTIVE_APPS,
-  ME_FINANCE_APPS,
-} from "@constants/financeApps";
+import { FINANCE_PERSPECTIVE_APPS, ME_FINANCE_APPS } from "@constants/financeApps";
+import { CLAIM_APPROVAL_PATH } from "@features/finance/approvals/claimApprovalTabs";
 import { MARKETING_OPS_APPS } from "@constants/marketingOpsApps";
 import { DUE_DILIGENCE_APPS } from "@constants/dueDiligenceApps";
 import { SECURITY_APPS } from "@constants/securityApps";
 import { ME_APPS } from "@constants/meApps";
+import { ME_PAR_APPS } from "@constants/parApps";
 import { INFRA_APPS } from "@constants/infraApps";
 
 export interface PerspectiveSection {
@@ -139,13 +139,13 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
     icon: TicketIcon,
     path: "/people-ops/subscriptions/manage",
   },
-  // par-app, ported one screen at a time — see docs/ported-apps/par-app.md.
-  // `alwaysGroup` for the same reason Master Data below carries it: a named
-  // group rather than a bare leaf, since more items (F2F scheduling; the
-  // rest of Lead Portal) are still coming. Employee Portal isn't
-  // `requires: ["admin"]` — every employee has their own PAR, same as Org
-  // Chart and Subscriptions above. Spread in rather than filtered out, so
-  // with the flag off the entry does not exist at all.
+  // par-app's Lead Portal — the half of par-app that's about your reports,
+  // not yourself (the employee portal moved to the Me perspective, see
+  // parApps.ts). `alwaysGroup` for the same reason Master Data below
+  // carries it: a named group rather than a bare leaf, since a second child
+  // (Admin Portal, once built — see docs/ported-apps/par-app.md §9) is
+  // still coming. Spread in rather than filtered out, so with the flag off
+  // the entry does not exist at all.
   ...(isPreviewEnabled("par")
     ? [
         {
@@ -154,11 +154,6 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
           icon: ClipboardCheckIcon,
           alwaysGroup: true,
           children: [
-            {
-              id: "par-employee-feedback",
-              label: "Employee Portal",
-              path: "/people-ops/performance",
-            },
             // Note what is NOT here: `requires: ["lead"]`. one-wso2's generic
             // "lead" capability is people-app privilege 993 — unrelated to
             // par-app's own PAR-cycle-scoped isTeamLead, and not guaranteed to
@@ -319,6 +314,12 @@ const ME_SECTIONS: PerspectiveSection[] = [
   },
   ...appsToSections(ME_APPS),
   ...appsToSections(ME_FINANCE_APPS),
+  // par-app's employee portal — see docs/ported-apps/par-app.md.
+  ...(isPreviewEnabled("par") ? appsToSections(ME_PAR_APPS) : []),
+];
+
+const UMT_SECTIONS: PerspectiveSection[] = [
+  { id: "umt-updates", label: "Updates", icon: RefreshCcw, path: "/umt/updates" },
 ];
 
 export interface PerspectiveDef {
@@ -392,9 +393,12 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     path: "/finance",
     forwardsToFirstItem: true,
     sections: [
-      // Deciding on other people's claims comes before the apps that file them:
-      // it is the work finance opens this perspective to do.
-      ...appsToSections(CLAIM_APPROVAL_APPS),
+      {
+        id: "claim-approval",
+        label: "Claim Approval",
+        icon: CheckCheckIcon,
+        path: CLAIM_APPROVAL_PATH,
+      },
       // Credit card lives here rather than under Me because a corporate card is
       // not something everyone has — unlike leave or claims, it is not part of
       // the set every employee needs.
@@ -511,9 +515,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     path: "/me",
     sections: ME_SECTIONS,
   },
-  // UMT currently exposes only its dashboard. An empty section list keeps the
-  // rail at Overview until the update, product, chunk and statistics routes are
-  // actually ported; UmtShell performs the service-owned role check at /umt.
+  // UmtShell performs the service-owned role check for all UMT pages.
   //
   // Held behind a preview flag, whole perspective and all, until it's ready for
   // production — not just `access: false`, because that would still leave a
@@ -530,7 +532,7 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
           externallyGated: true,
           access: true,
           path: "/umt",
-          sections: [],
+          sections: UMT_SECTIONS,
         },
       ]
     : []),
