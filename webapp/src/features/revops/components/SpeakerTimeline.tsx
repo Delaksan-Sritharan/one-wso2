@@ -159,6 +159,17 @@ export default function SpeakerTimeline({
                       cursor: "pointer",
                       bgcolor: hueFor(s.order, theme.palette.mode === "dark"),
                       "&:hover": { filter: "brightness(1.15)" },
+                      // INSET, because the track clips its children (overflow: hidden)
+                      // and a normal outline would be cut off. These segments are
+                      // tabbable and carry an aria-label, so without this a keyboard
+                      // user moves through them with nothing on screen changing.
+                      "&:focus-visible": {
+                        outline: "2px solid",
+                        outlineColor: theme.palette.getContrastText(
+                          hueFor(s.order, theme.palette.mode === "dark"),
+                        ),
+                        outlineOffset: "-2px",
+                      },
                     }}
                   />
                 </Tooltip>

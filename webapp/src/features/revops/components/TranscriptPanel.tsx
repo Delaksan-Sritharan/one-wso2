@@ -111,6 +111,10 @@ export default function TranscriptPanel({
         onChange={(e) => setQuery(e.target.value)}
         sx={{ mb: 1.5 }}
         slotProps={{
+          // A placeholder is not an accessible name: it disappears on focus and is
+          // not reliably announced. The field is labelled by its icon visually, so
+          // the name goes here rather than as a visible <label>.
+          htmlInput: { "aria-label": "Search transcript" },
           input: {
             startAdornment: (
               <InputAdornment position="start">
