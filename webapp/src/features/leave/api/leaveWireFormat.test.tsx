@@ -236,9 +236,15 @@ describe("what a submit invalidates", () => {
       isPublicComment: false,
     });
 
-    await waitFor(() => expect(invalidated.length).toBeGreaterThanOrEqual(2));
+    await waitFor(() => expect(invalidated.length).toBeGreaterThanOrEqual(3));
     expect(invalidated).toContainEqual(["leaves"]);
     expect(invalidated).toContainEqual(["leave-entitlement"]);
+    // THE one that was missing. optionalMails IS the copyEmailList of the
+    // caller's most recent request (backend/utils.bal:648-691), so the submit
+    // just changed it — and ["leave-app-config"] carries a THIRTY-minute
+    // staleTime. Without this, editing who to notify, submitting, and coming
+    // back to the form showed the people from the request before.
+    expect(invalidated).toContainEqual(["leave-app-config"]);
     spy.mockRestore();
   });
 });
