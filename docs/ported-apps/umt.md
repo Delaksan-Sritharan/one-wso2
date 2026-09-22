@@ -1,11 +1,12 @@
 # Updates Manager (UMT) — functional specification
 
 **Status:** written during a staged port, from the source implementation rather than from a prior
-specification. Updated as the port has progressed: Product Management is now routed and implemented
-(§2.3). On the Dashboard, Create and View updates, View pending, and View released still intentionally
-show an unavailable/maintenance notice. Updates (§2.2), Release Chunks, and Statistics are not
-currently routed or implemented; their sections below define the behaviour to preserve when the port
-continues.
+specification. Updated as the port has progressed: Updates (§2.2) and Product Management (§2.3) are
+now routed and implemented. On the Dashboard, View updates and Create are live actions; View pending,
+View released, and the admin-only release-chunk Create still intentionally show an
+unavailable/maintenance notice, since Release Chunks itself is not yet ported. Release Chunks and
+Statistics remain unrouted and unimplemented; their sections below define the behaviour to preserve
+when the port continues.
 
 **Source of truth for behaviour:** the Updates Manager service contract and verified backend
 responses. Backend responses are authoritative where display code and response data disagree.
@@ -53,35 +54,35 @@ The dashboard is a summary and a set of entry points, not a second source of upd
   - Successful: `SUCCESS`.
   - Failed: `FAILURE`, `UNSTABLE`, `ABORTED`, `UNKNOWN`, `NOT_BUILT`, `CANCELLED`, and
     `NO_BUILD_JOB` combined.
-- **View updates**, **View pending**, and **View released** currently show an unavailable notice;
-  they do not navigate to unported routes.
-- **Create** opens the update-creation dialog. Its submission action currently shows the same
-  unavailable notice. Metadata currently populates product and version choices only.
+- **View updates** navigates to `/umt/updates`. **Create** opens the update-creation dialog and
+  submits to the real creation endpoint.
+- **View pending** and **View released**, under Release chunks, still show an unavailable notice;
+  they do not navigate to unported routes. The admin-only release-chunk **Create** shows the same
+  notice.
 
 While statistics are loading, the screen retains its structure and shows progress in place of
 values. A failed statistics request produces a retryable error without hiding the rest of the UMT
 shell.
 
-### 2.2 Updates — future `/umt/updates`
+### 2.2 Updates — `/umt/updates`
 
-**Not yet ported.** The source screen is a server-paged list backed by `POST /update/search`.
+**Ported.** The screen is a server-paged list backed by `POST /update/search`.
 
 The list exposes update identity, case and Jira references, internal issue, products, update type,
 lifecycle state, assignee, estimates, issue type, security data, public issues, pull requests,
 artifacts, release date, and row actions. Selecting an update opens its detail workflow.
 
-Filters are drafted separately and take effect only when applied. The source supports update id,
-ServiceNow case id, Jira id, type, issue type, lifecycle state, lifecycle, product and version,
-internal issues, security advisory, assignee, pull requests, artifacts, public-PR modification date,
-released-without-public-PR, and released date. Clearing filters restores the unfiltered search.
+Filters are drafted separately and take effect only when applied. Update id, ServiceNow case id,
+Jira id, type, issue type, lifecycle state, lifecycle, product and version, internal issues, security
+advisory, assignee, pull requests, artifacts, public-PR modification date,
+released-without-public-PR, and released date are all supported. Clearing filters restores the
+unfiltered search.
 
-The detail routes belong to this feature and must be ported with it:
+`/umt/updates/:id` is the detail route — a single page with View, Branch, Edit, and Lifecycle
+History tabs, rather than separate routes per tab. The last-selected tab is persisted per update id.
 
-- `/umt/updates/:id` — update details, lifecycle work, subscription, and history.
-- `/umt/updates/:id/branch` — branch creation and branch-specific work.
-
-Do not reduce this screen to a client-side table over `GET /update`. Its pagination and filtering
-contract is server-side.
+The screen's pagination and filtering contract is server-side, not a client-side table over
+`GET /update`.
 
 ### 2.3 Product Management — `/umt/products`
 
@@ -183,14 +184,14 @@ All calls use the shared authenticated request layer and the base URL
 | Endpoint | Purpose | Port status |
 |---|---|---|
 | `GET /update/user-info` | Employee record and numeric UMT privileges. | Ported |
-| `GET /meta` | Shared products, versions, issue types, lifecycles, and user emails. | Ported for the Dashboard's presentational Create dialog |
+| `GET /meta` | Shared products, versions, issue types, lifecycles, and user emails. | Ported |
 | `GET /update/stats` | Dashboard update and release-chunk totals. | Ported |
 | `GET /update/platform-stats` | Monthly totals for a platform. | Not yet ported |
 | `GET /update/platform-stats/{breakdown}` | Product-, version-, origin-, lifecycle-, or extended-support-wise monthly totals. | Not yet ported |
-| `POST /update/search` | Paged, filtered update list and duplicate-case lookup. | Not yet ported |
-| `GET /update/{id}` | One update and its current workflow data. | Not yet ported |
-| `POST /update` | Create an update. | UI only; submission not yet ported |
-| `POST /update/{id}/subscribe` / `DELETE /update/{id}/subscribe` | Subscribe to or unsubscribe from an update. | Not yet ported |
+| `POST /update/search` | Paged, filtered update list and duplicate-case lookup. | Ported |
+| `GET /update/{id}` | One update and its current workflow data. | Ported |
+| `POST /update` | Create an update. | Ported |
+| `POST /update/{id}/subscribe` / `DELETE /update/{id}/subscribe` | Subscribe to or unsubscribe from an update. | Ported |
 | `GET /update/releaseChunk` | Pending release chunks. | Not yet ported |
 | `GET /update/releaseChunk?states=released` | Released release chunks. | Not yet ported |
 | `POST /update/releaseChunk` | Create chunks from selected update ids. | Not yet ported |

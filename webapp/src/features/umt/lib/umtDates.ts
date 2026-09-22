@@ -47,7 +47,7 @@ export function formatTimestamp(value?: string | null): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "N/A";
   return date.toLocaleDateString("en-GB", {
-    day: "numeric",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     month: "short",
