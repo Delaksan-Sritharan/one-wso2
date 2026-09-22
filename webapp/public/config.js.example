@@ -35,8 +35,12 @@ window.config = {
   // ONE_WSO2_EMAIL_GROUPS_BACKEND_URL: "<your-email-group-manager-backend-url>",
   // RevOps (auto-recorded meetings) backend — people-ops-suite's meet-app
   // service, reused unchanged. Powers the RevOps app's meeting history.
-  // Optional — when absent RevOps is hidden from the launcher entirely and the
-  // /revops route shows a "not connected" notice.
+  // Optional, and note what "optional" means here: leaving it unset does NOT hide
+  // RevOps. The perspective is registered regardless, so the launcher tile and rail
+  // stay, and /revops renders its own "not connected" notice — that is how an
+  // operator finds out the key is missing, rather than the app looking like the
+  // feature was never built. Visibility is controlled by the preview flag below,
+  // not by this URL.
   // drive-service base URL is NOT needed here: the streaming URL is minted by
   // meet-app-backend and arrives already pointing at drive-service. Nothing in this app
   // constructs it.
@@ -153,5 +157,5 @@ window.config = {
   // Each entry is deleted when its feature ships — a list that only grows
   // stops describing anything.
   //
-  // ONE_WSO2_PREVIEW_FEATURES: { expenseSubmitter: false, umt: false },
+  // ONE_WSO2_PREVIEW_FEATURES: { expenseSubmitter: false, par: false, umt: false, revops: false },
 };
