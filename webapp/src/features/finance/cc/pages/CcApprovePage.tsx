@@ -52,7 +52,7 @@ import { ccHasAccess, type CcTransaction } from "../ccTypes";
 const ALL = "all";
 import { FINANCE_EYEBROW } from "@constants/financeApps";
 
-type ApproveRole = "lead" | "finance";
+export type ApproveRole = "lead" | "finance";
 
 // approve-submissions/index.tsx:192-194 capitalises the role for the heading.
 const ROLE_TITLE: Record<ApproveRole, string> = { lead: "Lead", finance: "Finance" };
@@ -104,18 +104,24 @@ export default function CcApprovePage() {
   );
 }
 
-function ApproveBody({
+export function ApproveBody({
   userInfo,
   isLead,
   isFinance,
   role,
   onPickRole,
+  // The standalone screen picks its role from its own dropdown; the Claim
+  // Approval tab renders the "As lead / As finance" toggle other claim types
+  // use instead, above this component, and passes "none" so the two controls
+  // don't both appear.
+  roleControl = "dropdown",
 }: {
   userInfo: ReturnType<typeof useCcUserInfo>;
   isLead: boolean;
   isFinance: boolean;
   role: ApproveRole | null;
   onPickRole: (r: ApproveRole) => void;
+  roleControl?: "dropdown" | "none";
 }) {
   const txns = useCcTransactions();
   // Only for the reassignment list — the queue itself is not card-scoped here.
@@ -308,7 +314,7 @@ function ApproveBody({
     <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
       {/* index.tsx:198-210 — offered only to someone who holds both roles;
           everyone else has one mode and the heading already names it. */}
-      {isLead && isFinance && role && (
+      {roleControl === "dropdown" && isLead && isFinance && role && (
         <Box sx={{ width: 220, mb: 2, alignSelf: "flex-end" }}>
           <TextField
             select

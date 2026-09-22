@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   Autocomplete,
@@ -31,7 +31,8 @@ import {
 import { useDebouncedValue } from "@hooks/useDebouncedValue";
 import { describeError } from "../../util/financeError";
 import { useExpenseAppData, useExpenseClaims, useExpenseEmployees } from "../useExpense";
-import { ExpenseClaimDetailsDialog } from "../ExpenseClaimDetailsDialog";
+import { ExpenseApprovalReview } from "../approvals/ExpenseApprovalReview";
+import { makeNameResolver } from "../approvals/expenseApprovalTypes";
 import { ClaimsTable } from "./ExpenseHistoryPage";
 import {
   FINANCE_TABS,
@@ -118,6 +119,9 @@ function ApprovalsBody({ view }: { view: ApproverView }) {
   const claimIdFilter = useDebouncedValue(claimId.trim());
   const [employee, setEmployee] = useState<string | null>(null);
   const employees = useExpenseEmployees(Boolean(allowed));
+  // For the review screen's name display — falls back to the bare email
+  // until this arrives, same as the standalone Approvals screen does.
+  const nameFor = useMemo(() => makeNameResolver(employees.data), [employees.data]);
 
   const claims = useExpenseClaims(
     {
@@ -146,6 +150,23 @@ function ApprovalsBody({ view }: { view: ApproverView }) {
   }
 
   const isPendingTab = activeTab.key === "pending";
+
+  // Same review screen the standalone Lead/Finance Approvals uses, taking
+  // over this tab the same way it takes over that screen — the app's own
+  // decision, its own amounts-in-full, not a shrunk-down copy in a dialog.
+  if (selected) {
+    return (
+      <ExpenseApprovalReview
+        claim={selected}
+        stage={view}
+        pending={isPendingTab}
+        nameFor={nameFor}
+        viewerEmail={email}
+        onBack={() => setSelected(null)}
+        onDecided={() => {}}
+      />
+    );
+  }
 
   return (
     <Box>
@@ -198,8 +219,6 @@ function ApprovalsBody({ view }: { view: ApproverView }) {
           actionVariant={isPendingTab ? "contained" : "outlined"}
         />
       )}
-
-      <ExpenseClaimDetailsDialog claim={selected} onClose={() => setSelected(null)} review={isPendingTab ? view : undefined} />
     </Box>
   );
 }

@@ -40,10 +40,17 @@ export function OpdHistoryClaimDetails({
   claim,
   onBack,
   onShowActivity,
+  onResubmit,
 }: {
   claim: OpdClaim;
   onBack: () => void;
   onShowActivity: () => void;
+  /**
+   * Offered on the employee's own rejected claim — ClaimDetails.tsx:101-114.
+   * Absent on the Finance-perspective read of someone's history, which never
+   * resubmits somebody else's claim.
+   */
+  onResubmit?: (claim: OpdClaim) => void;
 }) {
   const getAccessToken = useAccessToken();
   const { showError } = useNotifications();
@@ -78,6 +85,18 @@ export function OpdHistoryClaimDetails({
           {claim.id}
         </Typography>
         <Box sx={{ flex: 1 }} />
+        {/* :101-114 — only a rejected claim can be taken up again. */}
+        {onResubmit && claim.statusDetails.status === "REJECTED" && (
+          <Button
+            size="small"
+            variant="contained"
+            color="warning"
+            onClick={() => onResubmit(claim)}
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
+            Resubmit as New Claim
+          </Button>
+        )}
         <Button size="small" onClick={onShowActivity} sx={{ textTransform: "none" }}>
           Claim activity
         </Button>

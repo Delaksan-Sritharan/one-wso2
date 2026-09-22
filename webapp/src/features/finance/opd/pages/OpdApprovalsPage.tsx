@@ -37,7 +37,7 @@ import { isOpdBackendConfigured } from "@config/apiConfig";
 import { describeError } from "../../util/financeError";
 import { money, formatNice } from "../../util/financeFormat";
 import { useOpdClaims, useOpdEmployees, useOpdUserInfo } from "../useOpd";
-import { OpdClaimDetailsDialog } from "../OpdClaimDetailsDialog";
+import { OpdApprovalReview } from "../approvals/OpdApprovalReview";
 import { OPD_ROLE, opdHasRole, opdStatusFilter, type OpdClaim, type OpdClaimStatus } from "../opdTypes";
 import { withLoadingAdornment } from "@components/picker-loading/pickerLoading";
 
@@ -100,6 +100,20 @@ function ApprovalsBody() {
   }
   if (!isFinance) {
     return <Alert severity="info">OPD approvals are limited to finance approvers.</Alert>;
+  }
+
+  // Same review screen Claim Approval's OPD tabs use, taking over this tab
+  // the same way it takes over those — the app's own decision, not a
+  // shrunk-down copy in a dialog.
+  if (selected) {
+    return (
+      <OpdApprovalReview
+        claim={selected}
+        pending={tab === "pending"}
+        onBack={() => setSelected(null)}
+        onDecided={() => {}}
+      />
+    );
   }
 
   return (
@@ -176,8 +190,6 @@ function ApprovalsBody() {
           </Table>
         </Box>
       )}
-
-      <OpdClaimDetailsDialog claim={selected} onClose={() => setSelected(null)} review={tab === "pending"} />
     </Box>
   );
 }

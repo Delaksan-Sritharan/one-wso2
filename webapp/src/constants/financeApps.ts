@@ -27,7 +27,12 @@
 // Each app's own backend still enforces its real role scheme; these
 // capability gates just decide what shows in the rail.
 
-import { CreditCardIcon, ReceiptTextIcon, StethoscopeIcon } from "@wso2/oxygen-ui-icons-react";
+import {
+  CreditCardIcon,
+  LayoutDashboardIcon,
+  ReceiptTextIcon,
+  StethoscopeIcon,
+} from "@wso2/oxygen-ui-icons-react";
 import { CC_PATH } from "@features/finance/cc/ccPaths";
 import { expenseFinancePaths } from "@features/finance/expense/expenseFinancePaths";
 import { opdFinancePaths } from "@features/finance/opd/opdFinancePaths";
@@ -66,6 +71,63 @@ export const ME_FINANCE_APPS: readonly MenuApp[] = [
  * something everyone has, so the app is not part of the set every employee
  * needs; it sits with the other finance operations instead.
  */
+/**
+ * Overview — under **Finance**, above the apps.
+ *
+ * Reading how money is being spent is a different job from spending it. These
+ * screens report across everyone rather than showing you your own work, and the
+ * people who read them are finance. Kept inside the app it reports on, a
+ * dashboard sits behind a group you open to file or reconcile something, which
+ * is not what you came for when you wanted the numbers.
+ *
+ * Two entries today — Credit Card Expenses and OPD Claims. The expense
+ * dashboard belongs here too when somebody moves it. Held back as a whole
+ * behind its own preview flag: this is new ground and has not run against a
+ * real account yet.
+ */
+export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = isPreviewEnabled("financeOverview")
+  ? [
+      {
+        key: "finance-overview",
+        name: "Overview",
+        icon: LayoutDashboardIcon,
+        purpose: "How the company's card spend and claim allowances are being used.",
+        // Two items today and it will not stay that way; collapsing to a leaf
+        // now would teach the wrong shape and make the entry vanish as a
+        // concept the day a third one lands.
+        alwaysGroup: true,
+        items: [
+          {
+            // The id is unchanged, so `useFinanceGate`, the rail's active-item
+            // matching and anyone's saved favourite all keep working. Only where
+            // it is listed has moved; the route is the same screen it always was.
+            id: "cc-dashboard",
+            label: "Credit Card Expenses",
+            desc: "Unsubmitted spend, how long it has been sitting, and what has been claimed.",
+            // Not a coarse capability: forces useFinanceGate to answer for the
+            // id — see its `cc-dashboard` case — so the group's own flag is
+            // enforced even if something one day asks the gate by hand,
+            // bypassing this registry entry the way the Finance overview
+            // pattern already does for other items.
+            requires: ["employee"],
+            path: `${CC_PATH}/dashboard`,
+          },
+          {
+            id: "opd-dashboard",
+            label: "OPD Claims",
+            desc: "Claims processed and pending, and how much of each employee's OPD limit is used.",
+            // Not a coarse capability: the OPD backend decides this, and the
+            // source puts the screen behind its finance view. `requires` only
+            // forces useFinanceGate to answer for the id — see its
+            // `opd-dashboard` case.
+            requires: ["admin"],
+            path: opdFinancePaths.dashboard,
+          },
+        ],
+      },
+    ]
+  : [];
+
 export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
   // Held back as a whole: New Claim, Claim History and both Approvals stages
   // all disappear together, not one route at a time.
@@ -148,7 +210,6 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
     icon: CreditCardIcon,
     purpose: "Reconcile and submit corporate credit-card transactions for approval.",
     items: [
-      { id: "cc-dashboard", label: "Dashboard", desc: "Unsubmitted spend, how long it has been sitting, and what has been claimed.", path: `${CC_PATH}/dashboard` },
       { id: "cc-new", label: "Pending Submissions", desc: "Unsubmitted card transactions to categorise and submit.", path: `${CC_PATH}/new` },
       { id: "cc-pending", label: "Pending Approvals", desc: "Submissions awaiting approval.", path: `${CC_PATH}/pending` },
       { id: "cc-approve", label: "Approve Submissions", desc: "Review and approve your team's submitted card transactions.", requires: ["lead", "admin"], path: `${CC_PATH}/approve` },
@@ -161,6 +222,7 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
 /** Every finance-domain app, wherever it is surfaced. */
 export const FINANCE_APPS: readonly MenuApp[] = [
   ...ME_FINANCE_APPS,
+  ...FINANCE_OVERVIEW_APPS,
   ...FINANCE_PERSPECTIVE_APPS,
 ];
 
@@ -194,7 +256,7 @@ export const FINANCE_EYEBROW = {
   // now, and their own titles say which type is being filed.
   claims: eyebrowFor("claims"),
   cc: eyebrowFor("cc"),
-  // Literal rather than eyebrowFor(...): this app sits behind a preview
+  // Literals rather than eyebrowFor(...): both apps sit behind a preview
   // flag, and with it off the lookup would fall back to the generic
   // "Finance" chip — wrong for a route still reachable directly by URL.
   expense: { icon: ReceiptTextIcon, label: "Expense Claims" },
