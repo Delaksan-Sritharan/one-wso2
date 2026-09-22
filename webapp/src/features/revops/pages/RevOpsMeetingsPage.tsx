@@ -27,7 +27,6 @@ import { isRevOpsBackendConfigured, useRevOpsRegions, useMeetings } from "../api
 import { useRevOpsGate } from "../api/useRevOpsGate";
 import { useCancelMeeting } from "../api/useRevOpsMutations";
 import { describeError, isForbidden } from "../util/revOpsError";
-import { endOfDayIso, toDateInputValue } from "../util/revOpsTime";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -57,13 +56,11 @@ export default function RevOpsMeetingsPage() {
   const regionsQuery = useRevOpsRegions();
   const cancelMeeting = useCancelMeeting();
 
-  // "Past" means "ended by the end of today". Computed once per scope change
-  // rather than per render, so a component that re-renders at midnight doesn't
-  // change the query key and refetch for no reason.
-  const endTime = useMemo(
-    () => (scope === "past" ? endOfDayIso(toDateInputValue(new Date())) : null),
-    [scope],
-  );
+  // "Past" means "already ended", so the cutoff is now rather than the end of
+  // today -- end-of-day listed a meeting that starts at 5pm as past all morning.
+  // Still computed once per scope change rather than per render, so the query key
+  // is stable and a re-render does not refetch.
+  const endTime = useMemo(() => (scope === "past" ? new Date().toISOString() : null), [scope]);
 
   const meetingsQuery = useMeetings({ search, region, endTime, page, pageSize });
 
