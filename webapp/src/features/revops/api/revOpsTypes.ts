@@ -132,7 +132,28 @@ export function parseOpportunityDetails(
   try {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
-    return parsed as OpportunityDetails;
+
+    // Narrowed rather than cast. This JSON is a Salesforce snapshot the add-on wrote
+    // into a text column -- nothing between there and here checks its shape, so
+    // `as OpportunityDetails` was a promise this function could not keep. It matters
+    // for `amount` in particular: MeetingDetailPage calls `.toLocaleString()` on it,
+    // so a string where a number was assumed takes the whole page down rather than
+    // rendering one field oddly. Fields failing their check are dropped, which the UI
+    // already handles -- every one is optional and renders as an em dash.
+    const o = parsed as Record<string, unknown>;
+    const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+    return {
+      customerId: str(o.customerId),
+      customerName: str(o.customerName),
+      stage: str(o.stage),
+      recordType:
+        typeof o.recordType === "string" || o.recordType === null ? o.recordType : undefined,
+      amount: typeof o.amount === "number" && Number.isFinite(o.amount) ? o.amount : undefined,
+      currency: str(o.currency),
+      closeDate: str(o.closeDate),
+      createdDate: str(o.createdDate),
+      isClosed: typeof o.isClosed === "boolean" ? o.isClosed : undefined,
+    };
   } catch {
     return null;
   }
