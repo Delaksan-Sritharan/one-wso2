@@ -60,6 +60,11 @@ declare global {
       // absent, the Performance & growth review row falls back to a
       // "not configured" state.
       ONE_WSO2_PAR_BACKEND_URL?: string;
+      // OAuth client ID for the Lead Portal's "attach from Google Drive"
+      // evidence picker (scope: drive.readonly). Optional — when absent,
+      // the picker button still renders but the token request fails, same
+      // as par-app's own GOOGLE_OAUTH_CLIENT_ID behavior.
+      ONE_WSO2_PAR_GOOGLE_OAUTH_CLIENT_ID?: string;
       // Base URL for the digiops-hr banking-app backend. Optional — when
       // absent, the Bank accounts card in Connected apps shows a
       // "not configured" state.

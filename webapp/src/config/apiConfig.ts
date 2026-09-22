@@ -152,6 +152,12 @@ export const bankingServiceUrls = {
 export const parBackendUrl: string =
   window.config?.ONE_WSO2_PAR_BACKEND_URL ?? "";
 
+// The Lead Portal's evidence-attachment picker (ParLeadReviewPanel.tsx) is
+// the only caller — a plain OAuth client ID, not a backend URL, so it lives
+// here rather than in parServiceUrls.
+export const googleOAuthClientId: string =
+  window.config?.ONE_WSO2_PAR_GOOGLE_OAUTH_CLIENT_ID ?? "";
+
 export const parServiceUrls = {
   // GET /employees/{workEmail} — par-app's OWN employee record, distinct
   // from people-app's. Carries `leadEmail: string?` — the exact field

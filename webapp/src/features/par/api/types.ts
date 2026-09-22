@@ -124,6 +124,10 @@ export interface ParRating {
   // Admin-only note, distinct from parLeadComment. Stripped from every
   // non-admin response.
   parAdminComment?: string;
+  // Lead-only evidence for a "Needs Improvement" rating — newline-delimited
+  // Google Drive file URLs, not an array on the wire. See
+  // util/parDriveFile.ts's parseSavedUrls.
+  parPerformanceNoticeAck?: string;
 }
 
 // ---- 360° feedback ----------------------------------------------------------
@@ -215,6 +219,8 @@ export interface ParRatingModify {
   // Admin-only — both checkForModifiableFieldsForLead and -ForSelf reject a
   // non-empty value here, so only an admin caller may actually set it.
   parAdminComment?: string;
+  // Lead-only, per the denylist comment above.
+  parPerformanceNoticeAck?: string;
 }
 
 // ---- Lead Portal ---------------------------------------------------------
