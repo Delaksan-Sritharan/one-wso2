@@ -52,6 +52,7 @@ const ParLeadReportChainTab = lazy(() => import("@features/par/pages/ParLeadRepo
 const ParLeadEmployeeHistoryTab = lazy(() => import("@features/par/pages/ParLeadEmployeeHistoryTab"));
 const ParLeadAllocationTab = lazy(() => import("@features/par/pages/ParLeadAllocationTab"));
 const ParAdminOngoingTab = lazy(() => import("@features/par/pages/ParAdminOngoingTab"));
+const ParAdminHistoryTab = lazy(() => import("@features/par/pages/ParAdminHistoryTab"));
 import EmailGroupsPage from "@features/my/email-groups/pages/EmailGroupsPage";
 import EmailSignaturePage from "@features/my/email-signature/pages/EmailSignaturePage";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
@@ -541,11 +542,9 @@ export default function App() {
               />
             </Route>
           )}
-          {/* People Ops → PAR → Admin Portal, ported one tab at a time —
-              only Ongoing so far, History is the explicit follow-up
-              (docs/ported-apps/par-app.md). ParRequiresAdminRoute checks the
-              Asgardeo groups claim client-side rather than a backend field,
-              since par-app's backend never exposes an isAdmin flag. */}
+          {/* People Ops → PAR → Admin Portal. ParRequiresAdminRoute checks
+              the Asgardeo groups claim client-side rather than a backend
+              field, since par-app's backend never exposes an isAdmin flag. */}
           {isPreviewEnabled("par") && (
             <Route
               path="people-ops/performance/admin"
@@ -561,6 +560,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
                     <ParAdminOngoingTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="history"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParAdminHistoryTab />
                   </Suspense>
                 }
               />

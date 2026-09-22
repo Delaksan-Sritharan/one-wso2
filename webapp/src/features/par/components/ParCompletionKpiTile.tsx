@@ -57,7 +57,12 @@ export default function ParCompletionKpiTile({
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 1 }}>
-          <Typography variant="h4" fontWeight={700} lineHeight={1.1} color={severity === "success" ? undefined : color}>
+          {/* Severity lives in the icon badge and the bar below, the same
+              restrained places the rest of the app puts it (small chips,
+              icon avatars, a colored bar) — never a whole stat number in
+              solid error/warning color, which read as much louder than any
+              other severity indicator in this app. */}
+          <Typography variant="h4" fontWeight={700} lineHeight={1.1}>
             {Math.round(percent)}%
           </Typography>
           <Typography variant="caption" color="text.secondary">

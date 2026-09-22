@@ -22,8 +22,10 @@ import ErrorNotice from "@components/error-notice/ErrorNotice";
 import ParShell from "../components/ParShell";
 import { useParIsAdmin } from "../api/useParIsAdmin";
 
-// Only Ongoing has a route so far — History is a follow-up.
-const TABS: RoutedTabDef[] = [{ segment: "ongoing", label: "Ongoing" }];
+const TABS: RoutedTabDef[] = [
+  { segment: "ongoing", label: "Ongoing" },
+  { segment: "history", label: "History" },
+];
 
 export default function ParAdminGroupPage() {
   return (

@@ -15,7 +15,7 @@
 // under the License.
 
 import { useState } from "react";
-import { Box, Button, Card, Dialog, DialogContent, DialogTitle, Divider, Grid, IconButton, Skeleton, Stack, Tab, Tabs, Tooltip, Typography } from "@wso2/oxygen-ui";
+import { Box, Button, Card, Dialog, DialogContent, DialogTitle, Divider, Grid, IconButton, Link, Skeleton, Stack, Tab, Tabs, Tooltip, Typography } from "@wso2/oxygen-ui";
 import {
   CalendarIcon,
   ClipboardCheckIcon,
@@ -56,12 +56,20 @@ import ParSyncEmployeeDialog from "./ParSyncEmployeeDialog";
 import ParViewReportsDialog from "./ParViewReportsDialog";
 import type { ParCycle, ParTeamSummary } from "../api/types";
 
-// The Admin Portal's main dashboard for an OPEN cycle. Fetches its own
+// The Admin Portal's main dashboard, for both an OPEN cycle (Ongoing tab)
+// and a CLOSED one (History tab, via `historyMode`). Fetches its own
 // org-wide teams data for the Completion Status cards — the Team View/
 // Employee View/Rejected Reviews/Quota Allocations tabs each fetch their
-// own row data. Not ported: the separate "History" browsing mode — out of
-// scope for the Ongoing tab.
-export default function ParOrgSummary({ cycle }: { cycle: ParCycle }) {
+// own row data.
+export default function ParOrgSummary({
+  cycle,
+  historyMode = false,
+  onBack,
+}: {
+  cycle: ParCycle;
+  historyMode?: boolean;
+  onBack?: () => void;
+}) {
   const teams = useParAdminTeams(cycle.parCycleId);
   const closeCycle = useSetParCycleStatus(cycle.parCycleId);
   const { showSuccess, showError } = useNotifications();
@@ -126,6 +134,16 @@ export default function ParOrgSummary({ cycle }: { cycle: ParCycle }) {
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
         <Box>
+          {historyMode && (
+            <>
+              <Link component="button" underline="hover" onClick={onBack} sx={{ mr: 0.5 }}>
+                History
+              </Link>
+              <Typography component="span" sx={{ mx: 0.5 }}>
+                /
+              </Typography>
+            </>
+          )}
           <Typography variant="h5" component="span">
             {cycle.parCycleName}{" "}
           </Typography>
@@ -137,37 +155,42 @@ export default function ParOrgSummary({ cycle }: { cycle: ParCycle }) {
           <Button variant="outlined" size="small" startIcon={<FileTextIcon size={16} />} onClick={() => setViewReportsOpen(true)}>
             View Reports
           </Button>
-          <Button variant="outlined" size="small" startIcon={<SendIcon size={16} />} onClick={() => setBulkReminderOpen(true)}>
-            Bulk Reminders
-          </Button>
-          <Tooltip title="Sync an Employee" arrow>
-            <IconButton size="small" onClick={() => setSyncEmployeeOpen(true)} aria-label="sync an employee">
-              <RefreshCwIcon size={17} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Open Cycle Dates" arrow>
-            <IconButton size="small" onClick={() => setCycleDatesOpen(true)} aria-label="cycle dates">
-              <CalendarIcon size={17} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="PAR Cycle Settings" arrow>
-            <IconButton size="small" onClick={() => setSettingsOpen(true)} aria-label="cycle settings">
-              <SettingsIcon size={17} />
-            </IconButton>
-          </Tooltip>
-          {/* Separated from the routine actions above rather than styled as
-              just another button in the row — the one action here that
-              can't be undone shouldn't be a misclick away from "View Reports". */}
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-          <Button
-            variant="text"
-            size="small"
-            color="error"
-            startIcon={<XCircleIcon size={16} />}
-            onClick={handleCloseCycle}
-          >
-            Close Cycle
-          </Button>
+          {!historyMode && (
+            <>
+              <Button variant="outlined" size="small" startIcon={<SendIcon size={16} />} onClick={() => setBulkReminderOpen(true)}>
+                Bulk Reminders
+              </Button>
+              <Tooltip title="Sync an Employee" arrow>
+                <IconButton size="small" onClick={() => setSyncEmployeeOpen(true)} aria-label="sync an employee">
+                  <RefreshCwIcon size={17} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Open Cycle Dates" arrow>
+                <IconButton size="small" onClick={() => setCycleDatesOpen(true)} aria-label="cycle dates">
+                  <CalendarIcon size={17} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="PAR Cycle Settings" arrow>
+                <IconButton size="small" onClick={() => setSettingsOpen(true)} aria-label="cycle settings">
+                  <SettingsIcon size={17} />
+                </IconButton>
+              </Tooltip>
+              {/* Separated from the routine actions above rather than styled
+                  as just another button in the row — the one action here
+                  that can't be undone shouldn't be a misclick away from
+                  "View Reports". */}
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+              <Button
+                variant="text"
+                size="small"
+                color="error"
+                startIcon={<XCircleIcon size={16} />}
+                onClick={handleCloseCycle}
+              >
+                Close Cycle
+              </Button>
+            </>
+          )}
         </Stack>
       </Stack>
 
