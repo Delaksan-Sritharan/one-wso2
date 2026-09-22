@@ -111,6 +111,20 @@ const RecordingPlayer = forwardRef<RecordingPlayerHandle, {
       },
       { once: true },
     );
+    // Clear the latch only once the replacement is genuinely playing. The rule is
+    // "two CONSECUTIVE failures means it is not expiry", but the latch was only ever
+    // reset by the Try again button, so it meant "two failures ever" -- a token lasts
+    // six hours and a long review session outlives one, and the second expiry would
+    // have shown the error banner instead of blinking through it. Waiting for
+    // "playing" rather than "loadedmetadata" is what keeps the once-only guarantee:
+    // a replacement URL that fails before it plays leaves the latch set.
+    videoRef.current.addEventListener(
+      "playing",
+      () => {
+        retriedRef.current = false;
+      },
+      { once: true },
+    );
   }, [refetch]);
 
   // 404 is not a failure worth an error banner: it means either this deployment has no
