@@ -165,6 +165,9 @@ export default function App() {
               <Route path="umt/updates/:id" element={<UmtUpdateView />} />
             </>
           )}
+          {isPreviewEnabled("infra") && (
+            <Route path="infra" element={<InfraHomePage />} />
+          )}
           {/* My Team — placeholder for now; the real subordinates view is on
               hold this iteration (mirrors people-app's lead-only nav item). */}
           {/* My Team — a lead's reporting chain, ported from people-app. The
@@ -707,7 +710,6 @@ export default function App() {
               its own menu item rather than a tab — it shares no data or
               backend with Email Groups. Pure client-side HTML generator. */}
           <Route path="me/email-signature" element={<EmailSignaturePage />} />
-          <Route path="infra" element={<InfraHomePage />} />
           {/* Catch-all → landing */}
           <Route path="*" element={<Navigate to={landingPath()} replace />} />
         </Route>

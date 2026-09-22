@@ -89,7 +89,12 @@ export type PreviewFeature =
    * route inside it. `useUmtGate`'s own role check against the UMT backend is
    * unrelated and keeps working the same regardless of this flag.
    */
-  | "umt";
+  | "umt"
+  /**
+   * The whole Infra Portal perspective. Still being ported, so the waffle
+   * tile, landing option, and `/infra` route stay hidden until this is on.
+   */
+  | "infra";
 
 /**
  * Whether a preview feature should be shown.

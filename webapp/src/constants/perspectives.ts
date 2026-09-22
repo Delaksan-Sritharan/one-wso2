@@ -437,15 +437,22 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     access: isCsmConfigured(),
     externalUrl: csmUrl || undefined,
   },
-  {
-    key: "infra",
-    label: "Infra Portal",
-    icon: ServerIcon,
-    access: true,
-    path: "/infra",
-    externallyGated: true,
-    sections: appsToSections(INFRA_APPS),
-  },
+  // Held behind a preview flag, whole perspective and all, until it's ready
+  // for production. With the flag off the entry does not exist, so the waffle,
+  // landing options, and favourites stay clean. Same shape as UMT above.
+  ...(isPreviewEnabled("infra")
+  ? [
+      {
+        key: "infra",
+        label: "Infra Portal",
+        icon: ServerIcon,
+        access: true,
+        path: "/infra",
+        externallyGated: true,
+        sections: appsToSections(INFRA_APPS),
+      },
+    ]
+  : []),
   // Marketing Ops — UNLOCKED. Ported so far: Utilities (UTM + Asset Name
   // generators and their Marketing Admin panels) and Ad Campaigns → Analytics.
   // Still in Marketing Ops itself: Email Workbench, Events, CRM Upload — those
