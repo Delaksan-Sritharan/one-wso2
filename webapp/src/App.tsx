@@ -105,6 +105,7 @@ import ClaimsPage, { ClaimsIndex } from "@features/finance/claims/ClaimsPage";
 import OpdNewClaimPage from "@features/finance/opd/pages/OpdNewClaimPage";
 // OPD Claims as its own Finance app — a different screen on a different route
 // from the OPD tab under Me → Claims above, which is left alone.
+import OpdDashboardScreen from "@features/finance/opd/dashboard/OpdDashboardScreen";
 import OpdClaimHistoryScreen from "@features/finance/opd/history/OpdClaimHistoryScreen";
 import OpdClaimsTab from "@features/finance/opd/pages/OpdHistoryPage";
 import OpdApprovalsTab from "@features/finance/opd/pages/OpdApprovalsPage";
@@ -329,6 +330,12 @@ export default function App() {
           <Route path="finance/cc/approve" element={<CcApprovePage />} />
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
+          {/* Behind the same preview flag as its menu entry under Overview.
+              Hiding only the entry would leave the page reachable by anyone
+              with the URL. */}
+          {isPreviewEnabled("financeOverview") && (
+            <Route path="finance/opd/dashboard" element={<OpdDashboardScreen />} />
+          )}
           <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported

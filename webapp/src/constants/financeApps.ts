@@ -27,7 +27,12 @@
 // Each app's own backend still enforces its real role scheme; these
 // capability gates just decide what shows in the rail.
 
-import { CreditCardIcon, ReceiptTextIcon, StethoscopeIcon } from "@wso2/oxygen-ui-icons-react";
+import {
+  CreditCardIcon,
+  LayoutDashboardIcon,
+  ReceiptTextIcon,
+  StethoscopeIcon,
+} from "@wso2/oxygen-ui-icons-react";
 import { CC_PATH } from "@features/finance/cc/ccPaths";
 import { expenseFinancePaths } from "@features/finance/expense/expenseFinancePaths";
 import { opdFinancePaths } from "@features/finance/opd/opdFinancePaths";
@@ -66,6 +71,46 @@ export const ME_FINANCE_APPS: readonly MenuApp[] = [
  * something everyone has, so the app is not part of the set every employee
  * needs; it sits with the other finance operations instead.
  */
+/**
+ * Overview — under **Finance**, above the apps.
+ *
+ * Reading how the company is spending is a different job from filing or
+ * approving a claim: it is every employee's numbers rather than your own, and
+ * the people who do it are finance rather than the person who filed. So the
+ * dashboards live together here rather than one inside each claim app, where
+ * they would sit behind a group you open to file something.
+ *
+ * One entry today. The credit-card and expense dashboards belong here too when
+ * somebody moves them. Held back as a whole behind its own preview flag: this
+ * is new ground and has not run against a real account yet.
+ */
+export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = isPreviewEnabled("financeOverview")
+  ? [
+      {
+        key: "finance-overview",
+        name: "Overview",
+        icon: LayoutDashboardIcon,
+        purpose: "How the company's claim allowances are being used.",
+        // One item today and it will not stay that way; collapsing to a leaf now
+        // would teach the wrong shape.
+        alwaysGroup: true,
+        items: [
+          {
+            id: "opd-dashboard",
+            label: "OPD Claims",
+            desc: "Claims processed and pending, and how much of each employee's OPD limit is used.",
+            // Not a coarse capability: the OPD backend decides this, and the
+            // source puts the screen behind its finance view. `requires` only
+            // forces useFinanceGate to answer for the id — see its
+            // `opd-dashboard` case.
+            requires: ["admin"],
+            path: opdFinancePaths.dashboard,
+          },
+        ],
+      },
+    ]
+  : [];
+
 export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
   // Held back as a whole: New Claim, Claim History and both Approvals stages
   // all disappear together, not one route at a time.
@@ -161,6 +206,7 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
 /** Every finance-domain app, wherever it is surfaced. */
 export const FINANCE_APPS: readonly MenuApp[] = [
   ...ME_FINANCE_APPS,
+  ...FINANCE_OVERVIEW_APPS,
   ...FINANCE_PERSPECTIVE_APPS,
 ];
 
@@ -194,7 +240,7 @@ export const FINANCE_EYEBROW = {
   // now, and their own titles say which type is being filed.
   claims: eyebrowFor("claims"),
   cc: eyebrowFor("cc"),
-  // Literal rather than eyebrowFor(...): this app sits behind a preview
+  // Literals rather than eyebrowFor(...): both apps sit behind a preview
   // flag, and with it off the lookup would fall back to the generic
   // "Finance" chip — wrong for a route still reachable directly by URL.
   expense: { icon: ReceiptTextIcon, label: "Expense Claims" },

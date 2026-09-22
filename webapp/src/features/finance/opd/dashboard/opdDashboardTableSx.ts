@@ -15,18 +15,22 @@
 // under the License.
 
 /**
- * Where the OPD Claims app lives under the Finance perspective.
+ * The two table styles both dashboard tables share.
  *
- * Named here rather than written out in the registry and the router
- * separately: those two disagreeing is a 404 nobody notices until someone
- * clicks the menu item.
- *
- * Distinct from the OPD tab under Me → Claims, which is a different screen on
- * a different route and is left alone.
+ * Their own module rather than exports from a component file: mixing constants
+ * in with components turns off React fast refresh for that file, so an edit
+ * reloads the page instead of the component.
  */
-export const OPD_FINANCE_PATH = "/finance/opd";
-
-export const opdFinancePaths = {
-  dashboard: `${OPD_FINANCE_PATH}/dashboard`,
-  history: `${OPD_FINANCE_PATH}/history`,
+export const HEAD_SX = {
+  "& th": {
+    fontSize: 11,
+    fontWeight: 700,
+    color: "text.secondary",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    border: 0,
+  },
 } as const;
+
+/** `border: 0` — the source's dashboard tables draw no row rules. */
+export const CELL_SX = { fontSize: 13, color: "text.secondary", border: 0 } as const;

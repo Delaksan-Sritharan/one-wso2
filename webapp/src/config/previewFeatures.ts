@@ -75,6 +75,13 @@ export type PreviewFeature =
    */
   | "expenseClaims"
   /**
+   * Finance → Overview, the new dashboards section above the claim apps.
+   * Held back as a whole: it is new ground (an OPD Claims dashboard, with
+   * Credit Card Expenses and expense dashboards to follow), and it has not
+   * run against a real account yet.
+   */
+  | "financeOverview"
+  /**
    * People Ops → Performance, par-app's Employee Portal ported in #61. Held back until
    * the Lead Portal, Admin Portal, Report Chain and F2F follow it over — see
    * docs/ported-apps/par-app.md §7.

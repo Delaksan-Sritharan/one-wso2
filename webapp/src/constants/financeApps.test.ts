@@ -26,7 +26,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 type FinanceApps = typeof import("./financeApps");
 
 async function load(
-  preview: { expenseSubmitter?: boolean; opdClaims?: boolean; expenseClaims?: boolean } = {},
+  preview: {
+    expenseSubmitter?: boolean;
+    opdClaims?: boolean;
+    expenseClaims?: boolean;
+    financeOverview?: boolean;
+  } = {},
 ): Promise<FinanceApps> {
   vi.resetModules();
   window.config = {
@@ -62,12 +67,17 @@ describe("where each finance app lives", () => {
   // keeps its own registry key, distinct from "claims", which is what the other
   // invariants below actually depend on.
   it("keeps claims with the person, and both the card and expense claims with finance", async () => {
-    const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load({
+    const { ME_FINANCE_APPS, FINANCE_OVERVIEW_APPS, FINANCE_PERSPECTIVE_APPS } = await load({
       opdClaims: true,
       expenseClaims: true,
+      financeOverview: true,
     });
     expect(keys(ME_FINANCE_APPS)).toEqual(["claims"]);
     expect(keys(FINANCE_PERSPECTIVE_APPS)).toEqual(["expense", "opd", "cc"]);
+    // Reading how the allowance is spent is a different job from filing or
+    // approving a claim, so the dashboards sit in their own section above the
+    // apps rather than one inside each of them.
+    expect(keys(FINANCE_OVERVIEW_APPS)).toEqual(["finance-overview"]);
   });
 
   // The flag gates the New Claim ITEM, not the whole app. New Claim duplicates
@@ -115,16 +125,18 @@ describe("where each finance app lives", () => {
 
   it("puts every app KEY in exactly one of the two", async () => {
     for (const preview of [{}, { expenseSubmitter: true }]) {
-      const { FINANCE_APPS, ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load({
-        ...preview,
-        opdClaims: true,
-        expenseClaims: true,
-      });
-      const overlap = keys(ME_FINANCE_APPS).filter((k) =>
-        keys(FINANCE_PERSPECTIVE_APPS).includes(k),
-      );
+      const { FINANCE_APPS, ME_FINANCE_APPS, FINANCE_OVERVIEW_APPS, FINANCE_PERSPECTIVE_APPS } =
+        await load({ ...preview, opdClaims: true, expenseClaims: true, financeOverview: true });
+      const financeSide = [...keys(FINANCE_OVERVIEW_APPS), ...keys(FINANCE_PERSPECTIVE_APPS)];
+      const overlap = keys(ME_FINANCE_APPS).filter((k) => financeSide.includes(k));
       expect(overlap).toEqual([]);
-      expect(keys(FINANCE_APPS).sort()).toEqual(["cc", "claims", "expense", "opd"]);
+      expect(keys(FINANCE_APPS).sort()).toEqual([
+        "cc",
+        "claims",
+        "expense",
+        "finance-overview",
+        "opd",
+      ]);
     }
   });
 
@@ -192,5 +204,21 @@ describe("the Expense Claims preview flag", () => {
   it("shows it when the flag is on", async () => {
     const { FINANCE_PERSPECTIVE_APPS } = await load({ expenseClaims: true });
     expect(keys(FINANCE_PERSPECTIVE_APPS)).toContain("expense");
+  });
+});
+
+// Finance Overview is new ground — an OPD Claims dashboard, with more to
+// follow — and has not run against a real account yet. The whole group is
+// held back, not the one item inside it.
+describe("the Finance Overview preview flag", () => {
+  it("hides the group when the flag is off", async () => {
+    const { FINANCE_OVERVIEW_APPS, FINANCE_APPS } = await load();
+    expect(keys(FINANCE_OVERVIEW_APPS)).toEqual([]);
+    expect(keys(FINANCE_APPS)).not.toContain("finance-overview");
+  });
+
+  it("shows it when the flag is on", async () => {
+    const { FINANCE_OVERVIEW_APPS } = await load({ financeOverview: true });
+    expect(keys(FINANCE_OVERVIEW_APPS)).toEqual(["finance-overview"]);
   });
 });
