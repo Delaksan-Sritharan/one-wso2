@@ -107,6 +107,7 @@ import ClaimsPage, { ClaimsIndex } from "@features/finance/claims/ClaimsPage";
 import OpdNewClaimPage from "@features/finance/opd/pages/OpdNewClaimPage";
 // OPD Claims as its own Finance app — a different screen on a different route
 // from the OPD tab under Me → Claims above, which is left alone.
+import OpdDashboardScreen from "@features/finance/opd/dashboard/OpdDashboardScreen";
 import OpdClaimHistoryScreen from "@features/finance/opd/history/OpdClaimHistoryScreen";
 import OpdClaimsTab from "@features/finance/opd/pages/OpdHistoryPage";
 import OpdApprovalsTab from "@features/finance/opd/pages/OpdApprovalsPage";
@@ -127,6 +128,7 @@ import ClaimApprovalPage, {
 import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
 import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
+import CcApprovalsTab from "@features/finance/cc/pages/CcApprovalsTab";
 import { riskRoutes } from "@features/security/grc/modules/risk/routes";
 import { auditRoutes } from "@features/security/grc/modules/audit/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
@@ -325,13 +327,35 @@ export default function App() {
               />
             </>
           )}
-          <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
+          {/* Behind the same preview flag as its menu entry under Overview.
+              Hiding only the entry would leave the page reachable by anyone
+              with the URL. Moved here out of the plain cc routes below: this
+              is the same screen the "Dashboard" item used to point at when it
+              lived inside Credit Card Expenses. */}
+          {isPreviewEnabled("financeOverview") && (
+            <Route path="finance/cc/dashboard" element={<CcDashboardPage />} />
+          )}
           <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
           <Route path="finance/cc/pending" element={<CcPendingPage />} />
           <Route path="finance/cc/approve" element={<CcApprovePage />} />
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
-          <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
+          {/* Behind the same preview flag as its menu entry under Overview.
+              Hiding only the entry would leave the page reachable by anyone
+              with the URL. */}
+          {isPreviewEnabled("financeOverview") && (
+            <Route path="finance/opd/dashboard" element={<OpdDashboardScreen />} />
+          )}
+          {/* Behind the same preview flag as its menu entry. Hiding only the
+              entry would leave the page reachable by anyone with the URL —
+              not what "not released yet" means. Me → Claims → OPD stays
+              open regardless: that one was never behind this flag, filing
+              and reading your own claims is open to everyone
+              (claimsTabs.ts:22-24); this is specifically the Finance
+              perspective's own OPD Claims front door. */}
+          {isPreviewEnabled("opdClaims") && (
+            <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
+          )}
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
               from the standalone org-chart app. Unlike every other People Ops
@@ -563,6 +587,14 @@ export default function App() {
               }
             />
             <Route
+              path="cc"
+              element={
+                <ClaimApprovalTabRoute gateId="claim-approval-cc">
+                  <CcApprovalsTab />
+                </ClaimApprovalTabRoute>
+              }
+            />
+            <Route
               path="decided"
               element={
                 <ClaimApprovalTabRoute gateId="claim-approval">
@@ -639,11 +671,12 @@ export default function App() {
           />
           {/* RevOps — auto-recorded meetings. The meeting history ported from
               meet-app; scheduling stays in the calendar add-on and the
-              analytics dashboard was out of scope. No route-level guard: the
-              meet-app backend refuses a caller in no authorised group on every
-              endpoint, and RevOpsShell turns that 403 into an explanation, so
-              someone reaching this URL gets an answer rather than a blank
-              page. See docs/ported-apps/revops-meetings.md. */}
+              analytics dashboard was out of scope. The preview gate below
++              controls route registration; it is not an authorization guard.
++              The meet-app backend refuses a caller in no authorised group on
++              every endpoint, and RevOpsShell turns that 403 into an
++              explanation, so someone reaching a registered URL gets an answer
++              rather than a blank page. See docs/ported-apps/revops-meetings.md. */}
           {isPreviewEnabled("revops") && (
             <Route path="revops" element={<RevOpsMeetingsPage />} />
           )}

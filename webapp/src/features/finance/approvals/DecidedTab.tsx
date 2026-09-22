@@ -31,13 +31,14 @@ import {
 } from "@wso2/oxygen-ui";
 import { describeError } from "../util/financeError";
 import { formatNice, money } from "../util/financeFormat";
-import { useExpenseAppData, useExpenseClaims } from "../expense/useExpense";
+import { useExpenseAppData, useExpenseClaims, useExpenseEmployees } from "../expense/useExpense";
 import { useOpdClaims, useOpdUserInfo } from "../opd/useOpd";
 import { OPD_ROLE, opdHasRole } from "../opd/opdTypes";
 import type { ExpenseClaim } from "../expense/expenseTypes";
 import type { OpdClaim } from "../opd/opdTypes";
-import { ExpenseClaimDetailsDialog } from "../expense/ExpenseClaimDetailsDialog";
-import { OpdClaimDetailsDialog } from "../opd/OpdClaimDetailsDialog";
+import { ExpenseApprovalReview } from "../expense/approvals/ExpenseApprovalReview";
+import { makeNameResolver } from "../expense/approvals/expenseApprovalTypes";
+import { OpdApprovalReview } from "../opd/approvals/OpdApprovalReview";
 
 // Claims in this person's scope that already have a decision.
 //
@@ -56,6 +57,11 @@ export default function DecidedTab() {
   const canExpenseFinance = Boolean(expenseAppData.data?.enableFinanceView);
   const canOpd = opdHasRole(opdUserInfo.data, OPD_ROLE.FINANCE_APPROVER);
   const myEmail = expenseAppData.data?.userInfo.workEmail ?? undefined;
+
+  // For the review screen's name display — falls back to the bare email until
+  // this arrives, same as the standalone Lead/Finance Approvals screens do.
+  const employees = useExpenseEmployees();
+  const nameFor = useMemo(() => makeNameResolver(employees.data), [employees.data]);
 
   // A lead's decided queue is the claims they forwarded or turned down, so it is
   // scoped to their reports the same way their pending queue is.
@@ -103,6 +109,40 @@ export default function DecidedTab() {
     opdDecided.isLoading;
 
   if (loading) return <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 1.5 }} />;
+
+  // Same review screen Needs You opens, `pending={false}`: Approve/Reject are
+  // replaced by the status chip, which opens the activity trail instead — the
+  // decision already made, not offered again. `stage` still matters here even
+  // read-only, because only it decides whether Print shows.
+  if (expenseTarget) {
+    const decidedAtFinance =
+      expenseTarget.statusDetails.status === "APPROVED" ||
+      expenseTarget.statusDetails.status === "FINANCE_REJECTED";
+    return (
+      <ExpenseApprovalReview
+        claim={expenseTarget}
+        stage={decidedAtFinance ? "FINANCE" : "LEAD"}
+        pending={false}
+        nameFor={nameFor}
+        viewerEmail={myEmail}
+        onBack={() => setExpenseTarget(null)}
+        onDecided={() => {}}
+      />
+    );
+  }
+
+  // Same takeover for a decided OPD claim, `pending={false}` — the activity
+  // trail rather than Approve/Reject.
+  if (opdTarget) {
+    return (
+      <OpdApprovalReview
+        claim={opdTarget}
+        pending={false}
+        onBack={() => setOpdTarget(null)}
+        onDecided={() => {}}
+      />
+    );
+  }
 
   const failure =
   // The two calls that decide WHICH queues run belong here too. When either
@@ -189,11 +229,6 @@ export default function DecidedTab() {
         </Table>
       </Box>
       )}
-
-      {/* Read-only: `review` is left off, so these open as a record of what was
-          decided rather than offering the decision again. */}
-      <ExpenseClaimDetailsDialog claim={expenseTarget} onClose={() => setExpenseTarget(null)} />
-      <OpdClaimDetailsDialog claim={opdTarget} onClose={() => setOpdTarget(null)} />
     </Box>
   );
 }

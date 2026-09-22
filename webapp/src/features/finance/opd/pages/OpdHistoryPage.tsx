@@ -46,7 +46,8 @@ import { describeError } from "../../util/financeError";
 import { money, formatNice } from "../../util/financeFormat";
 import { CLAIMS_PATH } from "../../claims/claimsTabs";
 import { useOpdAppData, useOpdClaims, useOpdUserInfo } from "../useOpd";
-import { OpdClaimDetailsDialog } from "../OpdClaimDetailsDialog";
+import { OpdHistoryClaimDetails } from "../history/OpdHistoryClaimDetails";
+import { OpdClaimActivityDrawer } from "../history/OpdClaimActivityDrawer";
 import {
   OPD_FILTERABLE_STATUSES,
   opdStatusFilter,
@@ -135,7 +136,13 @@ function Allowance({
 function HistoryBody() {
   const userInfo = useOpdUserInfo();
   const currentYear = new Date().getFullYear();
+  // The claim being read in full — the details panel takes over the page,
+  // the same way Finance → OPD Claims → Claim History slides it over the
+  // list.
   const [selected, setSelected] = useState<OpdClaim | null>(null);
+  // Independent of `selected`: the activity trail opens straight from the
+  // detail view's own header button.
+  const [activityClaim, setActivityClaim] = useState<OpdClaim | null>(null);
   const [resubmitting, setResubmitting] = useState<OpdClaim | null>(null);
   const navigate = useNavigate();
 
@@ -185,6 +192,68 @@ function HistoryBody() {
     for (let y = currentYear; y >= currentYear - 4; y--) out.push(y);
     return out;
   }, [currentYear]);
+
+  // Same review screen Finance → OPD Claims → Claim History uses, taking
+  // over this tab the same way it takes over that screen — bills in full,
+  // and a rejected claim still offers Resubmit, not a shrunk-down copy in a
+  // dialog.
+  if (selected) {
+    return (
+      <>
+        <OpdHistoryClaimDetails
+          claim={selected}
+          onBack={() => setSelected(null)}
+          onShowActivity={() => setActivityClaim(selected)}
+          onResubmit={(c) => setResubmitting(c)}
+        />
+        <OpdClaimActivityDrawer claim={activityClaim} onClose={() => setActivityClaim(null)} />
+
+        {/* ClaimDetails.tsx:395-407. Resubmitting does not amend the rejected
+            claim — it starts a fresh one from its bills, which replaces
+            whatever draft was already saved, so that is said before it
+            happens. */}
+        <Dialog
+          open={resubmitting !== null}
+          onClose={() => setResubmitting(null)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle sx={{ fontSize: 17, fontWeight: 700 }}>
+            Claim Resubmission Confirmation
+          </DialogTitle>
+          <DialogContent dividers>
+            <Typography sx={{ fontSize: 13.5 }}>
+              Are you sure you want to resubmit this claim? This will create a new
+              draft claim and <b>your existing draft will be cleared</b>.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button size="small" onClick={() => setResubmitting(null)}>
+              Cancel
+            </Button>
+            <Button
+              size="small"
+              color="success"
+              variant="contained"
+              onClick={() => {
+                // :187-192 — the bills are carried over locally and the New
+                // Claim screen persists them as the draft, exactly as the
+                // source does.
+                const transactions = resubmitting?.transactions ?? [];
+                setResubmitting(null);
+                setSelected(null);
+                navigate(`${CLAIMS_PATH}/opd/new`, {
+                  state: { resubmitTransactions: transactions },
+                });
+              }}
+            >
+              Resubmit
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </>
+    );
+  }
 
   return (
     <Box>
@@ -379,54 +448,6 @@ function HistoryBody() {
           </Table>
         </Box>
       )}
-
-      <OpdClaimDetailsDialog
-        claim={selected}
-        onClose={() => setSelected(null)}
-        onResubmit={(c) => setResubmitting(c)}
-      />
-
-      {/* ClaimDetails.tsx:395-407. Resubmitting does not amend the rejected
-          claim — it starts a fresh one from its bills, which replaces whatever
-          draft was already saved, so that is said before it happens. */}
-      <Dialog
-        open={resubmitting !== null}
-        onClose={() => setResubmitting(null)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle sx={{ fontSize: 17, fontWeight: 700 }}>
-          Claim Resubmission Confirmation
-        </DialogTitle>
-        <DialogContent dividers>
-          <Typography sx={{ fontSize: 13.5 }}>
-            Are you sure you want to resubmit this claim? This will create a new
-            draft claim and <b>your existing draft will be cleared</b>.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button size="small" onClick={() => setResubmitting(null)}>
-            Cancel
-          </Button>
-          <Button
-            size="small"
-            color="success"
-            variant="contained"
-            onClick={() => {
-              // :187-192 — the bills are carried over locally and the New Claim
-              // screen persists them as the draft, exactly as the source does.
-              const transactions = resubmitting?.transactions ?? [];
-              setResubmitting(null);
-              setSelected(null);
-              navigate(`${CLAIMS_PATH}/opd/new`, {
-                state: { resubmitTransactions: transactions },
-              });
-            }}
-          >
-            Resubmit
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }
