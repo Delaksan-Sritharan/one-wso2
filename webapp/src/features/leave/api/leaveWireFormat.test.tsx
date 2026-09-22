@@ -120,7 +120,7 @@ describe("the report filter", () => {
   // The exact request a lead's report makes, compared against one confirmed
   // working against the live backend on 2026-09-01:
   //
-  //   /leaves?approverEmail=duminduk%40wso2.com&startDate=2026-01-01
+  //   /leaves?approverEmail=approver%40example.com&startDate=2026-01-01
   //          &endDate=2026-09-01&statuses=APPROVED
   //          &employeeStatuses=Active&employeeStatuses=Marked%20leaver
   //
@@ -136,7 +136,7 @@ describe("the report filter", () => {
           startDate: "2026-01-01",
           endDate: "2026-09-01",
           statuses: ["APPROVED"],
-          approverEmail: "duminduk@wso2.com",
+          approverEmail: "approver@example.com",
           employeeStatuses: ["Active", "Marked leaver"],
         }),
       { wrapper },
@@ -145,7 +145,7 @@ describe("the report filter", () => {
 
     const sent = new URL(requests[0].url).searchParams;
     const working = new URL(
-      "https://x/leaves?approverEmail=duminduk%40wso2.com&startDate=2026-01-01" +
+      "https://x/leaves?approverEmail=approver%40example.com&startDate=2026-01-01" +
         "&endDate=2026-09-01&statuses=APPROVED" +
         "&employeeStatuses=Active&employeeStatuses=Marked%20leaver",
     ).searchParams;
