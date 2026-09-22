@@ -336,6 +336,15 @@ export interface ParLegacyThreeSixtyReview {
   reviewComment: string | null;
 }
 
+// GET /legacy-par-history-cycles — mirrors backend's LegacyParCycleSummary:
+// one distinct legacy cycle, aggregated org-wide across every employee who
+// has a row for it. Admin-only (Admin Portal's History tab).
+export interface ParLegacyCycleSummary {
+  cycleName: string;
+  participantCount: number;
+  latestCompletedDate: string | null;
+}
+
 // GET /par-cycles/{cycleId}/reports?leadEmail= — mirrors backend's
 // AdditionalReportsParRating exactly (ParRatingMinimal + these two fields).
 // Returns BOTH direct and indirect reports; the "Additional Reports" tab

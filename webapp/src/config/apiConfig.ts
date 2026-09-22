@@ -312,6 +312,14 @@ export const parServiceUrls = {
   // gated on isLeadInActiveParCycle, scoped to the caller's own reports).
   parBulkReminder: (kind: "employee" | "lead" | "special-rating") =>
     `${parBackendUrl}/reminders/schedule-${kind}-reminders`,
+  // GET every distinct legacy (pre-par-app) cycle, org-wide — the History
+  // tab's merged cycle list, admin-gated the same way as the per-employee
+  // legacy endpoint above.
+  legacyParHistoryCycles: () => `${parBackendUrl}/legacy-par-history-cycles`,
+  // GET every employee's legacy row for one cycle name — the History tab's
+  // legacy drill-down.
+  legacyParHistoryCyclesParticipants: (cycleName: string) =>
+    `${parBackendUrl}/legacy-par-history-cycles/${encodeURIComponent(cycleName)}/participants`,
 };
 
 // Leave app backend (people-ops-suite/apps/leave-app). Its own service
