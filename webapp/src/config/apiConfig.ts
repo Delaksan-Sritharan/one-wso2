@@ -206,6 +206,61 @@ export const parServiceUrls = {
   par360Participants: (parCycleId: number) =>
     `${parBackendUrl}/par-cycles/${parCycleId}/participants`,
 
+  // ---- Lead Portal -------------------------------------------------------------
+  //
+  // GET .../teams?leadEmail= — every team this lead owns (a lead can have
+  // more than one). `leadEmail` is a query param, not a path segment, so
+  // the backend can also resolve it from the token when self-querying.
+  parTeams: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/teams?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../teams/{teamId} — one team's roster (ParTeamDetails.details).
+  parTeamDetails: (parCycleId: number, parTeamId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/teams/${parTeamId}`,
+  // PATCH .../reminders/schedule-360-reminders — no body; scoped to the
+  // calling lead's own reports server-side (isLeadInActiveParCycle), not a
+  // global send. MultiTeamSummary.tsx's "Send 360° Reminder" button.
+  parSchedule360Reminders: () => `${parBackendUrl}/reminders/schedule-360-reminders`,
+  // GET .../special-rating-groups-quota?leadEmail= — SpecialRatingAllocationView's
+  // own fetchQuotaGroupRatings. Non-admin callers may only pass their own
+  // email (enforced server-side); leadEmail stays a required param here
+  // since the Lead Portal never omits it (that's the admin-only "everyone"
+  // view, out of scope for this portal).
+  parSpecialRatingAllocations: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups-quota?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../reports?leadEmail= — EmployeeReportView.tsx's own
+  // fetchDirectAndIndirectReports. Returns both direct and indirect reports;
+  // the Additional Reports tab keeps only the indirect ones.
+  parAdditionalReports: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/reports?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../report-levels?leadEmail= — ReportChainView.tsx's own
+  // fetchDirectEmployeePars. One drill-down level: the direct reports of
+  // whichever email is passed, not always the caller's own.
+  parReportLevels: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/report-levels?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET /employees?leadEmail= — EmployeeReportView.tsx's own
+  // fetchEntityEmployees. Org-chart direct reports, not PAR-cycle-scoped.
+  parLeadEmployees: (leadEmail: string) => `${parBackendUrl}/employees?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET /par-cycles?status=CLOSED, no email — EmployeeHistoryView.tsx's own
+  // fetchClosedParCycles: every closed cycle org-wide, gated only on the
+  // caller being a lead in the active cycle (or admin), not scoped to their
+  // own participation the way parCycles(email, "CLOSED") above is.
+  parAllClosedCycles: () => `${parBackendUrl}/par-cycles?status=CLOSED`,
+  // GET .../participants?leadEmail= — same endpoint parServiceUrls.par360Participants
+  // hits with no leadEmail (org-wide); EmployeeHistoryView.tsx's own
+  // fetchParticipants scopes it to the calling lead's own reports instead.
+  parHistoryParticipants: (parCycleId: number, leadEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/participants?leadEmail=${encodeURIComponent(leadEmail)}`,
+  // GET .../employees/{email}/reviews — every review ABOUT that employee
+  // (reviewer, rating, comment, status), regardless of who's asking, as
+  // opposed to par360Review (the caller's OWN review of someone else).
+  parEmployeeReviews: (parCycleId: number, employeeEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(employeeEmail)}/reviews`,
+  // GET /legacy-par-history/{employeeEmail} — pre-migration PeopleHR export
+  // data. 360 feedback is server-side stripped when the caller IS the
+  // employee (self-view); a lead viewing a report's history gets it intact.
+  parLegacyHistory: (employeeEmail: string) =>
+    `${parBackendUrl}/legacy-par-history/${encodeURIComponent(employeeEmail)}`,
+
   // ---- F2F scheduling ---------------------------------------------------------
   //
   // Flat top-level paths on the same par-app backend, not nested under
@@ -1017,6 +1072,45 @@ export const subscriptionBackendUrl: string =
 export function isSubscriptionBackendConfigured(): boolean {
   return Boolean(subscriptionBackendUrl);
 }
+
+// ---------------------------------------------------------------------------
+// Email Group Manager backend (digiops-infra/apps/email-group-manager). Lets
+// an employee browse the company's Google Groups mailing lists, subscribe or
+// unsubscribe themselves, and — client-side only, no backend of its own —
+// build an email signature. See docs/ported-apps/email-group-manager.md for
+// the contract.
+//
+// The source app's own GET /user-info is NOT reused here: this webapp already
+// has an identical call (people-app's, via @api/useUserInfo) for the
+// signed-in caller's name, designation and work email, and asking a second
+// backend the same question would just be a second round trip for the same
+// answer. `isAdmin` on the source response was dead code even in the
+// original — nothing in its UI branched on it — so it has no equivalent here.
+export const emailGroupsBackendUrl: string =
+  window.config?.ONE_WSO2_EMAIL_GROUPS_BACKEND_URL ?? "";
+
+export function isEmailGroupsBackendConfigured(): boolean {
+  return Boolean(emailGroupsBackendUrl);
+}
+
+export const emailGroupsServiceUrls = {
+  // Groups every employee is subscribed to automatically. Read-only — there is
+  // no endpoint to leave one.
+  defaultGroups: `${emailGroupsBackendUrl}/default-google-groups`,
+  // The full catalog the caller may subscribe to or unsubscribe from.
+  allGroups: `${emailGroupsBackendUrl}/all-google-groups`,
+  // The caller's own current memberships — a mix of default groups, catalog
+  // groups they opted into, and groups an admin added them to that aren't in
+  // the catalog at all ("other" groups on the page).
+  userGroups: `${emailGroupsBackendUrl}/user-google-groups`,
+  // PATCH, body `{groupName, userEmail}`. The subject is not decided by a path
+  // segment or the token alone — it's a field in the payload — so unlike every
+  // other backend in this file these two calls are the same URL regardless of
+  // who they're for; that's fine, because the only caller this page ever acts
+  // for is the signed-in employee themself.
+  subscribe: `${emailGroupsBackendUrl}/google-group/subscribe`,
+  unsubscribe: `${emailGroupsBackendUrl}/google-group/unsubscribe`,
+};
 
 export const subscriptionServiceUrls = {
   // Distance ranges, the four opt-in/opt-out day boundaries, the LaaS price,

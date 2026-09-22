@@ -91,12 +91,24 @@ export default function EditableLinkSection({
 
   async function handleConfirmDelete() {
     if (!deleteTarget) return;
+    // Both guards below exist because the list can change under an open dialog:
+    // `onSave` replaces it wholesale and a background `["umt-update"]` refetch
+    // can reorder or shrink it between opening the dialog and confirming.
+
+    // Re-check the invariant rather than relying on `deleteDisabled`, which is
+    // computed at render to gate the button: a refetch can shrink the list to
+    // its last entry while this dialog is already open, and the identity check
+    // below would still pass if that entry happens to be the target.
+    if (requireAtLeastOne && items.length <= 1) {
+      showError(`At least one ${addFieldLabel.toLowerCase()} is required.`);
+      setDeleteTarget(null);
+      return;
+    }
     // Delete by position, not by value: nothing stops these lists holding two
     // identical entries (add has no duplicate check, and two of the three
     // sections pass no `validate` at all), and a value filter would remove
-    // every copy — which with `requireAtLeastOne` can empty a list that must
-    // never be empty. The value is re-checked because a background refetch can
-    // reorder the list while the dialog is open.
+    // every copy. The value is re-checked here so a reorder can't redirect the
+    // delete onto a different row.
     if (items[deleteTarget.index] !== deleteTarget.value) {
       showError(
         `This ${addFieldLabel.toLowerCase()} changed while the dialog was open. Reopen and try again.`,

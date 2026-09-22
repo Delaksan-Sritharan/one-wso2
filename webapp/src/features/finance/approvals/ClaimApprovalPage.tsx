@@ -18,8 +18,7 @@
 
 import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router";
-import { Alert, Box, Chip, Skeleton, Typography } from "@wso2/oxygen-ui";
-import { CheckCheckIcon } from "@wso2/oxygen-ui-icons-react";
+import { Alert, Box, Skeleton, Typography } from "@wso2/oxygen-ui";
 import RoutedTabs from "@components/routed-tabs/RoutedTabs";
 import { useFinanceGate } from "../api/useFinanceGate";
 import {
@@ -41,16 +40,12 @@ export default function ClaimApprovalPage() {
 
   return (
     <Box>
-      <Chip
-        icon={<CheckCheckIcon size={14} />}
-        label="Finance"
-        color="primary"
-        size="small"
-        variant="outlined"
-        sx={{ mb: 0.5 }}
-      />
+      {/* No chip. This is a bare section under the Finance perspective, not a
+          screen inside an app, so there is no app name to put above the title —
+          the chip said "Finance", which is the perspective the rail already
+          shows. "Claim approval" identifies itself. */}
       <Typography variant="h5" sx={{ mb: 0.5 }}>
-        Claim approval
+        Claim Approval
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25, maxWidth: "70ch" }}>
         Claims waiting on your decision, and the ones already decided. Submitting a claim and looking
