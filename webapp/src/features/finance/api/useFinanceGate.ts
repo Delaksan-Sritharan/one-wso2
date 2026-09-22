@@ -85,8 +85,8 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // No lead stage exists for OPD — the backend grants role 555 or nothing.
       case "claim-approval-opd":
         return opdFinance;
-      // Same privileges as "cc-approve" — this tab and the standalone screen
-      // under Me read the same queue.
+      // The only place left to approve a CC submission — the standalone
+      // screen this used to share a gate with ("cc-approve") was retired.
       case "claim-approval-cc":
         return ccLeadOrFinance;
       // Behind two flags: the group's own, and — on top of that — the one on
@@ -97,17 +97,6 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // leave that tile offering a route that no longer exists.
       case "expense-new":
         return isPreviewEnabled("expenseClaims") && isPreviewEnabled("expenseSubmitter");
-      // Approving expense claims, beside filing them. One entry per stage, each
-      // on its own backend flag — `appDataSlice.ts:104-109` decides which of
-      // the source app's two sidebar entries exist the same way — but both
-      // sit behind the group's own flag first, same as expense-new above.
-      // Both cases are required, not optional: each item declares `requires`,
-      // so an unmapped id falls through to the default and fails closed for
-      // everyone.
-      case "expense-lead-approvals":
-        return isPreviewEnabled("expenseClaims") && expenseLead;
-      case "expense-finance-approvals":
-        return isPreviewEnabled("expenseClaims") && expenseFinance;
       // OPD Claims → Claim History, in the Finance perspective. The submitter
       // role, not the approver one: this is your own history, the same claims
       // the Me-side OPD tab shows.
@@ -131,8 +120,6 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // error notice and a retry.
       case "opd-dashboard":
         return isPreviewEnabled("financeOverview") && (opdFinance || opd.isError);
-      case "cc-approve":
-        return ccLeadOrFinance;
       case "cc-settings":
         return ccFinance;
       // Finance → Overview → Credit Card Expenses dashboard. `requires:

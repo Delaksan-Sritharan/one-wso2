@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import {
   Alert,
   Box,
@@ -22,18 +22,14 @@ import {
   Chip,
   DataGrid,
   IconButton,
-  MenuItem,
   Popover,
   Skeleton,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
 import { FilterIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { useNotifications } from "@context/notifications/NotificationsContext";
-import { isCcBackendConfigured } from "@config/apiConfig";
-import FinanceShell from "../../components/FinanceShell";
 import { describeError } from "../../util/financeError";
 import { CcApproveDetail } from "../CcApproveDetail";
 import { StatusChip, ccStatusMeta } from "../../components/FinanceChips";
@@ -46,18 +42,21 @@ import { CcEditDialog } from "../CcEditDialog";
 import { CcPickOne } from "../CcPickOne";
 import { CC_SNACK } from "../ccCopy";
 import { useCcTransactions, useCcUserInfo, useCreditCards } from "../useCc";
-import { ccHasAccess, type CcTransaction } from "../ccTypes";
+import type { CcTransaction } from "../ccTypes";
 
 // FILTER_ALL in approve-submissions/index.tsx.
 const ALL = "all";
-import { FINANCE_EYEBROW } from "@constants/financeApps";
 
 export type ApproveRole = "lead" | "finance";
 
-// approve-submissions/index.tsx:192-194 capitalises the role for the heading.
-const ROLE_TITLE: Record<ApproveRole, string> = { lead: "Lead", finance: "Finance" };
-
 /**
+ * The Credit Card Expenses approval queue: the grid, the detail panel, the
+ * filter popover, and the approve/edit mutations. Was the standalone Approve
+ * Submissions screen's own body; that screen was retired once Claim
+ * Approval's CC Expenses tab became the only place to approve, but the
+ * queue's own logic didn't move — this is that same code, unchanged, now
+ * with a single caller.
+ *
  * Approving is a mode, not a per-row decision.
  *
  * The source derives one `approveRole` from the user's own roles with finance
@@ -70,58 +69,26 @@ const ROLE_TITLE: Record<ApproveRole, string> = { lead: "Lead", finance: "Financ
  * until someone picks, and the default is computed. Same behaviour, without a
  * state write on first render.
  */
-export default function CcApprovePage() {
-  const userInfo = useCcUserInfo();
-  const isFinance = ccHasAccess(userInfo.data, "finance");
-  const isLead = ccHasAccess(userInfo.data, "lead");
-  const [picked, setPicked] = useState<ApproveRole | null>(null);
-  const role: ApproveRole | null =
-    picked ?? (isFinance ? "finance" : isLead ? "lead" : null);
-
-  return (
-    <FinanceShell
-      eyebrow={FINANCE_EYEBROW.cc}
-      // No suffix until the roles have loaded — the source renders no heading
-      // at all until then, so there is nothing to be faithful to mid-flight.
-      title={
-        role
-          ? `Approve Expense Submissions (${ROLE_TITLE[role]})`
-          : "Approve Expense Submissions"
-      }
-      subtitle="Review and approve card transactions submitted by your team. Leads approve pending-lead items; finance gives the final approval."
-      configured={isCcBackendConfigured()}
-      configKey="ONE_WSO2_CC_EXPENSES_BACKEND_URL"
-      fill
-    >
-      <ApproveBody
-        userInfo={userInfo}
-        isLead={isLead}
-        isFinance={isFinance}
-        role={role}
-        onPickRole={setPicked}
-      />
-    </FinanceShell>
-  );
-}
-
 export function ApproveBody({
   userInfo,
   isLead,
   isFinance,
   role,
-  onPickRole,
-  // The standalone screen picks its role from its own dropdown; the Claim
-  // Approval tab renders the "As lead / As finance" toggle other claim types
-  // use instead, above this component, and passes "none" so the two controls
-  // don't both appear.
-  roleControl = "dropdown",
+  checked,
+  setChecked,
 }: {
   userInfo: ReturnType<typeof useCcUserInfo>;
   isLead: boolean;
   isFinance: boolean;
   role: ApproveRole | null;
-  onPickRole: (r: ApproveRole) => void;
-  roleControl?: "dropdown" | "none";
+  // Owned by the caller, not this component: switching role is a selection
+  // change too (the row on screen a moment ago may not even be actionable in
+  // the new mode), and the codebase clears a selection at the point of
+  // change rather than from an effect reacting to a prop — so the toggle
+  // that changes `role`, above this component, is exactly where its own
+  // selection has to be cleared alongside it.
+  checked: Set<number>;
+  setChecked: Dispatch<SetStateAction<Set<number>>>;
 }) {
   const txns = useCcTransactions();
   // Only for the reassignment list — the queue itself is not card-scoped here.
@@ -131,7 +98,6 @@ export function ApproveBody({
   // the options, leaving the control showing a value it does not offer.
   const allCards = useCreditCards(true);
   const { showSuccess, showError } = useNotifications();
-  const [checked, setChecked] = useState<Set<number>>(new Set());
 
   const email = userInfo.data?.workEmail;
   // ApproveFilterPopover.tsx — the source narrows this queue by user, by card
@@ -312,25 +278,6 @@ export function ApproveBody({
 
   return (
     <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-      {/* index.tsx:198-210 — offered only to someone who holds both roles;
-          everyone else has one mode and the heading already names it. */}
-      {roleControl === "dropdown" && isLead && isFinance && role && (
-        <Box sx={{ width: 220, mb: 2, alignSelf: "flex-end" }}>
-          <TextField
-            select
-            size="small"
-            fullWidth
-            label="Approve Role"
-            value={role}
-            onChange={(e) => narrow(onPickRole)(e.target.value as ApproveRole)}
-          >
-            {/* FilterMenu.tsx:51-60 — the source's own option wording. */}
-            <MenuItem value="lead">Approve as Lead</MenuItem>
-            <MenuItem value="finance">Approve as Finance</MenuItem>
-          </TextField>
-        </Box>
-      )}
-
       {/* ApproveFilterPopover.tsx — the source keeps these behind one trigger
           rather than spending a row of the page on three selects that are
           usually left alone. The badge says how many are narrowing the queue. */}

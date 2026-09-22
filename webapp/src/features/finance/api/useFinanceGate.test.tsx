@@ -123,13 +123,6 @@ describe("the cc tab", () => {
     roles.expenseFinance = true;
     expect(gate().canSee("claim-approval-cc")).toBe(false);
   });
-
-  // Same privileges the standalone Approve Submissions screen checks — this
-  // tab reads the same queue, not a separate one.
-  it("matches cc-approve's own gate", () => {
-    roles.cc = ["lead"];
-    expect(gate().canSee("claim-approval-cc")).toBe(gate().canSee("cc-approve"));
-  });
 });
 
 describe("the expense tab", () => {
@@ -148,78 +141,28 @@ describe("the expense tab", () => {
   });
 });
 
-// Under Finance → Expense Claims, one entry per review stage — the source
-// app's own two sidebar entries, each on its own backend flag, on top of the
-// group's own preview flag (Expense Claims is held back as a whole).
-describe("the expense approval entries", () => {
-  const originalConfig = window.config;
-  beforeEach(() => {
-    window.config = {
-      ...(window.config ?? {}),
-      ONE_WSO2_PREVIEW_FEATURES: { expenseClaims: true },
-    } as Window["config"];
-  });
-  afterEach(() => {
-    window.config = originalConfig;
-  });
-
-  it("shows a lead only the lead entry", () => {
-    roles.expenseLead = true;
-    expect(gate().canSee("expense-lead-approvals")).toBe(true);
-    expect(gate().canSee("expense-finance-approvals")).toBe(false);
-  });
-
-  it("shows finance only the finance entry", () => {
-    roles.expenseFinance = true;
-    expect(gate().canSee("expense-finance-approvals")).toBe(true);
-    expect(gate().canSee("expense-lead-approvals")).toBe(false);
-  });
-
-  it("shows both to somebody holding both", () => {
-    roles.expenseLead = true;
-    roles.expenseFinance = true;
-    expect(gate().canSee("expense-lead-approvals")).toBe(true);
-    expect(gate().canSee("expense-finance-approvals")).toBe(true);
-  });
-
-  // Both items declare `requires`, so an unmapped id would fall through to the
-  // default and fail closed — withheld from everyone, silently.
-  it("withholds both from somebody who approves nothing", () => {
-    expect(gate().canSee("expense-lead-approvals")).toBe(false);
-    expect(gate().canSee("expense-finance-approvals")).toBe(false);
-  });
-
-  // The group's own flag outranks the backend role: holding the role means
-  // nothing while Expense Claims itself is hidden.
-  it("withholds both when the group's own flag is off, role or not", () => {
-    window.config = { ...(window.config ?? {}) } as Window["config"];
-    delete (window.config as { ONE_WSO2_PREVIEW_FEATURES?: unknown }).ONE_WSO2_PREVIEW_FEATURES;
-    roles.expenseLead = true;
-    roles.expenseFinance = true;
-    expect(gate().canSee("expense-lead-approvals")).toBe(false);
-    expect(gate().canSee("expense-finance-approvals")).toBe(false);
-  });
-});
-
 // The entries that stayed under Me keep the rules they had.
 describe("what stayed behind", () => {
-  it("still gates credit card approval on its own privileges", () => {
-    expect(gate().canSee("cc-approve")).toBe(false);
-    roles.cc = ["lead"];
-    expect(gate().canSee("cc-approve")).toBe(true);
-  });
-
   it("leaves the per-user views open", () => {
     expect(gate().canSee("claims")).toBe(true);
     expect(gate().canSee("cc-history")).toBe(true);
   });
 
-  // The three approval ids are gone from the registry, so their cases were dead
-  // code answering a question nothing asks. They fall through to the open
-  // default now, which is safe precisely because no rail entry names them —
-  // asserted so that a future entry reusing the name cannot quietly go open.
+  // The approval ids are gone from the registry — Lead/Finance Approvals and
+  // Approve Submissions were retired once Claim Approval's own tabs covered
+  // the same queues — so their cases were dead code answering a question
+  // nothing asks. They fall through to the open default now, which is safe
+  // precisely because no rail entry names them — asserted so that a future
+  // entry reusing the name cannot quietly go open.
   it("no longer carries the retired approval ids", () => {
-    for (const retired of ["opd-approvals", "expense-lead", "expense-finance"]) {
+    for (const retired of [
+      "opd-approvals",
+      "expense-lead",
+      "expense-finance",
+      "expense-lead-approvals",
+      "expense-finance-approvals",
+      "cc-approve",
+    ]) {
       expect(FINANCE_ITEM_IDS.has(retired), `${retired} is still a rail item`).toBe(false);
     }
   });

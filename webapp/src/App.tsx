@@ -112,7 +112,6 @@ import OpdApprovalsTab from "@features/finance/opd/pages/OpdApprovalsPage";
 import CcDashboardPage from "@features/finance/cc/pages/CcDashboardPage";
 import CcNewTransactionsPage from "@features/finance/cc/pages/CcNewTransactionsPage";
 import CcPendingPage from "@features/finance/cc/pages/CcPendingPage";
-import CcApprovePage from "@features/finance/cc/pages/CcApprovePage";
 import CcHistoryPage from "@features/finance/cc/pages/CcHistoryPage";
 import CcSettingsPage from "@features/finance/cc/pages/CcSettingsPage";
 import ExpenseNewClaimPage from "@features/finance/expense/pages/ExpenseNewClaimPage";
@@ -141,8 +140,6 @@ import TradeReferenceDeactivatedPage from "@features/due-diligence/trade-referen
 import DueDiligencePreferencesPage from "@features/due-diligence/preferences/pages/PreferencesPage";
 import ViewPdfPage from "@features/due-diligence/shared/pages/ViewPdfPage";
 import ViewImagePage from "@features/due-diligence/shared/pages/ViewImagePage";
-import ExpenseApprovalsScreen from "@features/finance/expense/approvals/ExpenseApprovalsScreen";
-import ExpenseLeadApprovalsScreen from "@features/finance/expense/approvals/ExpenseLeadApprovalsScreen";
 import UmtHomePage from "@features/umt/pages/UmtHomePage";
 import UmtUpdateView from "@features/umt/pages/UmtUpdateView";
 import UmtUpdatesPage from "@features/umt/pages/UmtUpdatesPage";
@@ -310,19 +307,6 @@ export default function App() {
                 path="finance/expense-claims/history"
                 element={<ExpenseClaimHistoryPage />}
               />
-              {/* Approving sits beside filing, where the source app's sidebar
-                  keeps it — one entry per stage, on the source's own two
-                  URLs. Each screen also gates itself on its own backend role,
-                  so a typed URL is no more revealing than the menu entry it
-                  belongs to. */}
-              <Route
-                path="finance/expense-claims/lead-approvals"
-                element={<ExpenseLeadApprovalsScreen />}
-              />
-              <Route
-                path="finance/expense-claims/finance-approvals"
-                element={<ExpenseApprovalsScreen stage="FINANCE" />}
-              />
             </>
           )}
           {/* Behind the same preview flag as its menu entry under Overview.
@@ -335,7 +319,6 @@ export default function App() {
           )}
           <Route path="finance/cc/new" element={<CcNewTransactionsPage />} />
           <Route path="finance/cc/pending" element={<CcPendingPage />} />
-          <Route path="finance/cc/approve" element={<CcApprovePage />} />
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
           {/* Behind the same preview flag as its menu entry under Overview.

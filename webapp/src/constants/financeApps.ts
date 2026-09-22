@@ -153,24 +153,11 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
           ]
         : []),
       { id: "expense-history", label: "Claim History", desc: "Claims you have submitted, and where each one has got to.", path: expenseFinancePaths.history },
-      // Approving sits beside filing, where the source app's own sidebar keeps
-      // it — and in its order, lead before finance, which is the order a claim
-      // travels. Each entry stands on its own backend flag, so somebody holding
-      // both sees both and somebody holding neither sees neither.
-      {
-        id: "expense-lead-approvals",
-        label: "Lead Approvals",
-        desc: "Expense claims from the people you lead, waiting on your decision.",
-        requires: ["lead", "admin"],
-        path: expenseFinancePaths.leadApprovals,
-      },
-      {
-        id: "expense-finance-approvals",
-        label: "Finance Approvals",
-        desc: "Expense claims that passed their lead and are waiting on finance.",
-        requires: ["lead", "admin"],
-        path: expenseFinancePaths.financeApprovals,
-      },
+      // Approving used to sit beside filing here, on the source app's own two
+      // sidebar entries. Retired once Claim Approval's Expense claims tab
+      // covered the same queue with the same review detail — that tab is now
+      // the only place to approve, gated by its own backend role rather than
+      // a rail entry.
     ],
     }] as MenuApp[])
     : []),
@@ -212,7 +199,10 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
     items: [
       { id: "cc-new", label: "Pending Submissions", desc: "Unsubmitted card transactions to categorise and submit.", path: `${CC_PATH}/new` },
       { id: "cc-pending", label: "Pending Approvals", desc: "Submissions awaiting approval.", path: `${CC_PATH}/pending` },
-      { id: "cc-approve", label: "Approve Submissions", desc: "Review and approve your team's submitted card transactions.", requires: ["lead", "admin"], path: `${CC_PATH}/approve` },
+      // Approve Submissions used to live here. Retired once Claim Approval's
+      // CC Expenses tab covered the same queue — that tab is now the only
+      // place to approve, gated by its own backend role rather than a rail
+      // entry.
       { id: "cc-history", label: "History", desc: "Your submitted past card transactions.", path: `${CC_PATH}/history` },
       { id: "cc-settings", label: "Settings", desc: "Upload and reconcile bank statements (finance).", requires: ["admin"], path: `${CC_PATH}/settings` },
     ],

@@ -17,13 +17,14 @@
 import { useState } from "react";
 import { Alert, Box, ToggleButton, ToggleButtonGroup } from "@wso2/oxygen-ui";
 import { isCcBackendConfigured } from "@config/apiConfig";
-import { ApproveBody, type ApproveRole } from "./CcApprovePage";
+import { ApproveBody, type ApproveRole } from "./CcApproveBody";
 import { useCcUserInfo } from "../useCc";
 import { ccHasAccess } from "../ccTypes";
 
-// The CC Expenses tab of Claim approval — the same queue the standalone
-// Approve Submissions screen under Me reads, with the "As lead / As finance"
-// toggle the Expense and OPD tabs use instead of that screen's own dropdown.
+// The CC Expenses tab of Claim approval — now the only place to approve
+// credit card submissions; the standalone Approve Submissions screen under Me
+// was retired once this tab covered the same queue. The "As lead / As
+// finance" toggle here matches the Expense and OPD tabs.
 export default function CcApprovalsTab() {
   // Its own backend's connectivity, as the Expense and OPD tabs report their
   // own: Claim approval spans three backends and any of them may be missing.
@@ -44,6 +45,10 @@ function CcApprovals() {
   const isLead = ccHasAccess(userInfo.data, "lead");
   const [picked, setPicked] = useState<ApproveRole | null>(null);
   const role: ApproveRole | null = picked ?? (isFinance ? "finance" : isLead ? "lead" : null);
+  // Owned here rather than inside ApproveBody: the row ticked a moment ago
+  // may not even be actionable in the mode being switched to, so a role
+  // change has to clear it at this same point, not react to it afterwards.
+  const [checked, setChecked] = useState<Set<number>>(new Set());
 
   // ApproveBody carries its own loading, error and no-access states — the
   // same ones the standalone screen shows — so nothing here duplicates them.
@@ -56,7 +61,11 @@ function CcApprovals() {
           size="small"
           exclusive
           value={role}
-          onChange={(_e, v) => v && setPicked(v as ApproveRole)}
+          onChange={(_e, v) => {
+            if (!v) return;
+            setChecked(new Set());
+            setPicked(v as ApproveRole);
+          }}
           sx={{ mb: 2, alignSelf: "flex-start" }}
         >
           <ToggleButton value="lead" sx={{ textTransform: "none" }}>
@@ -72,8 +81,8 @@ function CcApprovals() {
         isLead={isLead}
         isFinance={isFinance}
         role={role}
-        onPickRole={setPicked}
-        roleControl="none"
+        checked={checked}
+        setChecked={setChecked}
       />
     </Box>
   );
