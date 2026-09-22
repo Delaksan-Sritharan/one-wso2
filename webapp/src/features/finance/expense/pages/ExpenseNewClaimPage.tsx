@@ -51,7 +51,7 @@ export default function ExpenseNewClaimPage() {
     <FinanceShell
       eyebrow={FINANCE_EYEBROW.claims}
       title="New expense claim"
-      subtitle="Add each out-of-pocket expense as a line — date, amount and currency, expense type and its receipt — then submit the claim to your lead. Amounts are converted to your reimbursement currency automatically."
+      subtitle="Add each out-of-pocket expense as a line — date, amount, expense type and receipt — then submit to your lead; amounts convert to your reimbursement currency automatically."
       configured={isExpenseBackendConfigured()}
       configKey="ONE_WSO2_EXPENSE_CLAIMS_BACKEND_URL"
     >

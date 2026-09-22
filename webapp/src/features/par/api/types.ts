@@ -28,9 +28,10 @@ export interface ParEmployeeInfo {
   // reports" fallback — scoped to the active PAR cycle, so this is false
   // whenever there is none, even for someone who leads a team.
   isTeamLead: boolean;
+  // Only set when the request is a self-lookup (workEmail === the caller's
+  // own email) — absent otherwise. See useParIsAdmin.ts.
+  isAdmin?: boolean;
 }
-
-// No `isAdmin` field — the backend never returns one. See useParIsAdmin.ts.
 
 export type ParCycleStatus =
   | "PENDING"

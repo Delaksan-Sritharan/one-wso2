@@ -145,7 +145,7 @@ describe("resubmitting a rejected claim", () => {
     ];
     show();
     fireEvent.click(await screen.findByRole("button", { name: "View" }));
-    await screen.findByRole("button", { name: "Close" });
+    await screen.findByRole("button", { name: "Back to claim history" });
     expect(screen.queryByRole("button", { name: "Resubmit as New Claim" })).not.toBeInTheDocument();
   });
 
