@@ -37,6 +37,7 @@ import ParGroupPage, {
   ParRequiresLeadRoute,
 } from "@features/par/pages/ParGroupPage";
 import ParLeadGroupPage, { ParLeadGroupIndex, ParRequiresTeamLeadRoute } from "@features/par/pages/ParLeadGroupPage";
+import ParAdminGroupPage, { ParAdminGroupIndex, ParRequiresAdminRoute } from "@features/par/pages/ParAdminGroupPage";
 // Lazy on purpose, same reasoning as the leave report tabs below —
 // react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
 // transitively, and only someone who opens /me/performance needs them.
@@ -50,6 +51,7 @@ const ParLeadAdditionalReportsTab = lazy(() => import("@features/par/pages/ParLe
 const ParLeadReportChainTab = lazy(() => import("@features/par/pages/ParLeadReportChainTab"));
 const ParLeadEmployeeHistoryTab = lazy(() => import("@features/par/pages/ParLeadEmployeeHistoryTab"));
 const ParLeadAllocationTab = lazy(() => import("@features/par/pages/ParLeadAllocationTab"));
+const ParAdminOngoingTab = lazy(() => import("@features/par/pages/ParAdminOngoingTab"));
 import EmailGroupsPage from "@features/my/email-groups/pages/EmailGroupsPage";
 import EmailSignaturePage from "@features/my/email-signature/pages/EmailSignaturePage";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
@@ -521,6 +523,31 @@ export default function App() {
                 element={
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
                     <ParLeadAllocationTab />
+                  </Suspense>
+                }
+              />
+            </Route>
+          )}
+          {/* People Ops → PAR → Admin Portal, ported one tab at a time —
+              only Ongoing so far, History is the explicit follow-up
+              (docs/ported-apps/par-app.md). ParRequiresAdminRoute checks the
+              Asgardeo groups claim client-side rather than a backend field,
+              since par-app's backend never exposes an isAdmin flag. */}
+          {isPreviewEnabled("par") && (
+            <Route
+              path="people-ops/performance/admin"
+              element={
+                <ParRequiresAdminRoute>
+                  <ParAdminGroupPage />
+                </ParRequiresAdminRoute>
+              }
+            >
+              <Route index element={<ParAdminGroupIndex />} />
+              <Route
+                path="ongoing"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParAdminOngoingTab />
                   </Suspense>
                 }
               />

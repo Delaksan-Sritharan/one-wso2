@@ -277,6 +277,37 @@ export const parServiceUrls = {
   // shows the Meet link itself, only a "meeting scheduled" confirmation —
   // see ParScheduleF2fDialog.tsx.
   calendarScheduleF2f: () => `${parBackendUrl}/calendar/schedule-f2f`,
+
+  // ---- Admin Portal -------------------------------------------------------------
+  //
+  // Admin-gated server-side already (invokerDetails.isAdmin) — same backend
+  // as above, no separate deployment. Org-wide variants just drop the
+  // scoping param the Lead Portal builders require.
+
+  parCyclesByStatus: (status: "PENDING_QUOTA" | "OPEN" | "PENDING" | "CLOSED") =>
+    `${parBackendUrl}/par-cycles?status=${status}`,
+  parCycleCreate: () => `${parBackendUrl}/par-cycles`,
+  // Same resource edits cycle settings and drives OPEN/CLOSED transitions.
+  parCycleModify: (parCycleId: number) => `${parBackendUrl}/par-cycles/${parCycleId}`,
+  parGlobalConfig: () => `${parBackendUrl}/meta/configurations`,
+  parAdminTeams: (parCycleId: number) => `${parBackendUrl}/par-cycles/${parCycleId}/teams`,
+  parAdminSpecialRatingGroups: (parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups`,
+  // GET returns SpecialRatingAllocation[] — reuse ParSpecialRatingAllocation,
+  // not ParSpecialRatingQuotaWithName (that one's POST-only, see types.ts).
+  parAdminQuotaGroups: (parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups-quota`,
+  parRejectedReviews: (parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/rejected-reviews`,
+  parAllRatings: (parCycleId: number) => `${parBackendUrl}/par-cycles/${parCycleId}/par-ratings`,
+  parSyncEmployee: (parCycleId: number, workEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(workEmail)}/sync`,
+  // Restoring a rejected review reuses par360Review's PATCH above, called
+  // here on the reviewee's behalf by an admin — no separate endpoint.
+  // Distinct from parSchedule360Reminders above (a different resource,
+  // gated on isLeadInActiveParCycle, scoped to the caller's own reports).
+  parBulkReminder: (kind: "employee" | "lead" | "special-rating") =>
+    `${parBackendUrl}/reminders/schedule-${kind}-reminders`,
 };
 
 // Leave app backend (people-ops-suite/apps/leave-app). Its own service
