@@ -25,6 +25,7 @@ import { useParIsAdmin } from "../api/useParIsAdmin";
 const TABS: RoutedTabDef[] = [
   { segment: "ongoing", label: "Ongoing" },
   { segment: "history", label: "History" },
+  { segment: "configurations", label: "Configurations" },
 ];
 
 export default function ParAdminGroupPage() {
