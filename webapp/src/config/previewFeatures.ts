@@ -82,12 +82,6 @@ export type PreviewFeature =
    */
   | "financeOverview"
   /**
-   * People Ops → Performance, par-app's Employee Portal ported in #61. Held back until
-   * the Lead Portal, Admin Portal, Report Chain and F2F follow it over — see
-   * docs/ported-apps/par-app.md §7.
-   */
-  | "par"
-  /**
    * The whole UMT perspective — rail entry, launcher tile, landing-page
    * option, favourites eligibility, and the `/umt` route. UMT is still being
    * ported: only its dashboard exists so far (see perspectives.ts), and that

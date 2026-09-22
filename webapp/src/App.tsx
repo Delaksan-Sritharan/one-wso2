@@ -413,176 +413,167 @@ export default function App() {
               (Employee Feedback / Request 360° Feedback / Provide 360°
               Feedback / F2F) rather than invented ones. See
               docs/ported-apps/par-app.md. Not gated beyond signing in —
-              every employee has their own PAR. Behind the same preview flag
-              as its rail entry — hiding only the entry would leave every tab
-              reachable by URL. */}
-          {isPreviewEnabled("par") && (
-            <Route path="me/performance" element={<ParGroupPage />}>
-              <Route index element={<ParGroupIndex />} />
-              {/* Employee Feedback and Request 360° are hidden from a leadless
-                  employee entirely in the source (OngoingCycleView.tsx), not
-                  merely disabled — ParRequiresLeadRoute enforces that at the
-                  route, the same way the tab bar itself is filtered.
-                  ParRequiresActiveCycleRoute wraps every tab but History:
-                  none of them has anything to act on once the cycle closes. */}
-              <Route
-                path="employee-feedback"
-                element={
-                  <ParRequiresActiveCycleRoute>
-                    <ParRequiresLeadRoute>
-                      <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                        <ParEmployeeFeedbackTab />
-                      </Suspense>
-                    </ParRequiresLeadRoute>
-                  </ParRequiresActiveCycleRoute>
-                }
-              />
-              <Route
-                path="request-360"
-                element={
-                  <ParRequiresActiveCycleRoute>
-                    <ParRequiresLeadRoute>
-                      <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                        <ParRequestFeedbackTab />
-                      </Suspense>
-                    </ParRequiresLeadRoute>
-                  </ParRequiresActiveCycleRoute>
-                }
-              />
-              <Route
-                path="provide-360"
-                element={
-                  <ParRequiresActiveCycleRoute>
+              every employee has their own PAR. */}
+          <Route path="me/performance" element={<ParGroupPage />}>
+            <Route index element={<ParGroupIndex />} />
+            {/* Employee Feedback and Request 360° are hidden from a leadless
+                employee entirely in the source (OngoingCycleView.tsx), not
+                merely disabled — ParRequiresLeadRoute enforces that at the
+                route, the same way the tab bar itself is filtered.
+                ParRequiresActiveCycleRoute wraps every tab but History:
+                none of them has anything to act on once the cycle closes. */}
+            <Route
+              path="employee-feedback"
+              element={
+                <ParRequiresActiveCycleRoute>
+                  <ParRequiresLeadRoute>
                     <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                      <ParProvideFeedbackTab />
+                      <ParEmployeeFeedbackTab />
                     </Suspense>
-                  </ParRequiresActiveCycleRoute>
-                }
-              />
-              {/* F2F is leadless-gated too — OngoingCycleView.tsx's leadless
-                  branch has no F2F tab at all, same as Employee Feedback and
-                  Request 360°. */}
-              <Route
-                path="f2f"
-                element={
-                  <ParRequiresActiveCycleRoute>
-                    <ParRequiresLeadRoute>
-                      <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                        <ParF2fTab />
-                      </Suspense>
-                    </ParRequiresLeadRoute>
-                  </ParRequiresActiveCycleRoute>
-                }
-              />
-              <Route
-                path="history"
-                element={
+                  </ParRequiresLeadRoute>
+                </ParRequiresActiveCycleRoute>
+              }
+            />
+            <Route
+              path="request-360"
+              element={
+                <ParRequiresActiveCycleRoute>
+                  <ParRequiresLeadRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParRequestFeedbackTab />
+                    </Suspense>
+                  </ParRequiresLeadRoute>
+                </ParRequiresActiveCycleRoute>
+              }
+            />
+            <Route
+              path="provide-360"
+              element={
+                <ParRequiresActiveCycleRoute>
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParHistoryTab />
+                    <ParProvideFeedbackTab />
                   </Suspense>
-                }
-              />
-            </Route>
-          )}
+                </ParRequiresActiveCycleRoute>
+              }
+            />
+            {/* F2F is leadless-gated too — OngoingCycleView.tsx's leadless
+                branch has no F2F tab at all, same as Employee Feedback and
+                Request 360°. */}
+            <Route
+              path="f2f"
+              element={
+                <ParRequiresActiveCycleRoute>
+                  <ParRequiresLeadRoute>
+                    <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                      <ParF2fTab />
+                    </Suspense>
+                  </ParRequiresLeadRoute>
+                </ParRequiresActiveCycleRoute>
+              }
+            />
+            <Route
+              path="history"
+              element={
+                <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                  <ParHistoryTab />
+                </Suspense>
+              }
+            />
+          </Route>
           {/* People Ops → PAR → Lead Portal: par-app's LeadPortal.tsx, ported
               one tab at a time — all five tabs are now live. Reviewing and
               rating your reports' PAR is People-Ops-team work, unlike the
               employee half (now under Me — see docs/ported-apps/par-app.md).
-              Gated on the same preview flag as the employee portal, plus
-              ParRequiresTeamLeadRoute (par-app's own Role.TEAM_LEAD gate on
-              /lead-portal). */}
-          {isPreviewEnabled("par") && (
+              Gated on ParRequiresTeamLeadRoute (par-app's own Role.TEAM_LEAD
+              gate on /lead-portal). */}
+          <Route
+            path="people-ops/performance/lead"
+            element={
+              <ParRequiresTeamLeadRoute>
+                <ParLeadGroupPage />
+              </ParRequiresTeamLeadRoute>
+            }
+          >
+            <Route index element={<ParLeadGroupIndex />} />
             <Route
-              path="people-ops/performance/lead"
+              path="direct-reports"
               element={
-                <ParRequiresTeamLeadRoute>
-                  <ParLeadGroupPage />
-                </ParRequiresTeamLeadRoute>
+                <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                  <ParLeadDirectReportsTab />
+                </Suspense>
               }
-            >
-              <Route index element={<ParLeadGroupIndex />} />
-              <Route
-                path="direct-reports"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParLeadDirectReportsTab />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="additional-reports"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParLeadAdditionalReportsTab />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="report-chain"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParLeadReportChainTab />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="employee-history"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParLeadEmployeeHistoryTab />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="allocation"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParLeadAllocationTab />
-                  </Suspense>
-                }
-              />
-            </Route>
-          )}
+            />
+            <Route
+              path="additional-reports"
+              element={
+                <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                  <ParLeadAdditionalReportsTab />
+                </Suspense>
+              }
+            />
+            <Route
+              path="report-chain"
+              element={
+                <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                  <ParLeadReportChainTab />
+                </Suspense>
+              }
+            />
+            <Route
+              path="employee-history"
+              element={
+                <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                  <ParLeadEmployeeHistoryTab />
+                </Suspense>
+              }
+            />
+            <Route
+              path="allocation"
+              element={
+                <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                  <ParLeadAllocationTab />
+                </Suspense>
+              }
+            />
+          </Route>
           {/* People Ops → PAR → Admin Portal. ParRequiresAdminRoute reads
               isAdmin off the backend's own GET /employees/{workEmail}
               self-lookup, the same adminLdapGroup check every admin
               endpoint already enforces server-side. */}
-          {isPreviewEnabled("par") && (
+          <Route
+            path="people-ops/performance/admin"
+            element={
+              <ParRequiresAdminRoute>
+                <ParAdminGroupPage />
+              </ParRequiresAdminRoute>
+            }
+          >
+            <Route index element={<ParAdminGroupIndex />} />
             <Route
-              path="people-ops/performance/admin"
+              path="ongoing"
               element={
-                <ParRequiresAdminRoute>
-                  <ParAdminGroupPage />
-                </ParRequiresAdminRoute>
+                <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                  <ParAdminOngoingTab />
+                </Suspense>
               }
-            >
-              <Route index element={<ParAdminGroupIndex />} />
-              <Route
-                path="ongoing"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParAdminOngoingTab />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="history"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParAdminHistoryTab />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="configurations"
-                element={
-                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
-                    <ParAdminGlobalConfigTab />
-                  </Suspense>
-                }
-              />
-            </Route>
-          )}
+            />
+            <Route
+              path="history"
+              element={
+                <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                  <ParAdminHistoryTab />
+                </Suspense>
+              }
+            />
+            <Route
+              path="configurations"
+              element={
+                <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                  <ParAdminGlobalConfigTab />
+                </Suspense>
+              }
+            />
+          </Route>
           {/* People Ops reports. Admin-only, but enforced by the backend and
               explained by PeopleOpsShell — there is no route-level guard, so
               a non-admin reaching this URL gets the shell's "no access"
