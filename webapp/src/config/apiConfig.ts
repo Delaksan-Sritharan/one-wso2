@@ -151,10 +151,6 @@ export const bankingServiceUrls = {
 // digiopsHeaders().
 export const parBackendUrl: string =
   window.config?.ONE_WSO2_PAR_BACKEND_URL ?? "";
-// Asgardeo group name gating the Admin Portal route — see the
-// ONE_WSO2_PAR_ADMIN_GROUP comment in authConfig.ts's Window.config type.
-export const parAdminGroup: string =
-  window.config?.ONE_WSO2_PAR_ADMIN_GROUP ?? "";
 
 export const parServiceUrls = {
   // GET /employees/{workEmail} — par-app's OWN employee record, distinct

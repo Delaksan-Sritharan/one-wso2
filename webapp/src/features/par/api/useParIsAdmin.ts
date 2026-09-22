@@ -14,22 +14,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { hasAnyGroup, useAsgardeoGroups } from "@hooks/useAsgardeoGroups";
-import { parAdminGroup } from "@config/apiConfig";
+import { useMeProfile } from "@features/my/api/useMeProfile";
+import { useParEmployeeInfo } from "./useParData";
 
-// Unlike useParIsTeamLead, this isn't a wrapper around useParEmployeeInfo —
-// the backend never returns an isAdmin field. Reproduces par-app's own
-// check instead: id_token groups claim against a configured group name.
-// Presentation only — every admin endpoint re-derives isAdmin from the JWT
-// server-side, so a stale config value here can only hide the screen, never
-// grant access it shouldn't.
+// Like useParIsTeamLead, a wrapper around useParEmployeeInfo: the backend's
+// GET /employees/{workEmail} now returns isAdmin on a self-lookup, re-using
+// the same adminLdapGroup check every admin endpoint already enforces
+// server-side, instead of this reproducing that check client-side against a
+// separately configured group name. Presentation only — every admin
+// endpoint still re-derives isAdmin from the JWT, so a stale or slow fetch
+// here can only hide the screen from a real admin, never grant access it
+// shouldn't.
 export function useParIsAdmin() {
-  const { ready, groups, error, retry } = useAsgardeoGroups();
+  const profile = useMeProfile();
+  const workEmail = profile.data?.userInfo.workEmail;
+  const employeeInfo = useParEmployeeInfo(workEmail, Boolean(workEmail));
   return {
-    isAdmin: hasAnyGroup(groups, [parAdminGroup]),
-    isLoading: !ready,
-    isError: Boolean(error),
-    error,
-    retry,
+    isAdmin: employeeInfo.data?.isAdmin ?? false,
+    isLoading: profile.isLoading || employeeInfo.isLoading,
+    isError: profile.isError || employeeInfo.isError,
+    error: profile.error ?? employeeInfo.error,
+    retry: profile.isError ? profile.refetch : employeeInfo.refetch,
   };
 }
