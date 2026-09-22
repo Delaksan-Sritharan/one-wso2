@@ -1,11 +1,12 @@
 # PAR (Performance Appraisal Review) — functional specification
 
-**Status:** the employee-facing half of par-app (all five tabs, including F2F) is ported and live under
-the Me perspective. The Lead Portal is fully ported (all five tabs) and lives under People Ops. The
-Admin Portal is fully ported (Ongoing, History, and Configurations, §9) and lives under People Ops too.
-The only functional gap left is Lead Portal evidence attachments (§10). Written from the source and
-cross-checked against the running staging app (screenshots) — this is the reference for verifying the
-port and for writing test cases against it, not a proposal.
+**Status:** the migration is functionally complete. The employee-facing half of par-app (all five tabs,
+including F2F) is ported and live under the Me perspective. The Lead Portal is fully ported (all five
+tabs, including evidence attachments, §8.1) and lives under People Ops. The Admin Portal is fully ported
+(Ongoing, History, and Configurations, §9) and lives under People Ops too. §10 lists the two remaining
+items — both deliberate exclusions, not gaps. Written from the source and cross-checked against the
+running staging app (screenshots) — this is the reference for verifying the port and for writing test
+cases against it, not a proposal.
 
 **Source of truth for behaviour:** `digiops-hr/apps/par-app/webapp/src` — `OngoingCycleView.tsx` and
 its panels/components for the five tabs below (`views/ongoingCycleView/`, `components/common/
@@ -284,9 +285,18 @@ here either; the screen's existing default-read-only/`adminForceEdit` toggle alr
   employee picker). The shared history-rendering logic lives in `ParEmployeeHistoryView.tsx`, which this
   modal wraps in a `Dialog`.
 
-Not ported here: evidence attachments (`parPerformanceNoticeAck`'s Google Drive picker — a capability
-nothing else in this app has), and "Sync an Employee" (`TeamSummary.tsx`'s temporary org-chart-search
-dialog for this cycle).
+Also ported here: evidence attachments. Rating an employee "Needs Improvement" (`EVIDENCE_ENABLED_RATING`
+in `ParLeadReviewPanel.tsx`, hardcoded to source's own default the same way `TOP_5_20_ENABLED_RATING`
+already is, rather than plumbing a second config key for a business-rule constant) requires confirming a
+checkbox ("performance gaps were discussed... at least two discussions were held") before **Attach from
+Google Drive** enables; **Share** stays disabled until at least one file is attached. Files are picked via
+`useGoogleDrivePicker.ts` (ported verbatim from source's own hook of the same name — lazy-loads Google
+Identity Services + the Picker API, requests a `drive.readonly` OAuth token via
+`ONE_WSO2_PAR_GOOGLE_OAUTH_CLIENT_ID`), shown as removable chips (`ParDriveFileChip.tsx`, oxygen-ui icons
+in place of source's five MUI ones) while editing or a plain link list once shared. `parPerformanceNoticeAck`
+is one newline-delimited URL string on the wire, not an array — `util/parDriveFile.ts`'s `parseSavedUrls`
+is the only place that reconstructs the file list from it, matching source's own `parseSavedUrls`. Not
+ported here: "Sync an Employee" (`TeamSummary.tsx`'s temporary org-chart-search dialog for this cycle).
 
 ### 8.2 Additional Reports (`ParLeadAdditionalReportsTab.tsx`)
 
@@ -538,8 +548,8 @@ opened picks up the change immediately, with no separate wiring needed there.
 
 ## 10. Not yet ported
 
-- **Lead Portal — evidence attachments** (see §8.1) — needs a Google Drive picker integration nothing
-  else in this app has.
+No functional gaps remain — the two items below were each deliberately left out, not missed.
+
 - **PAR History's Chain view** — source's `ParHistory.tsx` has a second, lead-only tab alongside "My
   History" (`views/parHistory/ChainViewTab.tsx`): a lead's view of their reports' PAR history across
   cycles, reached by browsing the org chart. A version of this was built and then deliberately removed —
