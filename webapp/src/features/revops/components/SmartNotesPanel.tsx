@@ -63,17 +63,7 @@ export default function SmartNotesPanel({ meetingId }: { meetingId: number }) {
  * Give the notes a shape, without pretending to parse a document format.
  *
  * The backend has already reduced Meet's combined document to a summary, some themed
- * sections and a bullet list (see notesWithoutTranscript). What is left has a consistent
- * shape -- a short heading, a paragraph under it, and lines starting with "* " -- so three
- * rules are enough:
- *
- *   "* ..."                          a bullet
- *   short line, no sentence ending   a heading
- *   anything else                    a paragraph
- *
- * Deliberately heuristic and deliberately forgiving: a heading misread as a paragraph is
- * a slightly flat-looking note, which is a far smaller cost than a parser that drops a
- * line it did not recognise. Every line is rendered either way.
+ * sections and a bullet list (see notesWithoutTranscript). 
  */
 function renderNotes(text: string) {
   const lines = text.replace(/\r/g, "").split("\n");

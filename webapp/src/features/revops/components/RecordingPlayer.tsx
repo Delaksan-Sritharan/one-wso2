@@ -24,10 +24,7 @@ import { describeError } from "../util/revOpsError";
  * The recording, played in the page.
  *
  * Streamed by drive-service, which holds the Google credential and answers HTTP Range
- * requests -- that last part is why this is a plain <video> and not a Drive preview iframe.
- * An iframe would show the recording but expose no way to read or set playback position,
- * which forecloses ever syncing a transcript to it. This element can be driven from code,
- * so `video.currentTime = t` is all a transcript line will need.
+ * requests 
  */
 /** What the page can ask of the player. */
 export interface RecordingPlayerHandle {
@@ -65,8 +62,7 @@ const RecordingPlayer = forwardRef<RecordingPlayerHandle, {
       // to hear that part, not to park the playhead on it.
       void video.play();
       // Scroll the player into view — on a narrow screen the transcript may be the only
-      // thing visible, and a video that starts playing off-screen reads as nothing
-      // happening.
+      // thing visible, and a video that starts playing off-screen reads as nothing happening.
       video.scrollIntoView({ behavior: "smooth", block: "nearest" });
     },
   }), []);

@@ -37,23 +37,14 @@ const ALL_REGIONS = "__all__";
  * The three filters above the list: scope, region and title search.
  *
  * Search is a FORM rather than a text field with a keydown handler. Submitting
- * on Enter then comes for free and works the same as clicking the button, and
- * screen readers announce the field as a search rather than as a lone input —
- * the standalone app wired Enter by hand and the button separately, which is
- * two code paths for one behaviour.
+ * on Enter then comes for free and works the same as clicking the button.
  *
  * The typed query is deliberately NOT applied on every keystroke. Each change
  * is a round trip with server-side paging behind it, so searching as you type
  * would fire a request per character and race their responses.
  *
  * One box, several columns: the backend matches the term against title, account
- * owner, account name, call type and the opportunity's customer name. The label
- * names them rather than saying "search", because a box that silently searches
- * more than it claims leaves people not trying the thing that would have worked.
- *
- * Call type matches the STORED value (`monthly_weekly`), not the label shown in
- * the table ("Monthly / weekly sync") — so "monthly" finds those rows and "sync"
- * does not.
+ * owner, account name, call type and the opportunity's customer name. 
  */
 export default function MeetingFilters({
   scope,

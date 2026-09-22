@@ -193,9 +193,7 @@ export default function MeetingsTable({
                         {/* Plain text rather than the chip this used to be in the
                             title cell. A chip reads as a status — something
                             notable about this row — but every linked meeting has
-                            a call type, so a column of chips is just noise. In
-                            its own column the values line up and can be scanned
-                            down, which is what a field is for. */}
+                            a call type. */}
                         <Typography
                           variant="body2"
                           color="text.secondary"
@@ -278,14 +276,6 @@ export default function MeetingsTable({
         )}
 
         {/* Pagination is rendered here rather than through ListingTable.Footer.
-            In @wso2/oxygen-ui 0.6.0 that sub-component is a bare passthrough to
-            MUI's TableFooter — it takes only children, and the package ships no
-            TablePagination of its own — so although ListingTable.Provider
-            ACCEPTS page/rowsPerPage/totalCount, nothing in the library consumes
-            them to draw controls. The Provider is still given that state above,
-            because its context is what the toolbar and density controls read;
-            this renders the controls the library doesn't.
-
             `component="div"` because this sits outside <table>, where the
             default `td` element would be invalid markup. */}
         <TablePagination
