@@ -188,6 +188,27 @@ changes which rows come back.
 
 ## 7. Deviations from the source, and why
 
+**Notify people — the lead goes last.** The backend builds `cachedEmails.mandatoryMails` lead-first
+and group-second, hardcoded (`leave-app/backend/service.bal:146-162`); `emailGroupToNotify` is a
+required per-deployment configurable, so the group is always present — on staging it is simply
+pointed at the signed-in user's own address, which is why no distinct group shows there.
+
+The two source apps disagree on the order. The **webapp** renders the backend's order untouched
+(`NotifyPeople.tsx:79`). The **micro app** puts the group first: it ignores `mandatoryMails`
+entirely and builds `[...DEFAULT_EMAIL_RECIPIENTS, ...leadEmails]` from a group address hardcoded
+client-side (`digiops-hr/apps/leave/microapp`, `constants.js:96`, `NotifyPeople.js:178`).
+We follow the **micro app**: the group is where the absence is *announced*,
+the lead is who *acts* on it, and the announcement reads better first.
+
+The lead is identified by address (`/user-info`'s `leadEmail`), not by position, so the reordering
+holds whatever the backend sends and is a no-op when no lead is among them. Covered by
+`LeaveApplyPage.test.tsx` rather than by eye, since staging shows no distinct group.
+
+**Not** taken from the micro app: its hardcoded group *address* and display name ("WSO2 Vacation
+Group"). The backend sends neither, and a client-side copy is exactly what has already drifted — the
+micro app's constant and the backend's configurable resolve to different addresses on staging today.
+The chip shows whatever address the backend sends.
+
 **Kept — the port is right and the source is wrong.** The source parses `new Date("2026-08-15")` as
 UTC midnight, so dates render a day early west of UTC; it renders "1 days"; it renders
 "Conges_payes Leave"; and its `SingleLeaveHistory` omits `status`, which the backend returns and the

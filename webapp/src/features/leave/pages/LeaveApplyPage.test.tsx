@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -132,6 +132,47 @@ describe("who gets notified by default", () => {
     // A seeded one can be removed.
     const buddy = screen.getByText("buddy@wso2.com").closest(".MuiChip-root");
     expect(buddy?.querySelector(".MuiChip-deleteIcon")).not.toBeNull();
+  });
+});
+
+// Prod's mandatoryMails carries the leave group alongside the lead, and the
+// backend sends the lead first. The group is where the absence is ANNOUNCED and
+// the lead is who ACTS on it, so the announcement reads better at the front.
+// Staging has no group, which is why this is covered here rather than by eye.
+describe("the order of the always-notified chips", () => {
+  const original = appConfigData.cachedEmails.mandatoryMails;
+  afterEach(() => {
+    appConfigData.cachedEmails.mandatoryMails = original;
+  });
+
+  it("puts the leave group before the lead, whatever order the backend sends", async () => {
+    appConfigData.cachedEmails.mandatoryMails = [
+      { email: "lead@wso2.com", thumbnail: null },
+      { email: "leave-group@example.com", thumbnail: null },
+    ];
+    show();
+    await waitFor(() => expect(screen.getByText("leave-group@example.com")).toBeInTheDocument());
+
+    const order = [...document.querySelectorAll(".MuiChip-root")]
+      .map((c) => c.textContent?.trim())
+      .filter((s) => s === "lead@wso2.com" || s === "leave-group@example.com");
+    expect(order).toEqual(["leave-group@example.com", "lead@wso2.com"]);
+  });
+
+  // The lead is found by address, not by position, so a backend that already
+  // sends the group first must not have the two swapped back.
+  it("leaves a list that is already group-first alone", async () => {
+    appConfigData.cachedEmails.mandatoryMails = [
+      { email: "leave-group@example.com", thumbnail: null },
+      { email: "lead@wso2.com", thumbnail: null },
+    ];
+    show();
+    await waitFor(() => expect(screen.getByText("leave-group@example.com")).toBeInTheDocument());
+
+    const order = [...document.querySelectorAll(".MuiChip-root")]
+      .map((c) => c.textContent?.trim())
+      .filter((s) => s === "lead@wso2.com" || s === "leave-group@example.com");
+    expect(order).toEqual(["leave-group@example.com", "lead@wso2.com"]);
   });
 });
 

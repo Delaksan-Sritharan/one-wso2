@@ -225,10 +225,27 @@ function ApplyForm() {
     () => new Map(offerable.map((e) => [e.workEmail, e])),
     [offerable],
   );
-  const mandatory = useMemo(
-    () => (appConfig.data?.cachedEmails.mandatoryMails ?? []).map((m) => m.email),
-    [appConfig.data],
-  );
+  // The always-notified addresses, with the LEAD LAST.
+  //
+  // The backend sends these lead-first, which put the person who decides ahead
+  // of the leave group that only needs telling. The group reads as "where this
+  // is announced" and the lead as "who acts on it", and the announcement is the
+  // one that belongs at the front.
+  //
+  // The lead is found by ADDRESS — whoever /user-info calls `leadEmail` — not
+  // by position, so this holds however the backend orders the list and whatever
+  // else is in it. With no lead resolved, or no lead among them, the backend's
+  // order stands untouched.
+  //
+  // A deliberate deviation: NotifyPeople.tsx renders mandatoryMails in the
+  // order received. See docs/ported-apps/leave-app.md.
+  const mandatory = useMemo(() => {
+    const all = (appConfig.data?.cachedEmails.mandatoryMails ?? []).map((m) => m.email);
+    const lead = userInfo.data?.leadEmail;
+    if (!lead) return all;
+    const withoutLead = all.filter((e) => e !== lead);
+    return withoutLead.length === all.length ? all : [...withoutLead, lead];
+  }, [appConfig.data, userInfo.data]);
 
   // Who the backend says was copied on this person's last request. The source
   // pre-selects these (NotifyPeople.tsx:86-99) so a repeat request notifies the
