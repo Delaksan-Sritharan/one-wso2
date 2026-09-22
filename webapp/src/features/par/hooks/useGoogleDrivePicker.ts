@@ -15,7 +15,7 @@
 // under the License.
 
 import { useCallback, useRef, useState } from "react";
-import { googleOAuthClientId } from "@config/apiConfig";
+import { googleOAuthClientId, googlePickerApiKey } from "@config/apiConfig";
 import type { DriveFile } from "../util/parDriveFile";
 
 export type DrivePickerError = "SCRIPT_LOAD_FAILED" | "POPUP_BLOCKED" | "ACCESS_DENIED" | null;
@@ -52,11 +52,18 @@ export function useGoogleDrivePicker() {
   const pendingCallbackRef = useRef<((files: DriveFile[]) => void) | null>(null);
 
   const openPickerWithToken = useCallback((token: string, onFilesSelected: (files: DriveFile[]) => void) => {
-    const picker = new google.picker.PickerBuilder()
+    let builder = new google.picker.PickerBuilder()
       .addView(new google.picker.DocsView().setIncludeFolders(false))
       .addView(google.picker.ViewId.RECENTLY_PICKED)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .setOAuthToken(token)
+      .setOAuthToken(token);
+    // Passed only when actually configured (see apiConfig.ts's
+    // googlePickerApiKey) — an empty string here could itself trigger
+    // Google's "API developer key is invalid" error.
+    if (googlePickerApiKey) {
+      builder = builder.setDeveloperKey(googlePickerApiKey);
+    }
+    const picker = builder
       .setCallback((data: google.picker.ResponseObject) => {
         if (data.action === google.picker.Action.PICKED) {
           const files: DriveFile[] = data.docs.map((doc) => ({

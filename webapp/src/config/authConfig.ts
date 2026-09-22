@@ -65,6 +65,14 @@ declare global {
       // the picker button still renders but the token request fails, same
       // as par-app's own GOOGLE_OAUTH_CLIENT_ID behavior.
       ONE_WSO2_PAR_GOOGLE_OAUTH_CLIENT_ID?: string;
+      // Browser API key for the same picker. Optional — see apiConfig.ts's
+      // googlePickerApiKey for why it's unset by default.
+      ONE_WSO2_PAR_GOOGLE_PICKER_API_KEY?: string;
+      // The PAR rating names that trigger the Top 5%/20% checkbox and the
+      // evidence-attachment requirement. Optional — see apiConfig.ts's
+      // top5p20pEnabledRating/evidenceEnabledRating for why.
+      ONE_WSO2_PAR_TOP5P20P_ENABLED_RATING?: string;
+      ONE_WSO2_PAR_EVIDENCE_ENABLED_RATING?: string;
       // Base URL for the digiops-hr banking-app backend. Optional — when
       // absent, the Bank accounts card in Connected apps shows a
       // "not configured" state.

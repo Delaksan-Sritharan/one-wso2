@@ -45,6 +45,7 @@ import {
 import { ChevronDownIcon, ExternalLinkIcon, FileDownIcon, Google, PencilIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { describeError } from "@api/errors";
+import { evidenceEnabledRating, top5p20pEnabledRating } from "@config/apiConfig";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useParRating } from "../api/useParData";
 import { useLeadRatingUpdate } from "../api/useLeadRatingUpdate";
@@ -61,12 +62,6 @@ import ParDriveFileChip from "./ParDriveFileChip";
 import ParEmptyState from "./ParEmptyState";
 import ParHistoryReviewSection from "./ParHistoryReviewSection";
 import type { ParCycle } from "../api/types";
-
-const TOP_5_20_ENABLED_RATING = "Successful";
-// par-app's own evidenceEnabledRating is a window.config value defaulting to
-// this same string — hardcoded here rather than plumbing a new config key,
-// same call already made for TOP_5_20_ENABLED_RATING above.
-const EVIDENCE_ENABLED_RATING = "Needs Improvement";
 
 // Ports LeadReviewPanel.tsx's lead-only path, plus (via `isAdminView`) its
 // isAdminAuditViewOn branch used from the Admin Portal's Employee View/Team
@@ -114,7 +109,7 @@ export default function ParLeadReviewPanel({
     setParRatingValue(parRatingData.parRating && parRatingData.parRating !== "NOT_ASSIGNED" ? parRatingData.parRating : "");
     setSpecialRating((parRatingData.parSpecialRating as "TOP5P" | "TOP20P" | undefined) ?? "NONE");
     setSpecialRatingConfirmed(
-      parRatingData.parRating === TOP_5_20_ENABLED_RATING &&
+      parRatingData.parRating === top5p20pEnabledRating &&
         Boolean(parRatingData.parSpecialRating) &&
         parRatingData.parSpecialRating !== "NONE",
     );
@@ -126,11 +121,11 @@ export default function ParLeadReviewPanel({
   }
 
   useEffect(() => {
-    if (parRatingValue !== TOP_5_20_ENABLED_RATING) {
+    if (parRatingValue !== top5p20pEnabledRating) {
       setSpecialRating("NONE");
       setSpecialRatingConfirmed(false);
     }
-    if (parRatingValue !== EVIDENCE_ENABLED_RATING) {
+    if (parRatingValue !== evidenceEnabledRating) {
       setDriveFiles([]);
       setEvidenceConfirmed(false);
     }
@@ -293,7 +288,7 @@ export default function ParLeadReviewPanel({
     employeeHasStarted &&
     Boolean(parRatingValue) &&
     !isEmptyHtml(leadComment) &&
-    !(parRatingValue === EVIDENCE_ENABLED_RATING && (!evidenceConfirmed || driveFiles.length === 0));
+    !(parRatingValue === evidenceEnabledRating && (!evidenceConfirmed || driveFiles.length === 0));
 
   return (
     <Grid container spacing={2}>
@@ -393,7 +388,7 @@ export default function ParLeadReviewPanel({
                   )}
                 </Box>
 
-                {parRatingValue === TOP_5_20_ENABLED_RATING && (
+                {parRatingValue === top5p20pEnabledRating && (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                     <Typography variant="body2" sx={{ flexShrink: 0, minWidth: 96 }} color="text.secondary">
                       Top 5%/20%
@@ -418,7 +413,7 @@ export default function ParLeadReviewPanel({
                   </Box>
                 )}
 
-                {!readOnly && parRatingValue === TOP_5_20_ENABLED_RATING && (
+                {!readOnly && parRatingValue === top5p20pEnabledRating && (
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -432,7 +427,7 @@ export default function ParLeadReviewPanel({
                   />
                 )}
 
-                {!readOnly && parRatingValue === EVIDENCE_ENABLED_RATING && (
+                {!readOnly && parRatingValue === evidenceEnabledRating && (
                   <Box>
                     <FormControlLabel
                       control={
@@ -442,7 +437,7 @@ export default function ParLeadReviewPanel({
                           disabled={ratingUpdate.isPending}
                         />
                       }
-                      label={`Performance gaps were discussed, and the employee has been informed of the "${EVIDENCE_ENABLED_RATING}" rating, and at least two discussions were held.`}
+                      label={`Performance gaps were discussed, and the employee has been informed of the "${evidenceEnabledRating}" rating, and at least two discussions were held.`}
                       sx={{ "& .MuiFormControlLabel-label": { fontSize: "0.8rem" } }}
                     />
 
@@ -484,10 +479,10 @@ export default function ParLeadReviewPanel({
                   </Box>
                 )}
 
-                {readOnly && parRatingData.parPerformanceNoticeAck && parRatingData.parRating === EVIDENCE_ENABLED_RATING && (
+                {readOnly && parRatingData.parPerformanceNoticeAck && parRatingData.parRating === evidenceEnabledRating && (
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      Performance gaps were discussed, and the employee has been informed of the "{EVIDENCE_ENABLED_RATING}" rating, and at least
+                      Performance gaps were discussed, and the employee has been informed of the "{evidenceEnabledRating}" rating, and at least
                       two discussions were held.
                     </Typography>
                     <Stack spacing={0.5}>

@@ -285,10 +285,12 @@ here either; the screen's existing default-read-only/`adminForceEdit` toggle alr
   employee picker). The shared history-rendering logic lives in `ParEmployeeHistoryView.tsx`, which this
   modal wraps in a `Dialog`.
 
-Also ported here: evidence attachments. Rating an employee "Needs Improvement" (`EVIDENCE_ENABLED_RATING`
-in `ParLeadReviewPanel.tsx`, hardcoded to source's own default the same way `TOP_5_20_ENABLED_RATING`
-already is, rather than plumbing a second config key for a business-rule constant) requires confirming a
-checkbox ("performance gaps were discussed... at least two discussions were held") before **Attach from
+Also ported here: evidence attachments. Rating an employee "Needs Improvement" (`evidenceEnabledRating`,
+a `window.config` value defaulting to source's own default, the same way the Top 5%/20% checkbox's
+trigger rating (`top5p20pEnabledRating`) now is too — both `apiConfig.ts` exports, not hardcoded
+constants, since Admin Portal → Configurations (§9.8) lets an admin freely rename or remove entries from
+the org-wide rating list, and a hardcoded trigger name would silently stop matching if that happened)
+requires confirming a checkbox ("performance gaps were discussed... at least two discussions were held") before **Attach from
 Google Drive** enables; **Share** stays disabled until at least one file is attached. Files are picked via
 `useGoogleDrivePicker.ts` (ported verbatim from source's own hook of the same name — lazy-loads Google
 Identity Services + the Picker API, requests a `drive.readonly` OAuth token via
