@@ -85,19 +85,12 @@ export default function AttachmentsDialog({
             {attachments.map((attachment) => (
               <ListItem key={attachment.fileId} disableGutters>
                 <ListItemIcon sx={{ minWidth: 36 }}>
-                  {attachment.iconLink ? (
-                    // Drive's own type icon. Decorative — the file name beside
-                    // it already names the thing — so the alt is empty rather
-                    // than repeating the title to a screen reader.
-                    <Box
-                      component="img"
-                      src={attachment.iconLink}
-                      alt=""
-                      sx={{ width: 20, height: 20 }}
-                    />
-                  ) : (
-                    <FileIcon size={18} />
-                  )}
+                  {/* A local glyph, never `attachment.iconLink`. Pointing an <img> at
+                      Drive's own icon URL makes the BROWSER fetch from Google, which
+                      tells Google that this viewer is looking at this meeting and is
+                      the one place this app would talk to anything but meet-app-backend.
+                      The file name beside it already says what the thing is. */}
+                  <FileIcon size={18} />
                 </ListItemIcon>
                 <ListItemText
                   primary={
