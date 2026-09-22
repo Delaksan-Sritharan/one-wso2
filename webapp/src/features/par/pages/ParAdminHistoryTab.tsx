@@ -85,8 +85,10 @@ export default function ParAdminHistoryTab() {
         </Stack>
       ),
     },
-    { field: "startDate", headerName: "Start Date", flex: 1, valueGetter: (_v, row) => (row.startDate ? formatShortDate(row.startDate) : "-") },
-    { field: "endDate", headerName: "End Date", flex: 1, valueGetter: (_v, row) => (row.endDate ? formatShortDate(row.endDate) : "-") },
+    // Raw values kept for sorting — formatShortDate's "D Mon 'YY" labels
+    // would otherwise sort lexicographically, not chronologically.
+    { field: "startDate", headerName: "Start Date", flex: 1, valueFormatter: (value: string | null) => (value ? formatShortDate(value) : "-") },
+    { field: "endDate", headerName: "End Date", flex: 1, valueFormatter: (value: string | null) => (value ? formatShortDate(value) : "-") },
     {
       field: "actions",
       headerName: "",

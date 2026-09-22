@@ -119,6 +119,17 @@ describe("groupLegacyParticipantsByTeam", () => {
     expect(groups[0]).toMatchObject({ employeeParCompletion: "1/2", leadFeedbackCompletion: "1/2" });
   });
 
+  it("counts employee PAR as done from questionAnswers content even with no overallCommentEmployee", () => {
+    const groups = groupLegacyParticipantsByTeam([
+      legacyRecord({
+        overallCommentEmployee: null,
+        questionAnswers: JSON.stringify([{ title: "Q1", employeeAnswer: "A real answer", managerFeedback: null }]),
+      }),
+      legacyRecord({ overallCommentEmployee: null, questionAnswers: null }),
+    ]);
+    expect(groups[0]).toMatchObject({ employeeParCompletion: "1/2" });
+  });
+
   it("counts 5% and 20% special-rating slots from overallSpecialRating", () => {
     const groups = groupLegacyParticipantsByTeam([
       legacyRecord({ overallSpecialRating: "TOP5P" }),

@@ -21,6 +21,7 @@ import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useLeaveEmployees } from "@features/leave/api/useLeaveData";
 import { useLegacyParHistoryByCycle } from "../api/useParAdmin";
 import { formatShortDate } from "../util/parDate";
+import { deriveLegacyRatingFromScore } from "../util/parLegacyHistory";
 import { groupLegacyParticipantsByTeam, type LegacyTeamGroup } from "../util/parAdminHistory";
 import ParEmptyState from "./ParEmptyState";
 import ParLegacyRecordDetail from "./ParLegacyRecordDetail";
@@ -120,12 +121,21 @@ export default function ParAdminLegacyCycleView({ cycleName, onBack }: { cycleNa
     const columns: DataGrid.GridColDef<ParLegacyHistory>[] = [
       { field: "employeeEmail", headerName: "Employee", flex: 1.3, valueGetter: (_v, row) => nameFor(row.employeeEmail) },
       { field: "reviewerName", headerName: "Reviewer", flex: 1, valueGetter: (_v, row) => row.reviewerName ?? "-" },
-      { field: "overallRating", headerName: "Overall Rating", flex: 1, valueGetter: (_v, row) => row.overallRating ?? "Not Assigned" },
+      {
+        field: "overallRating",
+        headerName: "Overall Rating",
+        flex: 1,
+        // Same fallback ParLegacyRecordDetail uses, so a record can't show
+        // "Not Assigned" here and a derived rating once opened.
+        valueGetter: (_v, row) => row.overallRating ?? deriveLegacyRatingFromScore(row.managerScoreCode).rating ?? "Not Assigned",
+      },
       {
         field: "reviewCompletedDate",
         headerName: "Completed Date",
         flex: 1,
-        valueGetter: (_v, row) => (row.reviewCompletedDate ? formatShortDate(row.reviewCompletedDate) : "-"),
+        // Raw value kept for sorting — formatShortDate's "D Mon 'YY" labels
+        // would otherwise sort lexicographically, not chronologically.
+        valueFormatter: (value: string | null) => (value ? formatShortDate(value) : "-"),
       },
       {
         field: "actions",
