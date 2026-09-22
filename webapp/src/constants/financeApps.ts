@@ -80,9 +80,10 @@ export const ME_FINANCE_APPS: readonly MenuApp[] = [
  * dashboard sits behind a group you open to file or reconcile something, which
  * is not what you came for when you wanted the numbers.
  *
- * One entry today. The OPD and expense dashboards belong here too. Held back
- * as a whole behind its own preview flag: this is new ground and has not run
- * against a real account yet.
+ * Two entries today — Credit Card Expenses and OPD Claims. The expense
+ * dashboard belongs here too when somebody moves it. Held back as a whole
+ * behind its own preview flag: this is new ground and has not run against a
+ * real account yet.
  */
 export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = isPreviewEnabled("financeOverview")
   ? [
@@ -91,9 +92,9 @@ export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = isPreviewEnabled("finan
         name: "Overview",
         icon: LayoutDashboardIcon,
         purpose: "How the company's card spend and claim allowances are being used.",
-        // One item today and it will not stay that way; collapsing to a leaf now
-        // would teach the wrong shape and make the entry vanish as a concept the
-        // day a second one lands.
+        // Two items today and it will not stay that way; collapsing to a leaf
+        // now would teach the wrong shape and make the entry vanish as a
+        // concept the day a third one lands.
         alwaysGroup: true,
         items: [
           {
@@ -110,6 +111,17 @@ export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = isPreviewEnabled("finan
             // pattern already does for other items.
             requires: ["employee"],
             path: `${CC_PATH}/dashboard`,
+          },
+          {
+            id: "opd-dashboard",
+            label: "OPD Claims",
+            desc: "Claims processed and pending, and how much of each employee's OPD limit is used.",
+            // Not a coarse capability: the OPD backend decides this, and the
+            // source puts the screen behind its finance view. `requires` only
+            // forces useFinanceGate to answer for the id — see its
+            // `opd-dashboard` case.
+            requires: ["admin"],
+            path: opdFinancePaths.dashboard,
           },
         ],
       },
@@ -244,7 +256,7 @@ export const FINANCE_EYEBROW = {
   // now, and their own titles say which type is being filed.
   claims: eyebrowFor("claims"),
   cc: eyebrowFor("cc"),
-  // Literal rather than eyebrowFor(...): this app sits behind a preview
+  // Literals rather than eyebrowFor(...): both apps sit behind a preview
   // flag, and with it off the lookup would fall back to the generic
   // "Finance" chip — wrong for a route still reachable directly by URL.
   expense: { icon: ReceiptTextIcon, label: "Expense Claims" },

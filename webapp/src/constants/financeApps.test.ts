@@ -67,12 +67,17 @@ describe("where each finance app lives", () => {
   // keeps its own registry key, distinct from "claims", which is what the other
   // invariants below actually depend on.
   it("keeps claims with the person, and both the card and expense claims with finance", async () => {
-    const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load({
+    const { ME_FINANCE_APPS, FINANCE_OVERVIEW_APPS, FINANCE_PERSPECTIVE_APPS } = await load({
       opdClaims: true,
       expenseClaims: true,
+      financeOverview: true,
     });
     expect(keys(ME_FINANCE_APPS)).toEqual(["claims"]);
     expect(keys(FINANCE_PERSPECTIVE_APPS)).toEqual(["expense", "opd", "cc"]);
+    // Reading how the allowance is spent is a different job from filing or
+    // approving a claim, so the dashboards sit in their own section above the
+    // apps rather than one inside each of them.
+    expect(keys(FINANCE_OVERVIEW_APPS)).toEqual(["finance-overview"]);
   });
 
   // The flag gates the New Claim ITEM, not the whole app. New Claim duplicates
@@ -203,8 +208,8 @@ describe("the Expense Claims preview flag", () => {
 });
 
 // Finance Overview is new ground — a Credit Card Expenses dashboard moved out
-// of its own app — and has not run against a real account yet. The whole
-// group is held back, not the one item inside it.
+// of its own app, and an OPD Claims dashboard — and has not run against a
+// real account yet. The whole group is held back, not the items inside it.
 describe("the Finance Overview preview flag", () => {
   it("hides the group when the flag is off", async () => {
     const { FINANCE_OVERVIEW_APPS, FINANCE_APPS } = await load();

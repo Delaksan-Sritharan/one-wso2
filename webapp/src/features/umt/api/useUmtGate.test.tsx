@@ -16,6 +16,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { SIGNING_OUT_EVENT } from "@constants/appEvents";
 
 const userInfo: {
   data?: { roles: number[] };
@@ -29,11 +30,17 @@ const userInfo: {
   refetch: vi.fn(),
 };
 
+const asgardeo: { isSignedIn: boolean } = { isSignedIn: true };
+
 vi.mock("./useUmtUserInfo", () => ({
   useUmtUserInfo: () => userInfo,
 }));
 
-const { useUmtGate } = await import("./useUmtGate");
+vi.mock("@asgardeo/react", () => ({
+  useAsgardeo: () => asgardeo,
+}));
+
+const { __resetUmtGateCacheForTests, useUmtGate } = await import("./useUmtGate");
 const gate = () => renderHook(() => useUmtGate()).result.current;
 
 beforeEach(() => {
@@ -42,6 +49,8 @@ beforeEach(() => {
   userInfo.isError = false;
   userInfo.error = undefined;
   userInfo.refetch.mockReset();
+  asgardeo.isSignedIn = true;
+  __resetUmtGateCacheForTests();
 });
 
 describe("UMT role mapping", () => {
@@ -72,7 +81,7 @@ describe("UMT role mapping", () => {
 });
 
 describe("gate states", () => {
-  it("waits for the identity and user-info decision", () => {
+  it("waits for the identity and user-info decision on a genuine first load", () => {
     userInfo.isPending = true;
     expect(gate().isResolving).toBe(true);
   });
@@ -89,5 +98,62 @@ describe("gate states", () => {
   it("retries the underlying user-info query", () => {
     gate().retry();
     expect(userInfo.refetch).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the last successful roles through a background refetch failure instead of denying access", () => {
+    // TanStack keeps `data` from the last successful fetch even while a
+    // later background refetch is failing (isError and data are not
+    // mutually exclusive) — a transient blip must not blank an
+    // already-authorized page.
+    userInfo.data = { roles: [555] };
+    userInfo.isError = true;
+    userInfo.error = new Error("gateway unavailable");
+    const result = gate();
+    expect(result.isError).toBe(false);
+    expect(result.isAdmin).toBe(true);
+    expect(result.isAuthorized).toBe(true);
+  });
+});
+
+describe("remount smoothing (the /umt <-> /umt/updates navigation flash)", () => {
+  it("serves the last resolved decision instead of re-resolving on a remount", () => {
+    userInfo.data = { roles: [555] };
+    expect(gate().isResolving).toBe(false);
+
+    // Simulate the remount: useUmtUserInfo goes pending again for an instant
+    // while useAsgardeoSub re-resolves the subject on the fresh UmtShell.
+    userInfo.isPending = true;
+    userInfo.data = undefined;
+    const result = gate();
+    expect(result.isResolving).toBe(false);
+    expect(result.isAdmin).toBe(true);
+    expect(result.isAuthorized).toBe(true);
+  });
+
+  it("updates to a genuine role change once the new fetch resolves", () => {
+    userInfo.data = { roles: [555] };
+    expect(gate().isAdmin).toBe(true);
+
+    userInfo.data = { roles: [444] };
+    const result = gate();
+    expect(result.isAdmin).toBe(false);
+    expect(result.isUser).toBe(true);
+  });
+
+  // AuthGuard swaps <Outlet/> for a spinner in the same commit that isSignedIn
+  // flips false, so the hook is unmounted before it could observe the
+  // transition. The module-level SIGNING_OUT_EVENT listener is what clears the
+  // cache, independently of the React tree.
+  it("clears the cached decision on SIGNING_OUT_EVENT, so a new sign-in resolves fresh", () => {
+    userInfo.data = { roles: [555] };
+    expect(gate().isAdmin).toBe(true);
+
+    window.dispatchEvent(new Event(SIGNING_OUT_EVENT));
+
+    userInfo.isPending = true;
+    userInfo.data = undefined;
+    const result = gate();
+    expect(result.isResolving).toBe(true);
+    expect(result.isAdmin).toBe(false);
   });
 });

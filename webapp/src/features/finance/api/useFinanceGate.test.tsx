@@ -265,25 +265,44 @@ describe("a preview-gated item", () => {
   });
 });
 
-// The Overview dashboard tile has no backend role of its own — it is
-// everyone's own numbers — so its group's preview flag is the only gate.
-describe("the Finance Overview dashboard", () => {
+// The Overview group has two dashboard tiles now, gated differently: Credit
+// Card Expenses has no backend role of its own — it is everyone's own
+// numbers — so its group's preview flag is the only gate. OPD Claims has its
+// own backend role too, but the group's preview flag comes first: holding
+// the role means nothing while Overview itself is hidden.
+describe("the Finance Overview dashboards", () => {
   const originalConfig = window.config;
   afterEach(() => {
     window.config = originalConfig;
   });
 
-  it("is refused when the group's flag is absent", () => {
+  it("refuses the credit card dashboard when the group's flag is absent", () => {
     window.config = { ...(window.config ?? {}) } as Window["config"];
     delete (window.config as { ONE_WSO2_PREVIEW_FEATURES?: unknown }).ONE_WSO2_PREVIEW_FEATURES;
     expect(gate().canSee("cc-dashboard")).toBe(false);
   });
 
-  it("is allowed when the group's flag is on", () => {
+  it("allows the credit card dashboard when the group's flag is on", () => {
     window.config = {
       ...(window.config ?? {}),
       ONE_WSO2_PREVIEW_FEATURES: { financeOverview: true },
     } as Window["config"];
     expect(gate().canSee("cc-dashboard")).toBe(true);
+  });
+
+  it("refuses the OPD dashboard when the group's flag is absent, role or not", () => {
+    window.config = { ...(window.config ?? {}) } as Window["config"];
+    delete (window.config as { ONE_WSO2_PREVIEW_FEATURES?: unknown }).ONE_WSO2_PREVIEW_FEATURES;
+    roles.opd = [555];
+    expect(gate().canSee("opd-dashboard")).toBe(false);
+  });
+
+  it("allows the OPD dashboard when the group's flag is on and the role is held", () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { financeOverview: true },
+    } as Window["config"];
+    roles.opd = [555];
+    expect(gate().canSee("opd-dashboard")).toBe(true);
   });
 });
