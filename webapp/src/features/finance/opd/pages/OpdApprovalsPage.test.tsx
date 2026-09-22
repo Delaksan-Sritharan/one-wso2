@@ -27,6 +27,8 @@ vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) })
 // Every search payload the screen asks for, so the assertions are about what
 // reaches the backend rather than what happens to render.
 const payloads: Record<string, unknown>[] = [];
+// What the queue has to show, when a test wants a row to click.
+let claimsData: Record<string, unknown>[] = [];
 
 vi.mock("../useOpd", () => ({
   useOpdUserInfo: () => ({
@@ -36,7 +38,7 @@ vi.mock("../useOpd", () => ({
   }),
   useOpdClaims: (payload: Record<string, unknown>) => {
     payloads.push(payload);
-    return { data: [], isLoading: false, isError: false, isSuccess: true };
+    return { data: claimsData, isLoading: false, isError: false, isSuccess: true };
   },
   useOpdEmployees: () => ({ data: [], isLoading: false, isError: false }),
 }));
@@ -59,8 +61,19 @@ vi.mock("../../components/FinanceShell", () => ({
 const { default: OpdApprovalsPage } = await import("./OpdApprovalsPage");
 const { NotificationsProvider } = await import("@context/notifications/NotificationsContext");
 
+const claim = (over: Record<string, unknown>) => ({
+  id: "OPD-1",
+  transactions: [],
+  employeeEmail: "kasun@wso2.com",
+  totalAmount: 100,
+  createdDate: new Date(2026, 6, 20).toISOString(),
+  statusDetails: { status: "PENDING" },
+  ...over,
+});
+
 beforeEach(() => {
   payloads.length = 0;
+  claimsData = [];
 });
 
 function show() {
@@ -167,5 +180,33 @@ describe("typing a claim id does not search on every keystroke", () => {
     expect(distinctIds()).toEqual(
       new Set([JSON.stringify(undefined), JSON.stringify(["C-42"])]),
     );
+  });
+});
+
+// Clicking a row takes over this tab with the same review screen Claim
+// Approval's OPD tabs use — the app's own decision, not a shrunk-down copy
+// in a dialog.
+describe("opening a claim", () => {
+  it("replaces the queue with the review screen on Pending", async () => {
+    claimsData = [claim({})];
+    show();
+    fireEvent.click(await screen.findByRole("button", { name: "Review" }));
+    expect(await screen.findByText("OPD-1")).toBeInTheDocument();
+    // Pending: a decision is on offer.
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument();
+    // Gone, not merely covered: the review screen took the tab's place.
+    expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
+  });
+
+  it("opens read-only, with no decision on offer, on Approved", async () => {
+    claimsData = [claim({ statusDetails: { status: "APPROVED" } })];
+    show();
+    // The Pending tab is the default; switch to Approved to reach this claim.
+    fireEvent.click(await screen.findByRole("tab", { name: "Approved" }));
+    fireEvent.click(await screen.findByRole("button", { name: "View" }));
+    expect(await screen.findByText("OPD-1")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
   });
 });

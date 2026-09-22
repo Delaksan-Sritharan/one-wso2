@@ -346,6 +346,8 @@ export function isOpdBackendConfigured(): boolean {
 export const opdServiceUrls = {
   userInfo: `${opdBackendUrl}/user-info`,
   appData: `${opdBackendUrl}/app-data`,
+  // Finance-only: the whole analytics screen in one request.
+  dashboardSummary: `${opdBackendUrl}/dashboard-summary`,
   searchClaims: `${opdBackendUrl}/search-claims`,
   claims: `${opdBackendUrl}/claims`,
   claimDrafts: `${opdBackendUrl}/claim-drafts`,
@@ -389,6 +391,9 @@ export const ccServiceUrls = {
   transactionSummary: `${ccBackendUrl}/transactions/new-transaction-summary`,
   submittedByCategory: `${ccBackendUrl}/transactions/submitted-transaction-summary`,
   cardHolderCompliance: `${ccBackendUrl}/transactions/card-holder-compliance-summary`,
+  // Lead view: every lead's approval backlog, and one lead's team within it.
+  leadApprovalSummary: `${ccBackendUrl}/transactions/lead-approval-summary`,
+  leadTeamCardHolders: `${ccBackendUrl}/transactions/lead-team-card-holder-summary`,
   expenseTypes: `${ccBackendUrl}/configurations/expense-types`,
   subRegions: `${ccBackendUrl}/configurations/sub-regions`,
   productAndBusinessUnits: `${ccBackendUrl}/configurations/product-and-business-units`,

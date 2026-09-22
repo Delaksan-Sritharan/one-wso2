@@ -92,6 +92,11 @@ vi.mock("../useExpense", () => ({
 const resubmitMutate = vi.fn();
 const uploadReceipt =
   vi.fn<(args: { email: string; file: File }) => Promise<string>>(async () => "replacement.pdf");
+vi.mock("../submitter/useExpenseSubmitter", () => ({
+  useSubmitterExpenseTypes: () => ({ data: [{ id: 3, type: "Taxi" }], isLoading: false, isError: false }),
+  useOnBehalfOfTravels: () => ({ data: [], isLoading: false, isError: false }),
+}));
+
 vi.mock("../useExpenseMutations", () => ({
   useExpenseClaimStatus: () => ({ mutate: vi.fn(), isPending: false }),
   useResubmitExpenseClaim: () => ({ mutate: resubmitMutate, isPending: false }),
@@ -153,7 +158,7 @@ describe("resubmitting a rejected claim", () => {
     state.status = "APPROVED";
     show();
     await open();
-    await screen.findByRole("button", { name: "Close" });
+    await screen.findByRole("button", { name: "Back to claim history" });
     expect(screen.queryByRole("button", { name: "Resubmit" })).not.toBeInTheDocument();
   });
 
@@ -162,9 +167,7 @@ describe("resubmitting a rejected claim", () => {
     await open();
     fireEvent.click(await screen.findByRole("button", { name: "Resubmit" }));
     expect(
-      await screen.findByText(
-        "You haven't changed any claim items. Are you sure you want to resubmit?",
-      ),
+      await screen.findByText("You haven't changed any claim items. Resubmit this claim as it is?"),
     ).toBeInTheDocument();
     expect(resubmitMutate).not.toHaveBeenCalled();
   });
@@ -173,7 +176,7 @@ describe("resubmitting a rejected claim", () => {
     show();
     await open();
     fireEvent.click(await screen.findByRole("button", { name: "Resubmit" }));
-    const dialog = await screen.findByText("Claim Resubmission Confirmation");
+    const dialog = await screen.findByText("Resubmit Confirmation");
     expect(dialog).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: "Resubmit" }).at(-1)!);
 
@@ -201,7 +204,7 @@ describe("resubmitting a rejected claim", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Resubmit" }));
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
     await waitFor(() =>
-      expect(screen.queryByText("Claim Resubmission Confirmation")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Resubmit Confirmation")).not.toBeInTheDocument(),
     );
     expect(resubmitMutate).not.toHaveBeenCalled();
   });
@@ -213,28 +216,30 @@ describe("correcting a line before resubmitting", () => {
   it("offers an edit control only while resubmission is possible", async () => {
     show();
     await open();
-    expect(await screen.findByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Edit expense item 1/ })).toBeInTheDocument();
   });
 
   it("offers none on a claim that cannot be resubmitted", async () => {
     state.status = "APPROVED";
     show();
     await open();
-    await screen.findByRole("button", { name: "Close" });
-    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    await screen.findByRole("button", { name: "Back to claim history" });
+    expect(screen.queryByRole("button", { name: /Edit expense item/ })).not.toBeInTheDocument();
   });
 
   it("sends the corrected amount, not the original", async () => {
     show();
     await open();
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Edit expense item 1/ }));
     fireEvent.change(await screen.findByDisplayValue("40"), { target: { value: "55" } });
     fireEvent.click(screen.getByRole("button", { name: "Save expense" }));
 
     fireEvent.click(await screen.findByRole("button", { name: "Resubmit" }));
     // The wording drops the "you haven't changed anything" hedge.
     expect(
-      await screen.findByText("Are you sure you want to resubmit the claim?"),
+      await screen.findByText(
+        "This claim will go back to your lead for review with the corrections you have made.",
+      ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: "Resubmit" }).at(-1)!);
 
@@ -245,20 +250,20 @@ describe("correcting a line before resubmitting", () => {
   it("confirms before discarding unsaved corrections", async () => {
     show();
     await open();
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Edit expense item 1/ }));
     fireEvent.change(await screen.findByDisplayValue("40"), { target: { value: "55" } });
     fireEvent.click(screen.getByRole("button", { name: "Save expense" }));
 
-    fireEvent.click(await screen.findByRole("button", { name: "Close" }));
-    expect(await screen.findByText("Edit Discard Confirmation")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Back to claim history" }));
+    expect(await screen.findByText("Discard Changes")).toBeInTheDocument();
   });
 
   it("closes straight away when nothing was changed", async () => {
     show();
     await open();
-    fireEvent.click(await screen.findByRole("button", { name: "Close" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Back to claim history" }));
     await waitFor(() =>
-      expect(screen.queryByText("Edit Discard Confirmation")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Discard Changes")).not.toBeInTheDocument(),
     );
   });
 });
@@ -314,7 +319,7 @@ describe("the date limit while resubmitting", () => {
   it("counts back from the claim's creation date", async () => {
     show();
     await open();
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Edit expense item 1/ }));
     // createdDate is 2026-08-11T00:00:00Z and pastDateRestrictionDays is 30, so
     // the oldest date allowed is 29 days before it.
     //
@@ -332,7 +337,7 @@ describe("the date limit while resubmitting", () => {
   it("still accepts the line the claim was filed with", async () => {
     show();
     await open();
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Edit expense item 1/ }));
     // The existing line is dated 2026-08-10 — inside the window measured from
     // the claim, and outside one measured from today.
     await waitFor(() =>
@@ -349,7 +354,7 @@ describe("replacing a receipt while correcting a claim", () => {
   it("uploads against the claim's owner and keeps the new file", async () => {
     show();
     await open();
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Edit expense item 1/ }));
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(["x"], "new-receipt.pdf", { type: "application/pdf" });

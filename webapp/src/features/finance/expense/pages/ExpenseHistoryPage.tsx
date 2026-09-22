@@ -38,8 +38,10 @@ import { isExpenseBackendConfigured } from "@config/apiConfig";
 import { StatusChip, expenseStatusMeta } from "../../components/FinanceChips";
 import { describeError } from "../../util/financeError";
 import { money, formatNice, startOfYearIso, endOfYearIso } from "../../util/financeFormat";
-import { useExpenseAppData, useExpenseClaims } from "../useExpense";
-import { ExpenseClaimDetailsDialog } from "../ExpenseClaimDetailsDialog";
+import { useExpenseAppData, useExpenseClaims, useExpenseEmployees } from "../useExpense";
+import { ExpenseHistoryClaimDetails } from "../history/ExpenseHistoryClaimDetails";
+import { ExpenseClaimActivityDrawer } from "../history/ExpenseClaimActivityDrawer";
+import { makeNameResolver, type HistoryClaim } from "../history/expenseHistoryTypes";
 import {
   EXPENSE_FILTERABLE_STATUSES,
   type ExpenseClaim,
@@ -71,8 +73,18 @@ type Range = typeof LATEST | number;
 function HistoryBody() {
   const appData = useExpenseAppData();
   const currentYear = new Date().getFullYear();
+  // Names are what the source shows on screen; addresses live in tooltips —
+  // needed only for the activity trail's submission stage.
+  const employees = useExpenseEmployees();
+  const nameFor = useMemo(() => makeNameResolver(employees.data), [employees.data]);
   const [range, setRange] = useState<Range>(LATEST);
-  const [selected, setSelected] = useState<ExpenseClaim | null>(null);
+  // The claim being read in full — the details panel takes over the page,
+  // the same way Finance → Expense Claims → Claim History slides it over
+  // the list.
+  const [selected, setSelected] = useState<HistoryClaim | null>(null);
+  // Independent of `selected`: the activity trail opens straight from the
+  // detail view's own header button.
+  const [activityClaim, setActivityClaim] = useState<HistoryClaim | null>(null);
   // FilterHolder.tsx:175-178,249 — the employee's own view filters by status
   // and by claim id as well as by period.
   const [status, setStatus] = useState<ExpenseClaimStatus | "All">("All");
@@ -102,6 +114,30 @@ function HistoryBody() {
     for (let y = currentYear; y >= currentYear - 5; y--) out.push(y);
     return out;
   }, [currentYear]);
+
+  // Same review screen Finance → Expense Claims → Claim History uses, taking
+  // over this tab the same way it takes over that screen — bills in full,
+  // and a rejected claim still opens editable for resubmit, not a
+  // shrunk-down copy in a dialog.
+  if (selected) {
+    return (
+      <>
+        <ExpenseHistoryClaimDetails
+          claim={selected}
+          appData={appData.data}
+          viewerEmail={email}
+          onBack={() => setSelected(null)}
+          onShowActivity={() => setActivityClaim(selected)}
+        />
+        <ExpenseClaimActivityDrawer
+          claim={activityClaim}
+          nameFor={nameFor}
+          viewerEmail={email}
+          onClose={() => setActivityClaim(null)}
+        />
+      </>
+    );
+  }
 
   return (
     <Box>
@@ -164,12 +200,6 @@ function HistoryBody() {
       ) : (
         <ClaimsTable claims={claims.data!} onView={setSelected} />
       )}
-
-      <ExpenseClaimDetailsDialog
-        claim={selected}
-        onClose={() => setSelected(null)}
-        appData={appData.data}
-      />
     </Box>
   );
 }
