@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // file.
 type Perspectives = typeof import("./perspectives");
 
-async function load(preview: { umt?: boolean } = {}): Promise<Perspectives> {
+async function load(preview: { umt?: boolean; infra?: boolean } = {}): Promise<Perspectives> {
   vi.resetModules();
   window.config = {
     ...(window.config ?? {}),
@@ -111,5 +111,30 @@ describe("perspectives whose landing forwards to the first rail item", () => {
   it("leaves Me alone", async () => {
     const { PERSPECTIVES } = await load({ umt: true });
     expect(PERSPECTIVES.find((p) => p.key === "me")?.forwardsToFirstItem).toBeUndefined();
+  });
+
+  // Infra Portal is behind a preview flag, so the registry depends on
+  // `window.config` and has to be imported fresh per state rather than once at
+  // the top of the file.
+  describe("the Infra Portal perspective", () => {
+    it("is absent from the registry when the preview flag is off", async () => {
+      const { PERSPECTIVES, reachablePerspectives } = await load({ infra: false });
+      expect(keys(PERSPECTIVES)).not.toContain("infra");
+      expect(keys(reachablePerspectives())).not.toContain("infra");
+    });
+  
+    it("is absent on an absent flag, not only on an explicit false", async () => {
+      const { PERSPECTIVES } = await load();
+      expect(keys(PERSPECTIVES)).not.toContain("infra");
+    });
+  
+    it("is present, built and routable, when the preview flag is on", async () => {
+      const { PERSPECTIVES, reachablePerspectives, findPerspectiveByPath } = await load({
+        infra: true,
+      });
+      expect(keys(PERSPECTIVES)).toContain("infra");
+      expect(keys(reachablePerspectives())).toContain("infra");
+      expect(findPerspectiveByPath("/infra")?.key).toBe("infra");
+    });
   });
 });

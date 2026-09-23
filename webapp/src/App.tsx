@@ -151,6 +151,7 @@ import ExpenseLeadApprovalsScreen from "@features/finance/expense/approvals/Expe
 import UmtHomePage from "@features/umt/pages/UmtHomePage";
 import UmtUpdateView from "@features/umt/pages/UmtUpdateView";
 import UmtUpdatesPage from "@features/umt/pages/UmtUpdatesPage";
+import InfraHomePage from "@features/infra/pages/InfraHomePage";
 
 export default function App() {
   return (
@@ -170,6 +171,9 @@ export default function App() {
               <Route path="umt/updates" element={<UmtUpdatesPage />} />
               <Route path="umt/updates/:id" element={<UmtUpdateView />} />
             </>
+          )}
+          {isPreviewEnabled("infra") && (
+            <Route path="infra" element={<InfraHomePage />} />
           )}
           {/* My Team — placeholder for now; the real subordinates view is on
               hold this iteration (mirrors people-app's lead-only nav item). */}
