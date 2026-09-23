@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Autocomplete,
@@ -132,7 +132,14 @@ export default function UpdateAssigneesDialog({
   // Action Owner can be any employee, searched live against the HR entity and
   // resolved to a user id on selection — same as Add Risk and Edit Risk.
   const [actionOwnerOptions, setActionOwnerOptions] = useState<EmployeeOption[]>([]);
-  const [actionOwnerSelected, setActionOwnerSelected] = useState<EmployeeOption | null>(null);
+  // The current Action Owner as an Autocomplete option. RiskDetail has only
+  // their id, so the name comes from the page's users list, which may still be
+  // loading when the dialog opens.
+  const currentActionOwnerOption = useMemo<EmployeeOption | null>(() => {
+    const u = users.find((x) => x.id === currentActionOwnerId);
+    return u ? { name: u.display_name, email: u.email } : null;
+  }, [users, currentActionOwnerId]);
+  const [actionOwnerSelected, setActionOwnerSelected] = useState<EmployeeOption | null>(currentActionOwnerOption);
   const [actionOwnerSearchLoading, setActionOwnerSearchLoading] = useState(false);
   const [actionOwnerResolving, setActionOwnerResolving] = useState(false);
   const [actionOwnerError, setActionOwnerError] = useState<string | null>(null);
@@ -167,13 +174,17 @@ export default function UpdateAssigneesDialog({
     setManagementApproverId(detail.management_approver_id);
     setAssignmentTeamId(detail.assignment_team_id);
     setActionOwnerId(detail.action_plan?.action_owner_id ?? null);
-    const currentActionOwner = users.find((u) => u.id === detail.action_plan?.action_owner_id);
-    setActionOwnerSelected(
-      currentActionOwner ? { name: currentActionOwner.display_name, email: currentActionOwner.email } : null,
-    );
+    setActionOwnerSelected(currentActionOwnerOption);
     setActionOwnerError(null);
     setApiError("");
-  }, [open, detail, users]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the dialog opens on a risk; re-running when the users list arrives would wipe the user's unsaved picks
+  }, [open, detail]);
+
+  // Fill in the current Action Owner's name if the users list lands after the
+  // dialog opened, without touching a replacement the user already picked.
+  useEffect(() => {
+    setActionOwnerSelected((selected) => selected ?? currentActionOwnerOption);
+  }, [currentActionOwnerOption]);
 
   const payload: UpdateAssigneesPayload = {};
   if (assignerId !== detail.assigner_id) payload.assigner_id = assignerId;
@@ -282,10 +293,11 @@ export default function UpdateAssigneesDialog({
               if (reason === "input") handleActionOwnerInputChange(newInputValue);
             }}
             onChange={(_, newValue) => {
-              // Clearing the field means "leave it as it is" — the correction
-              // never removes an Action Owner, only replaces one.
+              // The correction never removes an Action Owner, only replaces
+              // one, so clearing the field puts the current one back rather
+              // than showing an empty field that would not be saved as empty.
               if (!newValue) {
-                setActionOwnerSelected(null);
+                setActionOwnerSelected(currentActionOwnerOption);
                 setActionOwnerId(currentActionOwnerId);
                 return;
               }
@@ -297,7 +309,7 @@ export default function UpdateAssigneesDialog({
                   setActionOwnerError(null);
                 })
                 .catch(() => {
-                  setActionOwnerSelected(null);
+                  setActionOwnerSelected(currentActionOwnerOption);
                   setActionOwnerId(currentActionOwnerId);
                   setActionOwnerError("Unable to link this employee to a user account. Please try again.");
                 })
@@ -311,7 +323,10 @@ export default function UpdateAssigneesDialog({
                 label="Action Owner"
                 placeholder="Search by email"
                 error={!!actionOwnerError}
-                helperText={actionOwnerError ?? undefined}
+                helperText={
+                  actionOwnerError ??
+                  (currentActionOwnerId !== null ? "Search to replace the current Action Owner." : undefined)
+                }
               />
             )}
           />
