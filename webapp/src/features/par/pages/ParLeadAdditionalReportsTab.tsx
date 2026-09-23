@@ -20,6 +20,7 @@ import {
   Avatar,
   Box,
   Card,
+  Chip,
   DataGrid,
   Dialog,
   DialogContent,
@@ -138,30 +139,33 @@ export default function ParLeadAdditionalReportsTab() {
               slotProps={{ img: { referrerPolicy: "no-referrer" } }}
               sx={{ mr: 1.5, height: "2.2rem", width: "2.2rem" }}
             />
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {params.row.parEmployeeName}
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: "2.95rem" }}>
-            <Typography variant="caption" color="text.secondary">
-              {params.row.parEmployeeEmail}
-            </Typography>
-            <Tooltip title="Copy Email" arrow>
-              <IconButton
-                size="small"
-                aria-label="Copy Email"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(params.row.parEmployeeEmail);
-                    showSuccess("Email copied");
-                  } catch (err) {
-                    showError(describeError(err));
-                  }
-                }}
-              >
-                <CopyIcon size={13} />
-              </IconButton>
-            </Tooltip>
+            <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <Typography variant="body2" sx={{ fontSize: 13, fontWeight: 600 }}>
+                {params.row.parEmployeeName}
+              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <Typography variant="caption" sx={{ fontSize: 11.5 }} color="text.secondary">
+                  {params.row.parEmployeeEmail}
+                </Typography>
+                <Tooltip title="Copy Email" arrow>
+                  <IconButton
+                    size="small"
+                    aria-label="Copy Email"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await navigator.clipboard.writeText(params.row.parEmployeeEmail);
+                        showSuccess("Email copied");
+                      } catch (err) {
+                        showError(describeError(err));
+                      }
+                    }}
+                  >
+                    <CopyIcon size={13} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
           </Box>
         </Box>
       ),
@@ -170,12 +174,18 @@ export default function ParLeadAdditionalReportsTab() {
       field: "parEmployeeStatus",
       headerName: "Employee PAR",
       flex: 0.8,
+      display: "flex",
+      align: "center",
+      headerAlign: "center",
       renderCell: (params) => <ParStatusChip content={params.row.parEmployeeStatus} />,
     },
     {
       field: "par360ReviewStatus",
       headerName: "360° Feedback",
       flex: 0.9,
+      display: "flex",
+      align: "center",
+      headerAlign: "center",
       renderCell: (params) => (
         <ParStatusChip
           content={params.row.par360ReviewStatus}
@@ -190,24 +200,36 @@ export default function ParLeadAdditionalReportsTab() {
       field: "parLeadStatus",
       headerName: "Lead's PAR",
       flex: 0.8,
+      display: "flex",
+      align: "center",
+      headerAlign: "center",
       renderCell: (params) => <ParStatusChip content={params.row.parLeadStatus} />,
     },
     {
       field: "parRating",
       headerName: "Rating",
       flex: 0.8,
+      display: "flex",
+      align: "center",
+      headerAlign: "center",
       renderCell: (params) => <ParStatusChip content={params.row.parRating ?? ""} />,
     },
     {
       field: "parSpecialRating",
       headerName: "Top 5%/20% Rating",
       flex: 0.9,
+      display: "flex",
+      align: "center",
+      headerAlign: "center",
       renderCell: (params) => <ParStatusChip content={params.row.parSpecialRating ?? ""} />,
     },
     {
       field: "parF2fStatus",
       headerName: "F2F",
       flex: 0.6,
+      display: "flex",
+      align: "center",
+      headerAlign: "center",
       renderCell: (params) => <ParStatusChip content={params.row.parF2fStatus} />,
     },
     {
@@ -215,6 +237,8 @@ export default function ParLeadAdditionalReportsTab() {
       headerName: "",
       sortable: false,
       flex: 0.5,
+      display: "flex",
+      align: "center",
       renderCell: (params) => (
         <Tooltip title={params.row.parLeadStatus === "SHARED" ? "View" : "Review"} arrow>
           <IconButton onClick={() => setReviewEmployeeEmail(params.row.parEmployeeEmail)}>
@@ -229,11 +253,9 @@ export default function ParLeadAdditionalReportsTab() {
     <Stack spacing={2}>
       <Grid container spacing={2} sx={{ alignItems: "center" }}>
         <Grid size={{ xs: 12, md: 4 }}>
-          <Box display="flex" alignItems="center">
-            <Typography variant="h4" component="span">
-              {cycle.parCycleName}{" "}
-            </Typography>
-            <Typography component="span" color="text.secondary" sx={{ ml: 1 }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Chip label={cycle.parCycleName} size="small" color="primary" variant="outlined" />
+            <Typography component="span" variant="caption" color="text.secondary">
               ({formatShortDate(cycle.parCycleStartDate)} - {formatShortDate(cycle.parCycleEndDate)})
             </Typography>
           </Box>
