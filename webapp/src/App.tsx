@@ -107,12 +107,11 @@ const SabbaticalReportTab = lazy(
 import SabbaticalApplyTab from "@features/leave/pages/LeaveSabbaticalPage";
 import ClaimsPage, { ClaimsIndex } from "@features/finance/claims/ClaimsPage";
 import OpdNewClaimPage from "@features/finance/opd/pages/OpdNewClaimPage";
-// OPD Claims as its own Finance app — a different screen on a different route
-// from the OPD tab under Me → Claims above, which is left alone.
+// The company-wide analytics screen, not a personal one — everyone's spend,
+// not your own. Claim History used to live here too as its own Finance app;
+// retired once Me → Claims → OPD covered the same queue, filters and all.
 import OpdDashboardScreen from "@features/finance/opd/dashboard/OpdDashboardScreen";
-import OpdClaimHistoryScreen from "@features/finance/opd/history/OpdClaimHistoryScreen";
 import OpdClaimsTab from "@features/finance/opd/pages/OpdHistoryPage";
-import OpdApprovalsTab from "@features/finance/opd/pages/OpdApprovalsPage";
 import CcDashboardPage from "@features/finance/cc/pages/CcDashboardPage";
 import CcNewTransactionsPage from "@features/finance/cc/pages/CcNewTransactionsPage";
 import CcPendingPage from "@features/finance/cc/pages/CcPendingPage";
@@ -120,8 +119,6 @@ import CcApprovePage from "@features/finance/cc/pages/CcApprovePage";
 import CcHistoryPage from "@features/finance/cc/pages/CcHistoryPage";
 import CcSettingsPage from "@features/finance/cc/pages/CcSettingsPage";
 import ExpenseNewClaimPage from "@features/finance/expense/pages/ExpenseNewClaimPage";
-import ExpenseSubmitterPage from "@features/finance/expense/submitter/ExpenseSubmitterPage";
-import ExpenseClaimHistoryPage from "@features/finance/expense/history/ExpenseClaimHistoryPage";
 import ExpenseClaimsTab from "@features/finance/expense/pages/ExpenseHistoryPage";
 import ClaimApprovalPage, {
   ClaimApprovalIndex,
@@ -129,8 +126,6 @@ import ClaimApprovalPage, {
 } from "@features/finance/approvals/ClaimApprovalPage";
 import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
-import ExpenseApprovalsTab from "@features/finance/expense/pages/ExpenseApprovalsPage";
-import CcApprovalsTab from "@features/finance/cc/pages/CcApprovalsTab";
 import { riskRoutes } from "@features/security/grc/modules/risk/routes";
 import { auditRoutes } from "@features/security/grc/modules/audit/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
@@ -145,8 +140,6 @@ import TradeReferenceDeactivatedPage from "@features/due-diligence/trade-referen
 import DueDiligencePreferencesPage from "@features/due-diligence/preferences/pages/PreferencesPage";
 import ViewPdfPage from "@features/due-diligence/shared/pages/ViewPdfPage";
 import ViewImagePage from "@features/due-diligence/shared/pages/ViewImagePage";
-import ExpenseApprovalsScreen from "@features/finance/expense/approvals/ExpenseApprovalsScreen";
-import ExpenseLeadApprovalsScreen from "@features/finance/expense/approvals/ExpenseLeadApprovalsScreen";
 import UmtHomePage from "@features/umt/pages/UmtHomePage";
 import UmtUpdateView from "@features/umt/pages/UmtUpdateView";
 import UmtUpdatesPage from "@features/umt/pages/UmtUpdatesPage";
@@ -313,38 +306,6 @@ export default function App() {
               </SriLankaRoute>
             }
           />
-          {/* Behind the same preview flag as the group's own menu entry.
-              Hiding only the entry would leave every one of these pages
-              reachable by anyone with the URL, which is not what "not
-              released yet" means. */}
-          {isPreviewEnabled("expenseClaims") && (
-            <>
-              {/* New Claim carries a second, narrower flag on top of the
-                  group's: it holds back a SECOND way to file a claim until it
-                  is reconciled with Me → Claims, which is a different
-                  question from whether Expense Claims is released at all. */}
-              {isPreviewEnabled("expenseSubmitter") && (
-                <Route path="finance/expense-claims/new" element={<ExpenseSubmitterPage />} />
-              )}
-              <Route
-                path="finance/expense-claims/history"
-                element={<ExpenseClaimHistoryPage />}
-              />
-              {/* Approving sits beside filing, where the source app's sidebar
-                  keeps it — one entry per stage, on the source's own two
-                  URLs. Each screen also gates itself on its own backend role,
-                  so a typed URL is no more revealing than the menu entry it
-                  belongs to. */}
-              <Route
-                path="finance/expense-claims/lead-approvals"
-                element={<ExpenseLeadApprovalsScreen />}
-              />
-              <Route
-                path="finance/expense-claims/finance-approvals"
-                element={<ExpenseApprovalsScreen stage="FINANCE" />}
-              />
-            </>
-          )}
           {/* Behind the same preview flag as its menu entry under Overview.
               Hiding only the entry would leave the page reachable by anyone
               with the URL. Moved here out of the plain cc routes below: this
@@ -363,16 +324,6 @@ export default function App() {
               with the URL. */}
           {isPreviewEnabled("financeOverview") && (
             <Route path="finance/opd/dashboard" element={<OpdDashboardScreen />} />
-          )}
-          {/* Behind the same preview flag as its menu entry. Hiding only the
-              entry would leave the page reachable by anyone with the URL —
-              not what "not released yet" means. Me → Claims → OPD stays
-              open regardless: that one was never behind this flag, filing
-              and reading your own claims is open to everyone
-              (claimsTabs.ts:22-24); this is specifically the Finance
-              perspective's own OPD Claims front door. */}
-          {isPreviewEnabled("opdClaims") && (
-            <Route path="finance/opd/history" element={<OpdClaimHistoryScreen />} />
           )}
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
@@ -616,30 +567,6 @@ export default function App() {
               element={
                 <ClaimApprovalTabRoute gateId="claim-approval">
                   <NeedsYouTab />
-                </ClaimApprovalTabRoute>
-              }
-            />
-            <Route
-              path="expense"
-              element={
-                <ClaimApprovalTabRoute gateId="claim-approval-expense">
-                  <ExpenseApprovalsTab />
-                </ClaimApprovalTabRoute>
-              }
-            />
-            <Route
-              path="opd"
-              element={
-                <ClaimApprovalTabRoute gateId="claim-approval-opd">
-                  <OpdApprovalsTab />
-                </ClaimApprovalTabRoute>
-              }
-            />
-            <Route
-              path="cc"
-              element={
-                <ClaimApprovalTabRoute gateId="claim-approval-cc">
-                  <CcApprovalsTab />
                 </ClaimApprovalTabRoute>
               }
             />
