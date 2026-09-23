@@ -20,13 +20,16 @@ export interface ConfirmationContent {
   title: string;
   text: string;
   confirmAction: () => void;
+  /** Defaults to "Confirm" — override for a caller whose source dialog uses
+   * different wording (e.g. "Proceed"). */
+  confirmLabel?: string;
 }
 
 /**
- * Ported from the source app's Dialog/ConfirmationDialog.js — a single
- * reusable "are you sure?" dialog, driven by whatever content the caller
- * currently has open (`null` = closed). Used throughout the Partners /
- * Trade References pages for status-change confirmations.
+ * Originally ported from the due-diligence source app's
+ * Dialog/ConfirmationDialog.js, now shared beyond it — a single reusable
+ * "are you sure?" dialog, driven by whatever content the caller currently
+ * has open (`null` = closed).
  */
 export default function ConfirmationDialog({
   content,
@@ -53,7 +56,7 @@ export default function ConfirmationDialog({
             onClose();
           }}
         >
-          Confirm
+          {content.confirmLabel ?? "Confirm"}
         </Button>
       </DialogActions>
     </Dialog>

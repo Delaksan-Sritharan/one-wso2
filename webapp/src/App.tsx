@@ -37,6 +37,7 @@ import ParGroupPage, {
   ParRequiresLeadRoute,
 } from "@features/par/pages/ParGroupPage";
 import ParLeadGroupPage, { ParLeadGroupIndex, ParRequiresTeamLeadRoute } from "@features/par/pages/ParLeadGroupPage";
+import ParAdminGroupPage, { ParAdminGroupIndex, ParRequiresAdminRoute } from "@features/par/pages/ParAdminGroupPage";
 // Lazy on purpose, same reasoning as the leave report tabs below —
 // react-quill-new, jspdf/jspdf-autotable and dompurify are pulled in
 // transitively, and only someone who opens /me/performance needs them.
@@ -50,6 +51,8 @@ const ParLeadAdditionalReportsTab = lazy(() => import("@features/par/pages/ParLe
 const ParLeadReportChainTab = lazy(() => import("@features/par/pages/ParLeadReportChainTab"));
 const ParLeadEmployeeHistoryTab = lazy(() => import("@features/par/pages/ParLeadEmployeeHistoryTab"));
 const ParLeadAllocationTab = lazy(() => import("@features/par/pages/ParLeadAllocationTab"));
+const ParAdminOngoingTab = lazy(() => import("@features/par/pages/ParAdminOngoingTab"));
+const ParAdminHistoryTab = lazy(() => import("@features/par/pages/ParAdminHistoryTab"));
 import EmailGroupsPage from "@features/my/email-groups/pages/EmailGroupsPage";
 import EmailSignaturePage from "@features/my/email-signature/pages/EmailSignaturePage";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
@@ -81,10 +84,11 @@ import {
   EmailWorkbenchHistoryPage,
   EmailWorkbenchManagePage,
 } from "@features/marketing-ops/email-workbench/pages/EmailWorkbenchPages";
-import LeaveGroupPage, {
-  LeaveGroupIndex,
-  LeaveTabRoute,
-} from "@features/leave/pages/LeaveGroupPage";
+import LeavePage, {
+  LeaveIndex,
+  LeaveKindRoute,
+  LeaveTabIndex,
+} from "@features/leave/pages/LeavePage";
 import GeneralApplyTab from "@features/leave/pages/LeaveApplyPage";
 import GeneralHistoryTab, {
   SabbaticalHistoryTab,
@@ -179,86 +183,98 @@ export default function App() {
           {/* Me → Leave: native screens ported from leave-app. Lives here
               (not People Ops) — it's something every employee does for
               themself, not an HR-team tool. */}
-          {/* Two groups by kind of leave, each holding everything you can do
-              with that kind. General is the everyday path; sabbatical is rare,
-              so it sits behind its own entry rather than threading through
-              every group. Each tab is a real route, so it can be linked,
-              refreshed and gated; see features/leave/leaveTabs.ts. */}
-          <Route path="me/leave/general" element={<LeaveGroupPage groupKey="general" />}>
-            <Route index element={<LeaveGroupIndex groupKey="general" />} />
+          {/* Me → Leave. ONE entry, tabs named for the action, and the kind of
+              leave as a route segment inside the tabs that offer both — the
+              source's own nesting (route.ts:47-150). The kind is in the URL
+              rather than in state because these guards are the enforcement:
+              a hidden toggle is not access control. See leaveTabs.ts. */}
+          <Route path="me/leave" element={<LeavePage />}>
+            <Route index element={<LeaveIndex />} />
+
+            <Route path="apply">
+              <Route index element={<LeaveTabIndex segment="apply" />} />
+              <Route
+                path="general"
+                element={
+                  <LeaveKindRoute gateId="leave-apply">
+                    <GeneralApplyTab />
+                  </LeaveKindRoute>
+                }
+              />
+              <Route
+                path="sabbatical"
+                element={
+                  <LeaveKindRoute gateId="leave-sabbatical-own">
+                    <SabbaticalApplyTab />
+                  </LeaveKindRoute>
+                }
+              />
+            </Route>
+
+            <Route path="history">
+              <Route index element={<LeaveTabIndex segment="history" />} />
+              <Route
+                path="general"
+                element={
+                  <LeaveKindRoute gateId="leave-history">
+                    <GeneralHistoryTab />
+                  </LeaveKindRoute>
+                }
+              />
+              <Route
+                path="sabbatical"
+                element={
+                  <LeaveKindRoute gateId="leave-sabbatical-own">
+                    <SabbaticalHistoryTab />
+                  </LeaveKindRoute>
+                }
+              />
+            </Route>
+
+            {/* Single-kind tabs carry no kind segment: general leave has no
+                approval step, so there is no choice to name in the URL. */}
             <Route
-              path="apply"
+              path="approvals"
               element={
-                <LeaveTabRoute groupKey="general" gateId="leave-apply">
-                  <GeneralApplyTab />
-                </LeaveTabRoute>
-              }
-            />
-            <Route
-              path="history"
-              element={
-                <LeaveTabRoute groupKey="general" gateId="leave-history">
-                  <GeneralHistoryTab />
-                </LeaveTabRoute>
-              }
-            />
-            <Route
-              path="reports"
-              element={
-                <LeaveTabRoute groupKey="general" gateId="leave-reports">
-                  {/* Skeleton rather than null: the chunk is fetched on
-                      navigation, and a blank frame reads as a broken link. */}
-                  <Suspense fallback={<Skeleton variant="rectangular" height={220} sx={{ borderRadius: 1.5 }} />}>
-                    <GeneralReportTab />
-                  </Suspense>
-                </LeaveTabRoute>
-              }
-            />
-          </Route>
-          <Route path="me/leave/sabbatical" element={<LeaveGroupPage groupKey="sabbatical" />}>
-            <Route index element={<LeaveGroupIndex groupKey="sabbatical" />} />
-            <Route
-              path="apply"
-              element={
-                <LeaveTabRoute groupKey="sabbatical" gateId="leave-sabbatical-own">
-                  <SabbaticalApplyTab />
-                </LeaveTabRoute>
-              }
-            />
-            <Route
-              path="history"
-              element={
-                <LeaveTabRoute groupKey="sabbatical" gateId="leave-sabbatical-own">
-                  <SabbaticalHistoryTab />
-                </LeaveTabRoute>
-              }
-            />
-            <Route
-              path="approve"
-              element={
-                <LeaveTabRoute groupKey="sabbatical" gateId="leave-approve">
+                <LeaveKindRoute gateId="leave-approve">
                   <SabbaticalApproveTab />
-                </LeaveTabRoute>
+                </LeaveKindRoute>
               }
             />
             <Route
               path="approval-history"
               element={
-                <LeaveTabRoute groupKey="sabbatical" gateId="leave-approve">
+                <LeaveKindRoute gateId="leave-approve">
                   <SabbaticalApprovalHistoryTab />
-                </LeaveTabRoute>
+                </LeaveKindRoute>
               }
             />
-            <Route
-              path="report"
-              element={
-                <LeaveTabRoute groupKey="sabbatical" gateId="leave-reports">
-                  <Suspense fallback={<Skeleton variant="rectangular" height={220} sx={{ borderRadius: 1.5 }} />}>
-                    <SabbaticalReportTab />
-                  </Suspense>
-                </LeaveTabRoute>
-              }
-            />
+
+            <Route path="reports">
+              <Route index element={<LeaveTabIndex segment="reports" />} />
+              <Route
+                path="general"
+                element={
+                  <LeaveKindRoute gateId="leave-reports">
+                    {/* Skeleton rather than null: the chunk is fetched on
+                        navigation, and a blank frame reads as a broken link. */}
+                    <Suspense fallback={<Skeleton variant="rectangular" height={220} sx={{ borderRadius: 1.5 }} />}>
+                      <GeneralReportTab />
+                    </Suspense>
+                  </LeaveKindRoute>
+                }
+              />
+              <Route
+                path="sabbatical"
+                element={
+                  <LeaveKindRoute gateId="leave-reports">
+                    <Suspense fallback={<Skeleton variant="rectangular" height={220} sx={{ borderRadius: 1.5 }} />}>
+                      <SabbaticalReportTab />
+                    </Suspense>
+                  </LeaveKindRoute>
+                }
+              />
+            </Route>
           </Route>
           {/* Me → digiops-finance claim apps: native screens ported from the
               three finance apps (opd-claims, cc-expenses, expense-claims).
@@ -525,6 +541,37 @@ export default function App() {
                 element={
                   <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
                     <ParLeadAllocationTab />
+                  </Suspense>
+                }
+              />
+            </Route>
+          )}
+          {/* People Ops → PAR → Admin Portal. ParRequiresAdminRoute checks
+              the Asgardeo groups claim client-side rather than a backend
+              field, since par-app's backend never exposes an isAdmin flag. */}
+          {isPreviewEnabled("par") && (
+            <Route
+              path="people-ops/performance/admin"
+              element={
+                <ParRequiresAdminRoute>
+                  <ParAdminGroupPage />
+                </ParRequiresAdminRoute>
+              }
+            >
+              <Route index element={<ParAdminGroupIndex />} />
+              <Route
+                path="ongoing"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParAdminOngoingTab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="history"
+                element={
+                  <Suspense fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}>
+                    <ParAdminHistoryTab />
                   </Suspense>
                 }
               />
