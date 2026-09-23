@@ -147,10 +147,20 @@ export default function SpeakerTimeline({
                     aria-label={`Play from ${formatOffset(seg.start)}, ${s.name} speaking`}
                     sx={{
                       position: "absolute",
-                      left: `${(seg.start / span) * 100}%`,
+                      // CLAMPED to the track, like the playhead above. `span` is the
+                      // player's duration when it has one and the transcript's last end
+                      // otherwise, and those two do not have to agree: a recording that was
+                      // stopped and restarted is shorter than the transcript covering the
+                      // whole call, so a late segment's start can exceed it and would
+                      // otherwise be painted past the right-hand edge.
+                      left: `${Math.min(100, Math.max(0, (seg.start / span) * 100))}%`,
                       // A floor so a one-word utterance is still clickable and visible;
-                      // without it the shortest segments vanish at this scale.
-                      width: `max(3px, ${(seg.duration / span) * 100}%)`,
+                      // without it the shortest segments vanish at this scale. Capped at
+                      // whatever track remains to the right of `left`.
+                      width: `max(3px, ${Math.min(
+                        100 - Math.min(100, Math.max(0, (seg.start / span) * 100)),
+                        (seg.duration / span) * 100,
+                      )}%)`,
                       top: 0,
                       bottom: 0,
                       p: 0,
