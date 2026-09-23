@@ -147,40 +147,35 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   // your reports and the org-wide cycle, not yourself (the employee portal
   // moved to the Me perspective, see parApps.ts). `alwaysGroup` for the
   // same reason Master Data below carries it: a named group rather than a
-  // bare leaf, since it has more than one child. Spread in rather than
-  // filtered out, so with the flag off the entry does not exist at all.
-  ...(isPreviewEnabled("par")
-    ? [
-        {
-          id: "people-par",
-          label: "PAR",
-          icon: ClipboardCheckIcon,
-          alwaysGroup: true,
-          children: [
-            // Note what is NOT here: `requires: ["lead"]`. one-wso2's generic
-            // "lead" capability is people-app privilege 993 — unrelated to
-            // par-app's own PAR-cycle-scoped isTeamLead, and not guaranteed to
-            // agree with it either way. SideRail asks useParIsTeamLead for
-            // this one instead (PAR_LEAD_PORTAL_ITEM_ID below), the same
-            // treatment Finance/Leave/Marketing Ops/Subscriptions already get
-            // for the identical reason. ParRequiresTeamLeadRoute is what
-            // actually enforces access at the route either way.
-            {
-              id: "par-lead-portal",
-              label: "Lead Portal",
-              path: "/people-ops/performance/lead",
-            },
-            // Same treatment as Lead Portal above: gated via
-            // PAR_ADMIN_PORTAL_ITEM_ID / useParIsAdmin, not `requires`.
-            {
-              id: "par-admin-portal",
-              label: "Admin Portal",
-              path: "/people-ops/performance/admin",
-            },
-          ],
-        },
-      ]
-    : []),
+  // bare leaf, since it has more than one child.
+  {
+    id: "people-par",
+    label: "PAR",
+    icon: ClipboardCheckIcon,
+    alwaysGroup: true,
+    children: [
+      // Note what is NOT here: `requires: ["lead"]`. one-wso2's generic
+      // "lead" capability is people-app privilege 993 — unrelated to
+      // par-app's own PAR-cycle-scoped isTeamLead, and not guaranteed to
+      // agree with it either way. SideRail asks useParIsTeamLead for
+      // this one instead (PAR_LEAD_PORTAL_ITEM_ID below), the same
+      // treatment Finance/Leave/Marketing Ops/Subscriptions already get
+      // for the identical reason. ParRequiresTeamLeadRoute is what
+      // actually enforces access at the route either way.
+      {
+        id: "par-lead-portal",
+        label: "Lead Portal",
+        path: "/people-ops/performance/lead",
+      },
+      // Same treatment as Lead Portal above: gated via
+      // PAR_ADMIN_PORTAL_ITEM_ID / useParIsAdmin, not `requires`.
+      {
+        id: "par-admin-portal",
+        label: "Admin Portal",
+        path: "/people-ops/performance/admin",
+      },
+    ],
+  },
   {
     id: "people-active-employee-report",
     label: "Active Employees",
@@ -328,7 +323,7 @@ const ME_SECTIONS: PerspectiveSection[] = [
   ...appsToSections(ME_APPS),
   ...appsToSections(ME_FINANCE_APPS),
   // par-app's employee portal — see docs/ported-apps/par-app.md.
-  ...(isPreviewEnabled("par") ? appsToSections(ME_PAR_APPS) : []),
+  ...appsToSections(ME_PAR_APPS),
 ];
 
 const UMT_SECTIONS: PerspectiveSection[] = [

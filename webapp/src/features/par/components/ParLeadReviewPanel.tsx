@@ -34,6 +34,7 @@ import {
   FormControlLabel,
   Grid,
   IconButton,
+  Link,
   MenuItem,
   Skeleton,
   Stack,
@@ -41,31 +42,35 @@ import {
   Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
-import { ChevronDownIcon, FileDownIcon, PencilIcon } from "@wso2/oxygen-ui-icons-react";
+import { ChevronDownIcon, ExternalLinkIcon, FileDownIcon, Google, PencilIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { describeError } from "@api/errors";
+import {
+  evidenceEnabledRating as defaultEvidenceEnabledRating,
+  top5p20pEnabledRating as defaultTop5p20pEnabledRating,
+} from "@config/apiConfig";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useParRating } from "../api/useParData";
 import { useLeadRatingUpdate } from "../api/useLeadRatingUpdate";
 import { useParEmployeeReviews } from "../api/useLeadHistory";
+import { useGoogleDrivePicker } from "../hooks/useGoogleDrivePicker";
 import { decodeParComment, encodeParComment, isEmptyHtml } from "../util/parComment";
 import { isDeadlinePassed } from "../util/parDeadline";
 import { formatShortDate } from "../util/parDate";
 import { downloadParPdf } from "../util/parPdf";
+import { parseSavedUrls, type DriveFile } from "../util/parDriveFile";
 import ParRichTextField from "./ParRichTextField";
 import { ParCommentView } from "./ParContent";
+import ParDriveFileChip from "./ParDriveFileChip";
 import ParEmptyState from "./ParEmptyState";
 import ParHistoryReviewSection from "./ParHistoryReviewSection";
 import type { ParCycle } from "../api/types";
 
-const TOP_5_20_ENABLED_RATING = "Successful";
-
 // Ports LeadReviewPanel.tsx's lead-only path, plus (via `isAdminView`) its
 // isAdminAuditViewOn branch used from the Admin Portal's Employee View/Team
 // View "Review" action. Not ported even in admin mode: editing the
-// employee's own comment on their behalf, and evidence attachments — the
-// "Update Status" tab is a sibling tab (ParUpdateStatusPanel), not part of
-// this panel.
+// employee's own comment on their behalf — the "Update Status" tab is a
+// sibling tab (ParUpdateStatusPanel), not part of this panel.
 export default function ParLeadReviewPanel({
   cycle,
   employeeEmail,
@@ -80,11 +85,19 @@ export default function ParLeadReviewPanel({
   const reviews = useParEmployeeReviews(cycle.parCycleId, employeeEmail);
   const { showSuccess, showError } = useNotifications();
 
+  // Cycle-scoped value first (not on the wire yet — always undefined until
+  // the backend ships it, see the field's own comment in api/types.ts),
+  // falling back to the deploy-wide window.config value.
+  const top5p20pEnabledRating = cycle.parCycleConfigurations?.top5p20pEnabledRating ?? defaultTop5p20pEnabledRating;
+  const evidenceEnabledRating = cycle.parCycleConfigurations?.evidenceEnabledRating ?? defaultEvidenceEnabledRating;
+
   const [leadComment, setLeadComment] = useState("");
   const [adminComment, setAdminComment] = useState("");
   const [parRatingValue, setParRatingValue] = useState("");
   const [specialRating, setSpecialRating] = useState<"NONE" | "TOP5P" | "TOP20P">("NONE");
   const [specialRatingConfirmed, setSpecialRatingConfirmed] = useState(false);
+  const [driveFiles, setDriveFiles] = useState<DriveFile[]>([]);
+  const [evidenceConfirmed, setEvidenceConfirmed] = useState(false);
   const [seededForId, setSeededForId] = useState<number | undefined>(undefined);
   const [autoSaved, setAutoSaved] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -105,18 +118,40 @@ export default function ParLeadReviewPanel({
     setParRatingValue(parRatingData.parRating && parRatingData.parRating !== "NOT_ASSIGNED" ? parRatingData.parRating : "");
     setSpecialRating((parRatingData.parSpecialRating as "TOP5P" | "TOP20P" | undefined) ?? "NONE");
     setSpecialRatingConfirmed(
-      parRatingData.parRating === TOP_5_20_ENABLED_RATING &&
+      parRatingData.parRating === top5p20pEnabledRating &&
         Boolean(parRatingData.parSpecialRating) &&
         parRatingData.parSpecialRating !== "NONE",
     );
+    setDriveFiles(parseSavedUrls(parRatingData.parPerformanceNoticeAck ?? ""));
+    // par-app never persists the checkbox itself, only its effect (the
+    // attached files) — always seeds unchecked, same as legacy's own
+    // initialValues.isEvidenceDiscussionConfirmed: false.
+    setEvidenceConfirmed(false);
   }
 
   useEffect(() => {
-    if (parRatingValue !== TOP_5_20_ENABLED_RATING) {
+    if (parRatingValue !== top5p20pEnabledRating) {
       setSpecialRating("NONE");
       setSpecialRatingConfirmed(false);
     }
-  }, [parRatingValue]);
+    if (parRatingValue !== evidenceEnabledRating) {
+      setDriveFiles([]);
+      setEvidenceConfirmed(false);
+    }
+  }, [parRatingValue, top5p20pEnabledRating, evidenceEnabledRating]);
+
+  const { openPicker, isLoading: isPickerLoading, error: pickerError } = useGoogleDrivePicker();
+
+  const handleFilesSelected = (newFiles: DriveFile[]) => {
+    setDriveFiles((prev) => {
+      const existingIds = new Set(prev.map((f) => f.id));
+      return [...prev, ...newFiles.filter((f) => !existingIds.has(f.id))];
+    });
+  };
+
+  const handleRemoveFile = (fileId: string) => {
+    setDriveFiles((prev) => prev.filter((f) => f.id !== fileId));
+  };
 
   // Every value below is derived with parRatingData possibly still
   // undefined (loading/error/not-found are handled further down, but hooks
@@ -154,6 +189,23 @@ export default function ParLeadReviewPanel({
             : {
                 ...(parRatingValue ? { parRating: parRatingValue } : {}),
                 parSpecialRating: specialRating,
+                // Omitted entirely rather than sent as "" when there's no
+                // evidence — the backend's ParRatingModify constrains this
+                // field to a non-empty string whenever it's present at all
+                // (types.bal's own [\s\S]*\S[\s\S]* pattern), so an explicit
+                // empty string 400s. Source's own updateEmployeeParRating
+                // has this same conditional-include for the same reason.
+                //
+                // One consequence neither side works around: there is no way
+                // to CLEAR a saved attachment through this endpoint at all.
+                // manager.bal's own isUpdatedString guard
+                // (`newValue.trim() != ""`) refuses to apply an empty value
+                // as an update even if one got past the constraint above, so
+                // removing every file and saving leaves the old URLs on the
+                // record — they reappear on the next fetch. Source has this
+                // identical gap; fixing it needs a backend change (a real
+                // clear operation), not a frontend one.
+                ...(driveFiles.length > 0 ? { parPerformanceNoticeAck: driveFiles.map((f) => f.url).join("\n") } : {}),
               }),
           // Only an admin caller may set this field — the backend rejects a
           // non-empty value from anyone else, per checkForModifiableFields-
@@ -214,7 +266,8 @@ export default function ParLeadReviewPanel({
     leadComment.trim() !== savedLeadComment.trim() ||
     (isAdminView && adminComment.trim() !== savedAdminComment.trim()) ||
     (parRatingValue !== (parRatingData.parRating ?? "") && parRatingValue !== "") ||
-    specialRating !== (parRatingData.parSpecialRating ?? "NONE");
+    specialRating !== (parRatingData.parSpecialRating ?? "NONE") ||
+    driveFiles.map((f) => f.url).join("\n") !== (parRatingData.parPerformanceNoticeAck ?? "");
 
   const statusAlert = readOnly ? (
     <Alert severity={shared ? "success" : "info"}>
@@ -253,7 +306,8 @@ export default function ParLeadReviewPanel({
     !ratingUpdate.isPending &&
     employeeHasStarted &&
     Boolean(parRatingValue) &&
-    !isEmptyHtml(leadComment);
+    !isEmptyHtml(leadComment) &&
+    !(parRatingValue === evidenceEnabledRating && (!evidenceConfirmed || driveFiles.length === 0));
 
   return (
     <Grid container spacing={2}>
@@ -353,7 +407,7 @@ export default function ParLeadReviewPanel({
                   )}
                 </Box>
 
-                {parRatingValue === TOP_5_20_ENABLED_RATING && (
+                {parRatingValue === top5p20pEnabledRating && (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                     <Typography variant="body2" sx={{ flexShrink: 0, minWidth: 96 }} color="text.secondary">
                       Top 5%/20%
@@ -378,7 +432,7 @@ export default function ParLeadReviewPanel({
                   </Box>
                 )}
 
-                {!readOnly && parRatingValue === TOP_5_20_ENABLED_RATING && (
+                {!readOnly && parRatingValue === top5p20pEnabledRating && (
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -390,6 +444,84 @@ export default function ParLeadReviewPanel({
                     label="The Top 5% / 20% rating decision was discussed and finalized with the functional lead"
                     sx={{ "& .MuiFormControlLabel-label": { fontSize: "0.8rem" } }}
                   />
+                )}
+
+                {!readOnly && parRatingValue === evidenceEnabledRating && (
+                  <Box>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={evidenceConfirmed}
+                          onChange={(e) => setEvidenceConfirmed(e.target.checked)}
+                          disabled={ratingUpdate.isPending}
+                        />
+                      }
+                      label={`Performance gaps were discussed, and the employee has been informed of the "${evidenceEnabledRating}" rating, and at least two discussions were held.`}
+                      sx={{ "& .MuiFormControlLabel-label": { fontSize: "0.8rem" } }}
+                    />
+
+                    {pickerError === "ACCESS_DENIED" && (
+                      <Alert severity="warning" sx={{ my: 1 }}>
+                        Google Drive access was denied. Please try again and grant access when prompted.
+                      </Alert>
+                    )}
+                    {pickerError && pickerError !== "ACCESS_DENIED" && (
+                      <Alert severity="warning" sx={{ my: 1 }}>
+                        Google sign-in popup was blocked, or the picker couldn't load. Please allow popups for this site and try again.
+                      </Alert>
+                    )}
+
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Google size={16} />}
+                      disabled={!evidenceConfirmed || ratingUpdate.isPending || isPickerLoading}
+                      onClick={() => openPicker(handleFilesSelected)}
+                      sx={{ mt: 1, mb: driveFiles.length > 0 ? 1 : 0 }}
+                    >
+                      {isPickerLoading ? "Opening…" : driveFiles.length > 0 ? "Attach more files" : "Attach from Google Drive"}
+                    </Button>
+
+                    {driveFiles.length > 0 && (
+                      <Stack spacing={1}>
+                        {driveFiles.map((file) => (
+                          <ParDriveFileChip key={file.id} file={file} onRemove={() => handleRemoveFile(file.id)} disabled={ratingUpdate.isPending} />
+                        ))}
+                      </Stack>
+                    )}
+
+                    {evidenceConfirmed && driveFiles.length === 0 && (
+                      <Typography variant="caption" color="error" sx={{ mt: 0.5, display: "block" }}>
+                        At least one attached file is required before sharing.
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+
+                {readOnly && parRatingData.parPerformanceNoticeAck && parRatingData.parRating === evidenceEnabledRating && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      Performance gaps were discussed, and the employee has been informed of the "{evidenceEnabledRating}" rating, and at least
+                      two discussions were held.
+                    </Typography>
+                    <Stack spacing={0.5}>
+                      {parRatingData.parPerformanceNoticeAck
+                        .split(/\r?\n/)
+                        .filter((line) => line.trim() !== "")
+                        .map((line) => (
+                          <Link
+                            key={line}
+                            component="button"
+                            variant="body2"
+                            onClick={() => window.open(line.trim(), "_blank", "noopener,noreferrer")}
+                            sx={{ display: "flex", alignItems: "center", gap: 1, textAlign: "left" }}
+                          >
+                            <ExternalLinkIcon size={14} />
+                            {line}
+                          </Link>
+                        ))}
+                    </Stack>
+                  </Box>
                 )}
 
                 {readOnly && parRatingData.parRatingSharedBy && (

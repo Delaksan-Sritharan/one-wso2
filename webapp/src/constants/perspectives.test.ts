@@ -16,13 +16,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Both PAR and UMT are behind preview flags, so the registry depends on
-// `window.config` and has to be imported fresh per state rather than once at
-// the top of the file.
+// UMT is behind a preview flag, so the registry depends on `window.config`
+// and has to be imported fresh per state rather than once at the top of the
+// file.
 type Perspectives = typeof import("./perspectives");
 
-async function load(preview: { par?: boolean; umt?: boolean; infra?: boolean } = {}): Promise<Perspectives> {
-vi.resetModules();
+async function load(preview: { umt?: boolean; infra?: boolean } = {}): Promise<Perspectives> {
+  vi.resetModules();
   window.config = {
     ...(window.config ?? {}),
     ONE_WSO2_PREVIEW_FEATURES: preview,
@@ -38,22 +38,14 @@ afterEach(() => {
 
 const keys = (perspectives: readonly { key: string }[]) => perspectives.map((p) => p.key);
 
+// PAR shipped out of preview once the Lead Portal, Admin Portal, Report
+// Chain and F2F all followed the Employee Portal over — see
+// docs/ported-apps/par-app.md. Its rail entry is unconditional now, so
+// there's nothing left to gate-test here.
 describe("PAR's People Ops rail entry", () => {
-  it("is there once staging switches the flag on", async () => {
-    const { PEOPLE_OPS_SECTIONS } = await load({ par: true });
-    expect(PEOPLE_OPS_SECTIONS.map((s) => s.id)).toContain("people-par");
-  });
-
-  it("is gone when the flag is off", async () => {
-    const { PEOPLE_OPS_SECTIONS } = await load({ par: false });
-    expect(PEOPLE_OPS_SECTIONS.map((s) => s.id)).not.toContain("people-par");
-  });
-
-  // Production sets no preview config at all — absent has to mean off, or the
-  // feature ships itself the day it merges.
-  it("is gone when nothing is configured", async () => {
+  it("is always present", async () => {
     const { PEOPLE_OPS_SECTIONS } = await load();
-    expect(PEOPLE_OPS_SECTIONS.map((s) => s.id)).not.toContain("people-par");
+    expect(PEOPLE_OPS_SECTIONS.map((s) => s.id)).toContain("people-par");
   });
 
   it("leaves the sections that are not gated alone", async () => {
@@ -104,7 +96,7 @@ describe("perspectives whose landing forwards to the first rail item", () => {
   // sees "Nothing here for you yet", permanently, with no way to tell that
   // from a privilege problem.
   it("only ever sits on a perspective with a route and sections", async () => {
-    const { PERSPECTIVES } = await load({ par: true, umt: true });
+    const { PERSPECTIVES } = await load({ umt: true });
     const forwarding = PERSPECTIVES.filter((p) => p.forwardsToFirstItem);
     expect(forwarding.length).toBeGreaterThan(0);
     for (const p of forwarding) {
@@ -117,7 +109,7 @@ describe("perspectives whose landing forwards to the first rail item", () => {
   // so it keeps its Overview row. This fails if a later pass sweeps it up with
   // the rest.
   it("leaves Me alone", async () => {
-    const { PERSPECTIVES } = await load({ par: true, umt: true });
+    const { PERSPECTIVES } = await load({ umt: true });
     expect(PERSPECTIVES.find((p) => p.key === "me")?.forwardsToFirstItem).toBeUndefined();
   });
 

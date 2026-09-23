@@ -15,12 +15,13 @@
 // under the License.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { authedPatch, authedPost } from "@api/http";
+import { authedPatch, authedPost, authedPut } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { parServiceUrls } from "@config/apiConfig";
 import { digiopsHeaders } from "@features/my/util/digiopsHeaders";
 import type {
   ParCycle,
+  ParCycleConfigurations,
   ParCycleCreate,
   ParCycleModify,
   ParCycleStatus,
@@ -160,6 +161,24 @@ export function useSyncEmployee(parCycleId: number | undefined) {
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["par-admin-teams", parCycleId] });
       await qc.invalidateQueries({ queryKey: ["par-admin-participants", parCycleId] });
+    },
+  });
+}
+
+// Org-wide defaults (question text, rating scales) new cycles are prefilled
+// from — ParCycleCreationDialog.tsx's own useParGlobalConfig() call.
+// Invalidating that same query key means it picks up the change immediately
+// on next open, with nothing else to wire.
+export function useUpdateParGlobalConfig() {
+  const getAccessToken = useAccessToken();
+  const qc = useQueryClient();
+  return useMutation<void, Error, ParCycleConfigurations>({
+    mutationFn: async (payload) => {
+      const accessToken = await getAccessToken();
+      await authedPut<void>(parServiceUrls.parGlobalConfig(), accessToken, payload, digiopsHeaders());
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["par-admin-global-config"] });
     },
   });
 }

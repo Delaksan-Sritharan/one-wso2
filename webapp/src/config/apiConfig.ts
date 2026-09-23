@@ -152,6 +152,27 @@ export const bankingServiceUrls = {
 export const parBackendUrl: string =
   window.config?.ONE_WSO2_PAR_BACKEND_URL ?? "";
 
+// The Lead Portal's evidence-attachment picker (ParLeadReviewPanel.tsx) is
+// the only caller — a plain OAuth client ID, not a backend URL, so it lives
+// here rather than in parServiceUrls.
+export const googleOAuthClientId: string =
+  window.config?.ONE_WSO2_PAR_GOOGLE_OAUTH_CLIENT_ID ?? "";
+// Optional — par-app's own useGoogleDrivePicker.ts never calls
+// PickerBuilder.setDeveloperKey either and works without it. Only needed if
+// Google's "API developer key is invalid" error shows up in practice.
+export const googlePickerApiKey: string =
+  window.config?.ONE_WSO2_PAR_GOOGLE_PICKER_API_KEY ?? "";
+
+// par-app's own admin-configurable rating names that trigger the Top 5%/20%
+// checkbox and the evidence-attachment requirement — real config, not
+// hardcoded constants, since Admin Portal → Configurations lets an admin
+// freely rename or remove entries from the org-wide parRatings list, and a
+// hardcoded trigger name would silently stop matching if that happened.
+export const top5p20pEnabledRating: string =
+  window.config?.ONE_WSO2_PAR_TOP5P20P_ENABLED_RATING ?? "Successful";
+export const evidenceEnabledRating: string =
+  window.config?.ONE_WSO2_PAR_EVIDENCE_ENABLED_RATING ?? "Needs Improvement";
+
 export const parServiceUrls = {
   // GET /employees/{workEmail} — par-app's OWN employee record, distinct
   // from people-app's. Carries `leadEmail: string?` — the exact field

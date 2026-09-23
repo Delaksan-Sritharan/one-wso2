@@ -1,10 +1,12 @@
 # PAR (Performance Appraisal Review) — functional specification
 
-**Status:** the employee-facing half of par-app (all five tabs, including F2F) is ported and live under
-the Me perspective. The Lead Portal is fully ported (all five tabs) and lives under People Ops. The
-Admin Portal is fully ported (both Ongoing and History, §9) and lives under People Ops too. Written
-from the source and cross-checked against the running staging app (screenshots) — this is the
-reference for verifying the port and for writing test cases against it, not a proposal.
+**Status:** the migration is functionally complete. The employee-facing half of par-app (all five tabs,
+including F2F) is ported and live under the Me perspective. The Lead Portal is fully ported (all five
+tabs, including evidence attachments, §8.1) and lives under People Ops. The Admin Portal is fully ported
+(Ongoing, History, and Configurations, §9) and lives under People Ops too. §10 lists the two remaining
+items — both deliberate exclusions, not gaps. Written from the source and cross-checked against the
+running staging app (screenshots) — this is the reference for verifying the port and for writing test
+cases against it, not a proposal.
 
 **Source of truth for behaviour:** `digiops-hr/apps/par-app/webapp/src` — `OngoingCycleView.tsx` and
 its panels/components for the five tabs below (`views/ongoingCycleView/`, `components/common/
@@ -283,9 +285,24 @@ here either; the screen's existing default-read-only/`adminForceEdit` toggle alr
   employee picker). The shared history-rendering logic lives in `ParEmployeeHistoryView.tsx`, which this
   modal wraps in a `Dialog`.
 
-Not ported here: evidence attachments (`parPerformanceNoticeAck`'s Google Drive picker — a capability
-nothing else in this app has), and "Sync an Employee" (`TeamSummary.tsx`'s temporary org-chart-search
-dialog for this cycle).
+Also ported here: evidence attachments. Rating an employee "Needs Improvement" (`evidenceEnabledRating`,
+resolved with a three-step fallback — `cycle.parCycleConfigurations.evidenceEnabledRating` (not on the
+wire yet; `ParCycleConfigurations` is a closed record on source's backend with no such field today, a
+planned addition tracked as a follow-up there) → the `window.config` value (`apiConfig.ts`'s own export,
+defaulting to source's default) → the hardcoded default, same three-step shape the Top 5%/20% checkbox's
+trigger rating (`top5p20pEnabledRating`) now resolves with too. Neither is a bare hardcoded constant,
+since Admin Portal → Configurations (§9.8) lets an admin freely rename or remove entries from the
+org-wide rating list, and a hardcoded trigger name would silently stop matching if that happened; once
+the backend field ships, this resolves per-cycle with no frontend change needed) requires confirming a
+checkbox ("performance gaps were discussed... at least two discussions were held") before **Attach from
+Google Drive** enables; **Share** stays disabled until at least one file is attached. Files are picked via
+`useGoogleDrivePicker.ts` (ported verbatim from source's own hook of the same name — lazy-loads Google
+Identity Services + the Picker API, requests a `drive.readonly` OAuth token via
+`ONE_WSO2_PAR_GOOGLE_OAUTH_CLIENT_ID`), shown as removable chips (`ParDriveFileChip.tsx`, oxygen-ui icons
+in place of source's five MUI ones) while editing or a plain link list once shared. `parPerformanceNoticeAck`
+is one newline-delimited URL string on the wire, not an array — `util/parDriveFile.ts`'s `parseSavedUrls`
+is the only place that reconstructs the file list from it, matching source's own `parseSavedUrls`. Not
+ported here: "Sync an Employee" (`TeamSummary.tsx`'s temporary org-chart-search dialog for this cycle).
 
 ### 8.2 Additional Reports (`ParLeadAdditionalReportsTab.tsx`)
 
@@ -362,14 +379,14 @@ slot, not two.
 ## 9. Admin Portal
 
 **Source of truth:** `views/adminPortal/AdminPortal.tsx` and `panels/OngoingPanel.tsx`, gated in source
-by `invokerDetails.isAdmin` — a JWT `groups`-claim check server-side, with no `EmployeeInfo` field
-exposing it to the frontend the way `isTeamLead` is. This port reproduces source's OWN mechanism
-(`authSlice`'s `decodedIdToken.groups.includes(adminGroup)`) rather than inventing a backend call:
-`useParIsAdmin` decodes the signed-in user's Asgardeo `groups` claim and checks it against
-`ONE_WSO2_PAR_ADMIN_GROUP`. This is presentation only — every admin endpoint behind it re-derives
-`isAdmin` from the JWT server-side and 403s a caller who doesn't hold the group, so a stale or
-misconfigured group name can only hide the screen from a real admin, never grant access it shouldn't.
-Both `AdminPortal.tsx` tabs are ported: **Ongoing** (§9.1–9.6) and **History** (§9.7).
+by `invokerDetails.isAdmin` — a JWT `groups`-claim check server-side. `useParIsAdmin` reads that same
+check back from `GET /employees/{workEmail}`'s own `isAdmin` field on a self-lookup (`useParEmployeeInfo`),
+the same way `isTeamLead` is already read — not a separately configured group name reproduced
+client-side. This is presentation only — every admin endpoint still re-derives `isAdmin` from the JWT
+server-side and 403s a caller who doesn't hold the group, so a stale or slow fetch here can only hide
+the screen from a real admin, never grant access it shouldn't. Both `AdminPortal.tsx` tabs are ported —
+**Ongoing** (§9.1–9.6) and **History** (§9.7) — plus source's separate `/settings` route, folded in here
+as a third tab, **Configurations** (§9.8).
 
 ### 9.1 Ongoing — cycle lifecycle (`ParAdminOngoingTab.tsx`)
 
@@ -521,10 +538,24 @@ one `DataGrid`, latest end date first, each legacy row tagged with a "Legacy" ch
   rather than a plain table, matching how every other legacy-table screen in this port (e.g. Team View,
   §9.4) has already upgraded from source's plain tables.
 
+### 9.8 Configurations (`ParAdminGlobalConfigTab.tsx`)
+
+Ports `views/globalSettings/GlobalSettings.tsx`, source's own standalone `/settings` route — folded into
+the Admin Portal's tab bar here instead of a separate top-level route, since it's admin-only functionality
+that belongs alongside Ongoing/History rather than its own nav entry. Edits the org-wide defaults
+`ParCycleCreationDialog.tsx` (§9.2) prefills new cycles from — the employee/360° question text and the
+master PAR/360 rating-option lists — via `GET`/`PUT meta/configurations`; editing here never touches a
+cycle already created, only what the next one starts with. Field set, validation (both questions required,
+both rating lists non-empty), and the freeSolo multi-chip rating pickers are a direct reuse of
+`ParCycleCreationDialog.tsx`'s own "Cycle configuration" section. Save is confirmation-gated
+("Update global PAR configurations?"); on success, invalidating the same query key
+`ParCycleCreationDialog.tsx`'s `useParGlobalConfig()` call reads means the next cycle-creation dialog
+opened picks up the change immediately, with no separate wiring needed there.
+
 ## 10. Not yet ported
 
-- **Lead Portal — evidence attachments** (see §8.1) — needs a Google Drive picker integration nothing
-  else in this app has.
+No functional gaps remain — the two items below were each deliberately left out, not missed.
+
 - **PAR History's Chain view** — source's `ParHistory.tsx` has a second, lead-only tab alongside "My
   History" (`views/parHistory/ChainViewTab.tsx`): a lead's view of their reports' PAR history across
   cycles, reached by browsing the org chart. A version of this was built and then deliberately removed —
