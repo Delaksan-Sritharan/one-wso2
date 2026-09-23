@@ -31,6 +31,7 @@ export const ccPaths = {
   dashboard: `${CC_PATH}/dashboard`,
   newTransactions: `${CC_PATH}/new`,
   pending: `${CC_PATH}/pending`,
+  approve: `${CC_PATH}/approve`,
   history: `${CC_PATH}/history`,
   settings: `${CC_PATH}/settings`,
 } as const;

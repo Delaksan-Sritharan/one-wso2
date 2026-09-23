@@ -15,31 +15,36 @@
 // under the License.
 
 import { useState } from "react";
-import { Alert, Box, ToggleButton, ToggleButtonGroup } from "@wso2/oxygen-ui";
+import { ToggleButton, ToggleButtonGroup } from "@wso2/oxygen-ui";
 import { isCcBackendConfigured } from "@config/apiConfig";
+import { FINANCE_EYEBROW } from "@constants/financeApps";
+import FinanceShell from "../../components/FinanceShell";
 import { ApproveBody, type ApproveRole } from "./CcApproveBody";
 import { useCcUserInfo } from "../useCc";
 import { ccHasAccess } from "../ccTypes";
 
-// The CC Expenses tab of Claim approval — now the only place to approve
-// credit card submissions; the standalone Approve Submissions screen under Me
-// was retired once this tab covered the same queue. The "As lead / As
-// finance" toggle here matches the Expense and OPD tabs.
-export default function CcApprovalsTab() {
-  // Its own backend's connectivity, as the Expense and OPD tabs report their
-  // own: Claim approval spans three backends and any of them may be missing.
-  if (!isCcBackendConfigured()) {
-    return (
-      <Alert severity="info">
-        Credit card expenses aren&apos;t connected yet. Set{" "}
-        <code>ONE_WSO2_CC_EXPENSES_BACKEND_URL</code> in <code>public/config.js</code> and reload.
-      </Alert>
-    );
-  }
-  return <CcApprovals />;
-}
+// approve-submissions/index.tsx:192-194 capitalises the role for the heading.
+const ROLE_TITLE: Record<ApproveRole, string> = { lead: "Lead", finance: "Finance" };
 
-function CcApprovals() {
+/**
+ * Credit Card Expenses' own approval queue. The one place this app's
+ * submissions are decided on — approving is work done for other people, so
+ * it sits under Finance rather than under Me with the things you do for
+ * yourself.
+ *
+ * Approving is a mode, not a per-row decision.
+ *
+ * The source derives one `approveRole` from the user's own roles with finance
+ * winning (index.tsx:83-87), names it in the heading, and offers a switcher
+ * only to someone who holds both (index.tsx:198). The mode decides what the
+ * queue contains, so the heading has to say which mode is in force — a merged
+ * list under a role-named heading would claim a filter it had not applied.
+ *
+ * Derived-with-override rather than the source's effect: `approveRole` is null
+ * until someone picks, and the default is computed. Same behaviour, without a
+ * state write on first render.
+ */
+export default function CcApprovePage() {
   const userInfo = useCcUserInfo();
   const isFinance = ccHasAccess(userInfo.data, "finance");
   const isLead = ccHasAccess(userInfo.data, "lead");
@@ -50,13 +55,22 @@ function CcApprovals() {
   // change has to clear it at this same point, not react to it afterwards.
   const [checked, setChecked] = useState<Set<number>>(new Set());
 
-  // ApproveBody carries its own loading, error and no-access states — the
-  // same ones the standalone screen shows — so nothing here duplicates them.
-  // isLead/isFinance are both false while userInfo is still loading, which
-  // keeps the toggle off screen until access is actually known.
   return (
-    <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-      {isLead && isFinance && (
+    <FinanceShell
+      eyebrow={FINANCE_EYEBROW.cc}
+      // No suffix until the roles have loaded — the source renders no heading
+      // at all until then, so there is nothing to be faithful to mid-flight.
+      title={
+        role ? `Approve Expense Submissions (${ROLE_TITLE[role]})` : "Approve Expense Submissions"
+      }
+      subtitle="Review and approve card transactions submitted by your team. Leads approve pending-lead items; finance gives the final approval."
+      configured={isCcBackendConfigured()}
+      configKey="ONE_WSO2_CC_EXPENSES_BACKEND_URL"
+      fill
+    >
+      {/* index.tsx:198-210 — offered only to someone who holds both roles;
+          everyone else has one mode and the heading already names it. */}
+      {isLead && isFinance && role && (
         <ToggleButtonGroup
           size="small"
           exclusive
@@ -84,6 +98,6 @@ function CcApprovals() {
         checked={checked}
         setChecked={setChecked}
       />
-    </Box>
+    </FinanceShell>
   );
 }

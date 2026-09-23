@@ -20,24 +20,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
-
-// This is the only test coverage ApproveBody has — the standalone Approve
-// Submissions screen it used to live under was retired once this tab covered
-// the same queue (see CcApproveBody.tsx), so its full former test suite lives
-// here now, rendered through the tab instead of that page. The one thing that
-// changed shape: the standalone screen picked its role from a dropdown
-// ("Approve Role"), this tab uses the "As lead / As finance" toggle the
-// Expense and OPD tabs use — every test that switched roles now clicks that
-// toggle instead of opening the dropdown.
+import type { ReactNode } from "react";
 
 vi.mock("@hooks/useAccessToken", () => ({ useAccessToken: () => async () => "token" }));
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
 
-const configured = { value: true };
-vi.mock("@config/apiConfig", async () => {
-  const actual = await vi.importActual<typeof import("@config/apiConfig")>("@config/apiConfig");
-  return { ...actual, isCcBackendConfigured: () => configured.value };
-});
+vi.mock("../../components/FinanceShell", () => ({
+  default: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
 
 const base = {
   ccNumber: "4444",
@@ -142,11 +132,10 @@ vi.mock("../useCcMutations", () => ({
   }),
 }));
 
-const { default: CcApprovalsTab } = await import("./CcApprovalsTab");
+const { default: CcApprovePage } = await import("./CcApprovePage");
 const { NotificationsProvider } = await import("@context/notifications/NotificationsContext");
 
 beforeEach(() => {
-  configured.value = true;
   state.access = ["finance"];
   state.txns = [withLead, withFinance];
   mutations.savePending = false;
@@ -154,7 +143,6 @@ beforeEach(() => {
   approveCalls.length = 0;
 });
 
-/** The per-row checkboxes only — the grid's header has a select-all. */
 /** The filters live behind one trigger, as ApproveFilterPopover.tsx has them. */
 const openFilters = async (u: ReturnType<typeof userEvent.setup>) =>
   u.click(await screen.findByRole("button", { name: /^Filter( \d+)?$/ }));
@@ -173,20 +161,11 @@ function show() {
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <NotificationsProvider>
-        <CcApprovalsTab />
+        <CcApprovePage />
       </NotificationsProvider>
     </QueryClientProvider>,
   );
 }
-
-describe("when the cc backend isn't configured", () => {
-  it("says so instead of rendering the queue", () => {
-    configured.value = false;
-    show();
-    expect(screen.getByText(/Credit card expenses aren't connected yet/)).toBeInTheDocument();
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-  });
-});
 
 // approve-submissions/index.tsx:122-126 — finance's queue spans both stages, so
 // they can see what is still waiting on a lead. ApproveTransactionsDataGrid

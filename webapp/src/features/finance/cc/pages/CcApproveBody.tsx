@@ -51,11 +51,9 @@ export type ApproveRole = "lead" | "finance";
 
 /**
  * The Credit Card Expenses approval queue: the grid, the detail panel, the
- * filter popover, and the approve/edit mutations. Was the standalone Approve
- * Submissions screen's own body; that screen was retired once Claim
- * Approval's CC Expenses tab became the only place to approve, but the
- * queue's own logic didn't move — this is that same code, unchanged, now
- * with a single caller.
+ * filter popover, and the approve/edit mutations. `CcApprovePage.tsx` is its
+ * only caller — CC approving lives entirely under Credit Card Expenses, with
+ * no second entry point through Claim Approval the way Expense and OPD have.
  *
  * Approving is a mode, not a per-row decision.
  *

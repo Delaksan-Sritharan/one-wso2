@@ -34,7 +34,6 @@ import {
   StethoscopeIcon,
 } from "@wso2/oxygen-ui-icons-react";
 import { CC_PATH } from "@features/finance/cc/ccPaths";
-import { expenseFinancePaths } from "@features/finance/expense/expenseFinancePaths";
 import { opdFinancePaths } from "@features/finance/opd/opdFinancePaths";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import type { MenuApp } from "@constants/appMenu";
@@ -129,68 +128,15 @@ export const FINANCE_OVERVIEW_APPS: readonly MenuApp[] = isPreviewEnabled("finan
   : [];
 
 export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
-  // Held back as a whole: New Claim, Claim History and both Approvals stages
-  // all disappear together, not one route at a time.
-  ...(isPreviewEnabled("expenseClaims")
-    ? ([{
-    key: "expense",
-    name: "Expense Claims",
-    icon: ReceiptTextIcon,
-    purpose: "File an expense claim, track the ones you submitted, and decide on the ones waiting on you.",
-    items: [
-      // New Claim carries its own flag on top of the app's: Me → Claims
-      // already offers a new-claim flow, and showing a second entry point
-      // under Finance before the two are reconciled would leave people with
-      // two ways in and no way to tell which one they want. Spread in rather
-      // than filtered out, so with the flag off the item does not exist at
-      // all — the rail sections and favourites both derive from this list.
-      // It is NOT the whole story: the Finance overview builds its tiles by
-      // hand and asks `useFinanceGate` by item id, so that surface is gated
-      // there too.
-      ...(isPreviewEnabled("expenseSubmitter")
-        ? [
-            { id: "expense-new", label: "New Claim", desc: "File a new expense claim.", path: expenseFinancePaths.new },
-          ]
-        : []),
-      { id: "expense-history", label: "Claim History", desc: "Claims you have submitted, and where each one has got to.", path: expenseFinancePaths.history },
-      // Approving used to sit beside filing here, on the source app's own two
-      // sidebar entries. Retired once Claim Approval's Expense claims tab
-      // covered the same queue with the same review detail — that tab is now
-      // the only place to approve, gated by its own backend role rather than
-      // a rail entry.
-    ],
-    }] as MenuApp[])
-    : []),
-  ...(isPreviewEnabled("opdClaims")
-    ? ([{
-    // OPD has been a tab under Me → Claims and nothing else, which is right for
-    // filing your own but left the app with no front door of its own the way
-    // Expense Claims has. Only Claim History lives here today; New Claim stays
-    // under Me until the two are reconciled, so there is one way in and no
-    // guessing which.
-    key: "opd",
-    name: "OPD Claims",
-    icon: StethoscopeIcon,
-    purpose: "Track the outpatient medical claims you have submitted.",
-    // One screen today and it will not stay that way. Collapsing to a leaf now
-    // would teach the wrong shape and make the item vanish as a concept the day
-    // a second one lands.
-    alwaysGroup: true,
-    items: [
-      {
-        id: "opd-history",
-        label: "Claim History",
-        desc: "OPD claims you have submitted, and where each one has got to.",
-        // Not a coarse capability: the OPD backend decides this, and refuses
-        // the whole app to anyone holding neither of its roles. `requires` only
-        // forces useFinanceGate to answer for the id — see its `opd-history`
-        // case, which asks the OPD backend rather than people-app.
-        requires: ["employee"],
-        path: opdFinancePaths.history,
-      },
-    ],
-    }] as MenuApp[])
-    : []),
+  // Expense Claims used to have its own Finance front door here — New Claim,
+  // Claim History, and both Approvals stages. Retired item by item as each
+  // moved elsewhere (Approvals to Claim Approval, New Claim and Claim History
+  // to Me → Claims, on-behalf filing included) until nothing was left of it.
+  //
+  // OPD Claims used to have its own Finance front door here too, with Claim
+  // History as its one item. Retired once Me → Claims → OPD covered the same
+  // queue, filters and all — there was nothing left for a second entry point
+  // to do.
   {
     key: "cc",
     name: "Credit Card Expenses",
@@ -199,10 +145,7 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
     items: [
       { id: "cc-new", label: "Pending Submissions", desc: "Unsubmitted card transactions to categorise and submit.", path: `${CC_PATH}/new` },
       { id: "cc-pending", label: "Pending Approvals", desc: "Submissions awaiting approval.", path: `${CC_PATH}/pending` },
-      // Approve Submissions used to live here. Retired once Claim Approval's
-      // CC Expenses tab covered the same queue — that tab is now the only
-      // place to approve, gated by its own backend role rather than a rail
-      // entry.
+      { id: "cc-approve", label: "Approve Submissions", desc: "Review and approve your team's submitted card transactions.", requires: ["lead", "admin"], path: `${CC_PATH}/approve` },
       { id: "cc-history", label: "History", desc: "Your submitted past card transactions.", path: `${CC_PATH}/history` },
       { id: "cc-settings", label: "Settings", desc: "Upload and reconcile bank statements (finance).", requires: ["admin"], path: `${CC_PATH}/settings` },
     ],
@@ -246,9 +189,8 @@ export const FINANCE_EYEBROW = {
   // now, and their own titles say which type is being filed.
   claims: eyebrowFor("claims"),
   cc: eyebrowFor("cc"),
-  // Literals rather than eyebrowFor(...): both apps sit behind a preview
-  // flag, and with it off the lookup would fall back to the generic
+  // A literal rather than eyebrowFor(...): the OPD dashboard sits behind a
+  // preview flag, and with it off the lookup would fall back to the generic
   // "Finance" chip — wrong for a route still reachable directly by URL.
-  expense: { icon: ReceiptTextIcon, label: "Expense Claims" },
   opd: { icon: StethoscopeIcon, label: "OPD Claims" },
 } as const;
