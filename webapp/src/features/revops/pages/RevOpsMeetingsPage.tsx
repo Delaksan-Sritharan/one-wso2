@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Alert, Box } from "@wso2/oxygen-ui";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import RevOpsShell from "../components/RevOpsShell";
@@ -56,13 +56,16 @@ export default function RevOpsMeetingsPage() {
   const regionsQuery = useRevOpsRegions();
   const cancelMeeting = useCancelMeeting();
 
-  // "Past" means "already ended", so the cutoff is now rather than the end of
-  // today -- end-of-day listed a meeting that starts at 5pm as past all morning.
-  // Still computed once per scope change rather than per render, so the query key
-  // is stable and a re-render does not refetch.
-  const endTime = useMemo(() => (scope === "past" ? new Date().toISOString() : null), [scope]);
-
-  const meetingsQuery = useMeetings({ search, region, endTime, page, pageSize });
+  // "Past" means "already ended". The cutoff instant is NOT computed here: it belongs to
+  // the fetch, so it advances with each one. Computing it here froze the list at whatever
+  // moment the scope was chosen, and a tab left open stopped showing meetings as they ended.
+  const meetingsQuery = useMeetings({
+    search,
+    region,
+    pastOnly: scope === "past",
+    page,
+    pageSize,
+  });
 
   // Any filter change invalidates the current page number — page 4 of the old
   // result set is meaningless in the new one, and asking the server for it
