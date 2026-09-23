@@ -286,11 +286,15 @@ here either; the screen's existing default-read-only/`adminForceEdit` toggle alr
   modal wraps in a `Dialog`.
 
 Also ported here: evidence attachments. Rating an employee "Needs Improvement" (`evidenceEnabledRating`,
-a `window.config` value defaulting to source's own default, the same way the Top 5%/20% checkbox's
-trigger rating (`top5p20pEnabledRating`) now is too — both `apiConfig.ts` exports, not hardcoded
-constants, since Admin Portal → Configurations (§9.8) lets an admin freely rename or remove entries from
-the org-wide rating list, and a hardcoded trigger name would silently stop matching if that happened)
-requires confirming a checkbox ("performance gaps were discussed... at least two discussions were held") before **Attach from
+resolved with a three-step fallback — `cycle.parCycleConfigurations.evidenceEnabledRating` (not on the
+wire yet; `ParCycleConfigurations` is a closed record on source's backend with no such field today, a
+planned addition tracked as a follow-up there) → the `window.config` value (`apiConfig.ts`'s own export,
+defaulting to source's default) → the hardcoded default, same three-step shape the Top 5%/20% checkbox's
+trigger rating (`top5p20pEnabledRating`) now resolves with too. Neither is a bare hardcoded constant,
+since Admin Portal → Configurations (§9.8) lets an admin freely rename or remove entries from the
+org-wide rating list, and a hardcoded trigger name would silently stop matching if that happened; once
+the backend field ships, this resolves per-cycle with no frontend change needed) requires confirming a
+checkbox ("performance gaps were discussed... at least two discussions were held") before **Attach from
 Google Drive** enables; **Share** stays disabled until at least one file is attached. Files are picked via
 `useGoogleDrivePicker.ts` (ported verbatim from source's own hook of the same name — lazy-loads Google
 Identity Services + the Picker API, requests a `drive.readonly` OAuth token via

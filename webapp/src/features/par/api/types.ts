@@ -54,6 +54,17 @@ export interface ParCycleConfigurations {
   threeSixtyReviewQuestion: string;
   parRatings: string[];
   threeSixtyReviewRatings: string[];
+  // Not on the wire yet — the backend's ParCycleConfigurations is a closed
+  // record with no such fields (see digiops-hr/apps/par-app/backend's
+  // modules/types/types.bal), so these are always undefined today. Typed
+  // ahead of a planned backend change so ParLeadReviewPanel.tsx's fallback
+  // chain (cycle config → apiConfig.ts's window.config value → hardcoded
+  // default) picks them up automatically once the backend ships them,
+  // with no frontend change needed at that point. Never send these back on
+  // a PUT until the backend actually accepts them — a closed record 400s on
+  // an unrecognized field.
+  top5p20pEnabledRating?: string;
+  evidenceEnabledRating?: string;
 }
 
 export interface ParCycle {

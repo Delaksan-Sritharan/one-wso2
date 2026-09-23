@@ -45,7 +45,10 @@ import {
 import { ChevronDownIcon, ExternalLinkIcon, FileDownIcon, Google, PencilIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { describeError } from "@api/errors";
-import { evidenceEnabledRating, top5p20pEnabledRating } from "@config/apiConfig";
+import {
+  evidenceEnabledRating as defaultEvidenceEnabledRating,
+  top5p20pEnabledRating as defaultTop5p20pEnabledRating,
+} from "@config/apiConfig";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useParRating } from "../api/useParData";
 import { useLeadRatingUpdate } from "../api/useLeadRatingUpdate";
@@ -81,6 +84,12 @@ export default function ParLeadReviewPanel({
   const ratingUpdate = useLeadRatingUpdate(cycle.parCycleId);
   const reviews = useParEmployeeReviews(cycle.parCycleId, employeeEmail);
   const { showSuccess, showError } = useNotifications();
+
+  // Cycle-scoped value first (not on the wire yet — always undefined until
+  // the backend ships it, see the field's own comment in api/types.ts),
+  // falling back to the deploy-wide window.config value.
+  const top5p20pEnabledRating = cycle.parCycleConfigurations?.top5p20pEnabledRating ?? defaultTop5p20pEnabledRating;
+  const evidenceEnabledRating = cycle.parCycleConfigurations?.evidenceEnabledRating ?? defaultEvidenceEnabledRating;
 
   const [leadComment, setLeadComment] = useState("");
   const [adminComment, setAdminComment] = useState("");
@@ -129,7 +138,7 @@ export default function ParLeadReviewPanel({
       setDriveFiles([]);
       setEvidenceConfirmed(false);
     }
-  }, [parRatingValue]);
+  }, [parRatingValue, top5p20pEnabledRating, evidenceEnabledRating]);
 
   const { openPicker, isLoading: isPickerLoading, error: pickerError } = useGoogleDrivePicker();
 
