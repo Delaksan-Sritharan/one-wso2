@@ -27,6 +27,7 @@ import {
   CardHeader,
   Checkbox,
   Chip,
+  ComplexSelect,
   Dialog,
   DialogActions,
   DialogContent,
@@ -35,10 +36,8 @@ import {
   Grid,
   IconButton,
   Link,
-  MenuItem,
   Skeleton,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
@@ -343,7 +342,20 @@ export default function ParLeadReviewPanel({
         </Box>
       </Grid>
 
-      <Grid size={{ xs: 12, md: 6 }}>
+      <Grid size={12}>
+        <Card variant="outlined" sx={{ height: "100%" }}>
+          <CardHeader title={<Typography variant="h6">Employee PAR</Typography>} />
+          <CardContent>
+            {employeeComment ? (
+              <ParCommentView html={employeeComment} />
+            ) : (
+              <ParEmptyState text="Employee PAR hasn't been shared" />
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid size={12}>
         <Card variant="outlined" sx={{ height: "100%" }}>
           <CardHeader title={<Typography variant="h6">Lead's Feedback</Typography>} />
           <CardContent>
@@ -389,21 +401,18 @@ export default function ParLeadReviewPanel({
                       </Typography>
                     )
                   ) : (
-                    <TextField
-                      select
-                      label="Select Rating"
-                      size="small"
+                    <ComplexSelect
                       fullWidth
                       value={parRatingValue}
-                      onChange={(e) => setParRatingValue(e.target.value)}
+                      onChange={(e) => setParRatingValue(e.target.value as string)}
                       disabled={ratingUpdate.isPending}
                     >
                       {(cycle.parCycleConfigurations?.parRatings ?? []).map((r) => (
-                        <MenuItem key={r} value={r}>
+                        <ComplexSelect.MenuItem key={r} value={r}>
                           {r}
-                        </MenuItem>
+                        </ComplexSelect.MenuItem>
                       ))}
-                    </TextField>
+                    </ComplexSelect>
                   )}
                 </Box>
 
@@ -415,19 +424,16 @@ export default function ParLeadReviewPanel({
                     {readOnly ? (
                       <Chip size="small" label={specialRating} />
                     ) : (
-                      <TextField
-                        select
-                        label="Select Top 5%/20% Rating"
-                        size="small"
+                      <ComplexSelect
                         fullWidth
                         value={specialRating}
                         onChange={(e) => setSpecialRating(e.target.value as typeof specialRating)}
                         disabled={!specialRatingConfirmed || ratingUpdate.isPending}
                       >
-                        <MenuItem value="NONE">N/A</MenuItem>
-                        <MenuItem value="TOP5P">Top 5%</MenuItem>
-                        <MenuItem value="TOP20P">Top 20%</MenuItem>
-                      </TextField>
+                        <ComplexSelect.MenuItem value="NONE">N/A</ComplexSelect.MenuItem>
+                        <ComplexSelect.MenuItem value="TOP5P">Top 5%</ComplexSelect.MenuItem>
+                        <ComplexSelect.MenuItem value="TOP20P">Top 20%</ComplexSelect.MenuItem>
+                      </ComplexSelect>
                     )}
                   </Box>
                 )}
@@ -556,22 +562,9 @@ export default function ParLeadReviewPanel({
         </Card>
       </Grid>
 
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Card variant="outlined" sx={{ height: "100%" }}>
-          <CardHeader title={<Typography variant="h6">Employee PAR</Typography>} />
-          <CardContent>
-            {employeeComment ? (
-              <ParCommentView html={employeeComment} />
-            ) : (
-              <ParEmptyState text="Employee PAR hasn't been shared" />
-            )}
-          </CardContent>
-        </Card>
-      </Grid>
-
       {isAdminView && (
         <Grid size={12}>
-          <Accordion defaultExpanded={Boolean(savedAdminComment)}>
+          <Accordion variant="outlined" defaultExpanded={Boolean(savedAdminComment)}>
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>
               <Typography variant="h6">Admin Comment</Typography>
             </AccordionSummary>
