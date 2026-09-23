@@ -71,6 +71,8 @@ const RecordingPlayer = forwardRef<RecordingPlayerHandle, {
   // rather than blaming the viewer for a token they never saw.
   const [playbackFailed, setPlaybackFailed] = useState(false);
   const retriedRef = useRef(false);
+  // Position to restore after a re-minted URL reloads the element. 0 means nothing to do.
+  const resumeAtRef = useRef(0);
 
   /**
    * Recover from a token that expired mid-playback.
@@ -91,40 +93,17 @@ const RecordingPlayer = forwardRef<RecordingPlayerHandle, {
     }
     retriedRef.current = true;
 
-    const resumeAt = videoRef.current?.currentTime ?? 0;
+    // Remembered, not applied. React owns `src` (it is bound to data.url below), and
+    // refetch() updates data, so React re-renders and re-assigns src itself. Assigning
+    // videoRef.current.src here as well raced that render: whichever landed second won,
+    // and the seek-restore attached to the losing load was silently dropped. The position
+    // is parked here instead and applied by onLoadedMetadata, whichever load wins.
+    resumeAtRef.current = videoRef.current?.currentTime ?? 0;
+
     const refreshed = await refetch();
-    const url = refreshed.data?.url;
-    if (!url || !videoRef.current) {
+    if (!refreshed.data?.url) {
       setPlaybackFailed(true);
-      return;
     }
-    videoRef.current.src = url;
-    // Assigning src reloads, discarding position — restore it once there is enough of the
-    // new stream to seek into.
-    videoRef.current.addEventListener(
-      "loadedmetadata",
-      () => {
-        if (videoRef.current) {
-          videoRef.current.currentTime = resumeAt;
-          void videoRef.current.play();
-        }
-      },
-      { once: true },
-    );
-    // Clear the latch only once the replacement is genuinely playing. The rule is
-    // "two CONSECUTIVE failures means it is not expiry", but the latch was only ever
-    // reset by the Try again button, so it meant "two failures ever" -- a token lasts
-    // six hours and a long review session outlives one, and the second expiry would
-    // have shown the error banner instead of blinking through it. Waiting for
-    // "playing" rather than "loadedmetadata" is what keeps the once-only guarantee:
-    // a replacement URL that fails before it plays leaves the latch set.
-    videoRef.current.addEventListener(
-      "playing",
-      () => {
-        retriedRef.current = false;
-      },
-      { once: true },
-    );
   }, [refetch]);
 
   // 404 is not a failure worth an error banner: it means either this deployment has no
@@ -180,16 +159,27 @@ const RecordingPlayer = forwardRef<RecordingPlayerHandle, {
             ? (e) => onTimeUpdate((e.currentTarget as HTMLVideoElement).currentTime)
             : undefined
         }
-        onLoadedMetadata={
-          onDurationChange
-            ? (e) => {
-                const d = (e.currentTarget as HTMLVideoElement).duration;
-                // Infinity until a streamed file's length is known — reporting that
-                // would make every timeline mark divide by it.
-                if (Number.isFinite(d)) onDurationChange(d);
-              }
-            : undefined
-        }
+        onLoadedMetadata={(e) => {
+          const video = e.currentTarget as HTMLVideoElement;
+          const d = video.duration;
+          // Infinity until a streamed file's length is known — reporting that
+          // would make every timeline mark divide by it.
+          if (onDurationChange && Number.isFinite(d)) onDurationChange(d);
+          // A reload caused by a re-minted URL discards the position. Restore it here
+          // rather than from the error handler, so it applies to whichever load actually
+          // happened instead of the one that handler expected.
+          if (resumeAtRef.current > 0) {
+            video.currentTime = resumeAtRef.current;
+            resumeAtRef.current = 0;
+            void video.play();
+          }
+        }}
+        // Clears the retry latch only once the replacement is genuinely playing. The rule
+        // is "two CONSECUTIVE failures means it is not expiry"; a replacement that fails
+        // before it plays leaves the latch set, so it still only ever retries once.
+        onPlaying={() => {
+          retriedRef.current = false;
+        }}
         sx={{ width: "100%", display: "block", borderRadius: 0.5, bgcolor: "common.black" }}
       />
     </Paper>
