@@ -71,6 +71,21 @@ export default function MeetingFilters({
   // Draft lives here; only submitting lifts it to the page.
   const [draft, setDraft] = useState(search ?? "");
 
+  // Resync when the APPLIED search changes from outside this component.
+  //
+  // `useState(search ?? "")` seeds the box once and then ignores the prop for ever, so the
+  // input and the applied filter can drift apart: a "clear all filters" control, or a deep
+  // link arriving with a query, would change `search` while the box kept showing whatever
+  // was last typed. 
+  // Adjusted during render rather than in an effect, the same way MeetingDetailPage resets
+  // the player clock.
+  const applied = search ?? "";
+  const [lastApplied, setLastApplied] = useState(applied);
+  if (applied !== lastApplied) {
+    setLastApplied(applied);
+    setDraft(applied);
+  }
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const trimmed = draft.trim();
