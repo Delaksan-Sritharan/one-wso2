@@ -100,8 +100,16 @@ export interface MeetingsQueryParams {
   search: string | null;
   /** Region name, or null for every region. */
   region: string | null;
-  /** Upper bound on end time, ISO. Set only by the Past scope. */
-  endTime: string | null;
+  /**
+   * True for the Past scope, which asks for meetings that have already ended.
+   *
+   * A boolean rather than the timestamp itself, deliberately. The cutoff is "now", and
+   * "now" has to advance -- a caller that computes it once and passes it in freezes the
+   * list at the moment the scope was chosen, and because the value would also be part of
+   * the query key, every later refetch reuses the stale key and cannot recover. So the
+   * instant is produced inside the fetch below, where it is fresh every time.
+   */
+  pastOnly: boolean;
   page: number;
   pageSize: number;
 }
@@ -119,17 +127,20 @@ export interface MeetingsQueryParams {
  */
 export function useMeetings(params: MeetingsQueryParams) {
   const { getAccessToken, subState, retryIdentity, userSub, ready } = useRevOpsQueryBasis();
-  const { search, region, endTime, page, pageSize } = params;
+  const { search, region, pastOnly, page, pageSize } = params;
 
   const query = useQuery<MeetingList>({
-    queryKey: ["revops-meetings", userSub, search, region, endTime, page, pageSize],
+    // `pastOnly`, not the instant it resolves to: an exact timestamp in the key would
+    // make every render a new key. Freshness comes from staleTime instead -- each refetch
+    // recomputes the cutoff below.
+    queryKey: ["revops-meetings", userSub, search, region, pastOnly, page, pageSize],
     enabled: ready,
     queryFn: async () =>
       authedGet<MeetingList>(
         buildMeetingsUrl({
           searchString: search,
           region,
-          endTime,
+          endTime: pastOnly ? new Date().toISOString() : null,
           limit: pageSize,
           offset: page * pageSize,
         }),
