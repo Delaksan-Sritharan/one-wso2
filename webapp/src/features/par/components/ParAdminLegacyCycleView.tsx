@@ -15,7 +15,7 @@
 // under the License.
 
 import { useMemo, useState } from "react";
-import { Box, Chip, DataGrid, IconButton, InputAdornment, Link, Skeleton, Stack, TextField, Tooltip, Typography } from "@wso2/oxygen-ui";
+import { Box, Card, Chip, DataGrid, IconButton, InputAdornment, Link, Skeleton, Stack, TextField, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { ArrowRightIcon, SearchIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useLeaveEmployees } from "@features/leave/api/useLeaveData";
@@ -161,19 +161,21 @@ export default function ParAdminLegacyCycleView({ cycleName, onBack }: { cycleNa
           ]}
           current={group.parLeadEmail}
         />
-        <DataGrid.DataGrid
-          rows={group.participants}
-          columns={columns}
-          getRowId={(row) => row.legacyHeaderId}
-          rowHeight={56}
-          disableRowSelectionOnClick
-          onRowClick={(params) => setSelection({ level: "record", group, record: params.row })}
-          showToolbar
-          slots={{ toolbar: ParGridToolbar }}
-          sx={{ border: "none", "& .MuiDataGrid-row": { cursor: "pointer" } }}
-          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-          pageSizeOptions={[10, 20, 25]}
-        />
+        <Card variant="outlined" sx={{ p: 2 }}>
+          <DataGrid.DataGrid
+            rows={group.participants}
+            columns={columns}
+            getRowId={(row) => row.legacyHeaderId}
+            rowHeight={56}
+            disableRowSelectionOnClick
+            onRowClick={(params) => setSelection({ level: "record", group, record: params.row })}
+            showToolbar
+            slots={{ toolbar: ParGridToolbar }}
+            sx={{ border: "none", "& .MuiDataGrid-row": { cursor: "pointer" } }}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            pageSizeOptions={[10, 20, 25]}
+          />
+        </Card>
       </Stack>
     );
   }
@@ -201,13 +203,13 @@ export default function ParAdminLegacyCycleView({ cycleName, onBack }: { cycleNa
       field: "employeeParCompletion",
       headerName: "Employee PAR",
       flex: 0.7,
-      renderCell: (params) => <Chip size="small" label={params.row.employeeParCompletion} />,
+      renderCell: (params) => <Chip size="small" variant="outlined" label={params.row.employeeParCompletion} />,
     },
     {
       field: "leadFeedbackCompletion",
       headerName: "Lead's Feedback",
       flex: 0.7,
-      renderCell: (params) => <Chip size="small" label={params.row.leadFeedbackCompletion} />,
+      renderCell: (params) => <Chip size="small" variant="outlined" label={params.row.leadFeedbackCompletion} />,
     },
     { field: "numberOf5pSlots", headerName: "5% Slots", flex: 0.5 },
     { field: "numberOf20pSlots", headerName: "20% Slots", flex: 0.5 },
@@ -248,18 +250,20 @@ export default function ParAdminLegacyCycleView({ cycleName, onBack }: { cycleNa
         />
       </Box>
 
-      <DataGrid.DataGrid
-        rows={filteredGroups}
-        columns={columns}
-        rowHeight={56}
-        disableRowSelectionOnClick
-        onRowClick={(params) => setSelection({ level: "roster", group: params.row })}
-        showToolbar
-        slots={{ toolbar: ParGridToolbar }}
-        sx={{ border: "none", "& .MuiDataGrid-row": { cursor: "pointer" } }}
-        initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-        pageSizeOptions={[10, 20, 25]}
-      />
+      <Card variant="outlined" sx={{ p: 2 }}>
+        <DataGrid.DataGrid
+          rows={filteredGroups}
+          columns={columns}
+          rowHeight={56}
+          disableRowSelectionOnClick
+          onRowClick={(params) => setSelection({ level: "roster", group: params.row })}
+          showToolbar
+          slots={{ toolbar: ParGridToolbar }}
+          sx={{ border: "none", "& .MuiDataGrid-row": { cursor: "pointer" } }}
+          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          pageSizeOptions={[10, 20, 25]}
+        />
+      </Card>
     </Stack>
   );
 }

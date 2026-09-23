@@ -15,13 +15,11 @@
 // under the License.
 
 import { useState } from "react";
-import { Box, Button, Card, Dialog, DialogContent, DialogTitle, Divider, Grid, IconButton, Link, Skeleton, Stack, Tab, Tabs, Tooltip, Typography } from "@wso2/oxygen-ui";
+import { Box, Button, Card, Chip, Dialog, DialogContent, DialogTitle, Divider, Grid, IconButton, Link, Skeleton, Stack, Tab, Tabs, Tooltip, Typography } from "@wso2/oxygen-ui";
 import {
   CalendarIcon,
-  ClipboardCheckIcon,
   ExternalLinkIcon,
   FileTextIcon,
-  MessageSquareIcon,
   PercentIcon,
   RefreshCwIcon,
   RotateCcwIcon,
@@ -29,7 +27,6 @@ import {
   SettingsIcon,
   UserIcon,
   UsersIcon,
-  VideoIcon,
   XCircleIcon,
 } from "@wso2/oxygen-ui-icons-react";
 import { describeError } from "@api/errors";
@@ -133,7 +130,7 @@ export default function ParOrgSummary({
   return (
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
-        <Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {historyMode && (
             <>
               <Link component="button" underline="hover" onClick={onBack} sx={{ mr: 0.5 }}>
@@ -144,10 +141,8 @@ export default function ParOrgSummary({
               </Typography>
             </>
           )}
-          <Typography variant="h5" component="span">
-            {cycle.parCycleName}{" "}
-          </Typography>
-          <Typography component="span" color="text.secondary">
+          <Chip label={cycle.parCycleName} size="small" color="primary" variant="outlined" />
+          <Typography component="span" variant="caption" color="text.secondary">
             ({formatShortDate(cycle.parCycleStartDate)} - {formatShortDate(cycle.parCycleEndDate)})
           </Typography>
         </Box>
@@ -212,7 +207,6 @@ export default function ParOrgSummary({
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 4 }}>
               <ParCompletionKpiTile
-                icon={<ClipboardCheckIcon size={22} />}
                 label="Employee PAR"
                 completed={totals.totalEmployeeParComplete}
                 total={totals.totalEmployees}
@@ -220,7 +214,6 @@ export default function ParOrgSummary({
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
               <ParCompletionKpiTile
-                icon={<MessageSquareIcon size={22} />}
                 label="Lead's Feedback"
                 completed={totals.totalLeadReviewComplete}
                 total={totals.totalEmployees}
@@ -228,7 +221,6 @@ export default function ParOrgSummary({
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
               <ParCompletionKpiTile
-                icon={<VideoIcon size={22} />}
                 label="F2F"
                 completed={totals.totalF2fComplete}
                 total={totals.totalEmployees}
