@@ -144,6 +144,10 @@ export default function UpdateAssigneesDialog({
   const [actionOwnerResolving, setActionOwnerResolving] = useState(false);
   const [actionOwnerError, setActionOwnerError] = useState<string | null>(null);
   const actionOwnerDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bumped on every Action Owner pick or clear. A lookup only applies its
+  // result while it is still the latest one, so picking A then B can never end
+  // with A's slower response overwriting B.
+  const actionOwnerRequest = useRef(0);
 
   const runActionOwnerSearch = useCallback((query: string) => {
     if (query.trim().length < MIN_EMPLOYEE_SEARCH_LEN) {
@@ -299,7 +303,9 @@ export default function UpdateAssigneesDialog({
               // The correction never removes an Action Owner, only replaces
               // one, so clearing the field puts the current one back rather
               // than showing an empty field that would not be saved as empty.
+              const request = ++actionOwnerRequest.current;
               if (!newValue) {
+                setActionOwnerResolving(false);
                 setActionOwnerSelected(currentActionOwnerOption);
                 setActionOwnerId(currentActionOwnerId);
                 return;
@@ -307,16 +313,20 @@ export default function UpdateAssigneesDialog({
               setActionOwnerResolving(true);
               resolveUserByEmail(authFetch, newValue)
                 .then((resolved) => {
+                  if (request !== actionOwnerRequest.current) return;
                   setActionOwnerSelected(newValue);
                   setActionOwnerId(resolved.id);
                   setActionOwnerError(null);
                 })
                 .catch(() => {
+                  if (request !== actionOwnerRequest.current) return;
                   setActionOwnerSelected(currentActionOwnerOption);
                   setActionOwnerId(currentActionOwnerId);
                   setActionOwnerError("Unable to link this employee to a user account. Please try again.");
                 })
-                .finally(() => setActionOwnerResolving(false));
+                .finally(() => {
+                  if (request === actionOwnerRequest.current) setActionOwnerResolving(false);
+                });
             }}
             loadingText="Searching…"
             noOptionsText={actionOwnerError ?? "Type at least 2 characters of the employee's email to search"}
@@ -344,7 +354,7 @@ export default function UpdateAssigneesDialog({
         <Button onClick={() => !submitting && onClose()} disabled={submitting} color="inherit">
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={submitting || !hasChanges} variant="contained">
+        <Button onClick={handleSave} disabled={submitting || !hasChanges || actionOwnerResolving} variant="contained">
           {submitting ? "Saving..." : "Save Changes"}
         </Button>
       </DialogActions>
