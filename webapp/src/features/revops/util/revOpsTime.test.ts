@@ -16,11 +16,9 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  endOfDayIso,
   formatDateTime,
   parseUtc,
   splitParticipants,
-  toDateInputValue,
 } from "./revOpsTime";
 
 describe("parseUtc", () => {
@@ -68,39 +66,6 @@ describe("formatDateTime", () => {
   it("shows a placeholder rather than Invalid Date", () => {
     expect(formatDateTime(null)).toBe("—");
     expect(formatDateTime("nonsense")).toBe("—");
-  });
-});
-
-describe("toDateInputValue", () => {
-  it("uses the local calendar day, not the UTC one", () => {
-    // Late evening in a positive-offset zone is already "tomorrow" in UTC, so
-    // toISOString().slice(0,10) would be a day ahead. Build a date from local
-    // parts so the assertion holds in any zone the suite runs in.
-    const date = new Date(2026, 8, 14, 23, 45);
-    expect(toDateInputValue(date)).toBe("2026-09-14");
-  });
-
-  it("zero-pads month and day", () => {
-    expect(toDateInputValue(new Date(2026, 0, 5))).toBe("2026-01-05");
-  });
-});
-
-describe("endOfDayIso", () => {
-  it("resolves to the last instant of the day, so that day's meetings are included", () => {
-    const iso = endOfDayIso("2026-09-14");
-    expect(iso).not.toBeNull();
-    const parsed = new Date(iso as string);
-    expect(parsed.getFullYear()).toBe(2026);
-    expect(parsed.getMonth()).toBe(8);
-    expect(parsed.getDate()).toBe(14);
-    expect(parsed.getHours()).toBe(23);
-    expect(parsed.getMinutes()).toBe(59);
-  });
-
-  it("returns null for a malformed value rather than an Invalid Date string", () => {
-    expect(endOfDayIso("")).toBeNull();
-    expect(endOfDayIso("14/09/2026")).toBeNull();
-    expect(endOfDayIso("2026-9-4")).toBeNull();
   });
 });
 

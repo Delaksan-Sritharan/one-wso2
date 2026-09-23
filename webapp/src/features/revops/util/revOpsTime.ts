@@ -73,35 +73,6 @@ export function formatDateTime(value: string | null | undefined): string {
   return `${day}/${month}/${year}, ${hours}:${minutes}`;
 }
 
-/**
- * `yyyy-MM-dd` for a Date, in LOCAL time.
- *
- * Deliberately not toISOString().slice(0, 10), which would give the UTC date
- * and so shift the day for anyone east of UTC late in the evening — in IST
- * that is wrong for the last five and a half hours of every day.
- */
-export function toDateInputValue(date: Date): string {
-  const pad = (n: number): string => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-/**
- * Turn the Past filter's cutoff into what `GET /meetings?endTime=` expects.
- *
- * The cutoff is a local calendar day and the filter means "meetings that had
- * ended by the end of that day", so it resolves to the LAST instant of the day
- * rather than midnight at its start — with midnight, everything that happened
- * during the chosen day would be excluded, which reads as an off-by-one-day bug
- * to anyone picking today.
- */
-export function endOfDayIso(dateInputValue: string): string | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateInputValue.trim());
-  if (!match) return null;
-  const [, y, m, d] = match;
-  const date = new Date(Number(y), Number(m) - 1, Number(d), 23, 59, 59, 999);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
 /** Split the comma-separated participant string into trimmed, non-empty emails. */
 export function splitParticipants(value: string | null | undefined): string[] {
   if (!value) return [];
