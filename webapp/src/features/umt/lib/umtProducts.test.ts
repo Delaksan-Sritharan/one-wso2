@@ -36,7 +36,7 @@ function baseProduct(overrides: Partial<UmtBaseProduct> = {}): UmtBaseProduct {
     version: "4.0.0.0.full",
     isActive: true,
     createdBy: "admin@wso2.com",
-    createdOn: "2026-01-01T00:00:00Z",
+    createdOn: "2026-01-01 09:14:22.0",
     ...overrides,
   };
 }

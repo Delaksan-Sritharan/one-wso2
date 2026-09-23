@@ -109,7 +109,18 @@ export default function UmtAddProductDialog({ open, onClose }: { open: boolean; 
           <TextField label="FTP Host" required size="small" {...field("ftpHost", "FTP host")} />
           <TextField label="FTP Port" required size="small" {...field("ftpPort", "FTP port")} />
           <TextField label="FTP Username" required size="small" {...field("ftpUsername", "FTP username")} />
-          <TextField label="FTP Password" type="password" required size="small" {...field("ftpPassword", "FTP password")} />
+          {/* new-password, not off/current-password: this is a shared service
+              credential, not this admin's own login, so the browser must
+              neither offer to save it to their personal password manager nor
+              autofill it in from one. */}
+          <TextField
+            label="FTP Password"
+            type="password"
+            required
+            size="small"
+            autoComplete="new-password"
+            {...field("ftpPassword", "FTP password")}
+          />
           <TextField label="FTP Absolute Path" required size="small" {...field("ftpAbsolutePath", "FTP absolute path")} />
         </Stack>
       </DialogContent>
