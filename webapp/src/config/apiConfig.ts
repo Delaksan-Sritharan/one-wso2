@@ -277,6 +277,45 @@ export const parServiceUrls = {
   // shows the Meet link itself, only a "meeting scheduled" confirmation —
   // see ParScheduleF2fDialog.tsx.
   calendarScheduleF2f: () => `${parBackendUrl}/calendar/schedule-f2f`,
+
+  // ---- Admin Portal -------------------------------------------------------------
+  //
+  // Admin-gated server-side already (invokerDetails.isAdmin) — same backend
+  // as above, no separate deployment. Org-wide variants just drop the
+  // scoping param the Lead Portal builders require.
+
+  parCyclesByStatus: (status: "PENDING_QUOTA" | "OPEN" | "PENDING" | "CLOSED") =>
+    `${parBackendUrl}/par-cycles?status=${status}`,
+  parCycleCreate: () => `${parBackendUrl}/par-cycles`,
+  // Same resource edits cycle settings and drives OPEN/CLOSED transitions.
+  parCycleModify: (parCycleId: number) => `${parBackendUrl}/par-cycles/${parCycleId}`,
+  parGlobalConfig: () => `${parBackendUrl}/meta/configurations`,
+  parAdminTeams: (parCycleId: number) => `${parBackendUrl}/par-cycles/${parCycleId}/teams`,
+  parAdminSpecialRatingGroups: (parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups`,
+  // GET returns SpecialRatingAllocation[] — reuse ParSpecialRatingAllocation,
+  // not ParSpecialRatingQuotaWithName (that one's POST-only, see types.ts).
+  parAdminQuotaGroups: (parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups-quota`,
+  parRejectedReviews: (parCycleId: number) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/rejected-reviews`,
+  parAllRatings: (parCycleId: number) => `${parBackendUrl}/par-cycles/${parCycleId}/par-ratings`,
+  parSyncEmployee: (parCycleId: number, workEmail: string) =>
+    `${parBackendUrl}/par-cycles/${parCycleId}/employees/${encodeURIComponent(workEmail)}/sync`,
+  // Restoring a rejected review reuses par360Review's PATCH above, called
+  // here on the reviewee's behalf by an admin — no separate endpoint.
+  // Distinct from parSchedule360Reminders above (a different resource,
+  // gated on isLeadInActiveParCycle, scoped to the caller's own reports).
+  parBulkReminder: (kind: "employee" | "lead" | "special-rating") =>
+    `${parBackendUrl}/reminders/schedule-${kind}-reminders`,
+  // GET every distinct legacy (pre-par-app) cycle, org-wide — the History
+  // tab's merged cycle list, admin-gated the same way as the per-employee
+  // legacy endpoint above.
+  legacyParHistoryCycles: () => `${parBackendUrl}/legacy-par-history-cycles`,
+  // GET every employee's legacy row for one cycle name — the History tab's
+  // legacy drill-down.
+  legacyParHistoryCyclesParticipants: (cycleName: string) =>
+    `${parBackendUrl}/legacy-par-history-cycles/${encodeURIComponent(cycleName)}/participants`,
 };
 
 // Leave app backend (people-ops-suite/apps/leave-app). Its own service
@@ -346,6 +385,8 @@ export function isOpdBackendConfigured(): boolean {
 export const opdServiceUrls = {
   userInfo: `${opdBackendUrl}/user-info`,
   appData: `${opdBackendUrl}/app-data`,
+  // Finance-only: the whole analytics screen in one request.
+  dashboardSummary: `${opdBackendUrl}/dashboard-summary`,
   searchClaims: `${opdBackendUrl}/search-claims`,
   claims: `${opdBackendUrl}/claims`,
   claimDrafts: `${opdBackendUrl}/claim-drafts`,
@@ -389,6 +430,9 @@ export const ccServiceUrls = {
   transactionSummary: `${ccBackendUrl}/transactions/new-transaction-summary`,
   submittedByCategory: `${ccBackendUrl}/transactions/submitted-transaction-summary`,
   cardHolderCompliance: `${ccBackendUrl}/transactions/card-holder-compliance-summary`,
+  // Lead view: every lead's approval backlog, and one lead's team within it.
+  leadApprovalSummary: `${ccBackendUrl}/transactions/lead-approval-summary`,
+  leadTeamCardHolders: `${ccBackendUrl}/transactions/lead-team-card-holder-summary`,
   expenseTypes: `${ccBackendUrl}/configurations/expense-types`,
   subRegions: `${ccBackendUrl}/configurations/sub-regions`,
   productAndBusinessUnits: `${ccBackendUrl}/configurations/product-and-business-units`,

@@ -17,7 +17,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -73,6 +73,9 @@ vi.mock("../expense/useExpense", () => ({
       error: new Error("expense backend down"),
     };
   },
+  // Only feeds the review screen's name resolver, which falls back to the
+  // bare email with nothing here — nothing under test cares which name shows.
+  useExpenseEmployees: () => ({ data: [], isLoading: false, isError: false }),
 }));
 
 vi.mock("../opd/useOpd", () => ({
@@ -95,13 +98,32 @@ vi.mock("../opd/useOpd", () => ({
   },
 }));
 
-vi.mock("../expense/ExpenseClaimDetailsDialog", () => ({
-  ExpenseClaimDetailsDialog: ({ claim }: { claim: unknown }) =>
-    claim ? <div data-testid="expense-dialog" /> : null,
+// An expense claim now takes over the whole tab — the app's own Lead/Finance
+// Approvals review screen, tested in its own file — rather than opening in a
+// dialog here. Stubbed the same way OPD's dialog is: what this file cares
+// about is WHICH claim opened it and with which stage, not the review
+// screen's own internals.
+vi.mock("../expense/approvals/ExpenseApprovalReview", () => ({
+  ExpenseApprovalReview: ({
+    claim,
+    stage,
+  }: {
+    claim: { id: string };
+    stage: string;
+  }) => (
+    <div data-testid="expense-review" data-stage={stage}>
+      {claim.id}
+    </div>
+  ),
 }));
-vi.mock("../opd/OpdClaimDetailsDialog", () => ({
-  OpdClaimDetailsDialog: ({ claim }: { claim: unknown }) =>
-    claim ? <div data-testid="opd-dialog" /> : null,
+// OPD now takes over the tab the same way expense does — its own review
+// screen, tested in its own file — rather than opening in a dialog.
+vi.mock("../opd/approvals/OpdApprovalReview", () => ({
+  OpdApprovalReview: ({ claim, pending }: { claim: { id: string }; pending: boolean }) => (
+    <div data-testid="opd-review" data-pending={String(pending)}>
+      {claim.id}
+    </div>
+  ),
 }));
 
 const { default: NeedsYouTab } = await import("./NeedsYouTab");
@@ -302,13 +324,51 @@ describe("when one backend is down", () => {
 });
 
 describe("opening a claim", () => {
-  it("opens the app's own review dialog for the type clicked", async () => {
+  // OPD also replaces the whole tab with its own review screen now, the
+  // same way expense does — one flow, not a dialog copy.
+  it("replaces the queue with the review screen for an OPD claim", async () => {
     data.opd = [opdClaim({})];
     show();
     const row = (await screen.findByText("OPD-1")).closest("tr")!;
     within(row).getByRole("button", { name: "Review" }).click();
-    await waitFor(() => expect(screen.getByTestId("opd-dialog")).toBeInTheDocument());
-    expect(screen.queryByTestId("expense-dialog")).not.toBeInTheDocument();
+    const review = await screen.findByTestId("opd-review");
+    expect(review).toHaveTextContent("OPD-1");
+    expect(review).toHaveAttribute("data-pending", "true");
+    expect(screen.queryByTestId("expense-review")).not.toBeInTheDocument();
+    // Gone, not merely covered: the review screen took the tab's place.
+    expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
+  });
+
+  // Expense claims replace the whole tab with the app's own Lead/Finance
+  // Approvals review screen rather than opening in a dialog — the same
+  // screen, the same decision, not a shrunk-down copy.
+  it("replaces the queue with the review screen for an expense claim", async () => {
+    data.lead = [expenseClaim({ id: "EXP-LEAD" })];
+    show();
+    const row = (await screen.findByText("EXP-LEAD")).closest("tr")!;
+    within(row).getByRole("button", { name: "Review" }).click();
+    const review = await screen.findByTestId("expense-review");
+    expect(review).toHaveTextContent("EXP-LEAD");
+    // Gone, not merely covered: the review screen took the tab's place.
+    expect(screen.queryByText("Nothing is waiting on you.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
+  });
+
+  // The lead/finance split the row already told the approver about is the
+  // same split the review screen has to answer with — otherwise Approve
+  // decides the wrong stage.
+  it("opens a finance-stage claim on FINANCE, not LEAD", async () => {
+    data.finance = [
+      expenseClaim({
+        id: "EXP-FIN",
+        statusDetails: { status: "PENDING_FINANCE", leadApprovedDate: iso(2026, 7, 25) },
+      }),
+    ];
+    show();
+    const row = (await screen.findByText("EXP-FIN")).closest("tr")!;
+    within(row).getByRole("button", { name: "Review" }).click();
+    const review = await screen.findByTestId("expense-review");
+    expect(review).toHaveAttribute("data-stage", "FINANCE");
   });
 });
 

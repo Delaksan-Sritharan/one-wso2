@@ -42,7 +42,11 @@ import {
   type LucideIcon,
 } from "@wso2/oxygen-ui-icons-react";
 import type { Capability, MenuApp } from "@constants/appMenu";
-import { FINANCE_PERSPECTIVE_APPS, ME_FINANCE_APPS } from "@constants/financeApps";
+import {
+  FINANCE_OVERVIEW_APPS,
+  FINANCE_PERSPECTIVE_APPS,
+  ME_FINANCE_APPS,
+} from "@constants/financeApps";
 import { CLAIM_APPROVAL_PATH } from "@features/finance/approvals/claimApprovalTabs";
 import { MARKETING_OPS_APPS } from "@constants/marketingOpsApps";
 import { DUE_DILIGENCE_APPS } from "@constants/dueDiligenceApps";
@@ -138,13 +142,12 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
     icon: TicketIcon,
     path: "/people-ops/subscriptions/manage",
   },
-  // par-app's Lead Portal — the half of par-app that's about your reports,
-  // not yourself (the employee portal moved to the Me perspective, see
-  // parApps.ts). `alwaysGroup` for the same reason Master Data below
-  // carries it: a named group rather than a bare leaf, since a second child
-  // (Admin Portal, once built — see docs/ported-apps/par-app.md §9) is
-  // still coming. Spread in rather than filtered out, so with the flag off
-  // the entry does not exist at all.
+  // par-app's Lead and Admin Portals — the halves of par-app that are about
+  // your reports and the org-wide cycle, not yourself (the employee portal
+  // moved to the Me perspective, see parApps.ts). `alwaysGroup` for the
+  // same reason Master Data below carries it: a named group rather than a
+  // bare leaf, since it has more than one child. Spread in rather than
+  // filtered out, so with the flag off the entry does not exist at all.
   ...(isPreviewEnabled("par")
     ? [
         {
@@ -165,6 +168,13 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
               id: "par-lead-portal",
               label: "Lead Portal",
               path: "/people-ops/performance/lead",
+            },
+            // Same treatment as Lead Portal above: gated via
+            // PAR_ADMIN_PORTAL_ITEM_ID / useParIsAdmin, not `requires`.
+            {
+              id: "par-admin-portal",
+              label: "Admin Portal",
+              path: "/people-ops/performance/admin",
             },
           ],
         },
@@ -260,6 +270,9 @@ export const SUBSCRIPTION_ITEM_IDS: ReadonlySet<string> = new Set([
  * on the section itself, above.
  */
 export const PAR_LEAD_PORTAL_ITEM_ID = "par-lead-portal";
+
+/** Same idea, for the Admin Portal — gated via useParIsAdmin. */
+export const PAR_ADMIN_PORTAL_ITEM_ID = "par-admin-portal";
 
 // Marketing Ops. Built from the registry now so the rail is ready, but the
 // perspective itself stays locked (`access: false` below) until Phase 1
@@ -408,6 +421,9 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     path: "/finance",
     forwardsToFirstItem: true,
     sections: [
+      // Overview first: what the numbers say comes before the work of acting on
+      // them, and it is the screen finance opens the perspective to read.
+      ...appsToSections(FINANCE_OVERVIEW_APPS),
       {
         id: "claim-approval",
         label: "Claim Approval",

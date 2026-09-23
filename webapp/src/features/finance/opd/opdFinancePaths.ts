@@ -27,5 +27,6 @@
 export const OPD_FINANCE_PATH = "/finance/opd";
 
 export const opdFinancePaths = {
+  dashboard: `${OPD_FINANCE_PATH}/dashboard`,
   history: `${OPD_FINANCE_PATH}/history`,
 } as const;

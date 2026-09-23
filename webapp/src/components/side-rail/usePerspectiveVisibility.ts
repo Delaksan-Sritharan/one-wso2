@@ -16,6 +16,7 @@
 
 import { useMemo } from "react";
 import {
+  PAR_ADMIN_PORTAL_ITEM_ID,
   PAR_LEAD_PORTAL_ITEM_ID,
   SRI_LANKA_ONLY_ITEM_IDS,
   SUBSCRIPTION_ITEM_IDS,
@@ -36,6 +37,7 @@ import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligence
 import { useSecurityGate } from "@features/security/api/useSecurityGate";
 import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
 import { useParCanSeeLeadPortal } from "@features/par/api/useParData";
+import { useParIsAdmin } from "@features/par/api/useParIsAdmin";
 import { useUmtGate } from "@features/umt/api/useUmtGate";
 import { isSriLankaWorkLocation } from "@utils/locationGate";
 import { visibleLeavesOf } from "./railActive";
@@ -157,6 +159,10 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // Only fetched while People Ops is active; fails closed while resolving.
   const parLeadPortalGate = useParCanSeeLeadPortal(userInfo.data?.workEmail, isPeopleOps);
 
+  // Admin Portal's own gate — a JWT decode, not a backend call, so unlike
+  // every gate above there's no per-perspective fetch to avoid by disabling it.
+  const parAdminPortalGate = useParIsAdmin();
+
   // UMT is the same shape of problem again: Product Management is
   // UMT_ADMIN-only, decided by UMT's own /update/user-info roles, which bear
   // no relation to the people-app privilege numbers `caps` is built from.
@@ -204,6 +210,7 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
     if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
     if (s.id === PAR_LEAD_PORTAL_ITEM_ID) return parLeadPortalGate.canSee;
+    if (s.id === PAR_ADMIN_PORTAL_ITEM_ID) return parAdminPortalGate.isAdmin;
     if (UMT_ADMIN_ITEM_IDS.has(s.id)) return umtGate.isAdmin && !umtGate.isResolving;
     if (isMarketingOps) return marketingOpsGate.canSee(s.id);
     return sectionAllowed(s.requires, caps);
@@ -228,6 +235,7 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     securityGate.isResolving ||
     subscriptionGate.isResolving ||
     parLeadPortalGate.isLoading ||
+    parAdminPortalGate.isLoading ||
     umtGate.isResolving;
 
   const isError =
