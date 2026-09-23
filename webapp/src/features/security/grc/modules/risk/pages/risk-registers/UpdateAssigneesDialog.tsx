@@ -288,7 +288,10 @@ export default function UpdateAssigneesDialog({
             getOptionLabel={(option) => option.name}
             isOptionEqualToValue={(option, value) => option.email === value.email}
             value={actionOwnerSelected}
-            disabled={submitting}
+            // The backend can only set the owner of an existing STANDARD
+            // plan and answers 409 otherwise, so don't offer a pick that can
+            // only fail. A plan with no owner yet is fine to set.
+            disabled={submitting || !detail.action_plan}
             onInputChange={(_, newInputValue, reason) => {
               if (reason === "input") handleActionOwnerInputChange(newInputValue);
             }}
@@ -325,7 +328,11 @@ export default function UpdateAssigneesDialog({
                 error={!!actionOwnerError}
                 helperText={
                   actionOwnerError ??
-                  (currentActionOwnerId !== null ? "Search to replace the current Action Owner." : undefined)
+                  (!detail.action_plan
+                    ? "This risk has no action plan, so there is no Action Owner to set."
+                    : currentActionOwnerId !== null
+                      ? "Search to replace the current Action Owner."
+                      : undefined)
                 }
               />
             )}
