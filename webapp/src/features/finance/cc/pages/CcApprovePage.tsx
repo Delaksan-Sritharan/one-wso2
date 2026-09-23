@@ -91,6 +91,11 @@ export default function CcApprovePage() {
         </ToggleButtonGroup>
       )}
       <ApproveBody
+        // Remounts on a role change, so ApproveBody's own filter state (user,
+        // card, and finance's stage filter) resets with it — otherwise a
+        // stage picked as finance silently narrows the queue again on
+        // switching back to it, after a detour through lead.
+        key={role}
         userInfo={userInfo}
         isLead={isLead}
         isFinance={isFinance}

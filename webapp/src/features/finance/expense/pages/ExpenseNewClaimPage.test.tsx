@@ -751,10 +751,15 @@ describe("converting a foreign-currency amount", () => {
       dataTransfer: { files: [new File(["x"], "t.pdf", { type: "application/pdf" })] },
     });
     await waitFor(() => expect(uploadMutate).toHaveBeenCalled());
-    fireEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+    const add = await screen.findByRole("button", { name: "Add expense" });
+    await waitFor(() => expect(add).not.toBeDisabled());
+    fireEvent.click(add);
 
     // The line, and the card's Total Amount footer, both in LKR.
-    await waitFor(() => expect(screen.getAllByText("Rs. 15,000.00").length).toBeGreaterThan(0));
+    await waitFor(() =>
+      expect(screen.getAllByText("Rs. 15,000.00").length).toBeGreaterThanOrEqual(2),
+    );
+    expect(screen.getByText("Total Amount:").parentElement).toHaveTextContent("Rs. 15,000.00");
   });
 
   // A missing rate must NOT collapse to 1: that would price 50 USD as Rs. 50

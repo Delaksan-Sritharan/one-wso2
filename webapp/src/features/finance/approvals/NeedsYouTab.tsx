@@ -75,9 +75,15 @@ export default function NeedsYouTab() {
   // holding both flags decides one stage at a time, not a merged list. Opens
   // on whichever stage this person actually holds; someone with one flag
   // never sees the switch at all — there is nothing to switch to.
-  const [view, setView] = useState<ApproverView>(canLead ? "LEAD" : "FINANCE");
-  const expenseStage: ApproverView =
-    canLead && canExpenseFinance ? view : canLead ? "LEAD" : "FINANCE";
+  //
+  // Derived-with-override, the same as CcApprovePage's own `role`: `picked`
+  // is null until someone chooses, and the default is computed fresh every
+  // render rather than captured once. `canLead` reads false on the render
+  // before expense app data has arrived — a plain `useState(canLead ? ... )`
+  // would freeze on that false and never reconsider it once the data landed,
+  // leaving a dual-role approver stuck on Finance.
+  const [picked, setPicked] = useState<ApproverView | null>(null);
+  const expenseStage: ApproverView = picked ?? (canLead ? "LEAD" : "FINANCE");
 
   // For the review screen's name display — falls back to the bare email until
   // this arrives, same as the standalone Lead/Finance Approvals screens do.
@@ -149,14 +155,18 @@ export default function NeedsYouTab() {
   // screen spun forever for anyone holding less than all three, which is most
   // people. `isLoading` is pending AND fetching, so a disabled query reads as
   // not loading, which is what it is.
-  const loading =
-    expenseAppData.isLoading ||
-    opdUserInfo.isLoading ||
-    leadQueue.isLoading ||
-    financeQueue.isLoading ||
-    opdQueue.isLoading;
+  //
+  // Split from the queues' own loading: `email`/`ids` are part of every query
+  // KEY below, so typing a filter starts a brand new query and this would
+  // otherwise blank the whole tab — the toggle and the filter fields
+  // themselves included — losing focus mid-keystroke. Only identity/role
+  // resolution gates the whole tab; a queue reloading after a filter change
+  // shows its loading state in place of the list, below still-mounted
+  // controls.
+  const identityLoading = expenseAppData.isLoading || opdUserInfo.isLoading;
+  const queuesLoading = leadQueue.isLoading || financeQueue.isLoading || opdQueue.isLoading;
 
-  if (loading) {
+  if (identityLoading) {
     return <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 1.5 }} />;
   }
 
@@ -226,8 +236,8 @@ export default function NeedsYouTab() {
         <ToggleButtonGroup
           size="small"
           exclusive
-          value={view}
-          onChange={(_e, v) => v && setView(v as ApproverView)}
+          value={expenseStage}
+          onChange={(_e, v) => v && setPicked(v as ApproverView)}
           sx={{ mb: 2 }}
         >
           <ToggleButton value="LEAD" sx={{ textTransform: "none" }}>
@@ -261,7 +271,9 @@ export default function NeedsYouTab() {
         />
       </Stack>
 
-      {total === 0 && failures.length === 0 ? (
+      {queuesLoading ? (
+        <Skeleton variant="rectangular" height={220} sx={{ borderRadius: 1.5 }} />
+      ) : total === 0 && failures.length === 0 ? (
         <Typography sx={{ fontSize: 13, color: "text.secondary", py: 3 }}>
           {employee || claimIdFilter ? "No claims match these filters." : "Nothing is waiting on you."}
         </Typography>

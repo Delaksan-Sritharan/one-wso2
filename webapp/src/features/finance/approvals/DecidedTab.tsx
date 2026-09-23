@@ -154,14 +154,18 @@ export default function DecidedTab() {
   // screen spun forever for anyone holding less than all three, which is most
   // people. `isLoading` is pending AND fetching, so a disabled query reads as
   // not loading, which is what it is.
-  const loading =
-    expenseAppData.isLoading ||
-    opdUserInfo.isLoading ||
-    leadDecided.isLoading ||
-    financeDecided.isLoading ||
-    opdDecided.isLoading;
+  //
+  // Split from the queues' own loading: `email`/`ids` are part of every query
+  // KEY below, so typing a filter starts a brand new query and this would
+  // otherwise blank the whole tab — the Approved/Rejected tabs and the filter
+  // fields themselves included — losing focus mid-keystroke. Only
+  // identity/role resolution gates the whole tab; a queue reloading after a
+  // filter change shows its loading state in place of the list, below still-
+  // mounted controls.
+  const identityLoading = expenseAppData.isLoading || opdUserInfo.isLoading;
+  const queuesLoading = leadDecided.isLoading || financeDecided.isLoading || opdDecided.isLoading;
 
-  if (loading) return <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 1.5 }} />;
+  if (identityLoading) return <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 1.5 }} />;
 
   // Same review screen Needs You opens, `pending={false}`: Approve/Reject are
   // replaced by the status chip, which opens the activity trail instead — the
@@ -251,7 +255,9 @@ export default function DecidedTab() {
       {/* "Nothing has been decided" is a claim about the data, so it is only
           made when the data actually arrived — a failure stands alone,
           saying both at once tells the reader two different things. */}
-      {expenseRows.length === 0 && opdRows.length === 0 ? (
+      {queuesLoading ? (
+        <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1.5 }} />
+      ) : expenseRows.length === 0 && opdRows.length === 0 ? (
         !failure && (
           <Typography sx={{ fontSize: 13, color: "text.secondary", py: 3 }}>
             {employee || claimIdFilter ? "No claims match these filters." : `Nothing ${outcome} yet.`}

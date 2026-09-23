@@ -426,33 +426,39 @@ function NewClaimBody() {
                           buttons: the viewer it opens carries its own Download,
                           so a second one out here was a duplicate. */}
                       <Tooltip describeChild title={it.receiptUrl ? "View or download the receipt" : "No receipt attached"} arrow>
-                        <IconButton
-                          size="small"
-                          aria-label={it.receiptUrl ? "View receipt" : "No receipt attached"}
-                          disabled={!it.receiptUrl}
-                          onClick={() => {
-                            const fileName = it.receiptUrl!;
-                            setReceiptLoad(() => async () => {
-                              const accessToken = await getAccessToken();
-                              return fetchReceiptObjectUrl(expenseServiceUrls.receiptFile(fileName), accessToken);
-                            });
-                          }}
-                          sx={{
-                            borderRadius: 1,
-                            bgcolor: "grey.500",
-                            color: "white",
-                            "&:hover": { bgcolor: "grey.700" },
-                            // Muted rather than grey-on-grey when there is no
-                            // receipt to open, so "nothing to see" reads as
-                            // unavailable instead of just a darker square.
-                            "&.Mui-disabled": {
-                              bgcolor: "action.disabledBackground",
-                              color: "action.disabled",
-                            },
-                          }}
-                        >
-                          <ReceiptTextIcon size={14} />
-                        </IconButton>
+                        {/* A disabled button fires none of the pointer/focus
+                            events Tooltip listens for, so without this span
+                            the "No receipt attached" tooltip would never
+                            show. */}
+                        <span>
+                          <IconButton
+                            size="small"
+                            aria-label={it.receiptUrl ? "View receipt" : "No receipt attached"}
+                            disabled={!it.receiptUrl}
+                            onClick={() => {
+                              const fileName = it.receiptUrl!;
+                              setReceiptLoad(() => async () => {
+                                const accessToken = await getAccessToken();
+                                return fetchReceiptObjectUrl(expenseServiceUrls.receiptFile(fileName), accessToken);
+                              });
+                            }}
+                            sx={{
+                              borderRadius: 1,
+                              bgcolor: "grey.500",
+                              color: "white",
+                              "&:hover": { bgcolor: "grey.700" },
+                              // Muted rather than grey-on-grey when there is no
+                              // receipt to open, so "nothing to see" reads as
+                              // unavailable instead of just a darker square.
+                              "&.Mui-disabled": {
+                                bgcolor: "action.disabledBackground",
+                                color: "action.disabled",
+                              },
+                            }}
+                          >
+                            <ReceiptTextIcon size={14} />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                       <Tooltip describeChild title="Edit this expense" arrow>
                         <IconButton
