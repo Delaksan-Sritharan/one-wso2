@@ -14,23 +14,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { Accordion, AccordionDetails, AccordionSummary, Avatar, Chip, Divider, Grid, Stack, Typography } from "@wso2/oxygen-ui";
+import { Accordion, AccordionDetails, AccordionSummary, Avatar, Card, Chip, Divider, Grid, Stack, Typography } from "@wso2/oxygen-ui";
 import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import { deriveLegacyRatingFromScore, parseLegacyQuestionAnswers } from "../util/parLegacyHistory";
-import { employeeChipLabel } from "../util/parLabels";
 import { ParCommentView } from "./ParContent";
 import ParLegacyReviewSection from "./ParLegacyReviewSection";
+import ParStatusChip from "./ParStatusChip";
 import type { ParLegacyHistory } from "../api/types";
 
-function InfoItem({ title, subtitle1, subtitle2 }: { title: string; subtitle1: string; subtitle2: string }) {
+function InfoItem({ label, value, secondaryValue }: { label: string; value: string; secondaryValue: string }) {
   return (
     <Grid size="grow">
-      <Typography variant="body1">{title || "—"}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {subtitle1}
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: "block", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, mb: 0.25 }}
+      >
+        {label}
+      </Typography>
+      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+        {value || "—"}
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        {subtitle2 || "—"}
+        {secondaryValue || "—"}
       </Typography>
     </Grid>
   );
@@ -66,44 +72,45 @@ export default function ParLegacyRecordDetail({
 
   return (
     <Stack spacing={2}>
-      <Grid container spacing={2}>
-        <Grid size="auto">
-          <Avatar variant="rounded" src={thumbnail} alt="Employee Thumbnail" sx={{ width: 100, height: 100 }} />
-        </Grid>
-        <Grid size="grow">
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {special && special !== "NOT_ASSIGNED" && (
-              <Chip size="small" color={employeeChipLabel(special).color} label={employeeChipLabel(special).label} />
+      <Card variant="outlined" sx={{ p: 2 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid size="auto">
+            <Avatar variant="rounded" src={thumbnail} alt="Employee Thumbnail" sx={{ width: 100, height: 100 }} />
+          </Grid>
+          <Grid size="grow">
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              {special && special !== "NOT_ASSIGNED" && <ParStatusChip content={special} />}
+              {rating && rating !== "NOT_ASSIGNED" && <ParStatusChip content={rating} />}
+            </Stack>
+            {(record.reviewerEmail || record.reviewerName) && (
+              <Chip
+                size="small"
+                variant="outlined"
+                sx={{ mt: 1 }}
+                label={`PAR shared by: ${record.reviewerEmail ?? record.reviewerName}`}
+              />
             )}
-            {rating && <Chip size="small" color={employeeChipLabel(rating).color} label={employeeChipLabel(rating).label} />}
-          </Stack>
-          {(record.reviewerEmail || record.reviewerName) && (
-            <Chip size="small" sx={{ mt: 1 }} label={`PAR shared by: ${record.reviewerEmail ?? record.reviewerName}`} />
-          )}
+          </Grid>
+          <InfoItem label="Employee" value={employeeName} secondaryValue={employeeEmail} />
+          <InfoItem label="Lead" value={record.reviewerName ?? record.reviewerEmail ?? ""} secondaryValue={record.reviewerEmail ?? ""} />
+          <InfoItem label="Team" value={record.team ?? ""} secondaryValue={record.department ?? ""} />
         </Grid>
-        <InfoItem title={employeeName} subtitle1="Employee" subtitle2={employeeEmail} />
-        <InfoItem title={record.reviewerName ?? record.reviewerEmail ?? ""} subtitle1="Lead" subtitle2={record.reviewerEmail ?? ""} />
-        <InfoItem title={record.team ?? ""} subtitle1="Team" subtitle2={record.department ?? ""} />
-      </Grid>
+      </Card>
 
-      <Divider />
-
-      <Accordion disabled={!legacyEmployeeContent} defaultExpanded={Boolean(legacyEmployeeContent)} sx={{ mt: 1 }}>
+      <Accordion variant="outlined" disabled={!legacyEmployeeContent} defaultExpanded={Boolean(legacyEmployeeContent)}>
         <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Employee PAR</AccordionSummary>
         <AccordionDetails>
           <Divider sx={{ my: 1 }} />
           <ParCommentView html={legacyEmployeeContent} />
         </AccordionDetails>
       </Accordion>
-      <Accordion disabled={!legacyLeadContent} defaultExpanded={Boolean(legacyLeadContent)} sx={{ mt: 1 }}>
+      <Accordion variant="outlined" disabled={!legacyLeadContent} defaultExpanded={Boolean(legacyLeadContent)}>
         <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Lead's Feedback</AccordionSummary>
         <AccordionDetails>
           <Divider sx={{ my: 1 }} />
           <ParCommentView html={legacyLeadContent} />
         </AccordionDetails>
       </Accordion>
-
-      <Divider />
 
       <ParLegacyReviewSection feedback360={record.feedback360} />
     </Stack>
