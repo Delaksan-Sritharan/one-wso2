@@ -68,6 +68,25 @@ export default function MeetingDetailPage() {
   // transcript is one of possibly several things that want to know it.
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  // Reset the clock when the route moves to a different meeting.
+  //
+  // Changing `:meetingId` does NOT unmount this page -- React Router swaps the param and
+  // re-renders -- so without this, meeting A's position survives into meeting B: the
+  // timeline draws a playhead partway through a recording that has not started, and the
+  // transcript highlights whatever line that instant lands on, until B's video happens to
+  // emit its first event.
+  //
+  // Done during render rather than in an effect. This is React's documented way to adjust
+  // state when a prop changes: the re-render happens before anything is painted, so the
+  // wrong position is never on screen, and an effect would both paint it first and trip
+  // the set-state-in-effect rule.
+  const [clockOwner, setClockOwner] = useState(meetingId);
+  if (clockOwner !== meetingId) {
+    setClockOwner(meetingId);
+    setCurrentTime(0);
+    setDuration(0);
+  }
   // Tab state is local, not a route. Unlike the meeting itself — which must be linkable —
   // which pane you were reading is not something anyone shares.
   // Summary first, and the default: someone opening a call wants to know what it was
@@ -197,6 +216,10 @@ export default function MeetingDetailPage() {
           {/* RIGHT — the recording. */}
           <Box>
             <RecordingPlayer
+              // Remount per meeting: the player keeps its own retry latch and failure
+              // flag, and a <video> reused across a src change can carry the old
+              // element's buffered state with it.
+              key={meeting.meetingId}
               ref={playerRef}
               meetingId={meeting.meetingId}
               onTimeUpdate={setCurrentTime}
