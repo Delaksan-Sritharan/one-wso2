@@ -186,6 +186,16 @@ export default function ParLeadReviewPanel({
                 // (types.bal's own [\s\S]*\S[\s\S]* pattern), so an explicit
                 // empty string 400s. Source's own updateEmployeeParRating
                 // has this same conditional-include for the same reason.
+                //
+                // One consequence neither side works around: there is no way
+                // to CLEAR a saved attachment through this endpoint at all.
+                // manager.bal's own isUpdatedString guard
+                // (`newValue.trim() != ""`) refuses to apply an empty value
+                // as an update even if one got past the constraint above, so
+                // removing every file and saving leaves the old URLs on the
+                // record — they reappear on the next fetch. Source has this
+                // identical gap; fixing it needs a backend change (a real
+                // clear operation), not a frontend one.
                 ...(driveFiles.length > 0 ? { parPerformanceNoticeAck: driveFiles.map((f) => f.url).join("\n") } : {}),
               }),
           // Only an admin caller may set this field — the backend rejects a
