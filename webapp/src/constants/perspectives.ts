@@ -29,6 +29,7 @@ import {
   LayoutDashboard,
   MegaphoneIcon,
   NetworkIcon,
+  RadioIcon,
   RefreshCcw,
   SatelliteDishIcon,
   ScaleIcon,
@@ -38,6 +39,7 @@ import {
   UserRoundMinusIcon,
   UsersIcon,
   UsersRoundIcon,
+  VideoIcon,
   WalletIcon,
   ServerIcon,
   type LucideIcon,
@@ -341,6 +343,7 @@ const UMT_SECTIONS: PerspectiveSection[] = [
   { id: "umt-products", label: "Product Management", icon: BoxIcon, path: "/umt/products" },
 ];
 
+
 /**
  * UMT rail ids whose visibility must be decided by UMT's own /update/user-info
  * roles, not the people-app capability vocabulary `requires` speaks — the same
@@ -351,6 +354,22 @@ const UMT_SECTIONS: PerspectiveSection[] = [
  * ask useUmtGate directly rather than reading `requires` for them.
  */
 export const UMT_ADMIN_ITEM_IDS: ReadonlySet<string> = new Set(["umt-products"]);
+// RevOps's rail. One entry today — the meeting history — but a list rather than
+// nothing, because the rail is how you get back to the screen from a deep link
+// and because the detail view for a single recording lands next to it next.
+const REVOPS_SECTIONS: PerspectiveSection[] = [
+  {
+    id: "revops-meetings",
+    label: "Meetings",
+    // NOT RadioIcon, which belongs to the perspective itself. SideRail renders
+    // the Overview row with `active.icon`, so a section reusing the perspective
+    // icon puts the same glyph on two adjacent rows and the rail stops being
+    // scannable. Video reads as "recorded call" and its solid rectangle is the
+    // strongest silhouette contrast against Radio's arcs at 20px.
+    icon: VideoIcon,
+    path: "/revops",
+  },
+];
 
 export interface PerspectiveDef {
   key: string;
@@ -394,6 +413,13 @@ export interface PerspectiveDef {
    *
    * Me is the one perspective that does not carry this: its landing is the
    * person's own profile, which is a page someone stops and reads.
+   *
+   * ALSO covers the near case where the landing does not forward because it
+   * already IS the first row's destination -- RevOps, whose Meetings row points
+   * at `/revops` itself. The reason differs (nothing bounces) but the rail
+   * problem is identical: two rows, one destination, and the reader has to work
+   * out that they are the same place. The name is kept rather than split into a
+   * second near-identical flag.
    */
   forwardsToFirstItem?: boolean;
   sections?: PerspectiveSection[];
@@ -470,6 +496,46 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     access: isCsmConfigured(),
     externalUrl: csmUrl || undefined,
   },
+  // RevOps — auto-recorded meetings. One screen so far: the meeting history
+  // ported from meet-app. Create Meeting stayed behind (scheduling happens in
+  // the calendar add-on) and the analytics dashboard was out of scope.
+  //
+  // `externallyGated` because access is decided by the meet-app backend's own
+  // privileges (ADMIN 762 / TEAM 987), not by One WSO2's four capabilities: a
+  // signed-in user who is in neither group gets a 403 on every endpoint. That
+  // flag is what keeps someone from being LANDED here at sign-in only to meet
+  // an authorization notice — the rail and launcher still show it, where the
+  // notice is the right answer.
+  //
+  // `access: true` regardless of whether the backend URL is set, unlike CSM
+  // just above. The difference is that CSM is somewhere else — with no URL its
+  // tile could only ever be a link to nowhere — whereas RevOps is a page we host,
+  // and that page explains its own not-connected state. Menu is the precedent:
+  // it stays in the rail unconfigured and says what is missing, which is how an
+  // operator finds out a key is unset. Hiding it instead would make a missing
+  // config indistinguishable from a feature that was never built.
+  //
+  // `isRevOpsBackendConfigured` is still imported and used by the page itself; it
+  // just doesn't decide visibility.
+  //
+  // Spread in behind a preview flag, exactly as umt is below: with the flag off
+  // the entry does not exist at all, rather than existing as a disabled tile.
+  // `access: false` would not do — FUNCTIONAL_PERSPECTIVES is unfiltered, so a
+  // locked entry still leaves a "not available yet" tile in the waffle.
+  ...(isPreviewEnabled("revops")
+    ? [
+        {
+          key: "revops",
+          label: "RevOps",
+          icon: RadioIcon,
+          access: true,
+          externallyGated: true,
+          forwardsToFirstItem: true,
+          path: "/revops",
+          sections: REVOPS_SECTIONS,
+        },
+      ]
+    : []),
   // Held behind a preview flag, whole perspective and all, until it's ready
   // for production. With the flag off the entry does not exist, so the waffle,
   // landing options, and favourites stay clean. Same shape as UMT above.

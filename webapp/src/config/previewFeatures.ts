@@ -72,7 +72,20 @@ export type PreviewFeature =
    */
   | "umt"
   /**
-   * The whole Infra Portal perspective. Still being ported, so the waffle
+   * The whole RevOps perspective — rail entry, launcher tile, landing-page
+   * option, favourites eligibility, and both `/revops` routes. Gated as a
+   * perspective rather than per screen, for the same reason as `umt`: what has
+   * to stay preview-only is the perspective existing at all, not one route
+   * inside it.
+   *
+   * Held back until the recording/transcript pipeline has run in production
+   * long enough to trust — locally it cannot run at all, since the Pub/Sub
+   * flow only executes in the deployed backend. The meet-app backend's own
+   * SALES_TEAM/SALES_ADMIN check is unrelated and still applies with the flag
+   * on; this decides whether anyone sees the app, that decides who may use it.
+   */
+  | "revops"
+  /* The whole Infra Portal perspective. Still being ported, so the waffle
    * tile, landing option, and `/infra` route stay hidden until this is on.
    */
   | "infra";
