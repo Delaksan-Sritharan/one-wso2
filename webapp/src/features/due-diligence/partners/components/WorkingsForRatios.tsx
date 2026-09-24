@@ -232,7 +232,14 @@ export default function WorkingsForRatios({
         !editable &&
         checkObjectComplete(years[1]) &&
         checkObjectComplete(years[2]) &&
-        checkObjectComplete(years[3]) && (
+        checkObjectComplete(years[3]) &&
+        // checkObjectComplete alone lets a 0 exchange rate through (it isn't
+        // part of that check — see blankYear's own note above). Without this,
+        // convertToDollars' own zero-rate guard kicks in and returns the
+        // figures unconverted, but this table would still labeled them "USD".
+        Number(years[1].exchangeRate) > 0 &&
+        Number(years[2].exchangeRate) > 0 &&
+        Number(years[3].exchangeRate) > 0 && (
           <>
             <Typography sx={{ fontWeight: 600 }}>US Dollar</Typography>
             <TableContainer sx={{ border: 1, borderColor: "divider" }}>
