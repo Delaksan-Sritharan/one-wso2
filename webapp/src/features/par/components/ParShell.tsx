@@ -41,7 +41,7 @@ export default function ParShell({
         {title}
       </Typography>
       {subtitle && (
-        <Typography variant="body2" color="text.secondary" noWrap sx={{ mb: 2.25 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
           {subtitle}
         </Typography>
       )}

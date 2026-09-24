@@ -73,6 +73,8 @@ export function Par360OfferPicker({
   return (
     <Autocomplete
       options={options}
+      value={null}
+      blurOnSelect
       getOptionLabel={(o) => `${o.employeeName} (${o.workEmail})`}
       loading={participants.isLoading}
       onChange={(_e, v) => {
@@ -133,6 +135,11 @@ export function Par360OfferConfirmDialog({
 }) {
   const offer = useOfferToReview(parCycleId, selfEmail);
 
+  const handleClose = () => {
+    offer.reset();
+    onClose();
+  };
+
   const handleConfirm = () => {
     if (!employee) return;
     offer.mutate(employee.workEmail, {
@@ -145,7 +152,7 @@ export function Par360OfferConfirmDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
       <DialogTitle>Provide Feedback</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary">
@@ -155,7 +162,7 @@ export function Par360OfferConfirmDialog({
         {offer.isError && <Alert severity="error" sx={{ mt: 2 }}>{describeError(offer.error)}</Alert>}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={offer.isPending}>
+        <Button onClick={handleClose} disabled={offer.isPending}>
           Cancel
         </Button>
         <Button variant="contained" onClick={handleConfirm} disabled={offer.isPending}>

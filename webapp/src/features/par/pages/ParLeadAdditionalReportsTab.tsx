@@ -127,6 +127,7 @@ export default function ParLeadAdditionalReportsTab() {
             aria-label={`Open review for ${params.row.parEmployeeName}`}
             onClick={() => setReviewEmployeeEmail(params.row.parEmployeeEmail)}
             onKeyDown={(e) => {
+              if (e.target !== e.currentTarget) return;
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 setReviewEmployeeEmail(params.row.parEmployeeEmail);

@@ -389,7 +389,7 @@ export default function ParLeadReviewPanel({
                   below. */}
               <Stack spacing={1.5} sx={{ p: 1.75, borderRadius: 1.5, bgcolor: "action.hover" }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <Typography variant="body2" sx={{ flexShrink: 0, minWidth: 96 }} color="text.secondary">
+                  <Typography id="lead-review-rating-label" variant="body2" sx={{ flexShrink: 0, minWidth: 96 }} color="text.secondary">
                     Rating
                   </Typography>
                   {readOnly ? (
@@ -406,6 +406,7 @@ export default function ParLeadReviewPanel({
                       value={parRatingValue}
                       onChange={(e) => setParRatingValue(e.target.value as string)}
                       disabled={ratingUpdate.isPending}
+                      aria-labelledby="lead-review-rating-label"
                     >
                       {(cycle.parCycleConfigurations?.parRatings ?? []).map((r) => (
                         <ComplexSelect.MenuItem key={r} value={r}>
@@ -418,7 +419,7 @@ export default function ParLeadReviewPanel({
 
                 {parRatingValue === top5p20pEnabledRating && (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <Typography variant="body2" sx={{ flexShrink: 0, minWidth: 96 }} color="text.secondary">
+                    <Typography id="lead-review-special-rating-label" variant="body2" sx={{ flexShrink: 0, minWidth: 96 }} color="text.secondary">
                       Top 5%/20%
                     </Typography>
                     {readOnly ? (
@@ -429,6 +430,7 @@ export default function ParLeadReviewPanel({
                         value={specialRating}
                         onChange={(e) => setSpecialRating(e.target.value as typeof specialRating)}
                         disabled={!specialRatingConfirmed || ratingUpdate.isPending}
+                        aria-labelledby="lead-review-special-rating-label"
                       >
                         <ComplexSelect.MenuItem value="NONE">N/A</ComplexSelect.MenuItem>
                         <ComplexSelect.MenuItem value="TOP5P">Top 5%</ComplexSelect.MenuItem>

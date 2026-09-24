@@ -193,12 +193,13 @@ export default function Par360ReviewDialog({
                 {/* ReviewProvideModal.tsx:442, parUiText.ThreeSixtyReviewPanelDescription */}
                 <Typography variant="body2" color="text.secondary">{PANEL_DESCRIPTION}</Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <Typography sx={{ flexShrink: 0 }}>Rating:</Typography>
+                  <Typography id="par360-review-rating-label" sx={{ flexShrink: 0 }}>Rating:</Typography>
                   <ComplexSelect
                     fullWidth
                     value={rating}
                     onChange={(e) => setRating(e.target.value as string)}
                     readOnly={deadlinePassed}
+                    aria-labelledby="par360-review-rating-label"
                   >
                     {reviewRatings.map((r) => (
                       <ComplexSelect.MenuItem key={r} value={r}>

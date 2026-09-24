@@ -210,6 +210,7 @@ export default function ParLeadTeamRoster({
             aria-label={`Open review for ${params.row.parEmployeeName}`}
             onClick={() => onOpenReview(params.row.parEmployeeEmail)}
             onKeyDown={(e) => {
+              if (e.target !== e.currentTarget) return;
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 onOpenReview(params.row.parEmployeeEmail);
