@@ -104,6 +104,11 @@ export default function UpdateAssigneesDialog({
   const [assignerCandidates, setAssignerCandidates] = useState<UserOption[]>([]);
   const [ownerCandidates, setOwnerCandidates] = useState<UserOption[]>([]);
   const [managementApprovers, setManagementApprovers] = useState<UserOption[]>([]);
+  // The assignment team the Owner and Management Approver lists above were
+  // fetched for. Until it matches the selected team, those lists are the
+  // previous team's: picks are not checked against them and Save waits.
+  const [candidatesTeamId, setCandidatesTeamId] = useState<number | null>(null);
+  const candidatesCurrent = candidatesTeamId === assignmentTeamId;
 
   useEffect(() => {
     if (!open) return;
@@ -118,12 +123,17 @@ export default function UpdateAssigneesDialog({
     if (!open) return;
     let cancelled = false;
     const teamIds = [detail.source_register_id, assignmentTeamId];
-    fetchRiskOwnerCandidates(authFetch, teamIds)
-      .then((list) => { if (!cancelled) setOwnerCandidates(list); })
-      .catch(() => { if (!cancelled) setOwnerCandidates([]); });
-    fetchManagementApprovers(authFetch, teamIds)
-      .then((list) => { if (!cancelled) setManagementApprovers(list); })
-      .catch(() => { if (!cancelled) setManagementApprovers([]); });
+    // Both lists land together, tagged with the team they belong to, so the
+    // Owner and Management Approver are never checked against different teams.
+    void Promise.allSettled([
+      fetchRiskOwnerCandidates(authFetch, teamIds),
+      fetchManagementApprovers(authFetch, teamIds),
+    ]).then(([owners, approvers]) => {
+      if (cancelled) return;
+      setOwnerCandidates(owners.status === "fulfilled" ? owners.value : []);
+      setManagementApprovers(approvers.status === "fulfilled" ? approvers.value : []);
+      setCandidatesTeamId(assignmentTeamId);
+    });
     // Cancelled on the next team change, so a slower earlier request can
     // never overwrite the list for the team now selected.
     return () => { cancelled = true; };
@@ -135,19 +145,21 @@ export default function UpdateAssigneesDialog({
   // (withCurrent only keeps the saved person). Fall back to the saved person,
   // who is always selectable here, as EditRiskDialog clears its own pick.
   useEffect(() => {
+    if (!candidatesCurrent) return;
     if (ownerId !== detail.owner_id && !ownerCandidates.some((u) => u.id === ownerId)) {
       setOwnerId(detail.owner_id);
     }
-  }, [ownerCandidates, ownerId, detail.owner_id]);
+  }, [candidatesCurrent, ownerCandidates, ownerId, detail.owner_id]);
 
   useEffect(() => {
+    if (!candidatesCurrent) return;
     if (
       managementApproverId !== detail.management_approver_id &&
       !managementApprovers.some((u) => u.id === managementApproverId)
     ) {
       setManagementApproverId(detail.management_approver_id);
     }
-  }, [managementApprovers, managementApproverId, detail.management_approver_id]);
+  }, [candidatesCurrent, managementApprovers, managementApproverId, detail.management_approver_id]);
 
   // Action Owner can be any employee, searched live against the HR entity and
   // resolved to a user id on selection — same as Add Risk and Edit Risk.
@@ -383,7 +395,7 @@ export default function UpdateAssigneesDialog({
         <Button onClick={() => !submitting && onClose()} disabled={submitting} color="inherit">
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={submitting || !hasChanges || actionOwnerResolving} variant="contained">
+        <Button onClick={handleSave} disabled={submitting || !hasChanges || actionOwnerResolving || !candidatesCurrent} variant="contained">
           {submitting ? "Saving..." : "Save Changes"}
         </Button>
       </DialogActions>
