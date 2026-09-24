@@ -109,6 +109,10 @@ export default function UpdateAssigneesDialog({
   // previous team's: picks are not checked against them and Save waits.
   const [candidatesTeamId, setCandidatesTeamId] = useState<number | null>(null);
   const candidatesCurrent = candidatesTeamId === assignmentTeamId;
+  // Set when the lists for the selected team failed to load. The lists and
+  // their team are then left as they were, so they stay non-current: no pick
+  // is judged against an empty list, and Save stays disabled.
+  const [candidatesError, setCandidatesError] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -123,6 +127,7 @@ export default function UpdateAssigneesDialog({
     if (!open) return;
     let cancelled = false;
     const teamIds = [detail.source_register_id, assignmentTeamId];
+    setCandidatesError(false);
     // Both lists land together, tagged with the team they belong to, so the
     // Owner and Management Approver are never checked against different teams.
     void Promise.allSettled([
@@ -130,8 +135,12 @@ export default function UpdateAssigneesDialog({
       fetchManagementApprovers(authFetch, teamIds),
     ]).then(([owners, approvers]) => {
       if (cancelled) return;
-      setOwnerCandidates(owners.status === "fulfilled" ? owners.value : []);
-      setManagementApprovers(approvers.status === "fulfilled" ? approvers.value : []);
+      if (owners.status !== "fulfilled" || approvers.status !== "fulfilled") {
+        setCandidatesError(true);
+        return;
+      }
+      setOwnerCandidates(owners.value);
+      setManagementApprovers(approvers.value);
       setCandidatesTeamId(assignmentTeamId);
     });
     // Cancelled on the next team change, so a slower earlier request can
@@ -289,6 +298,12 @@ export default function UpdateAssigneesDialog({
       <DialogContent dividers>
         <Stack gap={2.5} sx={{ py: 1 }}>
           {apiError && <Alert severity="error">{apiError}</Alert>}
+          {candidatesError && (
+            <Alert severity="error">
+              Unable to load the Risk Owner and Management Approver candidates for this team. Close the
+              dialog and try again.
+            </Alert>
+          )}
 
           <Alert severity="info">
             This risk came from the risk register migration, so its people and assignment team
