@@ -148,9 +148,15 @@ export function useMeetings(params: MeetingsQueryParams) {
       ),
     staleTime: 60 * 1000,
     refetchOnMount: true,
+
     // Keeps the previous page's rows on screen while the next one loads, so
-    // paging doesn't collapse the table to a spinner and back.
-    placeholderData: (previous) => previous,
+    // paging doesn't collapse the table to a spinner and back — but only for the
+    // same signed-in user. previousData is whatever the LAST key showed, even one
+    // keyed to another account, so without this check a change of subject would
+    // briefly show the previous user's meetings.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === userSub ? previous : undefined,
+    
     retry: revOpsRetry,
   });
   return foldIdentityError(query, subState, retryIdentity);
