@@ -22,10 +22,11 @@ import {
   Autocomplete,
   Avatar,
   Box,
+  Card,
   Chip,
+  ComplexSelect,
   Divider,
   Grid,
-  MenuItem,
   Skeleton,
   Stack,
   TextField,
@@ -46,24 +47,30 @@ import {
 import { buildMergedCycleOptions, filterEmployeesForCycle } from "../util/parEmployeeHistory";
 import { deriveLegacyRatingFromScore, parseLegacyQuestionAnswers } from "../util/parLegacyHistory";
 import { decodeParComment } from "../util/parComment";
-import { employeeChipLabel } from "../util/parLabels";
 import ParEmptyState from "../components/ParEmptyState";
 import { ParCommentView } from "../components/ParContent";
 import ParHistoryReviewSection from "../components/ParHistoryReviewSection";
 import ParLegacyReviewSection from "../components/ParLegacyReviewSection";
+import ParStatusChip from "../components/ParStatusChip";
 import type { ParEmployee } from "../api/types";
 
 type CycleSelection = { kind: "none" } | { kind: "real"; parCycleId: number } | { kind: "legacy"; cycleName: string };
 
-function InfoItem({ title, subtitle1, subtitle2 }: { title: string; subtitle1: string; subtitle2: string }) {
+function InfoItem({ label, value, secondaryValue }: { label: string; value: string; secondaryValue: string }) {
   return (
     <Grid size="grow">
-      <Typography variant="body1">{title || "—"}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {subtitle1}
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: "block", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, mb: 0.25 }}
+      >
+        {label}
+      </Typography>
+      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+        {value || "—"}
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        {subtitle2 || "—"}
+        {secondaryValue || "—"}
       </Typography>
     </Grid>
   );
@@ -194,26 +201,24 @@ export default function ParLeadEmployeeHistoryTab() {
     <Stack spacing={2}>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField
-            select
+          <ComplexSelect
             fullWidth
-            size="small"
             disabled={employees.isLoading || realCycles.isLoading || cycleOptions.length === 0}
             value={cyclePickerValue}
-            onChange={(e) => handleCycleChange(e.target.value)}
+            onChange={(e) => handleCycleChange(e.target.value as string)}
           >
-            <MenuItem value="none">
+            <ComplexSelect.MenuItem value="none">
               {cycleOptions.length === 0 ? "No previous PAR cycles found" : "Please select a PAR cycle"}
-            </MenuItem>
+            </ComplexSelect.MenuItem>
             {cycleOptions.map((option) => (
-              <MenuItem
+              <ComplexSelect.MenuItem
                 key={option.key}
                 value={option.isLegacy ? `legacy-${option.cycleName}` : String(option.parCycleId)}
               >
                 {option.label}
-              </MenuItem>
+              </ComplexSelect.MenuItem>
             ))}
-          </TextField>
+          </ComplexSelect>
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -254,7 +259,7 @@ export default function ParLeadEmployeeHistoryTab() {
       </Grid>
 
       {!selectedEmployeeEmail && (
-        <ParEmptyState text="Choose a PAR cycle and subordinate to view previous PAR's." />
+        <ParEmptyState text="Choose a PAR cycle and subordinate to view previous PARs." />
       )}
 
       {isLoadingSelection && <Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}
@@ -268,57 +273,60 @@ export default function ParLeadEmployeeHistoryTab() {
 
       {showLegacyDetails && selectedLegacyRecord && (
         <Stack spacing={2}>
-          <Grid container spacing={2}>
-            <Grid size="auto">
-              {/* Legacy records carry no thumbnail — matches source's own
-                  Avatar here, which never passes a src for this branch. */}
-              <Avatar variant="rounded" alt="Employee Thumbnail" sx={{ width: 100, height: 100 }} />
-            </Grid>
-            {(() => {
-              const derived = deriveLegacyRatingFromScore(selectedLegacyRecord.managerScoreCode);
-              const rating2 = selectedLegacyRecord.overallRating ?? derived.rating;
-              const special = selectedLegacyRecord.overallSpecialRating ?? derived.special;
-              return (
-                <Grid size="grow">
-                  <Stack direction="row" spacing={1} flexWrap="wrap">
-                    {special && special !== "NOT_ASSIGNED" && (
-                      <Chip size="small" color={employeeChipLabel(special).color} label={employeeChipLabel(special).label} />
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid size="auto">
+                {/* Legacy records carry no thumbnail — matches source's own
+                    Avatar here, which never passes a src for this branch. */}
+                <Avatar variant="rounded" alt="Employee Thumbnail" sx={{ width: 100, height: 100 }} />
+              </Grid>
+              {(() => {
+                const derived = deriveLegacyRatingFromScore(selectedLegacyRecord.managerScoreCode);
+                const rating2 = selectedLegacyRecord.overallRating ?? derived.rating;
+                const special = selectedLegacyRecord.overallSpecialRating ?? derived.special;
+                return (
+                  <Grid size="grow">
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                      {special && special !== "NOT_ASSIGNED" && <ParStatusChip content={special} />}
+                      {rating2 && rating2 !== "NOT_ASSIGNED" && <ParStatusChip content={rating2} />}
+                    </Stack>
+                    {(selectedLegacyRecord.reviewerEmail || selectedLegacyRecord.reviewerName) && (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        sx={{ mt: 1 }}
+                        label={`PAR shared by: ${selectedLegacyRecord.reviewerEmail ?? selectedLegacyRecord.reviewerName}`}
+                      />
                     )}
-                    {rating2 && <Chip size="small" color={employeeChipLabel(rating2).color} label={employeeChipLabel(rating2).label} />}
-                  </Stack>
-                  {(selectedLegacyRecord.reviewerEmail || selectedLegacyRecord.reviewerName) && (
-                    <Chip
-                      size="small"
-                      sx={{ mt: 1 }}
-                      label={`PAR shared by: ${selectedLegacyRecord.reviewerEmail ?? selectedLegacyRecord.reviewerName}`}
-                    />
-                  )}
-                </Grid>
-              );
-            })()}
-            <InfoItem
-              title={selectedEmployee?.employeeName ?? selectedLegacyRecord.employeeEmail}
-              subtitle1="Employee"
-              subtitle2={selectedLegacyRecord.employeeEmail}
-            />
-            <InfoItem
-              title={selectedLegacyRecord.reviewerName ?? selectedLegacyRecord.reviewerEmail ?? ""}
-              subtitle1="Lead"
-              subtitle2={selectedLegacyRecord.reviewerEmail ?? ""}
-            />
-            <InfoItem title={selectedLegacyRecord.team ?? ""} subtitle1="Team" subtitle2={selectedLegacyRecord.department ?? ""} />
-          </Grid>
+                  </Grid>
+                );
+              })()}
+              <InfoItem
+                label="Employee"
+                value={selectedEmployee?.employeeName ?? selectedLegacyRecord.employeeEmail}
+                secondaryValue={selectedLegacyRecord.employeeEmail}
+              />
+              <InfoItem
+                label="Lead"
+                value={selectedLegacyRecord.reviewerName ?? selectedLegacyRecord.reviewerEmail ?? ""}
+                secondaryValue={selectedLegacyRecord.reviewerEmail ?? ""}
+              />
+              <InfoItem
+                label="Team"
+                value={selectedLegacyRecord.team ?? ""}
+                secondaryValue={selectedLegacyRecord.department ?? ""}
+              />
+            </Grid>
+          </Card>
 
-          <Divider />
-
-          <Accordion disabled={!legacyEmployeeContent} sx={{ mt: 1 }}>
+          <Accordion variant="outlined" disabled={!legacyEmployeeContent}>
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Employee PAR</AccordionSummary>
             <AccordionDetails>
               <Divider sx={{ my: 1 }} />
               <ParCommentView html={legacyEmployeeContent} />
             </AccordionDetails>
           </Accordion>
-          <Accordion disabled={!legacyLeadContent} sx={{ mt: 1 }}>
+          <Accordion variant="outlined" disabled={!legacyLeadContent}>
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Lead's Feedback</AccordionSummary>
             <AccordionDetails>
               <Divider sx={{ my: 1 }} />
@@ -326,67 +334,64 @@ export default function ParLeadEmployeeHistoryTab() {
             </AccordionDetails>
           </Accordion>
 
-          <Divider />
-
           <ParLegacyReviewSection feedback360={selectedLegacyRecord.feedback360} />
         </Stack>
       )}
 
       {showRealDetails && rating.data && (
         <Stack spacing={2}>
-          <Grid container spacing={2}>
-            <Grid size="auto">
-              <Avatar
-                variant="rounded"
-                src={selectedEmployeeEmail ? thumbnailByEmail.get(selectedEmployeeEmail) : undefined}
-                alt="Employee Thumbnail"
-                sx={{ width: 100, height: 100 }}
-              />
-            </Grid>
-            <Grid size="grow">
-              <Stack direction="row" spacing={1} flexWrap="wrap">
-                {rating.data.parSpecialRating && (
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid size="auto">
+                <Avatar
+                  variant="rounded"
+                  src={selectedEmployeeEmail ? thumbnailByEmail.get(selectedEmployeeEmail) : undefined}
+                  alt="Employee Thumbnail"
+                  sx={{ width: 100, height: 100 }}
+                />
+              </Grid>
+              <Grid size="grow">
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {rating.data.parSpecialRating && rating.data.parSpecialRating !== "NOT_ASSIGNED" && (
+                    <ParStatusChip content={rating.data.parSpecialRating} />
+                  )}
+                  {rating.data.parRating && rating.data.parRating !== "NOT_ASSIGNED" && (
+                    <ParStatusChip content={rating.data.parRating} />
+                  )}
+                </Stack>
+                {rating.data.parRatingSharedBy && (
                   <Chip
                     size="small"
-                    color={employeeChipLabel(rating.data.parSpecialRating).color}
-                    label={employeeChipLabel(rating.data.parSpecialRating).label}
+                    variant="outlined"
+                    sx={{ mt: 1 }}
+                    label={`PAR shared by: ${rating.data.parRatingSharedBy}`}
                   />
                 )}
-                {rating.data.parRating && (
-                  <Chip size="small" color={employeeChipLabel(rating.data.parRating).color} label={employeeChipLabel(rating.data.parRating).label} />
-                )}
-              </Stack>
-              {rating.data.parRatingSharedBy && (
-                <Chip size="small" sx={{ mt: 1 }} label={`PAR shared by: ${rating.data.parRatingSharedBy}`} />
-              )}
+              </Grid>
+              <InfoItem
+                label="Employee"
+                value={selectedEmployee?.employeeName ?? selectedEmployeeEmail ?? ""}
+                secondaryValue={selectedEmployeeEmail ?? ""}
+              />
+              <InfoItem label="Lead" value={rating.data.parLeadEmail ?? ""} secondaryValue={rating.data.parLeadEmail ?? ""} />
+              <InfoItem label="Team" value={rating.data.parTeam ?? ""} secondaryValue={rating.data.parDepartment ?? ""} />
             </Grid>
-            <InfoItem
-              title={selectedEmployee?.employeeName ?? selectedEmployeeEmail ?? ""}
-              subtitle1="Employee"
-              subtitle2={selectedEmployeeEmail ?? ""}
-            />
-            <InfoItem title={rating.data.parLeadEmail ?? ""} subtitle1="Lead" subtitle2={rating.data.parLeadEmail ?? ""} />
-            <InfoItem title={rating.data.parTeam ?? ""} subtitle1="Team" subtitle2={rating.data.parDepartment ?? ""} />
-          </Grid>
+          </Card>
 
-          <Divider />
-
-          <Accordion disabled={!rating.data.parEmployeeComment?.trim()} sx={{ mt: 1 }}>
+          <Accordion variant="outlined" disabled={!rating.data.parEmployeeComment?.trim()}>
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Employee PAR</AccordionSummary>
             <AccordionDetails>
               <Divider sx={{ my: 1 }} />
               <ParCommentView html={decodeParComment(rating.data.parEmployeeComment)} />
             </AccordionDetails>
           </Accordion>
-          <Accordion disabled={!rating.data.parLeadComment?.trim()} sx={{ mt: 1 }}>
+          <Accordion variant="outlined" disabled={!rating.data.parLeadComment?.trim()}>
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Lead's Feedback</AccordionSummary>
             <AccordionDetails>
               <Divider sx={{ my: 1 }} />
               <ParCommentView html={decodeParComment(rating.data.parLeadComment)} />
             </AccordionDetails>
           </Accordion>
-
-          <Divider />
 
           <ParHistoryReviewSection reviews={reviews.data ?? []} />
         </Stack>

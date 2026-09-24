@@ -144,16 +144,21 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
     icon: TicketIcon,
     path: "/people-ops/subscriptions/manage",
   },
-  // par-app's Lead and Admin Portals — the halves of par-app that are about
-  // your reports and the org-wide cycle, not yourself (the employee portal
-  // moved to the Me perspective, see parApps.ts). `alwaysGroup` for the
-  // same reason Master Data below carries it: a named group rather than a
-  // bare leaf, since it has more than one child.
+  // par-app's Lead and Admin Views — the halves of par-app that are about
+  // your reports and the org-wide cycle, not yourself (the employee side
+  // moved to the Me perspective, see parApps.ts). No `alwaysGroup`,
+  // deliberately, unlike Master Data below: the majority of people who can
+  // see this at all are a lead OR an admin, not both, so most of the time
+  // exactly one child is visible — SectionNode's own single-visible-child
+  // rule then collapses this straight to a "PAR" leaf pointing at it,
+  // matching the Employee side's own single-click nav under Me. Someone who
+  // is both (e.g. a team head who is also a People Ops admin) still gets
+  // both children visible at once, which is what keeps this a group rather
+  // than a leaf for them — same mechanism, no special-casing needed.
   {
     id: "people-par",
     label: "PAR",
     icon: ClipboardCheckIcon,
-    alwaysGroup: true,
     children: [
       // Note what is NOT here: `requires: ["lead"]`. one-wso2's generic
       // "lead" capability is people-app privilege 993 — unrelated to
@@ -165,14 +170,14 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
       // actually enforces access at the route either way.
       {
         id: "par-lead-portal",
-        label: "Lead Portal",
+        label: "Lead View",
         path: "/people-ops/performance/lead",
       },
-      // Same treatment as Lead Portal above: gated via
+      // Same treatment as Lead View above: gated via
       // PAR_ADMIN_PORTAL_ITEM_ID / useParIsAdmin, not `requires`.
       {
         id: "par-admin-portal",
-        label: "Admin Portal",
+        label: "Admin View",
         path: "/people-ops/performance/admin",
       },
     ],

@@ -31,10 +31,10 @@ const TABS: RoutedTabDef[] = [
 export default function ParAdminGroupPage() {
   return (
     <ParShell
-      title="Admin Portal"
+      title="Admin View"
       subtitle="Create and manage PAR cycles, assign special-rating quotas, and monitor completion across the organization."
     >
-      <RoutedTabs basePath="/people-ops/performance/admin" tabs={TABS} ariaLabel="Admin Portal sections" />
+      <RoutedTabs basePath="/people-ops/performance/admin" tabs={TABS} ariaLabel="Admin View sections" />
       <Outlet />
     </ParShell>
   );

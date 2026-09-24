@@ -15,7 +15,7 @@
 // under the License.
 
 import { useState } from "react";
-import { Box, Chip, DataGrid, IconButton, InputAdornment, Skeleton, Stack, TextField, Tooltip } from "@wso2/oxygen-ui";
+import { Box, Card, Chip, DataGrid, IconButton, InputAdornment, Skeleton, Stack, TextField, Tooltip } from "@wso2/oxygen-ui";
 import { ArrowRightIcon, SearchIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useDistinctLegacyParCycles, useParCyclesByStatus } from "../api/useParAdmin";
@@ -114,8 +114,8 @@ export default function ParAdminHistoryTab() {
   };
 
   return (
-    <Stack spacing={1.5}>
-      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+    <Card variant="outlined" sx={{ p: 2 }}>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1.5 }}>
         <TextField
           size="small"
           placeholder="Search Cycle"
@@ -148,6 +148,6 @@ export default function ParAdminHistoryTab() {
         initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
         pageSizeOptions={[10, 20, 25]}
       />
-    </Stack>
+    </Card>
   );
 }

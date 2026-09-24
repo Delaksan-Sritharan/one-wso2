@@ -21,6 +21,7 @@ import {
   Box,
   Breadcrumbs,
   Card,
+  Chip,
   DataGrid,
   Dialog,
   DialogContent,
@@ -52,22 +53,11 @@ import { calculateCycleActiveStep } from "../util/parCycleActiveStep";
 import ParCycleDatesStepper from "../components/ParCycleDatesStepper";
 import ParStatusChip from "../components/ParStatusChip";
 import ParLeadReviewTabs from "../components/ParLeadReviewTabs";
-import type { ReactNode } from "react";
 import type { ParChainReport } from "../api/types";
 
 interface BreadcrumbEntry {
   email: string;
   name: string;
-}
-
-// Belt-and-suspenders alongside each column's own align/headerAlign, so a
-// narrow icon or chip never sticks to one edge of a much wider column.
-function CenteredCell({ children }: { children: ReactNode }) {
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
-      {children}
-    </Box>
-  );
 }
 
 // People Ops → Performance → Lead Portal → Report Chain: par-app's
@@ -151,6 +141,7 @@ export default function ParLeadReportChainTab() {
             aria-label={`Open review for ${params.row.parEmployeeName}`}
             onClick={() => setReviewEmployeeEmail(params.row.parEmployeeEmail)}
             onKeyDown={(e) => {
+              if (e.target !== e.currentTarget) return;
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 setReviewEmployeeEmail(params.row.parEmployeeEmail);
@@ -163,30 +154,33 @@ export default function ParLeadReportChainTab() {
               slotProps={{ img: { referrerPolicy: "no-referrer" } }}
               sx={{ mr: 1.5, height: "2.2rem", width: "2.2rem" }}
             />
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {params.row.parEmployeeName}
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: "2.95rem" }}>
-            <Typography variant="caption" color="text.secondary">
-              {params.row.parEmployeeEmail}
-            </Typography>
-            <Tooltip title="Copy Email" arrow>
-              <IconButton
-                size="small"
-                aria-label="Copy Email"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(params.row.parEmployeeEmail);
-                    showSuccess("Email copied");
-                  } catch (err) {
-                    showError(describeError(err));
-                  }
-                }}
-              >
-                <CopyIcon size={13} />
-              </IconButton>
-            </Tooltip>
+            <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <Typography variant="body2" sx={{ fontSize: 13, fontWeight: 600 }}>
+                {params.row.parEmployeeName}
+              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <Typography variant="caption" sx={{ fontSize: 11.5 }} color="text.secondary">
+                  {params.row.parEmployeeEmail}
+                </Typography>
+                <Tooltip title="Copy Email" arrow>
+                  <IconButton
+                    size="small"
+                    aria-label="Copy Email"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await navigator.clipboard.writeText(params.row.parEmployeeEmail);
+                        showSuccess("Email copied");
+                      } catch (err) {
+                        showError(describeError(err));
+                      }
+                    }}
+                  >
+                    <CopyIcon size={13} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
           </Box>
         </Box>
       ),
@@ -195,65 +189,70 @@ export default function ParLeadReportChainTab() {
       field: "parEmployeeStatus",
       headerName: "Employee PAR",
       flex: 0.8,
+      display: "flex",
       align: "center",
       headerAlign: "center",
-      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parEmployeeStatus} /></CenteredCell>,
+      renderCell: (params) => <ParStatusChip content={params.row.parEmployeeStatus} />,
     },
     {
       field: "par360ReviewStatus",
       headerName: "360° Feedback",
       flex: 0.9,
+      display: "flex",
       align: "center",
       headerAlign: "center",
       renderCell: (params) => (
-        <CenteredCell>
-          <ParStatusChip
-            content={params.row.par360ReviewStatus}
-            countDetails={{
-              completed: params.row.par360ReviewCounts.sharedReviewCount,
-              total: params.row.par360ReviewCounts.requestedReviewCount,
-            }}
-          />
-        </CenteredCell>
+        <ParStatusChip
+          content={params.row.par360ReviewStatus}
+          countDetails={{
+            completed: params.row.par360ReviewCounts.sharedReviewCount,
+            total: params.row.par360ReviewCounts.requestedReviewCount,
+          }}
+        />
       ),
     },
     {
       field: "parLeadStatus",
       headerName: "Lead's PAR",
       flex: 0.8,
+      display: "flex",
       align: "center",
       headerAlign: "center",
-      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parLeadStatus} /></CenteredCell>,
+      renderCell: (params) => <ParStatusChip content={params.row.parLeadStatus} />,
     },
     {
       field: "parRating",
       headerName: "Rating",
       flex: 0.8,
+      display: "flex",
       align: "center",
       headerAlign: "center",
-      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parRating ?? ""} /></CenteredCell>,
+      renderCell: (params) => <ParStatusChip content={params.row.parRating ?? ""} />,
     },
     {
       field: "parSpecialRating",
       headerName: "Top 5%/20% Rating",
       flex: 0.9,
+      display: "flex",
       align: "center",
       headerAlign: "center",
-      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parSpecialRating ?? ""} /></CenteredCell>,
+      renderCell: (params) => <ParStatusChip content={params.row.parSpecialRating ?? ""} />,
     },
     {
       field: "parF2fStatus",
       headerName: "F2F",
       flex: 0.6,
+      display: "flex",
       align: "center",
       headerAlign: "center",
-      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parF2fStatus} /></CenteredCell>,
+      renderCell: (params) => <ParStatusChip content={params.row.parF2fStatus} />,
     },
     {
       field: "actions",
       headerName: "",
       sortable: false,
       flex: 0.7,
+      display: "flex",
       align: "center",
       renderCell: (params) => (
         <Stack direction="row">
@@ -300,11 +299,9 @@ export default function ParLeadReportChainTab() {
 
       <Grid container spacing={2} sx={{ alignItems: "center" }}>
         <Grid size={{ xs: 12, md: 4 }}>
-          <Box display="flex" alignItems="center">
-            <Typography variant="h4" component="span">
-              {cycle.parCycleName}{" "}
-            </Typography>
-            <Typography component="span" color="text.secondary" sx={{ ml: 1 }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Chip label={cycle.parCycleName} size="small" color="primary" variant="outlined" />
+            <Typography component="span" variant="caption" color="text.secondary">
               ({formatShortDate(cycle.parCycleStartDate)} - {formatShortDate(cycle.parCycleEndDate)})
             </Typography>
           </Box>

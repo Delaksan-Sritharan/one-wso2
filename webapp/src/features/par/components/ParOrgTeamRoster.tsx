@@ -93,10 +93,10 @@ export default function ParOrgTeamRoster({
             sx={{ mr: 1.5, height: "2.2rem", width: "2.2rem" }}
           />
           <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            <Typography variant="body2" sx={{ fontSize: 13, fontWeight: 600 }}>
               {params.row.parEmployeeName}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{ fontSize: 11.5 }} color="text.secondary">
               {params.row.parEmployeeEmail}
             </Typography>
           </Box>

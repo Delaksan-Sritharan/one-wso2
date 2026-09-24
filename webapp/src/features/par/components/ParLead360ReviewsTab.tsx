@@ -116,7 +116,7 @@ export default function ParLead360ReviewsTab({
           {(reviewers.data ?? []).length === 0 ? (
             <TableRow>
               <TableCell colSpan={4} align="center" sx={{ border: "none" }}>
-                <Typography color="GrayText">No requests available</Typography>
+                <Typography color="text.secondary">No requests available</Typography>
               </TableCell>
             </TableRow>
           ) : (
@@ -133,7 +133,7 @@ export default function ParLead360ReviewsTab({
                       <Typography variant="h5">
                         {nameByEmail.get(reviewer.reviewerEmail) || reviewer.reviewerEmail}
                       </Typography>
-                      <Typography display="block" color="GrayText" sx={{ mt: -0.5 }}>
+                      <Typography display="block" color="text.secondary" sx={{ mt: -0.5 }}>
                         {reviewer.reviewerEmail}
                       </Typography>
                     </Box>

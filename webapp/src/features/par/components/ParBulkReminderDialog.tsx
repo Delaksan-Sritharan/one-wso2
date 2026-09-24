@@ -15,7 +15,7 @@
 // under the License.
 
 import { useState } from "react";
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, MenuItem, TextField, Typography } from "@wso2/oxygen-ui";
+import { Alert, Button, ComplexSelect, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Typography } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useSendBulkReminder } from "../api/useParMutations";
@@ -50,19 +50,18 @@ export default function ParBulkReminderDialog({ open, onClose }: { open: boolean
       <DialogTitle sx={{ pb: 2 }}>Send Bulk Reminders</DialogTitle>
       <Divider />
       <DialogContent>
-        <TextField
-          select
+        <ComplexSelect
           label="Select Type"
-          size="small"
+          labelAnchor="border"
           fullWidth
           sx={{ mt: 2 }}
           value={kind}
           onChange={(e) => setKind(e.target.value as ReminderKind)}
         >
-          <MenuItem value="employee">Employee Reminder</MenuItem>
-          <MenuItem value="lead">Lead Reminder</MenuItem>
-          <MenuItem value="special-rating">Top 5%/20% Rating Reminder</MenuItem>
-        </TextField>
+          <ComplexSelect.MenuItem value="employee">Employee Reminder</ComplexSelect.MenuItem>
+          <ComplexSelect.MenuItem value="lead">Lead Reminder</ComplexSelect.MenuItem>
+          <ComplexSelect.MenuItem value="special-rating">Top 5%/20% Rating Reminder</ComplexSelect.MenuItem>
+        </ComplexSelect>
         {sendReminder.isError && (
           <Alert severity="error" sx={{ mt: 2 }}>
             {describeError(sendReminder.error)}

@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { Box, Breadcrumbs, Chip, DataGrid, Divider, IconButton, Link, Stack, Typography } from "@wso2/oxygen-ui";
+import { Box, Breadcrumbs, Card, Chip, DataGrid, Divider, IconButton, Link, Stack, Typography } from "@wso2/oxygen-ui";
 import { ArrowLeftIcon } from "@wso2/oxygen-ui-icons-react";
 import { completionPercent, completionSeverity } from "../util/parCompletionSeverity";
 import { ParGridToolbar } from "./parGridToolbar";
@@ -30,9 +30,21 @@ interface CompletionRow {
   f2fCompletion: number;
 }
 
+// Same compact outlined-chip treatment ParStatusChip.tsx uses for every
+// other status/rating chip in the app.
+const CHIP_SX = { height: 20, fontSize: 10.5, fontWeight: 600, borderWidth: 1.5, minWidth: 60 };
+
 function percentChip(value: number) {
   const severity = completionSeverity(value);
-  return <Chip size="small" color={severity === "success" ? "default" : severity} label={`${value.toFixed(1)}%`} />;
+  return (
+    <Chip
+      size="small"
+      variant="outlined"
+      color={severity === "success" ? "default" : severity}
+      label={`${value.toFixed(1)}%`}
+      sx={CHIP_SX}
+    />
+  );
 }
 
 // Ports Completion.tsx — reuses the SAME teams data ParOrgSummary already
@@ -99,20 +111,22 @@ export default function ParCompletionOverview({
         <Divider />
       </Box>
 
-      <DataGrid.DataGrid
-        rows={rows}
-        columns={columns}
-        rowHeight={52}
-        disableRowSelectionOnClick
-        showToolbar
-        slots={{ toolbar: ParGridToolbar }}
-        sx={{ border: "none" }}
-        initialState={{
-          pagination: { paginationModel: { pageSize: 25 } },
-          columns: { columnVisibilityModel: { f2fCompletion: false } },
-        }}
-        pageSizeOptions={[25, 50, 100]}
-      />
+      <Card variant="outlined" sx={{ p: 2 }}>
+        <DataGrid.DataGrid
+          rows={rows}
+          columns={columns}
+          rowHeight={52}
+          disableRowSelectionOnClick
+          showToolbar
+          slots={{ toolbar: ParGridToolbar }}
+          sx={{ border: "none" }}
+          initialState={{
+            pagination: { paginationModel: { pageSize: 25 } },
+            columns: { columnVisibilityModel: { f2fCompletion: false } },
+          }}
+          pageSizeOptions={[25, 50, 100]}
+        />
+      </Card>
     </Stack>
   );
 }

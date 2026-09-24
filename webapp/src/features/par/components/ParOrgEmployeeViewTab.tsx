@@ -82,7 +82,7 @@ export default function ParOrgEmployeeViewTab({
             slotProps={{ img: { referrerPolicy: "no-referrer" } }}
             sx={{ mr: 2, height: "2.2rem", width: "2.2rem" }}
           />
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          <Typography variant="body2" sx={{ fontSize: 13, fontWeight: 600 }}>
             {params.row.employeeName}
           </Typography>
         </Box>
@@ -93,7 +93,7 @@ export default function ParOrgEmployeeViewTab({
       headerName: "Employee Email",
       flex: 2,
       renderCell: (params) => (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{ fontSize: 13 }} color="text.secondary">
           {params.row.workEmail}
         </Typography>
       ),
