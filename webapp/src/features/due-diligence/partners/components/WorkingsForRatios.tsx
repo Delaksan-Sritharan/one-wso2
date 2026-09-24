@@ -237,8 +237,14 @@ export default function WorkingsForRatios({
         // part of that check — see blankYear's own note above). Without this,
         // convertToDollars' own zero-rate guard kicks in and returns the
         // figures unconverted, but this table would still labeled them "USD".
+        // isFinite too, not just > 0: `Number(Infinity) > 0` is true, and
+        // parseFloat can produce Infinity from an input like "1e309" in
+        // setField — that also trips convertToDollars' guard, same as 0 does.
+        Number.isFinite(Number(years[1].exchangeRate)) &&
         Number(years[1].exchangeRate) > 0 &&
+        Number.isFinite(Number(years[2].exchangeRate)) &&
         Number(years[2].exchangeRate) > 0 &&
+        Number.isFinite(Number(years[3].exchangeRate)) &&
         Number(years[3].exchangeRate) > 0 && (
           <>
             <Typography sx={{ fontWeight: 600 }}>US Dollar</Typography>
@@ -254,20 +260,25 @@ export default function WorkingsForRatios({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {ROWS.map(({ label, field }) => {
-                    const usd1 = convertToDollars(years[1])[field];
-                    const usd2 = convertToDollars(years[2])[field];
-                    const usd3 = convertToDollars(years[3])[field];
-                    return (
-                      <TableRow key={field}>
-                        <TableCell>{label}</TableCell>
-                        <TableCell>USD</TableCell>
-                        <TableCell>{typeof usd1 === "number" ? `$ ${usd1.toLocaleString("en-US")}` : ""}</TableCell>
-                        <TableCell>{typeof usd2 === "number" ? `$ ${usd2.toLocaleString("en-US")}` : ""}</TableCell>
-                        <TableCell>{typeof usd3 === "number" ? `$ ${usd3.toLocaleString("en-US")}` : ""}</TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {(() => {
+                    const usdYear1 = convertToDollars(years[1]);
+                    const usdYear2 = convertToDollars(years[2]);
+                    const usdYear3 = convertToDollars(years[3]);
+                    return ROWS.map(({ label, field }) => {
+                      const usd1 = usdYear1[field];
+                      const usd2 = usdYear2[field];
+                      const usd3 = usdYear3[field];
+                      return (
+                        <TableRow key={field}>
+                          <TableCell>{label}</TableCell>
+                          <TableCell>USD</TableCell>
+                          <TableCell>{typeof usd1 === "number" ? `$ ${usd1.toLocaleString("en-US")}` : ""}</TableCell>
+                          <TableCell>{typeof usd2 === "number" ? `$ ${usd2.toLocaleString("en-US")}` : ""}</TableCell>
+                          <TableCell>{typeof usd3 === "number" ? `$ ${usd3.toLocaleString("en-US")}` : ""}</TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })()}
                 </TableBody>
               </Table>
             </TableContainer>
