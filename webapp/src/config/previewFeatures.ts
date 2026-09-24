@@ -84,7 +84,11 @@ export type PreviewFeature =
    * SALES_TEAM/SALES_ADMIN check is unrelated and still applies with the flag
    * on; this decides whether anyone sees the app, that decides who may use it.
    */
-  | "revops";
+  | "revops"
+  /* The whole Infra Portal perspective. Still being ported, so the waffle
+   * tile, landing option, and `/infra` route stay hidden until this is on.
+   */
+  | "infra";
    /* The whole Infra Portal perspective. Still being ported, so the waffle
    * tile, landing option, and `/infra` route stay hidden until this is on.
    */
