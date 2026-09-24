@@ -661,7 +661,12 @@ export function CcCategorisePanel({
             onView={() => viewAttachment("receipt")}
             onPick={async (file) => {
               const name = await attachment.upload.mutateAsync({ id: txn.id, attachmentType: "receipt", file });
-              change({ receiptFileName: name || file.name });
+
+              // The server already has this file: written to baseline too, not
+              // just draft, so Discard afterwards can't revert past it.
+              const patch = { receiptFileName: name || file.name };
+              change(patch);
+              setBaseline((b) => ({ ...b, ...patch }));
             }}
           />
           <AttachmentField
@@ -671,7 +676,11 @@ export function CcCategorisePanel({
             onView={() => viewAttachment("contract")}
             onPick={async (file) => {
               const name = await attachment.upload.mutateAsync({ id: txn.id, attachmentType: "contract", file });
-              change({ contractFileName: name || file.name });
+              // The server already has this file: written to baseline too, not
+              // just draft, so Discard afterwards can't revert past it.
+              const patch = { contractFileName: name || file.name };
+              change(patch);
+              setBaseline((b) => ({ ...b, ...patch }));
             }}
           />
         </FieldRow>
@@ -788,7 +797,11 @@ export function CcCategorisePanel({
           editable && viewingType
             ? async () => {
                 await attachment.remove.mutateAsync({ id: txn.id, attachmentType: viewingType });
-                change(viewingType === "receipt" ? { receiptFileName: null } : { contractFileName: null });
+                // The server has already dropped this file: written to baseline
+                // too, not just draft, so Discard afterwards can't bring it back.
+                const patch = viewingType === "receipt" ? { receiptFileName: null } : { contractFileName: null };
+                change(patch);
+                setBaseline((b) => ({ ...b, ...patch }));
                 showSuccess(CC_SNACK.success.removeAttachment);
               }
             : undefined
