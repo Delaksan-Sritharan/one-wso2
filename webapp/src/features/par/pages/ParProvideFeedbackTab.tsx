@@ -65,6 +65,10 @@ export default function ParProvideFeedbackTab() {
   const [reviewTarget, setReviewTarget] = useState<{ email: string; offered: boolean } | undefined>(undefined);
   const [offering, setOffering] = useState(false);
   const [offerTarget, setOfferTarget] = useState<ParParticipant | undefined>(undefined);
+  // Bumped whenever the confirmation dialog closes without an offer being
+  // recorded, so Par360OfferPicker remounts with a clean Autocomplete
+  // instead of keeping the just-picked name showing in its search box.
+  const [pickerResetKey, setPickerResetKey] = useState(0);
 
   if (profile.isLoading || activeCycles.isLoading) {
     return <Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5, maxWidth: 880 }} />;
@@ -134,6 +138,7 @@ export default function ParProvideFeedbackTab() {
           <Card variant="outlined" sx={{ p: 2, mb: 2 }}>
             <Typography sx={{ fontWeight: 700, mb: 1.5 }}>Provide Feedback</Typography>
             <Par360OfferPicker
+              key={pickerResetKey}
               open={offering}
               parCycleId={cycle.parCycleId}
               selfEmail={workEmail}
@@ -233,7 +238,10 @@ export default function ParProvideFeedbackTab() {
         employee={offerTarget}
         parCycleId={cycle.parCycleId}
         selfEmail={workEmail}
-        onClose={() => setOfferTarget(undefined)}
+        onClose={() => {
+          setOfferTarget(undefined);
+          setPickerResetKey((k) => k + 1);
+        }}
         onOffered={(email) => {
           setOffering(false);
           setReviewTarget({ email, offered: true });
