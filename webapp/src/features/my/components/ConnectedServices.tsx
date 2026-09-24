@@ -64,7 +64,9 @@ export default function ConnectedServices() {
               <Typography sx={{ fontWeight: 500, fontSize: 13 }}>Last promotion</Typography>
               <LastPromotionValue
                 configured={promotionConfigured}
-                isLoading={promotionInfo.isLoading}
+                // isPaused covers a retry held back while the tab is in the
+                // background — still loading, not an empty result.
+                isLoading={promotionInfo.isLoading || promotionInfo.isPaused}
                 isError={promotionInfo.isError}
                 summary={lastPromotion ? promotionSummary(lastPromotion) : null}
               />
