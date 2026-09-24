@@ -57,7 +57,7 @@ declare global {
       // RevOps app shows a not-connected state and makes no requests.
       ONE_WSO2_REVOPS_BACKEND_URL?: string;
       // Base URL for the digiops-hr promotion-app backend. Optional — when
-      // absent, ConnectedServices' "Last promoted date" row falls back to a
+      // absent, ConnectedServices' "Last promotion" row falls back to a
       // "not configured" state and doesn't fire a request.
       ONE_WSO2_PROMOTION_BACKEND_URL?: string;
       // Base URL for the digiops-hr par-app backend. Optional — when
