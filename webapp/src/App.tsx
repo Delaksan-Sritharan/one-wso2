@@ -142,6 +142,7 @@ import DueDiligencePreferencesPage from "@features/due-diligence/preferences/pag
 import ViewPdfPage from "@features/due-diligence/shared/pages/ViewPdfPage";
 import ViewImagePage from "@features/due-diligence/shared/pages/ViewImagePage";
 import UmtHomePage from "@features/umt/pages/UmtHomePage";
+import UmtProductsPage from "@features/umt/pages/UmtProductsPage";
 import UmtUpdateView from "@features/umt/pages/UmtUpdateView";
 import UmtUpdatesPage from "@features/umt/pages/UmtUpdatesPage";
 import InfraHomePage from "@features/infra/pages/InfraHomePage";
@@ -163,6 +164,9 @@ export default function App() {
               <Route path="umt" element={<UmtHomePage />} />
               <Route path="umt/updates" element={<UmtUpdatesPage />} />
               <Route path="umt/updates/:id" element={<UmtUpdateView />} />
+              {/* Admin-only: UmtProductsPage itself enforces this via UmtShell's
+                  requireAdmin, independent of the rail item's own visibility. */}
+              <Route path="umt/products" element={<UmtProductsPage />} />
             </>
           )}
           {isPreviewEnabled("infra") && (

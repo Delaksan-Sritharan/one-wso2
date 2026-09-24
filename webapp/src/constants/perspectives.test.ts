@@ -88,6 +88,18 @@ describe("the UMT perspective", () => {
       );
     }
   });
+
+  // usePerspectiveVisibility falls through to sectionAllowed(s.requires, caps)
+  // for any id not in a gate's own set — and umt-products deliberately sets no
+  // `requires`, so that fallback answers "visible to everyone". Dropping this
+  // id from the set would open the admin-only rail entry to every UMT user
+  // with a green suite and no compile error; this fails loudly instead. See
+  // useFinanceGate.test.tsx's "no longer carries the retired approval ids" for
+  // the same shape of guard.
+  it("keeps Product Management in the UMT admin gate set", async () => {
+    const { UMT_ADMIN_ITEM_IDS } = await load({ umt: true });
+    expect(UMT_ADMIN_ITEM_IDS.has("umt-products")).toBe(true);
+  });
 });
 
 describe("perspectives whose landing forwards to the first rail item", () => {
