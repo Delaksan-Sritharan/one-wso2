@@ -129,6 +129,26 @@ export default function UpdateAssigneesDialog({
     return () => { cancelled = true; };
   }, [open, authFetch, detail.source_register_id, assignmentTeamId]);
 
+  // A new assignment team refetches these lists. A replacement Owner or
+  // Management Approver picked for the old team who is not a candidate for the
+  // new one would otherwise stay in the payload while the Select showed blank
+  // (withCurrent only keeps the saved person). Fall back to the saved person,
+  // who is always selectable here, as EditRiskDialog clears its own pick.
+  useEffect(() => {
+    if (ownerId !== detail.owner_id && !ownerCandidates.some((u) => u.id === ownerId)) {
+      setOwnerId(detail.owner_id);
+    }
+  }, [ownerCandidates, ownerId, detail.owner_id]);
+
+  useEffect(() => {
+    if (
+      managementApproverId !== detail.management_approver_id &&
+      !managementApprovers.some((u) => u.id === managementApproverId)
+    ) {
+      setManagementApproverId(detail.management_approver_id);
+    }
+  }, [managementApprovers, managementApproverId, detail.management_approver_id]);
+
   // Action Owner can be any employee, searched live against the HR entity and
   // resolved to a user id on selection — same as Add Risk and Edit Risk.
   const [actionOwnerOptions, setActionOwnerOptions] = useState<EmployeeOption[]>([]);
