@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // file.
 type Perspectives = typeof import("./perspectives");
 
-async function load(preview: { umt?: boolean; infra?: boolean;  revops?: boolean } = {}): Promise<Perspectives> {
+async function load(preview: { umt?: boolean; infra?: boolean } = {}): Promise<Perspectives> {
   vi.resetModules();
   window.config = {
     ...(window.config ?? {}),
@@ -54,36 +54,28 @@ describe("PAR's People Ops rail entry", () => {
   });
 });
 
+// RevOps shipped out of preview: its entry is unconditional now, so it must be
+// there with no flags set at all -- which is exactly what production's config
+// looks like.
 describe("the RevOps perspective", () => {
-  it("is absent from the registry when the preview flag is off", async () => {
-    const { PERSPECTIVES, FUNCTIONAL_PERSPECTIVES, reachablePerspectives } = await load({
-      revops: false,
-    });
-    expect(keys(PERSPECTIVES)).not.toContain("revops");
-    expect(keys(FUNCTIONAL_PERSPECTIVES)).not.toContain("revops");
-    expect(keys(reachablePerspectives())).not.toContain("revops");
-  });
-
-  it("is absent on an absent flag, not only on an explicit false", async () => {
-    // Production ships no entry at all; safety must not depend on remembering
-    // to write `false`.
-    const { PERSPECTIVES } = await load();
-    expect(keys(PERSPECTIVES)).not.toContain("revops");
-  });
-
-  it("is present, built and routable, when the preview flag is on", async () => {
-    const { PERSPECTIVES, reachablePerspectives, findPerspectiveByKey, findPerspectiveByPath } =
-      await load({ revops: true });
+  it("is present, built and routable with no preview flags set", async () => {
+    const {
+      PERSPECTIVES,
+      FUNCTIONAL_PERSPECTIVES,
+      reachablePerspectives,
+      findPerspectiveByKey,
+      findPerspectiveByPath,
+    } = await load();
     expect(keys(PERSPECTIVES)).toContain("revops");
+    expect(keys(FUNCTIONAL_PERSPECTIVES)).toContain("revops");
     expect(keys(reachablePerspectives())).toContain("revops");
     expect(findPerspectiveByKey("revops")?.path).toBe("/revops");
     expect(findPerspectiveByPath("/revops")?.key).toBe("revops");
   });
 
-  it("takes its whole rail with it, not just the tile", async () => {
-    // The rail is what a deep link lands beside, so a perspective that is
-    // hidden from the launcher but still has sections would be half-gated.
-    const { findPerspectiveByKey } = await load({ revops: true });
+  it("brings its rail, not just the tile", async () => {
+    // The rail is what a deep link lands beside.
+    const { findPerspectiveByKey } = await load();
     expect(findPerspectiveByKey("revops")?.sections?.map((section) => section.id)).toContain(
       "revops-meetings",
     );
