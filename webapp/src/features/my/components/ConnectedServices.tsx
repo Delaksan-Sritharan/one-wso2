@@ -69,14 +69,23 @@ export default function ConnectedServices() {
                 summary={lastPromotion ? promotionSummary(lastPromotion) : null}
               />
             </Box>
-            {/* Only offered when there is something to show — with no
-                approved promotions (or while loading, on error, or when
-                the backend isn't configured) the dialog would be empty. */}
-            {lastPromotion && (
+            {/* History is only offered when there is something to show —
+                with no approved promotions (or while loading, or when the
+                backend isn't configured) the dialog would be empty. A failed
+                load gets a retry instead, since nothing else re-fetches. */}
+            {lastPromotion ? (
               <Button variant="outlined" size="small" onClick={() => setHistoryOpen(true)}>
                 View promotion history
               </Button>
-            )}
+            ) : promotionInfo.isError ? (
+              <Button
+                size="small"
+                disabled={promotionInfo.isFetching}
+                onClick={() => void promotionInfo.refetch()}
+              >
+                Retry
+              </Button>
+            ) : null}
           </Stack>
           <PerformanceStages workEmail={ownerEmail} />
           {/* Hand-built link, so the registry's gate does not cover it. */}
