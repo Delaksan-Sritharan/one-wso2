@@ -89,10 +89,6 @@ export type PreviewFeature =
    * tile, landing option, and `/infra` route stay hidden until this is on.
    */
   | "infra";
-   /* The whole Infra Portal perspective. Still being ported, so the waffle
-   * tile, landing option, and `/infra` route stay hidden until this is on.
-   */
-  | "infra";
 
 /**
  * Whether a preview feature should be shown.
