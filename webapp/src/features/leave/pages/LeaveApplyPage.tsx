@@ -400,9 +400,10 @@ function ApplyForm() {
             min={yearStart}
             onChange={(v) => {
               setStartDate(v);
-              // Keep the end date from trailing behind a later start date; the
-              // user can still edit it afterward like any other field.
-              setEndDate((prev) => (prev < v ? v : prev));
+              // Keep the end date from trailing behind a later start date, but
+              // only when it was still tracking the old start date — otherwise
+              // an end date the user deliberately picked would get clobbered.
+              setEndDate((prev) => (prev < v || prev === startDate ? v : prev));
             }}
           />
           <LeaveDateField label="End" value={endDate} min={startDate} onChange={setEndDate} />
