@@ -302,8 +302,6 @@ export function FieldRow({ children }: { children: React.ReactNode }) {
 export function AttachmentField({
   label,
   fileName,
-  required,
-  error,
   disabled,
   viewOnly,
   onPick,
@@ -311,8 +309,6 @@ export function AttachmentField({
 }: {
   label: string;
   fileName: string | null;
-  required?: boolean;
-  error?: boolean;
   disabled?: boolean;
   /**
    * Show only what is attached, and only let it be opened.
@@ -403,26 +399,13 @@ export function AttachmentField({
             justifyContent: "space-between",
             height: 50,
             border: 1,
-            borderColor: error ? "error.main" : "divider",
+            borderColor: "divider",
             borderRadius: 1.5,
             pl: 1.75,
             pr: 0.75,
           }}
         >
-          <Typography
-            sx={{
-              fontSize: 13.5,
-              color: error ? "error.main" : "text.primary",
-              fontWeight: error ? 600 : 400,
-            }}
-          >
-            {label}
-            {required && (
-              <Typography component="span" sx={{ color: error ? "error.main" : "text.secondary", ml: 0.5 }}>
-                *
-              </Typography>
-            )}
-          </Typography>
+          <Typography sx={{ fontSize: 13.5 }}>{label}</Typography>
           <IconButton
             size="small"
             aria-label={title}

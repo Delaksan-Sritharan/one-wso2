@@ -17,7 +17,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
-  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -56,6 +55,7 @@ import {
 } from "../util/financeReceipts";
 import { useCcJobNumberDetails, useCcMenus } from "./useCc";
 import { useCcAttachment } from "./useCcMutations";
+import { JobNumberAutocomplete } from "./ccFormFields";
 import { CcFundingSource,
   CC_MARKETING_CATEGORY,
   CC_TRAVEL_CATEGORY,
@@ -306,7 +306,7 @@ function CcEditForm({
                 value={jobNumber}
                 options={jobNumbers}
                 disabled={leadOnly}
-                onChange={setJobNumber}
+                onChange={(v) => setJobNumber(v ?? "")}
               />
             {/* EditPane.tsx:568-598 warns on both, because either one leaves
                 the row uncompletable and neither is the user's fault. */}
@@ -491,48 +491,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         {named}
       </FormControl>
     </Box>
-  );
-}
-
-/**
- * EditPane.tsx:1229-1246 / InputMenu.tsx:150-177 — the source's Travel Job
- * Number is a typable Autocomplete, not a plain Select: the reader can type
- * "Hilton" to filter a long job list down instead of scrolling it. Not
- * `freeSolo` there either — the committed value still has to be one of the
- * pre-loaded job numbers, typing only narrows the list.
- *
- * `labelId` is what `Field` clones onto the first child to name a Select via
- * `aria-labelledby`; Select accepts that prop itself, Autocomplete does not,
- * so this wrapper takes it and forwards it onto the actual input instead.
- */
-function JobNumberAutocomplete({
-  value,
-  options,
-  disabled,
-  onChange,
-  labelId,
-}: {
-  value: string;
-  options: string[];
-  disabled?: boolean;
-  onChange: (value: string) => void;
-  labelId?: string;
-}) {
-  return (
-    <Autocomplete
-      size="small"
-      options={options}
-      value={value || null}
-      disabled={disabled}
-      onChange={(_e, v) => onChange(v ?? "")}
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          placeholder="Select…"
-          slotProps={{ htmlInput: { ...params.inputProps, "aria-labelledby": labelId } }}
-        />
-      )}
-    />
   );
 }
 
