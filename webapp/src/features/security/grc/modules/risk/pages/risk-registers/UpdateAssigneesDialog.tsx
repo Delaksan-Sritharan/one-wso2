@@ -237,6 +237,17 @@ export default function UpdateAssigneesDialog({
     timeStyle: "short",
   });
 
+  // Action Owner belongs to one plan: the risk's original action plan, created
+  // with the risk. Plans the assigner added later keep their own owners, so
+  // name the plan rather than let this read as "every Action Owner".
+  const originalPlanDescription = detail.action_plan?.description?.trim() ?? "";
+  const originalPlanHelp =
+    "Sets the owner of the risk's original action plan" +
+    (originalPlanDescription
+      ? ` ("${originalPlanDescription.length > 60 ? `${originalPlanDescription.slice(0, 60)}…` : originalPlanDescription}")`
+      : "") +
+    ". Other action plans keep their own owners.";
+
   const assignerOptions = withCurrent(assignerCandidates, detail.assigner_id, detail.assigner_name);
   const ownerOptions = withCurrent(ownerCandidates, detail.owner_id, detail.owner_name);
   const managementApproverOptions = withCurrent(
@@ -360,9 +371,7 @@ export default function UpdateAssigneesDialog({
                   actionOwnerError ??
                   (!detail.action_plan
                     ? "This risk has no action plan, so there is no Action Owner to set."
-                    : currentActionOwnerId !== null
-                      ? "Search to replace the current Action Owner."
-                      : undefined)
+                    : originalPlanHelp)
                 }
               />
             )}
