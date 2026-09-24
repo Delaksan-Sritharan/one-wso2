@@ -517,25 +517,16 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
   //
   // `isRevOpsBackendConfigured` is still imported and used by the page itself; it
   // just doesn't decide visibility.
-  //
-  // Spread in behind a preview flag, exactly as umt is below: with the flag off
-  // the entry does not exist at all, rather than existing as a disabled tile.
-  // `access: false` would not do — FUNCTIONAL_PERSPECTIVES is unfiltered, so a
-  // locked entry still leaves a "not available yet" tile in the waffle.
-  ...(isPreviewEnabled("revops")
-    ? [
-        {
-          key: "revops",
-          label: "RevOps",
-          icon: RadioIcon,
-          access: true,
-          externallyGated: true,
-          forwardsToFirstItem: true,
-          path: "/revops",
-          sections: REVOPS_SECTIONS,
-        },
-      ]
-    : []),
+  {
+    key: "revops",
+    label: "RevOps",
+    icon: RadioIcon,
+    access: true,
+    externallyGated: true,
+    forwardsToFirstItem: true,
+    path: "/revops",
+    sections: REVOPS_SECTIONS,
+  },
   // Held behind a preview flag, whole perspective and all, until it's ready
   // for production. With the flag off the entry does not exist, so the waffle,
   // landing options, and favourites stay clean. Same shape as UMT above.
