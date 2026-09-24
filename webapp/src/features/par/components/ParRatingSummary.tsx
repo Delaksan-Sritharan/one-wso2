@@ -58,7 +58,7 @@ export default function ParRatingSummary({
   // what isn't assigned — spell that out instead of the bare label.
   const specialRatingLabel =
     rating.parSpecialRating === "NOT_ASSIGNED"
-      ? "Not assigned for Top 5%/20% Rating"
+      ? "No Top 5%/20% Rating"
       : employeeChipLabel(rating.parSpecialRating ?? "").label;
 
   return (
@@ -68,7 +68,12 @@ export default function ParRatingSummary({
           <Typography sx={{ fontWeight: 600, mb: 1 }}>Lead's feedback</Typography>
           <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: "wrap" }}>
             {rating.parRating && (
-              <Chip size="small" color={employeeChipLabel(rating.parRating).color} label={`PAR rating: ${employeeChipLabel(rating.parRating).label}`} />
+              <Chip
+                size="small"
+                variant="outlined"
+                color={employeeChipLabel(rating.parRating).color}
+                label={`PAR rating: ${employeeChipLabel(rating.parRating).label}`}
+              />
             )}
             {rating.parSpecialRating && (
               <Chip size="small" variant="outlined" color={employeeChipLabel(rating.parSpecialRating).color} label={specialRatingLabel} />
