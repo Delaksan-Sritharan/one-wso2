@@ -42,7 +42,7 @@ export default function ParLegacyReviewSection({ feedback360 }: { feedback360: s
   };
 
   return (
-    <Accordion disabled={reviews.length === 0}>
+    <Accordion variant="outlined" disabled={reviews.length === 0}>
       <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>
         <Typography variant="h6">360° Feedback</Typography>
       </AccordionSummary>

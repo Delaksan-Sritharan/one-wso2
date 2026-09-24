@@ -288,11 +288,9 @@ export default function ParAssignQuota({ cycle }: { cycle: ParCycle }) {
   return (
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
-        <Box>
-          <Typography variant="h5" component="span">
-            {cycle.parCycleName}{" "}
-          </Typography>
-          <Typography component="span" color="text.secondary">
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Chip label={cycle.parCycleName} size="small" color="primary" variant="outlined" />
+          <Typography component="span" variant="caption" color="text.secondary">
             ({formatShortDate(cycle.parCycleStartDate)} - {formatShortDate(cycle.parCycleEndDate)})
           </Typography>
         </Box>
@@ -339,6 +337,7 @@ export default function ParAssignQuota({ cycle }: { cycle: ParCycle }) {
               {groups.map((group) => (
                 <Accordion
                   key={group.id}
+                  variant="outlined"
                   expanded={expandedGroupId === group.id}
                   onChange={(_e, isExpanded) => setExpandedGroupId(isExpanded ? group.id : false)}
                 >

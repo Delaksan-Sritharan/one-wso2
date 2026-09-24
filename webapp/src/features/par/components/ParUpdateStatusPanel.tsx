@@ -15,7 +15,7 @@
 // under the License.
 
 import { useState } from "react";
-import { Alert, Box, Button, Card, CardContent, Divider, Grid, MenuItem, Skeleton, Stack, TextField, Typography } from "@wso2/oxygen-ui";
+import { Alert, Box, Button, Card, CardContent, ComplexSelect, Divider, Grid, Skeleton, Stack, Typography } from "@wso2/oxygen-ui";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
@@ -121,37 +121,35 @@ export default function ParUpdateStatusPanel({ cycle, employeeEmail }: { cycle: 
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  select
+                <ComplexSelect
                   label="Employee PAR Status"
-                  size="small"
+                  labelAnchor="border"
                   fullWidth
                   value={employeeStatus}
                   disabled={employeeStatusDisabled || ratingUpdate.isPending}
                   onChange={(e) => setEmployeeStatus(e.target.value as ParEmployeeStatus)}
                 >
-                  <MenuItem value="PENDING">Pending</MenuItem>
-                  <MenuItem value="DRAFT">Draft</MenuItem>
-                  <MenuItem value="SHARED">Shared</MenuItem>
-                  <MenuItem value="SHARED_BLOCKED" disabled>
+                  <ComplexSelect.MenuItem value="PENDING">Pending</ComplexSelect.MenuItem>
+                  <ComplexSelect.MenuItem value="DRAFT">Draft</ComplexSelect.MenuItem>
+                  <ComplexSelect.MenuItem value="SHARED">Shared</ComplexSelect.MenuItem>
+                  <ComplexSelect.MenuItem value="SHARED_BLOCKED" disabled>
                     Shared Blocked
-                  </MenuItem>
-                </TextField>
+                  </ComplexSelect.MenuItem>
+                </ComplexSelect>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  select
+                <ComplexSelect
                   label="Lead's Feedback Status"
-                  size="small"
+                  labelAnchor="border"
                   fullWidth
                   value={leadStatus}
                   disabled={ratingUpdate.isPending}
                   onChange={(e) => setLeadStatus(e.target.value as ParLeadStatus)}
                 >
-                  <MenuItem value="PENDING">Pending</MenuItem>
-                  <MenuItem value="DRAFT">Draft</MenuItem>
-                  <MenuItem value="SHARED">Shared</MenuItem>
-                </TextField>
+                  <ComplexSelect.MenuItem value="PENDING">Pending</ComplexSelect.MenuItem>
+                  <ComplexSelect.MenuItem value="DRAFT">Draft</ComplexSelect.MenuItem>
+                  <ComplexSelect.MenuItem value="SHARED">Shared</ComplexSelect.MenuItem>
+                </ComplexSelect>
               </Grid>
             </Grid>
           </Box>
@@ -164,18 +162,17 @@ export default function ParUpdateStatusPanel({ cycle, employeeEmail }: { cycle: 
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  select
+                <ComplexSelect
                   label="F2F Status"
-                  size="small"
+                  labelAnchor="border"
                   fullWidth
                   value={f2fStatus}
                   disabled={f2fDisabled || ratingUpdate.isPending}
                   onChange={(e) => setF2fStatus(e.target.value as ParF2fStatus)}
                 >
-                  <MenuItem value="PENDING">Pending</MenuItem>
-                  <MenuItem value="COMPLETED">Completed</MenuItem>
-                </TextField>
+                  <ComplexSelect.MenuItem value="PENDING">Pending</ComplexSelect.MenuItem>
+                  <ComplexSelect.MenuItem value="COMPLETED">Completed</ComplexSelect.MenuItem>
+                </ComplexSelect>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <ParDateField

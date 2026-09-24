@@ -15,33 +15,38 @@
 // under the License.
 
 import { useMemo, useState } from "react";
-import { Accordion, AccordionDetails, AccordionSummary, Avatar, Chip, Divider, Grid, MenuItem, Skeleton, Stack, TextField, Typography } from "@wso2/oxygen-ui";
+import { Accordion, AccordionDetails, AccordionSummary, Avatar, Card, Chip, ComplexSelect, Divider, Grid, Skeleton, Stack, Typography } from "@wso2/oxygen-ui";
 import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useLeaveEmployees } from "@features/leave/api/useLeaveData";
 import { useParRating } from "../api/useParData";
 import { useAllClosedParCycles, useParEmployeeReviews, useParLegacyHistory } from "../api/useLeadHistory";
 import { buildMergedCycleOptions } from "../util/parEmployeeHistory";
-import { deriveLegacyRatingFromScore, parseLegacyQuestionAnswers } from "../util/parLegacyHistory";
 import { decodeParComment } from "../util/parComment";
-import { employeeChipLabel } from "../util/parLabels";
 import { ParCommentView } from "./ParContent";
 import ParEmptyState from "./ParEmptyState";
 import ParHistoryReviewSection from "./ParHistoryReviewSection";
-import ParLegacyReviewSection from "./ParLegacyReviewSection";
+import ParLegacyRecordDetail from "./ParLegacyRecordDetail";
+import ParStatusChip from "./ParStatusChip";
 import type { ParLegacyHistoryByEmail } from "../api/useLeadHistory";
 
 type CycleSelection = { kind: "none" } | { kind: "real"; parCycleId: number } | { kind: "legacy"; cycleName: string };
 
-function InfoItem({ title, subtitle1, subtitle2 }: { title: string; subtitle1: string; subtitle2: string }) {
+function InfoItem({ label, value, secondaryValue }: { label: string; value: string; secondaryValue: string }) {
   return (
     <Grid size="grow">
-      <Typography variant="body1">{title || "—"}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {subtitle1}
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: "block", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, mb: 0.25 }}
+      >
+        {label}
+      </Typography>
+      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+        {value || "—"}
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        {subtitle2 || "—"}
+        {secondaryValue || "—"}
       </Typography>
     </Grid>
   );
@@ -94,16 +99,6 @@ export default function ParEmployeeHistoryView({
     ? legacyRecords.find((record) => record.cycleName === cycleSelection.cycleName)
     : undefined;
 
-  const isMeaningfulLegacyText = (text: string | null | undefined): text is string =>
-    Boolean(text) && text!.trim() !== "" && text!.trim() !== "N/A";
-  const legacyEmployeeContent = parseLegacyQuestionAnswers(selectedLegacyRecord?.questionAnswers ?? null)
-    .map((qa) => qa.employeeAnswer)
-    .filter(isMeaningfulLegacyText)
-    .join("\n\n");
-  const legacyLeadContent = isMeaningfulLegacyText(selectedLegacyRecord?.overallCommentManager)
-    ? selectedLegacyRecord!.overallCommentManager!
-    : "";
-
   // "No record" wording stays deliberately vague: the backend can't tell "no
   // rating exists for this cycle" apart from a genuine fetch error here.
   // Scoped to `rating` alone — a failed or still-loading `reviews` fetch is
@@ -118,26 +113,24 @@ export default function ParEmployeeHistoryView({
 
   return (
     <Stack spacing={2}>
-      <TextField
-        select
-        size="small"
+      <ComplexSelect
         sx={{ minWidth: 280 }}
         disabled={realCycles.isLoading || legacyHistory.isLoading || cycleOptions.length === 0}
         value={cyclePickerValue}
-        onChange={(e) => handleCycleChange(e.target.value)}
+        onChange={(e) => handleCycleChange(e.target.value as string)}
       >
-        <MenuItem value="none">
+        <ComplexSelect.MenuItem value="none">
           {cycleOptions.length === 0 ? "No previous PAR cycles found" : "Please select a PAR cycle"}
-        </MenuItem>
+        </ComplexSelect.MenuItem>
         {cycleOptions.map((option) => (
-          <MenuItem
+          <ComplexSelect.MenuItem
             key={option.key}
             value={option.isLegacy ? `legacy-${option.cycleName}` : String(option.parCycleId)}
           >
             {option.label}
-          </MenuItem>
+          </ComplexSelect.MenuItem>
         ))}
-      </TextField>
+      </ComplexSelect>
 
       {realCycles.isError && (
         <ErrorNotice error={realCycles.error} onRetry={() => realCycles.refetch()} retrying={realCycles.isFetching}>
@@ -161,114 +154,54 @@ export default function ParEmployeeHistoryView({
       )}
 
       {showLegacyDetails && selectedLegacyRecord && (
-        <Stack spacing={2}>
-          <Grid container spacing={2}>
-            <Grid size="auto">
-              {/* The avatar is the employee's own thumbnail regardless of
-                  cycle type — not a per-legacy-record field. */}
-              <Avatar variant="rounded" src={thumbnailByEmail.get(employeeEmail)} alt="Employee Thumbnail" sx={{ width: 100, height: 100 }} />
-            </Grid>
-            {(() => {
-              const derived = deriveLegacyRatingFromScore(selectedLegacyRecord.managerScoreCode);
-              const rating2 = selectedLegacyRecord.overallRating ?? derived.rating;
-              const special = selectedLegacyRecord.overallSpecialRating ?? derived.special;
-              return (
-                <Grid size="grow">
-                  <Stack direction="row" spacing={1} flexWrap="wrap">
-                    {special && special !== "NOT_ASSIGNED" && (
-                      <Chip size="small" color={employeeChipLabel(special).color} label={employeeChipLabel(special).label} />
-                    )}
-                    {rating2 && <Chip size="small" color={employeeChipLabel(rating2).color} label={employeeChipLabel(rating2).label} />}
-                  </Stack>
-                  {(selectedLegacyRecord.reviewerEmail || selectedLegacyRecord.reviewerName) && (
-                    <Chip
-                      size="small"
-                      sx={{ mt: 1 }}
-                      label={`PAR shared by: ${selectedLegacyRecord.reviewerEmail ?? selectedLegacyRecord.reviewerName}`}
-                    />
-                  )}
-                </Grid>
-              );
-            })()}
-            <InfoItem title={employeeName} subtitle1="Employee" subtitle2={employeeEmail} />
-            <InfoItem
-              title={selectedLegacyRecord.reviewerName ?? selectedLegacyRecord.reviewerEmail ?? ""}
-              subtitle1="Lead"
-              subtitle2={selectedLegacyRecord.reviewerEmail ?? ""}
-            />
-            <InfoItem title={selectedLegacyRecord.team ?? ""} subtitle1="Team" subtitle2={selectedLegacyRecord.department ?? ""} />
-          </Grid>
-
-          <Divider />
-
-          <Accordion
-            disabled={!legacyEmployeeContent}
-            defaultExpanded={Boolean(legacyEmployeeContent)}
-            sx={{ mt: 1 }}
-          >
-            <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Employee PAR</AccordionSummary>
-            <AccordionDetails>
-              <Divider sx={{ my: 1 }} />
-              <ParCommentView html={legacyEmployeeContent} />
-            </AccordionDetails>
-          </Accordion>
-          <Accordion
-            disabled={!legacyLeadContent}
-            defaultExpanded={Boolean(legacyLeadContent)}
-            sx={{ mt: 1 }}
-          >
-            <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Lead's Feedback</AccordionSummary>
-            <AccordionDetails>
-              <Divider sx={{ my: 1 }} />
-              <ParCommentView html={legacyLeadContent} />
-            </AccordionDetails>
-          </Accordion>
-
-          <Divider />
-
-          <ParLegacyReviewSection feedback360={selectedLegacyRecord.feedback360} />
-        </Stack>
+        <ParLegacyRecordDetail
+          record={selectedLegacyRecord}
+          employeeEmail={employeeEmail}
+          employeeName={employeeName}
+          thumbnail={thumbnailByEmail.get(employeeEmail)}
+        />
       )}
 
       {showRealDetails && rating.data && (
         <Stack spacing={2}>
-          <Grid container spacing={2}>
-            <Grid size="auto">
-              <Avatar
-                variant="rounded"
-                src={thumbnailByEmail.get(employeeEmail)}
-                alt="Employee Thumbnail"
-                sx={{ width: 100, height: 100 }}
-              />
-            </Grid>
-            <Grid size="grow">
-              <Stack direction="row" spacing={1} flexWrap="wrap">
-                {rating.data.parSpecialRating && (
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid size="auto">
+                <Avatar
+                  variant="rounded"
+                  src={thumbnailByEmail.get(employeeEmail)}
+                  alt="Employee Thumbnail"
+                  sx={{ width: 100, height: 100 }}
+                />
+              </Grid>
+              <Grid size="grow">
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {rating.data.parSpecialRating && rating.data.parSpecialRating !== "NOT_ASSIGNED" && (
+                    <ParStatusChip content={rating.data.parSpecialRating} />
+                  )}
+                  {rating.data.parRating && rating.data.parRating !== "NOT_ASSIGNED" && (
+                    <ParStatusChip content={rating.data.parRating} />
+                  )}
+                </Stack>
+                {rating.data.parRatingSharedBy && (
                   <Chip
                     size="small"
-                    color={employeeChipLabel(rating.data.parSpecialRating).color}
-                    label={employeeChipLabel(rating.data.parSpecialRating).label}
+                    variant="outlined"
+                    sx={{ mt: 1 }}
+                    label={`PAR shared by: ${rating.data.parRatingSharedBy}`}
                   />
                 )}
-                {rating.data.parRating && (
-                  <Chip size="small" color={employeeChipLabel(rating.data.parRating).color} label={employeeChipLabel(rating.data.parRating).label} />
-                )}
-              </Stack>
-              {rating.data.parRatingSharedBy && (
-                <Chip size="small" sx={{ mt: 1 }} label={`PAR shared by: ${rating.data.parRatingSharedBy}`} />
-              )}
+              </Grid>
+              <InfoItem label="Employee" value={employeeName} secondaryValue={employeeEmail} />
+              <InfoItem label="Lead" value={rating.data.parLeadEmail ?? ""} secondaryValue={rating.data.parLeadEmail ?? ""} />
+              <InfoItem label="Team" value={rating.data.parTeam ?? ""} secondaryValue={rating.data.parDepartment ?? ""} />
             </Grid>
-            <InfoItem title={employeeName} subtitle1="Employee" subtitle2={employeeEmail} />
-            <InfoItem title={rating.data.parLeadEmail ?? ""} subtitle1="Lead" subtitle2={rating.data.parLeadEmail ?? ""} />
-            <InfoItem title={rating.data.parTeam ?? ""} subtitle1="Team" subtitle2={rating.data.parDepartment ?? ""} />
-          </Grid>
-
-          <Divider />
+          </Card>
 
           <Accordion
+            variant="outlined"
             disabled={!rating.data.parEmployeeComment?.trim()}
             defaultExpanded={Boolean(rating.data.parEmployeeComment?.trim())}
-            sx={{ mt: 1 }}
           >
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Employee PAR</AccordionSummary>
             <AccordionDetails>
@@ -277,9 +210,9 @@ export default function ParEmployeeHistoryView({
             </AccordionDetails>
           </Accordion>
           <Accordion
+            variant="outlined"
             disabled={!rating.data.parLeadComment?.trim()}
             defaultExpanded={Boolean(rating.data.parLeadComment?.trim())}
-            sx={{ mt: 1 }}
           >
             <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>Lead's Feedback</AccordionSummary>
             <AccordionDetails>
@@ -287,8 +220,6 @@ export default function ParEmployeeHistoryView({
               <ParCommentView html={decodeParComment(rating.data.parLeadComment)} />
             </AccordionDetails>
           </Accordion>
-
-          <Divider />
 
           {reviews.isLoading ? (
             <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 1.5 }} />

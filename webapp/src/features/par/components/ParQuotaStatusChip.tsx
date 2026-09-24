@@ -34,6 +34,9 @@ export default function ParQuotaStatusChip({
   return (
     <Chip
       label={label}
+      size="small"
+      variant="outlined"
+      color={isUnderServed ? "warning" : "default"}
       sx={{
         bgcolor: isUnderServed ? alpha(theme.palette.warning.main, theme.palette.mode === "light" ? 0.35 : 0.45) : undefined,
       }}

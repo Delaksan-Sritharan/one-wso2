@@ -20,12 +20,14 @@ import {
   Box,
   Button,
   Card,
+  Chip,
   DataGrid,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
+  Grid,
   IconButton,
   InputAdornment,
   Skeleton,
@@ -45,7 +47,7 @@ import { useParTeams } from "../api/useLeadTeams";
 import { useSend360Reminder } from "../api/useLeadReminders";
 import { calculateTeamsCompletionTotals } from "../util/parTeamsSummary";
 import ParCycleDatesStepper from "../components/ParCycleDatesStepper";
-import ParTeamPulseTiles from "../components/ParTeamPulseTiles";
+import ParCompletionKpiTile from "../components/ParCompletionKpiTile";
 import ParEmptyState from "../components/ParEmptyState";
 import ParLeadTeamRoster from "../components/ParLeadTeamRoster";
 import ParLeadReviewTabs from "../components/ParLeadReviewTabs";
@@ -160,10 +162,11 @@ export default function ParLeadDirectReportsTab() {
       headerName: "",
       sortable: false,
       flex: 0.3,
+      display: "flex",
       align: "center",
       // The row already opens on click; this just makes that visible.
       renderCell: () => (
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "text.secondary" }}>
+        <Box sx={{ display: "flex", color: "text.secondary" }}>
           <EyeIcon size={18} />
         </Box>
       ),
@@ -173,11 +176,9 @@ export default function ParLeadDirectReportsTab() {
   return (
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
-        <Box>
-          <Typography variant="h5" component="span">
-            {cycle.parCycleName}{" "}
-          </Typography>
-          <Typography component="span" color="text.secondary">
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Chip label={cycle.parCycleName} size="small" color="primary" variant="outlined" />
+          <Typography component="span" variant="caption" color="text.secondary">
             ({formatShortDate(cycle.parCycleStartDate)} - {formatShortDate(cycle.parCycleEndDate)})
           </Typography>
         </Box>
@@ -193,13 +194,29 @@ export default function ParLeadDirectReportsTab() {
         </Stack>
       </Stack>
 
-      <ParTeamPulseTiles
-        tiles={[
-          { label: "Employee PAR", completed: totals.totalEmployeeParComplete, total: totals.totalEmployees, color: "success" },
-          { label: "Lead's PAR", completed: totals.totalLeadReviewComplete, total: totals.totalEmployees, color: "primary" },
-          { label: "F2F", completed: totals.totalF2fComplete, total: totals.totalEmployees, color: "warning" },
-        ]}
-      />
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <ParCompletionKpiTile
+            label="Employee PAR"
+            completed={totals.totalEmployeeParComplete}
+            total={totals.totalEmployees}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <ParCompletionKpiTile
+            label="Lead's PAR"
+            completed={totals.totalLeadReviewComplete}
+            total={totals.totalEmployees}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <ParCompletionKpiTile
+            label="F2F"
+            completed={totals.totalF2fComplete}
+            total={totals.totalEmployees}
+          />
+        </Grid>
+      </Grid>
 
       <Card variant="outlined" sx={{ p: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>

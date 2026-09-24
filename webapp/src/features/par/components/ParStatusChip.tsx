@@ -14,8 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { Avatar, Chip, Tooltip } from "@wso2/oxygen-ui";
-import { CheckIcon, HourglassIcon } from "@wso2/oxygen-ui-icons-react";
+import { Chip } from "@wso2/oxygen-ui";
 import { employeeChipLabel } from "../util/parLabels";
 
 const COMPLETED_VALUES = new Set(["SHARED", "SHARED_BLOCKED", "COMPLETED"]);
@@ -23,12 +22,12 @@ const PENDING_VALUES = new Set(["PENDING"]);
 
 // Ports ParStatusChip.tsx: the one chip renderer TeamSummary.tsx's roster
 // grid (and, later, Review.tsx's 360 monitoring table) uses for every
-// status/rating column. Completed/pending status enums (employee, lead,
-// 360, F2F — the same three words recur across all four) render as a small
-// icon avatar with a tooltip; everything else (REJECTED, DRAFT, a rating
-// code, or an empty value) renders as a coloured text chip — reusing
-// employeeChipLabel for the rating-code half, since that mapping already
-// exists for EmployeePar.tsx's own chips.
+// status/rating column. Source rendered completed/pending as a silent icon
+// avatar with a tooltip; every status everywhere else in this app (REJECTED,
+// DRAFT, a rating code, Leave's own StatusChip) is a coloured, labelled
+// outlined chip instead — matching that instead of the source's one-off icon
+// treatment, reusing employeeChipLabel for the rating-code half, since that
+// mapping already exists for EmployeePar.tsx's own chips.
 // Same compact outlined-chip treatment "My Team" uses for its own status
 // column (features/my/my-team/components/MyTeamTable.tsx).
 const CHIP_SX = { height: 20, fontSize: 10.5, fontWeight: 600, borderWidth: 1.5, minWidth: 72 };
@@ -54,22 +53,10 @@ export default function ParStatusChip({
   }
 
   if (COMPLETED_VALUES.has(content)) {
-    return (
-      <Tooltip title="Completed" arrow>
-        <Avatar sx={{ width: 20, height: 20, bgcolor: "success.main", color: "success.contrastText" }}>
-          <CheckIcon size={12} />
-        </Avatar>
-      </Tooltip>
-    );
+    return <Chip size="small" variant="outlined" color="success" label="Completed" sx={CHIP_SX} />;
   }
   if (PENDING_VALUES.has(content)) {
-    return (
-      <Tooltip title="Pending" arrow>
-        <Avatar sx={{ width: 20, height: 20, bgcolor: "warning.main", color: "warning.contrastText" }}>
-          <HourglassIcon size={12} />
-        </Avatar>
-      </Tooltip>
-    );
+    return <Chip size="small" variant="outlined" color="warning" label="Pending" sx={CHIP_SX} />;
   }
   if (content === "REJECTED") {
     return <Chip size="small" variant="outlined" color="error" label="Rejected" sx={CHIP_SX} />;

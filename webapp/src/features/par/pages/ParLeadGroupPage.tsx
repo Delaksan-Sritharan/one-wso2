@@ -77,13 +77,13 @@ export default function ParLeadGroupPage() {
 
   return (
     <ParShell
-      title="Lead Portal"
+      title="Lead View"
       subtitle="Review and rate your reports' PAR, manage their 360° feedback and F2F and see their record from past cycles."
     >
       <RoutedTabs
         basePath={BASE_PATH}
         tabs={employeeInfo.isTeamLead ? TABS : HISTORY_ONLY_TABS}
-        ariaLabel="Lead Portal sections"
+        ariaLabel="Lead View sections"
       />
       {needsActiveCycle && !employeeInfo.isTeamLead ? (
         <Navigate to={`${BASE_PATH}/employee-history`} replace />

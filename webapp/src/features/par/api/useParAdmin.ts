@@ -23,6 +23,8 @@ import { digiopsHeaders } from "@features/my/util/digiopsHeaders";
 import type {
   ParCycle,
   ParCycleConfigurations,
+  ParLegacyCycleSummary,
+  ParLegacyHistory,
   ParParticipant,
   ParRating,
   ParRejectedReview,
@@ -166,6 +168,42 @@ export function useParAllRatings(parCycleId: number | undefined, enabled = true)
     queryFn: async () => {
       const accessToken = await getAccessToken();
       return authedGet<ParRating[]>(parServiceUrls.parAllRatings(parCycleId!), accessToken, digiopsHeaders());
+    },
+    staleTime: 60 * 1000,
+    retry: defaultQueryRetry,
+  });
+}
+
+// GET every distinct legacy cycle org-wide — HistoryPanel.tsx's own
+// fetchDistinctLegacyParCycles, for the History tab's merged cycle list.
+export function useDistinctLegacyParCycles(enabled = true) {
+  const { isSignedIn, getAccessToken, backendConfigured } = useParBaseline();
+  return useQuery<ParLegacyCycleSummary[]>({
+    queryKey: ["par-admin-legacy-cycles"],
+    enabled: enabled && isSignedIn && backendConfigured,
+    queryFn: async () => {
+      const accessToken = await getAccessToken();
+      return authedGet<ParLegacyCycleSummary[]>(parServiceUrls.legacyParHistoryCycles(), accessToken, digiopsHeaders());
+    },
+    staleTime: 10 * 60 * 1000,
+    retry: defaultQueryRetry,
+  });
+}
+
+// GET every employee's legacy row for one cycle name — HistoryPanel.tsx's own
+// fetchLegacyParHistoryByCycle, for the History tab's legacy drill-down.
+export function useLegacyParHistoryByCycle(cycleName: string | undefined, enabled = true) {
+  const { isSignedIn, getAccessToken, backendConfigured } = useParBaseline();
+  return useQuery<ParLegacyHistory[]>({
+    queryKey: ["par-admin-legacy-cycle-participants", cycleName],
+    enabled: enabled && isSignedIn && backendConfigured && Boolean(cycleName),
+    queryFn: async () => {
+      const accessToken = await getAccessToken();
+      return authedGet<ParLegacyHistory[]>(
+        parServiceUrls.legacyParHistoryCyclesParticipants(cycleName!),
+        accessToken,
+        digiopsHeaders(),
+      );
     },
     staleTime: 60 * 1000,
     retry: defaultQueryRetry,

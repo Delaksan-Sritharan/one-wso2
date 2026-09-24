@@ -54,6 +54,17 @@ export interface ParCycleConfigurations {
   threeSixtyReviewQuestion: string;
   parRatings: string[];
   threeSixtyReviewRatings: string[];
+  // Not on the wire yet — the backend's ParCycleConfigurations is a closed
+  // record with no such fields (see digiops-hr/apps/par-app/backend's
+  // modules/types/types.bal), so these are always undefined today. Typed
+  // ahead of a planned backend change so ParLeadReviewPanel.tsx's fallback
+  // chain (cycle config → apiConfig.ts's window.config value → hardcoded
+  // default) picks them up automatically once the backend ships them,
+  // with no frontend change needed at that point. Never send these back on
+  // a PUT until the backend actually accepts them — a closed record 400s on
+  // an unrecognized field.
+  top5p20pEnabledRating?: string;
+  evidenceEnabledRating?: string;
 }
 
 export interface ParCycle {
@@ -124,6 +135,10 @@ export interface ParRating {
   // Admin-only note, distinct from parLeadComment. Stripped from every
   // non-admin response.
   parAdminComment?: string;
+  // Lead-only evidence for a "Needs Improvement" rating — newline-delimited
+  // Google Drive file URLs, not an array on the wire. See
+  // util/parDriveFile.ts's parseSavedUrls.
+  parPerformanceNoticeAck?: string;
 }
 
 // ---- 360° feedback ----------------------------------------------------------
@@ -215,6 +230,8 @@ export interface ParRatingModify {
   // Admin-only — both checkForModifiableFieldsForLead and -ForSelf reject a
   // non-empty value here, so only an admin caller may actually set it.
   parAdminComment?: string;
+  // Lead-only, per the denylist comment above.
+  parPerformanceNoticeAck?: string;
 }
 
 // ---- Lead Portal ---------------------------------------------------------
@@ -335,6 +352,15 @@ export interface ParLegacyThreeSixtyReview {
   reviewerName: string;
   reviewRating: string;
   reviewComment: string | null;
+}
+
+// GET /legacy-par-history-cycles — mirrors backend's LegacyParCycleSummary:
+// one distinct legacy cycle, aggregated org-wide across every employee who
+// has a row for it. Admin-only (Admin Portal's History tab).
+export interface ParLegacyCycleSummary {
+  cycleName: string;
+  participantCount: number;
+  latestCompletedDate: string | null;
 }
 
 // GET /par-cycles/{cycleId}/reports?leadEmail= — mirrors backend's

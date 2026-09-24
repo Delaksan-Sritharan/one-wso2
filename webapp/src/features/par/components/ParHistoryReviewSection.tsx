@@ -40,7 +40,7 @@ export default function ParHistoryReviewSection({ reviews }: { reviews: Par360Re
   };
 
   return (
-    <Accordion disabled={reviews.length === 0}>
+    <Accordion variant="outlined" disabled={reviews.length === 0}>
       <AccordionSummary expandIcon={<ChevronDownIcon size={18} />}>
         <Typography variant="h6">360° Feedback</Typography>
       </AccordionSummary>
@@ -48,7 +48,7 @@ export default function ParHistoryReviewSection({ reviews }: { reviews: Par360Re
         {reviews.length === 0 ? (
           <ParEmptyState text="No 360° feedback received" />
         ) : completed.length === 0 ? (
-          <ParEmptyState text="All 360° feedback were rejected" />
+          <ParEmptyState text="All 360° feedback was rejected" />
         ) : (
           <Stack spacing={1.5}>
             {completed.map((review) => (

@@ -16,7 +16,7 @@
 
 import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router";
-import { Skeleton, Typography } from "@wso2/oxygen-ui";
+import { Chip, Skeleton } from "@wso2/oxygen-ui";
 import RoutedTabs, { type RoutedTabDef } from "@components/routed-tabs/RoutedTabs";
 import { useMeProfile } from "@features/my/api/useMeProfile";
 import ParShell from "../components/ParShell";
@@ -62,16 +62,12 @@ export default function ParGroupPage() {
 
   return (
     <ParShell
-      title="Employee Portal"
+      title="Performance Appraisal Review"
       subtitle="Complete your own feedback, request and give 360° feedback and see your record from past cycles."
     >
       {/* The active cycle's own name/period, not the page's title — this
-          page is "Employee Portal" regardless of which cycle is running. */}
-      {cycleName && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600 }}>
-          Current cycle: {cycleName}
-        </Typography>
-      )}
+          page is "Performance Appraisal Review" regardless of which cycle is running. */}
+      {cycleName && <Chip label={cycleName} size="small" color="primary" variant="outlined" sx={{ mb: 2, fontWeight: 600 }} />}
       {isLoading || isActiveLoading ? (
         <Skeleton variant="rectangular" height={36} sx={{ borderRadius: 1, mb: 2, maxWidth: 640 }} />
       ) : (

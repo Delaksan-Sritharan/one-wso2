@@ -26,6 +26,7 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  Grid,
   IconButton,
   InputAdornment,
   Link,
@@ -47,19 +48,8 @@ import { calculateCycleActiveStep } from "../util/parCycleActiveStep";
 import { resolveGridSelectedIds } from "../util/parGridSelection";
 import ParCycleDatesStepper from "./ParCycleDatesStepper";
 import ParStatusChip from "./ParStatusChip";
-import ParTeamPulseTiles from "./ParTeamPulseTiles";
-import type { ReactNode } from "react";
+import ParCompletionKpiTile from "./ParCompletionKpiTile";
 import type { ParCycle, ParRatingMinimal, ParTeamSummary } from "../api/types";
-
-// Belt-and-suspenders alongside each column's own align/headerAlign, so a
-// narrow icon or chip never sticks to one edge of a much wider column.
-function CenteredCell({ children }: { children: ReactNode }) {
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
-      {children}
-    </Box>
-  );
-}
 
 // Shared "done" vocabulary across employee/lead/360 status fields (mirrors
 // ParStatusChip's own COMPLETED_VALUES) — used for each row's
@@ -220,6 +210,7 @@ export default function ParLeadTeamRoster({
             aria-label={`Open review for ${params.row.parEmployeeName}`}
             onClick={() => onOpenReview(params.row.parEmployeeEmail)}
             onKeyDown={(e) => {
+              if (e.target !== e.currentTarget) return;
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 onOpenReview(params.row.parEmployeeEmail);
@@ -232,30 +223,33 @@ export default function ParLeadTeamRoster({
               slotProps={{ img: { referrerPolicy: "no-referrer" } }}
               sx={{ mr: 1.5, height: "2.2rem", width: "2.2rem" }}
             />
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {params.row.parEmployeeName}
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: "2.95rem" }}>
-            <Typography variant="caption" color="text.secondary">
-              {params.row.parEmployeeEmail}
-            </Typography>
-            <Tooltip title="Copy Email" arrow>
-              <IconButton
-                size="small"
-                aria-label="Copy Email"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(params.row.parEmployeeEmail);
-                    showSuccess("Email copied");
-                  } catch (err) {
-                    showError(describeError(err));
-                  }
-                }}
-              >
-                <CopyIcon size={13} />
-              </IconButton>
-            </Tooltip>
+            <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <Typography variant="body2" sx={{ fontSize: 13, fontWeight: 600 }}>
+                {params.row.parEmployeeName}
+              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <Typography variant="caption" sx={{ fontSize: 11.5 }} color="text.secondary">
+                  {params.row.parEmployeeEmail}
+                </Typography>
+                <Tooltip title="Copy Email" arrow>
+                  <IconButton
+                    size="small"
+                    aria-label="Copy Email"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await navigator.clipboard.writeText(params.row.parEmployeeEmail);
+                        showSuccess("Email copied");
+                      } catch (err) {
+                        showError(describeError(err));
+                      }
+                    }}
+                  >
+                    <CopyIcon size={13} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
           </Box>
           <Box sx={{ ml: "2.95rem" }}>
             <StageProgress row={params.row} />
@@ -267,65 +261,70 @@ export default function ParLeadTeamRoster({
       field: "parEmployeeStatus",
       headerName: "Employee PAR",
       flex: 0.8,
+      display: "flex",
       align: "center",
       headerAlign: "center",
-      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parEmployeeStatus} /></CenteredCell>,
+      renderCell: (params) => <ParStatusChip content={params.row.parEmployeeStatus} />,
     },
     {
       field: "par360ReviewStatus",
       headerName: "360° Feedback",
       flex: 0.9,
+      display: "flex",
       align: "center",
       headerAlign: "center",
       renderCell: (params) => (
-        <CenteredCell>
-          <ParStatusChip
-            content={params.row.par360ReviewStatus}
-            countDetails={{
-              completed: params.row.par360ReviewCounts.sharedReviewCount,
-              total: params.row.par360ReviewCounts.requestedReviewCount,
-            }}
-          />
-        </CenteredCell>
+        <ParStatusChip
+          content={params.row.par360ReviewStatus}
+          countDetails={{
+            completed: params.row.par360ReviewCounts.sharedReviewCount,
+            total: params.row.par360ReviewCounts.requestedReviewCount,
+          }}
+        />
       ),
     },
     {
       field: "parLeadStatus",
       headerName: "Lead's PAR",
       flex: 0.8,
+      display: "flex",
       align: "center",
       headerAlign: "center",
-      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parLeadStatus} /></CenteredCell>,
+      renderCell: (params) => <ParStatusChip content={params.row.parLeadStatus} />,
     },
     {
       field: "parRating",
       headerName: "Rating",
       flex: 0.8,
+      display: "flex",
       align: "center",
       headerAlign: "center",
-      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parRating ?? ""} /></CenteredCell>,
+      renderCell: (params) => <ParStatusChip content={params.row.parRating ?? ""} />,
     },
     {
       field: "parSpecialRating",
       headerName: "Top 5%/20% Rating",
       flex: 0.9,
+      display: "flex",
       align: "center",
       headerAlign: "center",
-      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parSpecialRating ?? ""} /></CenteredCell>,
+      renderCell: (params) => <ParStatusChip content={params.row.parSpecialRating ?? ""} />,
     },
     {
       field: "parF2fStatus",
       headerName: "F2F",
       flex: 0.6,
+      display: "flex",
       align: "center",
       headerAlign: "center",
-      renderCell: (params) => <CenteredCell><ParStatusChip content={params.row.parF2fStatus} /></CenteredCell>,
+      renderCell: (params) => <ParStatusChip content={params.row.parF2fStatus} />,
     },
     {
       field: "actions",
       headerName: "",
       sortable: false,
       flex: 0.5,
+      display: "flex",
       align: "center",
       renderCell: (params) => (
         <Tooltip title={params.row.parLeadStatus === "SHARED" ? "View" : "Review"} arrow>
@@ -367,13 +366,29 @@ export default function ParLeadTeamRoster({
         </Stack>
       </Stack>
 
-      <ParTeamPulseTiles
-        tiles={[
-          { label: "Employee PAR", completed: team.summary.employeeParCompletedCount, total: team.numberOfTeamMembers, color: "success" },
-          { label: "Lead's PAR", completed: team.summary.leadsReviewCompletedCount, total: team.numberOfTeamMembers, color: "primary" },
-          { label: "F2F", completed: team.summary.f2fCompletedCount, total: team.numberOfTeamMembers, color: "warning" },
-        ]}
-      />
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <ParCompletionKpiTile
+            label="Employee PAR"
+            completed={team.summary.employeeParCompletedCount}
+            total={team.numberOfTeamMembers}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <ParCompletionKpiTile
+            label="Lead's PAR"
+            completed={team.summary.leadsReviewCompletedCount}
+            total={team.numberOfTeamMembers}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <ParCompletionKpiTile
+            label="F2F"
+            completed={team.summary.f2fCompletedCount}
+            total={team.numberOfTeamMembers}
+          />
+        </Grid>
+      </Grid>
 
       <Card variant="outlined" sx={{ p: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1} sx={{ mb: 1.5 }}>

@@ -22,16 +22,19 @@ import ErrorNotice from "@components/error-notice/ErrorNotice";
 import ParShell from "../components/ParShell";
 import { useParIsAdmin } from "../api/useParIsAdmin";
 
-// Only Ongoing has a route so far — History is a follow-up.
-const TABS: RoutedTabDef[] = [{ segment: "ongoing", label: "Ongoing" }];
+const TABS: RoutedTabDef[] = [
+  { segment: "ongoing", label: "Ongoing" },
+  { segment: "history", label: "History" },
+  { segment: "configurations", label: "Configurations" },
+];
 
 export default function ParAdminGroupPage() {
   return (
     <ParShell
-      title="Admin Portal"
+      title="Admin View"
       subtitle="Create and manage PAR cycles, assign special-rating quotas, and monitor completion across the organization."
     >
-      <RoutedTabs basePath="/people-ops/performance/admin" tabs={TABS} ariaLabel="Admin Portal sections" />
+      <RoutedTabs basePath="/people-ops/performance/admin" tabs={TABS} ariaLabel="Admin View sections" />
       <Outlet />
     </ParShell>
   );

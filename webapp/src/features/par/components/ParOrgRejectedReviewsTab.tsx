@@ -88,10 +88,10 @@ export default function ParOrgRejectedReviewsTab({ cycle }: { cycle: ParCycle })
       flex: 1.5,
       renderCell: (params) => (
         <Box>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          <Typography variant="body2" sx={{ fontSize: 13, fontWeight: 600 }}>
             {displayName(params.row.employeeEmail)}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{ fontSize: 11.5 }} color="text.secondary">
             {params.row.employeeEmail}
           </Typography>
         </Box>
@@ -115,10 +115,10 @@ export default function ParOrgRejectedReviewsTab({ cycle }: { cycle: ParCycle })
       flex: 1.5,
       renderCell: (params) => (
         <Box>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          <Typography variant="body2" sx={{ fontSize: 13, fontWeight: 600 }}>
             {displayName(params.row.reviewerEmail)}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{ fontSize: 11.5 }} color="text.secondary">
             {params.row.reviewerEmail}
           </Typography>
         </Box>

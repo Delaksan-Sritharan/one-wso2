@@ -101,6 +101,9 @@ describe("perspective hues", () => {
     // every remaining gap is under 45 degrees and most are under 30 — so the
     // next perspective genuinely cannot have a hue, and whoever hits this line
     // next should change the encoding rather than this number again.
+  // Hue discrimination collapses somewhere around eight or nine, so this cap is
+  // the tripwire: when it fires, the answer is a different encoding — hue per
+  // domain family, or back to monochrome — not more hues.
     expect(Object.keys(PERSPECTIVE_HUES).length).toBeLessThanOrEqual(9);
   });
 
