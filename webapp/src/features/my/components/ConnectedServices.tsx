@@ -69,21 +69,14 @@ export default function ConnectedServices() {
                 summary={lastPromotion ? promotionSummary(lastPromotion) : null}
               />
             </Box>
-            <Tooltip
-              title={promotionConfigured ? "" : "Set ONE_WSO2_PROMOTION_BACKEND_URL to enable this."}
-              placement="top"
-            >
-              <span>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  disabled={!promotionConfigured || !ownerEmail}
-                  onClick={() => setHistoryOpen(true)}
-                >
-                  View promotion history
-                </Button>
-              </span>
-            </Tooltip>
+            {/* Only offered when there is something to show — with no
+                approved promotions (or while loading, on error, or when
+                the backend isn't configured) the dialog would be empty. */}
+            {lastPromotion && (
+              <Button variant="outlined" size="small" onClick={() => setHistoryOpen(true)}>
+                View promotion history
+              </Button>
+            )}
           </Stack>
           <PerformanceStages workEmail={ownerEmail} />
           {/* Hand-built link, so the registry's gate does not cover it. */}
@@ -114,7 +107,7 @@ export default function ConnectedServices() {
 //   - not configured hint (promotion backend URL absent)
 //   - skeleton (loading)
 //   - error dash (fetch failed; hover for reason)
-//   - "No approved promotions" (nothing on record — new joiner, or every
+//   - "No promotions" (nothing approved on record — new joiner, or every
 //     request still in flight; states what the data shows rather than
 //     asserting the person has never been promoted)
 //   - cycle + band jump (happy path)
@@ -151,7 +144,7 @@ function LastPromotionValue({
   }
   if (!summary) {
     return (
-      <Typography sx={{ ...base, color: "text.disabled" }}>No approved promotions</Typography>
+      <Typography sx={{ ...base, color: "text.disabled" }}>No promotions</Typography>
     );
   }
   return (

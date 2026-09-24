@@ -82,15 +82,6 @@ export default function PromotionHistoryDialog({
             </Typography>
             <Typography sx={{ fontSize: 12.5 }}>{humanizeHttpError(query.error)}</Typography>
           </Alert>
-        ) : entries.length === 0 ? (
-          <Box sx={{ py: 3, textAlign: "center" }}>
-            <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-              No approved promotion records on file.
-            </Typography>
-            <Typography sx={{ fontSize: 12, color: "text.disabled", mt: 0.5 }}>
-              Once a promotion cycle approves your request, it'll show up here.
-            </Typography>
-          </Box>
         ) : (
           <Stack spacing={1.25}>
             {entries.map((e) => (

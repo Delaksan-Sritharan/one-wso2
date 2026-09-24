@@ -158,7 +158,7 @@ describe("latestPromotion", () => {
   });
 
   it("returns null when nothing is approved", () => {
-    // Drives the "No approved promotions" line rather than a false date.
+    // Drives the "No promotions" line rather than a false date.
     expect(latestPromotion([])).toBeNull();
     expect(latestPromotion(undefined)).toBeNull();
   });
