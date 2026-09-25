@@ -149,6 +149,13 @@ export interface BankAccount {
   bankLocation: string | null;
   branchCode: string | null;
   branchName: string | null;
+  // Non-null on the wire (db:EmployeeBankAccount), but every Bank Account
+  // rendered here comes through the same optional-chaining path as the
+  // nullable fields, so nullable is the safer type to declare.
+  beneficiaryAddress: string | null;
+  bankAddress: string | null;
+  // Only meaningful for CONSULTANCY; null for SALARY/REIMBURSEMENT.
+  paymentMethod: string | null;
   effectiveFrom: string;
   createdOn: string | null;
 }
@@ -157,6 +164,18 @@ export interface BankAccountsResponse {
   bankAccounts: BankAccount[];
   count: number;
 }
+
+// GET /app-config on the banking backend — deliberately a SUBSET of the
+// full response (it also serves customLocationMap/allCountries, unused
+// here): only the fields the day-of-month cutoff, work-location allow-list,
+// and restricted-role checks actually read.
+export interface BankingAppConfig {
+  salaryThreshold: number;
+  consultancyThreshold: number;
+  reimbursementsAllowedCountries: string[];
+  consultancyRestrictedRoles: string[];
+}
+
 
 // Body for PATCH /employees/{employeeId}/personal-info. Mirrors
 // database:UpdateEmployeePersonalInfoPayload — every field is optional and
