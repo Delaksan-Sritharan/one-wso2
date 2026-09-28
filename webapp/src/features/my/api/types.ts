@@ -158,6 +158,12 @@ export interface BankAccount {
   paymentMethod: string | null;
   effectiveFrom: string;
   createdOn: string | null;
+  // NetSuite identifiers, only ever populated once an account has been
+  // through NetSuite — null until then. Only the Change Requests tab's
+  // detail view renders these; every other Banking screen ignores them.
+  netSuiteInternalId: string | null;
+  netSuiteVendorId: string | null;
+  netSuitePaymentFileFormat: string | null;
 }
 
 export interface BankAccountsResponse {

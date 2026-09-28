@@ -172,6 +172,20 @@ export const bankingServiceUrls = {
   createBank: `${bankingBackendUrl}/banks`,
   // PATCH /threshold — updates the Salary or Consultancy monthly cutoff day.
   updateThreshold: `${bankingBackendUrl}/threshold`,
+  // GET /employee/accounts?statusArray=REQUESTED&accountTypesArray=SALARY —
+  // the Change Requests tab's own admin-wide query: every account still
+  // awaiting a People Ops decision. Deliberately omits employeeWorkEmail
+  // (unlike employeeAccounts() above) — the backend's own resource check
+  // requires an admin role whenever that param is left out, which is what
+  // makes this the admin query rather than a self-lookup. Fixed to
+  // REQUESTED/SALARY because this tab never shows anything else — the
+  // backend's own approve/reject action refuses any non-Salary account.
+  pendingSalaryAccounts: `${bankingBackendUrl}/employee/accounts?statusArray=REQUESTED&accountTypesArray=SALARY`,
+  // POST /employee/accounts/{accountId}/approve|reject — People-Ops-only,
+  // backend-enforced Salary-account-only (service.bal's own accountType
+  // check on this same resource).
+  accountAction: (accountId: number, action: "approve" | "reject") =>
+    `${bankingBackendUrl}/employee/accounts/${accountId}/${action}`,
 };
 
 // ---- PAR app backend ---------------------------------------------------------
