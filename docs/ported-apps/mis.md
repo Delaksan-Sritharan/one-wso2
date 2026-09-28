@@ -1361,6 +1361,14 @@ Kept because the two apps run side by side during the parallel period and must a
    shortcut or a real defect, and the two apps running side by side is the wrong time to find out.
 6. **`BFSI` is added to the industry list client-side.** The backend has never sent it
    (`ArrDashboard.js:54`). Kept, because Finance filters by it today.
+7. **A named February TTM ends on the 28th in a leap year too.** The newest column closes on the
+   last day of February in the as-of year, and each earlier column is that date shifted by
+   `addYears`, which keeps the day number. From a 2026 as-of the 2024 column therefore ends on
+   2024/02/28, and 29 February 2024 falls in the next column, which opens on 2024/02/28.
+   `ttmPeriods.js` shifts the same way. Reproduced so the two apps' February columns cover the
+   same days while they run side by side. The clamp the other way — a 29 February as-of into a
+   common year — is the leap-day case the port does NOT copy, and it is in §7, because the
+   parallel period contains no 29 February.
 
 **The drill-down dialog renders a missing value two different ways, and the port keeps both.** Seven
 of its columns fall back to the literal `N/A`; four render an empty cell. The four are exactly the

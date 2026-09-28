@@ -140,6 +140,23 @@ describe("Annually on a TTM Window", () => {
     ]);
   });
 
+  // Spec §8. The newest February closes on the 28th in 2026, and earlier columns
+  // keep that day number, so 2024 — a leap year — also ends on the 28th.
+  // 29 February belongs to the next column. ttmPeriods.js shifts the same way.
+  it("keeps a leap day in the later column when February is named from a common year", () => {
+    const ranges = getTtmPeriods({ yearsBack: 3, endingMonth: "February", asOf: ASOF });
+    expect(ranges.find((range) => range.end.startsWith("2024/"))).toMatchObject({
+      opening: "2023/02/28",
+      start: "2023/03/01",
+      end: "2024/02/28",
+    });
+    expect(ranges.find((range) => range.end.startsWith("2025/"))).toMatchObject({
+      opening: "2024/02/28",
+      start: "2024/02/29",
+      end: "2025/02/28",
+    });
+  });
+
   it("still gives one window when Years Back is below the legal range", () => {
     expect(getTtmPeriods({ yearsBack: 0, asOf: ASOF })).toHaveLength(1);
   });
