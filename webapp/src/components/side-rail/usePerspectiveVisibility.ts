@@ -271,12 +271,14 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     marketingOpsGate.isError ||
     dueDiligenceGate.isError ||
     infraGate.isError ||
+    salesGate.isError ||
     subscriptionGate.isError;
   const error = userInfo.isError
     ? userInfo.error
     : marketingOpsGate.errorMessage ??
       dueDiligenceGate.errorMessage ??
       infraGate.errorMessage ??
+      salesGate.errorMessage ??
       subscriptionGate.errorMessage;
   const retry = (): void => {
     if (userInfo.isError) void userInfo.refetch();
@@ -284,6 +286,7 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     if (dueDiligenceGate.isError) dueDiligenceGate.retry();
     if (subscriptionGate.isError) subscriptionGate.retry();
     if (infraGate.isError) infraGate.retry();
+    if (salesGate.isError) salesGate.retry();
   };
 
   return { resolveVisible, isResolving, visibleLeaves, isError, error, retry };
