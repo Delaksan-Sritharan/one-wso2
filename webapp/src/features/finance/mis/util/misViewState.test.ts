@@ -338,9 +338,12 @@ describe("the Type parameter", () => {
     const quarterly = { ...defaultAppliedFilters(QUARTERLY, SUBSCRIPTION), qrrType: "Renewal QRR", cumulativeQuarterly: true };
     expect(params(serializeViewState({ period: QUARTERLY, table: SUBSCRIPTION, filters: quarterly })))
       .toEqual({ type: "Renewal QRR", cumulative: "1" });
-    const monthly = { ...defaultAppliedFilters(MONTHLY, SUBSCRIPTION), mrrType: "Delayed MRR", cumulativeMonthly: true };
+    // Renewal, not Delayed. The Subscription Build does not offer Delayed, and
+    // the writer omits a value the reader would drop — so this sample has to
+    // be one the Build actually has.
+    const monthly = { ...defaultAppliedFilters(MONTHLY, SUBSCRIPTION), mrrType: "Renewal MRR", cumulativeMonthly: true };
     expect(params(serializeViewState({ period: MONTHLY, table: SUBSCRIPTION, filters: monthly })))
-      .toEqual({ type: "Delayed MRR", cumulative: "1" });
+      .toEqual({ type: "Renewal MRR", cumulative: "1" });
   });
 });
 
