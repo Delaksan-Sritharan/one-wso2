@@ -97,6 +97,11 @@ export default function OrgChartSidebar({
   onReset,
 }: OrgChartSidebarProps) {
   const [query, setQuery] = useState("");
+  // Whether the dropdown should show at all — decoupled from `query` itself
+  // so clicking away dismisses it (standard search-dropdown behaviour,
+  // matching browser address bars/MUI's own Autocomplete) without losing
+  // what was typed: refocusing the input re-opens it against the same text.
+  const [isFocused, setIsFocused] = useState(false);
 
   const matches = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
@@ -141,12 +146,22 @@ export default function OrgChartSidebar({
           placeholder="Find a person by name or email…"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           slotProps={{
             input: { startAdornment: <SearchIcon size={16} style={{ marginRight: 8, opacity: 0.5 }} /> },
           }}
         />
-        {query.trim() !== "" && (
+        {query.trim() !== "" && isFocused && (
           <Box
+            // Clicking a result would otherwise blur the input a tick before
+            // its own onClick fires (mousedown shifts focus, and that blur
+            // flips isFocused to false and unmounts this Box before the
+            // click ever reaches ListItemButton) — preventDefault on
+            // mousedown keeps focus on the input instead, so the dropdown
+            // stays mounted through the click. Clicking OUTSIDE this Box
+            // entirely still blurs the input normally and closes it.
+            onMouseDown={(event) => event.preventDefault()}
             sx={{
               position: "absolute",
               top: "calc(100% + 4px)",
