@@ -59,7 +59,8 @@ export default function MyAccountsTab() {
     // Still set here: the dialog reports success before anything clears it.
     const submittedType = editingType;
     setEditingType(null);
-    void accounts.refetch();
+    // No explicit refetch here: useCreateBankAccountRequest's own onSuccess
+    // already invalidates this same query, which refetches it.
     // The source app's own wording, naming the Account Type in lower case.
     setSnack({
       open: true,

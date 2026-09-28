@@ -80,7 +80,7 @@ export default function BankAccountsCard({ ownerEmail }: { ownerEmail?: string }
             onNext={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
           />
         )}
-        {bankingAccess.canSee && (
+        {bankingAccess.canSee && configured && (
           <Button size="small" component={RouterLink} to="/me/banking">
             Edit
           </Button>

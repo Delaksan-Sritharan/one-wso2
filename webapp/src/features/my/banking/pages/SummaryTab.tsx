@@ -80,6 +80,12 @@ const compareText = new Intl.Collator(undefined, { numeric: true, sensitivity: "
 // Account Type and every status, from the same unfiltered accounts fetch
 // the My Accounts tab already makes (react-query shares the cached result).
 // Rows keep the order the backend returns them in.
+//
+// Built on raw Table/TableSortLabel/TablePagination rather than Oxygen's
+// ListingTable on purpose: the source grid's three-state sort per column
+// (ascending -> descending -> back to the backend's own order) is what this
+// tab has to match, and that reset-to-unsorted state isn't a standard grid
+// sort cycle.
 export default function SummaryTab() {
   const asgardeoUser = useAsgardeoUser();
   const ownerEmail = asgardeoUser.email;

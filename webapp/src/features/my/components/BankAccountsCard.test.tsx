@@ -18,9 +18,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 
-const accounts = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
+const accounts = vi.hoisted(() => ({ value: {} as Record<string, unknown>, configured: true }));
 vi.mock("../api/useBankAccounts", () => ({
-  isBankingBackendConfigured: () => true,
+  isBankingBackendConfigured: () => accounts.configured,
   useBankAccounts: () => accounts.value,
 }));
 
@@ -41,6 +41,7 @@ function renderCard() {
 
 beforeEach(() => {
   access.canSee = true;
+  accounts.configured = true;
   accounts.value = {
     data: { bankAccounts: [], count: 0 },
     isLoading: false,
@@ -58,6 +59,16 @@ describe("BankAccountsCard's Edit link", () => {
 
   it("is not offered to someone the Banking page is closed to", () => {
     access.canSee = false;
+    renderCard();
+    expect(screen.queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
+  it("is not offered when the banking backend isn't configured, even though the gate defaults open", () => {
+    // useBankingAccess deliberately returns canSee: true when unconfigured
+    // (so BankingRoute itself doesn't bounce people); this card must not
+    // reuse that as "show the link" or it points at a dead page.
+    access.canSee = true;
+    accounts.configured = false;
     renderCard();
     expect(screen.queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
   });

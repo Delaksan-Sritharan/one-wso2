@@ -1027,4 +1027,32 @@ describe("Summary tab", () => {
     renderSummary();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
+
+  it("stays on a valid page when a refetch leaves fewer rows than the page being viewed", async () => {
+    const user = userEvent.setup();
+    useBankAccountsMock.mockReturnValue(
+      accounts(Array.from({ length: 10 }, (_, i) => account({ accountId: i + 1, accountNumber: String(i + 1) }))),
+    );
+    const { rerender } = renderSummary();
+
+    // rowsPerPage defaults to 7, so page 2 holds rows 8-10.
+    await user.click(screen.getByRole("button", { name: "Go to next page" }));
+    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(4); // header + 3
+
+    // The list is refetched on open and now has only 1 row — page 2 no longer exists.
+    useBankAccountsMock.mockReturnValue(accounts([account({ accountId: 1 })]));
+    rerender(
+      <MemoryRouter initialEntries={["/me/banking/summary"]}>
+        <Routes>
+          <Route path="me/banking" element={<BankingPage />}>
+            <Route index element={<BankingIndex />} />
+            <Route path="my-accounts" element={<MyAccountsTab />} />
+            <Route path="summary" element={<SummaryTab />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(2); // header + 1, not empty
+  });
 });
