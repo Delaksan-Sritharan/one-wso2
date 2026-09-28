@@ -45,7 +45,9 @@ import type { DrillDownFilter } from "./dashboard/constants";
 export default function RiskDashboard(): JSX.Element {
   const authFetch = useAuthApiClient();
   const navigate = useNavigate();
-  const [teams, setTeams] = useState<RiskTeam[]>([]);
+  // null until the register list loads (or if it fails): the category views
+  // need the complete list, so they stay hidden rather than undercount.
+  const [teams, setTeams] = useState<RiskTeam[] | null>(null);
   const [registerId, setRegisterId] = useState(0); // 0 = All Registers
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
   const [scores, setScores] = useState<RiskScore[]>([]);
@@ -108,7 +110,7 @@ export default function RiskDashboard(): JSX.Element {
             Overview of organizational risk posture
           </Typography>
         </Box>
-        <RegisterFilter teams={teams} value={registerId} onChange={setRegisterId} />
+        <RegisterFilter teams={teams ?? []} value={registerId} onChange={setRegisterId} />
       </Stack>
 
       {loading && (

@@ -39,7 +39,8 @@ interface DashboardViewProps {
   scores: RiskScore[];
   // The dashboard's register list (the register filter's options) — the
   // category views need registers with no risks too, which the payload omits.
-  teams: RiskTeam[];
+  // null while the register list is loading or failed to load — see RiskDashboard.
+  teams: RiskTeam[] | null;
   // false when the page is scoped to one register — hides charts that only
   // make sense comparing across registers (their x-axis or plotted points
   // *are* the register comparison).
@@ -68,8 +69,8 @@ export default function DashboardView({
     ...dashboard.registers.map((r) => ({ id: r.register_id, name: r.register_name })),
     ...(repeatedCategories ?? []).map((r) => ({ id: r.register_id, name: r.register_name })),
   ];
-  const registers = scopeRegisters(teams, payloadRegisters, registerId);
-  const registerColors = buildRegisterColorMap(scopeRegisters(teams, payloadRegisters).map((r) => r.name));
+  const registers = scopeRegisters(teams ?? [], payloadRegisters, registerId);
+  const registerColors = buildRegisterColorMap(scopeRegisters(teams ?? [], payloadRegisters).map((r) => r.name));
   const repeatGroups = groupRepeatedByRegister(registers, repeatedCategories ?? []);
   const registersWithRepeats = repeatGroups.filter((g) => g.rows.length > 0).length;
 
@@ -181,7 +182,7 @@ export default function DashboardView({
         <RegisterSection key={register.register_id} register={register} scores={scores} onDrillDown={onDrillDown} />
       ))}
 
-      {repeatedCategories && (
+      {teams && repeatedCategories && (
         <ChartCard
           title="Repeated Risks Within Each Register"
           subtitle="Risks covering the same category or root cause logged as separate entries. Open/Closed split shown for each repeated category."
@@ -197,7 +198,7 @@ export default function DashboardView({
         </ChartCard>
       )}
 
-      {isAllRegisters && commonOpenCategories && (
+      {isAllRegisters && teams && commonOpenCategories && (
         <ChartCard
           title="Common Open Risks Across All Risk Registers"
           subtitle="Risk categories open in 2 or more registers, each tracked under a separate remediation plan. Closed counts shown for context."
