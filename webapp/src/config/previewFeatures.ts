@@ -85,7 +85,14 @@ export type PreviewFeature =
    * stays hidden until this is on. A direct visit while it is off says
    * Engineering is not available.
    */
-  | "engineering";
+  | "engineering"
+  /**
+   * Finance → Finance MIS — the ARR, QRR and MRR Builds and ARR Analysis,
+   * rail entries and routes alike. Held back as a whole until Finance has
+   * compared it with the running MIS, figure for figure. `useMisGate`'s own
+   * privilege check is unrelated and keeps working the same either way.
+   */
+  | "mis";
 
 /**
  * Whether a preview feature should be shown.

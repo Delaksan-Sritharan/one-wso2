@@ -361,6 +361,7 @@ describe("claimOf", () => {
       "marketing",
       "due-diligence",
       "finance",
+      "mis",
       "leave",
       "banking",
       "banking-admin",

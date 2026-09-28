@@ -65,7 +65,7 @@ env vars use the `ONE_WSO2_` prefix (`vite.config.ts`).
 | `ONE_WSO2_ASGARDEO_MYACCOUNT_URL` | optional; defaults to the auth base URL with `api.` swapped for `myaccount.` | |
 | `ONE_WSO2_THEME` | `wso2` (default), `acrylicOrange`, `acrylicPurple`, `classic`, `highContrast`, `paleIndigo`, `paleGray` | `wso2` |
 | `ONE_WSO2_IDLE_AUTO_SIGN_OUT` | optional; `true` signs out 30 minutes after inactivity instead of waiting at the idle prompt | `false` |
-| `ONE_WSO2_PREVIEW_FEATURES` | features built but not released; absent or `false` hides them | `{ umt: false }` |
+| `ONE_WSO2_PREVIEW_FEATURES` | features built but not released; absent or `false` hides them | `{ umt: false, mis: false }` |
 
 ### Feature backends
 
@@ -90,6 +90,7 @@ naming the key and makes no requests.
 | Sales meetings | `ONE_WSO2_REVOPS_BACKEND_URL` |
 | Marketing Ops | `ONE_WSO2_MARKETINGOPS_BACKEND_URL`, `ONE_WSO2_MARKETINGOPS_ISAC_URL`, `ONE_WSO2_PARDOT_BASE_URL`, `ONE_WSO2_SALESFORCE_BASE_URL` |
 | Due Diligence | `ONE_WSO2_DUE_DILIGENCE_BACKEND_URL` |
+| Finance MIS | `ONE_WSO2_MIS_ARR_BACKEND_URL` (also needs `mis` in `ONE_WSO2_PREVIEW_FEATURES`) |
 | Infra Portal | `ONE_WSO2_INFRA_BACKEND_URL` |
 | CSM (separate app, opened in a new tab) | `ONE_WSO2_CSM_URL` |
 
