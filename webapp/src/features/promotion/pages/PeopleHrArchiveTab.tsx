@@ -40,7 +40,7 @@ import {
   TextField,
   Typography,
 } from "@wso2/oxygen-ui";
-import { ArchiveIcon, TrendingUpIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArchiveIcon, TrendingUpIcon, TriangleAlertIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { usePromotionArchive } from "../api/usePromotionArchive";
 import PromotionEmptyState from "../components/PromotionEmptyState";
@@ -163,7 +163,17 @@ export default function PeopleHrArchiveTab() {
         )}
       </Stack>
 
-      {archive.isPending ? (
+      {rangeInvalid ? (
+        // The query is disabled while the range is invalid, so archive.isPending
+        // would otherwise stay true forever — checked before it, ahead of the
+        // Skeleton, rather than leaving the "'To' is before 'from'" field-level
+        // helper text as the only explanation for a permanently-loading panel.
+        <PromotionEmptyState
+          icon={<TriangleAlertIcon size={28} />}
+          tone="warning"
+          message="'To' is before 'from' — fix the date range to see results."
+        />
+      ) : archive.isPending ? (
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : archive.isError ? (
         <PromotionEmptyState

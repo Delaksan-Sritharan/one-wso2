@@ -24,7 +24,7 @@
 // `from: "promotion_board"` passed to approve/reject, and the deadline field
 // read (promotionBoardDeadline, not functionalLeadDeadline).
 import { useState } from "react";
-import { Box, Button, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
+import { Alert, Box, Button, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
 import { CalendarOffIcon, CheckIcon, ChevronDownIcon, InboxIcon, PencilIcon, RefreshCwIcon, TriangleAlertIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
@@ -56,6 +56,7 @@ export default function PBActiveRequestsTab() {
   const [viewingRequest, setViewingRequest] = useState<PromotionRequestFull | null>(null);
   const [rejectTarget, setRejectTarget] = useState<number[] | null>(null);
   const [confirm, setConfirm] = useState<ConfirmationContent | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const approve = useApprovePromotionRequests("promotion_board");
   const reject = useRejectPromotionRequests("promotion_board");
@@ -68,7 +69,14 @@ export default function PBActiveRequestsTab() {
       text: `Do you want to approve ${ids.length > 1 ? "these promotion requests" : "this promotion request"}?`,
       confirmLabel: "approve",
       confirmAction: () => {
-        approve.mutate(ids, { onSuccess: () => setSelectedIds([]) });
+        setActionError(null);
+        approve.mutate(ids, {
+          onSuccess: () => setSelectedIds([]),
+          onError: (error) => {
+            setSelectedIds([]);
+            setActionError(humanizeHttpError(error));
+          },
+        });
       },
     });
   };
@@ -120,9 +128,25 @@ export default function PBActiveRequestsTab() {
         onClose={() => setRejectTarget(null)}
         onConfirm={(reason) => {
           if (!rejectTarget) return;
-          reject.mutate({ ids: rejectTarget, reason }, { onSuccess: () => setSelectedIds([]) });
+          setActionError(null);
+          reject.mutate(
+            { ids: rejectTarget, reason },
+            {
+              onSuccess: () => setSelectedIds([]),
+              onError: (error) => {
+                setSelectedIds([]);
+                setActionError(humanizeHttpError(error));
+              },
+            },
+          );
         }}
       />
+
+      {actionError && (
+        <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setActionError(null)}>
+          {actionError}
+        </Alert>
+      )}
 
       {cycle.cycle && !deadlinePast && (
         <PromotionDeadlineBanner>

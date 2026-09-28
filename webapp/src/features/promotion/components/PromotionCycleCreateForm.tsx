@@ -45,6 +45,14 @@ function addDays(base: Date, days: number): Date {
   return d;
 }
 
+// The DatePickers' own minDate/maxDate only constrain what a NEW pick can
+// be — they don't retroactively invalidate a value already sitting in
+// state when a dependency (startDate, functionalLeadDeadline) changes
+// later, so canSubmit re-checks the same ordering explicitly.
+function withinRange(date: Date, min: Date, max: Date): boolean {
+  return date >= min && date <= max;
+}
+
 // Ports promotion-app's own component/forms/promotionCycleForm.tsx
 // ("NewCycleForm") — creates a new promotion cycle with three deadlines
 // nested inside the cycle's own date range. `name` is built client-side as
@@ -72,6 +80,9 @@ export default function PromotionCycleCreateForm() {
     Boolean(functionalLeadDeadline) &&
     Boolean(promotionBoardDeadline) &&
     startDate! <= endDate! &&
+    withinRange(leadDeadline!, startDate!, endDate!) &&
+    withinRange(functionalLeadDeadline!, startDate!, endDate!) &&
+    withinRange(promotionBoardDeadline!, functionalLeadDeadline!, endDate!) &&
     !create.isPending;
 
   const handleSubmit = () => {

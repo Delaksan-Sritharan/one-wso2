@@ -16,6 +16,7 @@
 
 import { useState } from "react";
 import {
+  Alert,
   Autocomplete,
   Button,
   Dialog,
@@ -26,6 +27,7 @@ import {
   TextField,
   Typography,
 } from "@wso2/oxygen-ui";
+import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useUpdatePromotionRequestJobBand } from "../api/usePromotionRequests";
 import type { PromotionRequestFull } from "../api/types";
@@ -84,8 +86,11 @@ function EditJobBandDialogContent({
       text: "The recommended job band for this request will change.",
       confirmLabel: "Yes",
       confirmAction: () => {
-        update.mutate({ id: request.id, promotingJobBand });
-        onClose();
+        // Stays open (rather than closing immediately) until the mutation
+        // actually resolves — closing right away would unmount this content
+        // before a failed PATCH's error had anywhere to render, silently
+        // telling the user it worked when it didn't.
+        update.mutate({ id: request.id, promotingJobBand }, { onSuccess: onClose });
       },
     });
   };
@@ -113,6 +118,11 @@ function EditJobBandDialogContent({
           </Grid>
         </Grid>
         {warning && <Typography sx={{ fontSize: 12.5, color: "warning.main", mt: 1.5 }}>{warning}</Typography>}
+        {update.isError && (
+          <Alert severity="error" sx={{ mt: 1.5 }}>
+            {humanizeHttpError(update.error)}
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>

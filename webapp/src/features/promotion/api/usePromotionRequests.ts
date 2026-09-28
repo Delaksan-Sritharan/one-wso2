@@ -61,23 +61,41 @@ function useInvalidatePromotionRequests() {
   return () => queryClient.invalidateQueries({ queryKey: [REQUESTS_KEY] });
 }
 
+// Fans a bulk action out over every id with Promise.allSettled rather than
+// Promise.all: a single rejected promise from Promise.all would abort the
+// whole batch's error handling while the OTHER requests it raced against
+// still commit on the server — silently leaving the cache stale about rows
+// that did in fact change. allSettled lets every id run to completion
+// regardless, and this throws afterward (naming which ids failed) only if
+// at least one did — the caller's onSettled still fires either way, so a
+// partial failure still invalidates and refetches the true server state.
+async function settleBulkRequest(ids: number[], run: (id: number) => Promise<unknown>): Promise<void> {
+  const results = await Promise.allSettled(ids.map(run));
+  const failedIds = ids.filter((_, i) => results[i].status === "rejected");
+  if (failedIds.length > 0) {
+    const plural = failedIds.length > 1;
+    throw new Error(
+      `${failedIds.length} of ${ids.length} request${ids.length > 1 ? "s" : ""} failed (id${plural ? "s" : ""} ${failedIds.join(", ")}). The rest were processed.`,
+    );
+  }
+}
+
 // GET .../requests/{id}/approve?from=. Also accepts a list of ids —
 // source's own approveFLPromotionRequestList thunk is just Promise.all
 // over the single-approve endpoint (no real bulk endpoint exists), so this
-// mutation does the same fan-out.
+// mutation does the same fan-out (see settleBulkRequest's own comment for
+// why allSettled, not source's plain Promise.all).
 export function useApprovePromotionRequests(from: "functional_lead" | "promotion_board") {
   const getAccessToken = useAccessToken();
   const invalidate = useInvalidatePromotionRequests();
   return useMutation({
     mutationFn: async (ids: number[]) => {
       const accessToken = await getAccessToken();
-      await Promise.all(
-        ids.map((id) =>
-          authedGet(promotionServiceUrls.promotionRequestApprove(id, from), accessToken, digiopsHeaders()),
-        ),
+      await settleBulkRequest(ids, (id) =>
+        authedGet(promotionServiceUrls.promotionRequestApprove(id, from), accessToken, digiopsHeaders()),
       );
     },
-    onSuccess: () => invalidate(),
+    onSettled: () => invalidate(),
   });
 }
 
@@ -87,17 +105,15 @@ export function useRejectPromotionRequests(from: "functional_lead" | "promotion_
   return useMutation({
     mutationFn: async (payload: { ids: number[]; reason: string }) => {
       const accessToken = await getAccessToken();
-      await Promise.all(
-        payload.ids.map((id) =>
-          authedGet(
-            promotionServiceUrls.promotionRequestReject(id, from, payload.reason),
-            accessToken,
-            digiopsHeaders(),
-          ),
+      await settleBulkRequest(payload.ids, (id) =>
+        authedGet(
+          promotionServiceUrls.promotionRequestReject(id, from, payload.reason),
+          accessToken,
+          digiopsHeaders(),
         ),
       );
     },
-    onSuccess: () => invalidate(),
+    onSettled: () => invalidate(),
   });
 }
 

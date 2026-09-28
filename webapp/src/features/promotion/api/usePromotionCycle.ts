@@ -85,9 +85,17 @@ export function useInactivePromotionCycles() {
 // The backend re-checks this itself on every mutating recommendation
 // endpoint (save/submit), so a stale clock here can only hide an action
 // early, never let one through the server wouldn't have accepted anyway.
+//
+// `deadline` is a date-only string ("YYYY-MM-DD"). `new Date(deadline)`
+// parses that as UTC midnight, not local midnight — in a negative-UTC-offset
+// timezone (the Americas), that instant already falls on the PREVIOUS local
+// day, so a naive `new Date(deadline).setHours(23,59,59,999)` would mark end
+// of the wrong day, hiding this deadline's own actions a day early. Building
+// the Date from its own y/m/d components instead uses the local-time
+// constructor, which has no such UTC step.
 export function isPromotionDeadlinePast(deadline: string | undefined): boolean {
   if (!deadline) return false;
-  const endOfDay = new Date(deadline);
-  endOfDay.setHours(23, 59, 59, 999);
+  const [year, month, day] = deadline.split("-").map(Number);
+  const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
   return Date.now() > endOfDay.getTime();
 }

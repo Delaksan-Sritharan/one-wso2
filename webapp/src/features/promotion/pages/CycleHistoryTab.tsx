@@ -56,7 +56,11 @@ export default function CycleHistoryTab() {
   const enableBuFilter = !role.isHrAdmin && role.isFunctionalLead;
   const requests = usePromotionRequests(
     { cycleId: selectedCycleId || undefined, enableBuFilter },
-    selectedCycleId !== "",
+    // Wait for the role privileges to resolve too — firing while `role` is
+    // still loading would use enableBuFilter's default-false reading
+    // (org-wide) for a functional lead who isn't also HR_ADMIN, then
+    // immediately refire scoped once the real answer lands a moment later.
+    selectedCycleId !== "" && !role.isLoading,
   );
 
   const columns: DataGrid.GridColDef<PromotionRequestFull>[] = [

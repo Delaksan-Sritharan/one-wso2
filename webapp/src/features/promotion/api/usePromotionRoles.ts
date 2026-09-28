@@ -37,9 +37,10 @@ export function usePromotionPrivileges(workEmail: string | undefined, enabled = 
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
   const backendConfigured = Boolean(promotionBackendUrl);
+  const queryEnabled = enabled && isSignedIn && backendConfigured && Boolean(workEmail);
   const query = useQuery<PromotionPrivilegesResponse>({
     queryKey: ["promotion-employee-privileges", workEmail],
-    enabled: enabled && isSignedIn && backendConfigured && Boolean(workEmail),
+    enabled: queryEnabled,
     queryFn: async () => {
       const accessToken = await getAccessToken();
       return authedGet<PromotionPrivilegesResponse>(
@@ -58,7 +59,14 @@ export function usePromotionPrivileges(workEmail: string | undefined, enabled = 
     isFunctionalLead: codes.includes(FUNCTIONAL_LEAD_PRIVILEGE),
     isHrAdmin: codes.includes(HR_ADMIN_PRIVILEGE),
     isPromotionBoardMember: codes.includes(PROMOTION_BOARD_MEMBER_PRIVILEGE),
-    isLoading: query.isPending,
+    // A disabled query (`queryEnabled` false — no backend configured, or no
+    // workEmail to ask about) reports `isPending: true` forever in TanStack
+    // Query v5, since it never gets a chance to fetch. Gating on
+    // `queryEnabled` too means a caller that will genuinely never get an
+    // answer sees `isLoading: false` instead of spinning — every
+    // PromotionRequires*Route guard then falls through to its own
+    // fail-closed redirect rather than rendering nothing indefinitely.
+    isLoading: queryEnabled && query.isPending,
     isError: query.isError,
     error: query.error,
     isFetching: query.isFetching,

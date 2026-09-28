@@ -122,7 +122,7 @@ export default function AdminIndividualContributorTab() {
         </Tooltip>
       </Box>
 
-      {cycle.isPending || requests.isPending ? (
+      {cycle.isPending ? (
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : cycle.isError ? (
         <PromotionEmptyState
@@ -132,6 +132,8 @@ export default function AdminIndividualContributorTab() {
         />
       ) : !cycle.cycle ? (
         <PromotionEmptyState icon={<InboxIcon size={28} />} message="There is no active promotion cycle" />
+      ) : requests.isPending ? (
+        <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : requests.isError ? (
         <PromotionEmptyState
           icon={<TriangleAlertIcon size={28} />}

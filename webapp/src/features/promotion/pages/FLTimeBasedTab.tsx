@@ -22,7 +22,8 @@
 // CustomTable (this is the one FL tab source itself didn't build on that
 // component).
 import { Box, Chip, Grid, IconButton, Skeleton, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { ArrowRightIcon, InboxIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArrowRightIcon, InboxIcon, RefreshCwIcon, TriangleAlertIcon } from "@wso2/oxygen-ui-icons-react";
+import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests } from "../api/usePromotionRequests";
 import PromotionDeadlineBanner from "../components/PromotionDeadlineBanner";
@@ -71,8 +72,20 @@ export default function FLTimeBasedTab() {
 
       {cycle.isPending || (requests.isPending && Boolean(cycle.cycle)) ? (
         <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 1 }} />
+      ) : cycle.isError ? (
+        <PromotionEmptyState
+          icon={<TriangleAlertIcon size={28} />}
+          tone="error"
+          message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
+        />
       ) : !cycle.cycle ? (
         <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no active promotion cycles" />
+      ) : requests.isError ? (
+        <PromotionEmptyState
+          icon={<TriangleAlertIcon size={28} />}
+          tone="error"
+          message={`Unable to load promotion requests. ${humanizeHttpError(requests.error)}`}
+        />
       ) : rows.length === 0 ? (
         <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no time based promotion requests" />
       ) : (
