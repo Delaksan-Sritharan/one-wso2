@@ -28,7 +28,7 @@
 // mechanism, combined with the department filter by AND rather than
 // replacing it — picking both isolates people matching both at once.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -102,6 +102,10 @@ export default function OrgChartSidebar({
   // matching browser address bars/MUI's own Autocomplete) without losing
   // what was typed: refocusing the input re-opens it against the same text.
   const [isFocused, setIsFocused] = useState(false);
+  // Wraps the input AND the dropdown, so the input's own onBlur can tell a
+  // Tab into a result (focus staying inside this box) apart from focus
+  // actually leaving the widget (see the onBlur handler below).
+  const searchBoxRef = useRef<HTMLDivElement>(null);
 
   const matches = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
@@ -139,7 +143,22 @@ export default function OrgChartSidebar({
         </Box>
       </Stack>
 
-      <Box sx={{ position: "relative" }}>
+      <Box
+        ref={searchBoxRef}
+        sx={{ position: "relative" }}
+        // On the container, not just the input: React's onBlur tracks the
+        // native focusout event, which bubbles, so this also catches focus
+        // leaving a ListItemButton — needed because once Tab has moved focus
+        // past the input and into the results, further Tabs (between
+        // results, or off the far end) never blur the input again. Only
+        // relatedTarget outside this whole container counts as "left the
+        // widget"; moving from the input onto a result, or from one result
+        // to the next, stays inside it and keeps the dropdown open.
+        onBlur={(event) => {
+          if (searchBoxRef.current?.contains(event.relatedTarget as Node | null)) return;
+          setIsFocused(false);
+        }}
+      >
         <TextField
           fullWidth
           size="small"
@@ -147,7 +166,6 @@ export default function OrgChartSidebar({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
           slotProps={{
             input: { startAdornment: <SearchIcon size={16} style={{ marginRight: 8, opacity: 0.5 }} /> },
           }}
