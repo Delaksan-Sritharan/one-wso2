@@ -90,4 +90,21 @@ describe("writing", () => {
     expect(result.current.location.search).toBe("");
     expect(result.current.state.view).toBe("");
   });
+
+  // The fragment is an in-page link, not view state. Rewriting the query must
+  // not move the reader off the section they followed the link to.
+  it("keeps the fragment when it rewrites the query", () => {
+    const { result } = renderAt("?q=opening#section");
+    act(() => result.current.state.setView("closing"));
+    expect(result.current.location.search).toBe("?q=closing");
+    expect(result.current.location.hash).toBe("#section");
+  });
+
+  it("keeps the fragment when the view serialises to nothing", () => {
+    const { result } = renderAt("?q=opening#section");
+    act(() => result.current.state.setView(""));
+    expect(result.current.location.search).toBe("");
+    expect(result.current.location.hash).toBe("#section");
+    expect(result.current.navigationType).toBe("REPLACE");
+  });
 });

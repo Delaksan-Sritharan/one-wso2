@@ -15,7 +15,7 @@
 // under the License.
 
 import { useCallback, useMemo } from "react";
-import { useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 /**
  * Binds a screen's pure view codec to the address bar.
@@ -55,6 +55,9 @@ export interface UrlViewState<TRead, TWrite = TRead> {
    * address was carrying does not survive. That is what "a view is fully
    * described by its URL" costs, and the alternative — merging — leaves
    * parameters behind that no longer describe anything on screen.
+   *
+   * The fragment is left as it was. It is not part of the view, and replacing
+   * the address with a query-only URL would drop an in-page link's target.
    */
   setView(next: TWrite): void;
 }
@@ -71,16 +74,22 @@ export function useUrlViewState<TRead, TWrite = TRead>({
   parse,
   serialize,
 }: UrlViewCodec<TRead, TWrite>): UrlViewState<TRead, TWrite> {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const { hash } = useLocation();
+  const navigate = useNavigate();
   const search = searchParams.toString();
 
   const view = useMemo(() => parse(search), [parse, search]);
 
   const setView = useCallback(
     (next: TWrite) => {
-      setSearchParams(serialize(next), { replace: true });
+      // `setSearchParams` navigates to "?" plus the new query and nothing else,
+      // so a fragment the reader followed (`#section`) disappears. The search
+      // is still replaced wholesale; only the fragment rides along.
+      const nextSearch = serialize(next);
+      navigate({ search: nextSearch ? `?${nextSearch}` : "", hash }, { replace: true });
     },
-    [serialize, setSearchParams],
+    [serialize, navigate, hash],
   );
 
   return { view, setView };

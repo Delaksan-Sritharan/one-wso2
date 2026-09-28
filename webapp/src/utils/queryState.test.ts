@@ -169,6 +169,22 @@ describe("the writer", () => {
     expect(changed.toString()).toBe("region=EMEA%2CAPAC");
   });
 
+  // `listParam` reads `region=` as nothing and does not count it. Writing it
+  // for [] would leave a parameter that describes no view, instead of the
+  // empty query a default view owes.
+  it("omits an empty list when there is no fallback", () => {
+    const query = queryWriter();
+    query.setIfChanged("region", [], undefined, listParam);
+    expect(query.toString()).toBe("");
+    const reader = queryReader(query.toString());
+    expect(reader.read("region", listParam)).toBeUndefined();
+    expect(reader.recognised).toBe(0);
+
+    const kept = queryWriter();
+    kept.setIfChanged("region", ["EMEA"], undefined, listParam);
+    expect(kept.toString()).toBe("region=EMEA");
+  });
+
   it("writes a value with no default unconditionally", () => {
     const query = queryWriter();
     query.set("scale", "k");
