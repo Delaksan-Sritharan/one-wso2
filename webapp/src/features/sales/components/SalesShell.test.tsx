@@ -14,7 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { HttpError } from "@api/http";
 import { RadioIcon } from "@wso2/oxygen-ui-icons-react";
 import type { PerspectiveDef } from "@constants/perspectives";
 
@@ -40,6 +41,29 @@ const sales: PerspectiveDef = {
 vi.mock("@context/perspective/PerspectiveContext", () => ({
   useActivePerspective: () => sales,
 }));
+
+// meet-app's answer to /user-info -- the access check the shell waits on. Defaults to "allowed".
+const access: { isPending: boolean; isLoading: boolean; isError: boolean; error: unknown } = {
+  isPending: false,
+  isLoading: false,
+  isError: false,
+  error: null,
+};
+const refetch = vi.fn();
+vi.mock("../api/useSalesData", () => ({
+  useSalesUserInfo: () => ({ ...access, refetch }),
+}));
+beforeEach(() => {
+  access.isPending = false;
+  access.isLoading = false;
+  access.isError = false;
+  access.error = null;
+  refetch.mockClear();
+});
+const refuse = () => {
+  access.isError = true;
+  access.error = new HttpError("https://x/user-info", 403, "");
+};
 
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
@@ -87,6 +111,44 @@ describe("SalesShell", () => {
     renderShell({ configured: true, forbidden: false });
     expect(screen.getByText("meeting list")).toBeInTheDocument();
     expect(screen.queryByText("Nothing here for you yet")).not.toBeInTheDocument();
+  });
+
+  // The flash this fixes: the meetings grid rendered while meet-app's answer was in flight, then
+  // was replaced by the no-access card. Nothing of the page may show until access is known.
+  it("holds the page while access is being checked -- no content, just the title and a spinner", () => {
+    access.isPending = true;
+    access.isLoading = true;
+    renderShell({ configured: true });
+    expect(screen.getByText("Checking your Sales access…")).toBeInTheDocument();
+    expect(screen.queryByText("meeting list")).not.toBeInTheDocument();
+    expect(screen.queryByText("Nothing here for you yet")).not.toBeInTheDocument();
+  });
+
+  // Identity still resolving: the query is disabled -- pending but not loading. Still hold.
+  it("holds the page while identity is still resolving (pending, not loading)", () => {
+    access.isPending = true;
+    renderShell({ configured: true });
+    expect(screen.getByText("Checking your Sales access…")).toBeInTheDocument();
+    expect(screen.queryByText("meeting list")).not.toBeInTheDocument();
+  });
+
+  it("shows the no-access card when meet-app's access check itself says 403", () => {
+    refuse();
+    renderShell({ configured: true });
+    expect(screen.getByRole("heading", { name: "Nothing here for you yet" })).toBeInTheDocument();
+    expect(screen.queryByText("meeting list")).not.toBeInTheDocument();
+  });
+
+  // An outage is not a missing permission -- say the check failed, and offer a retry.
+  it("reports a failed access check as a failure, with a retry, not as no access", async () => {
+    access.isError = true;
+    access.error = new HttpError("https://x/user-info", 503, "");
+    renderShell({ configured: true });
+    expect(screen.getByText(/Couldn't check your Sales access/)).toBeInTheDocument();
+    expect(screen.queryByText("Nothing here for you yet")).not.toBeInTheDocument();
+    expect(screen.queryByText("meeting list")).not.toBeInTheDocument();
+    screen.getByRole("button", { name: /retry/i }).click();
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   // The requirement is visual parity with Security and Compliance and Marketing Ops. Both reach
