@@ -30,6 +30,7 @@ import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useActivePromotionCycle, isPromotionDeadlinePast } from "../api/usePromotionCycle";
 import {
+  PartialBulkFailureError,
   useApprovePromotionRequests,
   useRejectPromotionRequests,
   usePromotionRequests,
@@ -72,8 +73,13 @@ export default function PBActiveRequestsTab() {
         setActionError(null);
         approve.mutate(ids, {
           onSuccess: () => setSelectedIds([]),
+          // A partial failure keeps just the ids that actually failed
+          // selected, ready to retry — anything else (a token refresh
+          // failing before a single request went out, say) leaves the
+          // selection exactly as the user left it, rather than discarding
+          // a batch that was never even attempted.
           onError: (error) => {
-            setSelectedIds([]);
+            if (error instanceof PartialBulkFailureError) setSelectedIds(error.failedIds);
             setActionError(humanizeHttpError(error));
           },
         });
@@ -134,7 +140,7 @@ export default function PBActiveRequestsTab() {
             {
               onSuccess: () => setSelectedIds([]),
               onError: (error) => {
-                setSelectedIds([]);
+                if (error instanceof PartialBulkFailureError) setSelectedIds(error.failedIds);
                 setActionError(humanizeHttpError(error));
               },
             },

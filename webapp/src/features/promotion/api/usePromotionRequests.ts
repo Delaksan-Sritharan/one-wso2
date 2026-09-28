@@ -61,6 +61,23 @@ function useInvalidatePromotionRequests() {
   return () => queryClient.invalidateQueries({ queryKey: [REQUESTS_KEY] });
 }
 
+// Thrown by settleBulkRequest when SOME (not all) ids failed — carries the
+// failed ids as actual data, not just baked into the message string, so a
+// caller can re-select exactly those for a retry instead of either the
+// whole original batch (re-hitting the ones that already succeeded) or
+// nothing at all (losing track of which ones still need it).
+export class PartialBulkFailureError extends Error {
+  readonly failedIds: number[];
+  constructor(failedIds: number[], totalCount: number) {
+    const plural = failedIds.length > 1;
+    super(
+      `${failedIds.length} of ${totalCount} request${totalCount > 1 ? "s" : ""} failed (id${plural ? "s" : ""} ${failedIds.join(", ")}). The rest were processed.`,
+    );
+    this.name = "PartialBulkFailureError";
+    this.failedIds = failedIds;
+  }
+}
+
 // Fans a bulk action out over every id with Promise.allSettled rather than
 // Promise.all: a single rejected promise from Promise.all would abort the
 // whole batch's error handling while the OTHER requests it raced against
@@ -73,10 +90,7 @@ async function settleBulkRequest(ids: number[], run: (id: number) => Promise<unk
   const results = await Promise.allSettled(ids.map(run));
   const failedIds = ids.filter((_, i) => results[i].status === "rejected");
   if (failedIds.length > 0) {
-    const plural = failedIds.length > 1;
-    throw new Error(
-      `${failedIds.length} of ${ids.length} request${ids.length > 1 ? "s" : ""} failed (id${plural ? "s" : ""} ${failedIds.join(", ")}). The rest were processed.`,
-    );
+    throw new PartialBulkFailureError(failedIds, ids.length);
   }
 }
 
