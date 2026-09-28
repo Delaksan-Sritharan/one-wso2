@@ -57,6 +57,10 @@ export function promotionRequestColor(status: PromotionRequestStatus): string {
     case "FL_REJECTED":
     case "REJECTED":
       return "#FF0000";
+    case "REMOVED":
+      return "#DE350B";
+    case "EXPIRED":
+      return "#727681";
     default:
       return "#0052CC";
   }
