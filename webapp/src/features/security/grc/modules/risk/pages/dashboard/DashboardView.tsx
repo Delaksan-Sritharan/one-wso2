@@ -60,15 +60,19 @@ export default function DashboardView({
   registerId,
   onDrillDown,
 }: DashboardViewProps): JSX.Element {
+  // Absent until the backend that serves them is deployed; default rather than
+  // let one missing field take the whole dashboard down.
+  const repeatedCategories = dashboard.repeated_categories ?? [];
+  const commonOpenCategories = dashboard.common_open_categories ?? [];
   const payloadRegisters = [
     ...dashboard.registers.map((r) => ({ id: r.register_id, name: r.register_name })),
-    ...dashboard.repeated_categories.map((r) => ({ id: r.register_id, name: r.register_name })),
+    ...repeatedCategories.map((r) => ({ id: r.register_id, name: r.register_name })),
   ];
   const registers = scopeRegisters(teams, payloadRegisters, registerId);
   const registerColors = buildRegisterColorMap(scopeRegisters(teams, payloadRegisters).map((r) => r.name));
-  const repeatGroups = groupRepeatedByRegister(registers, dashboard.repeated_categories);
+  const repeatGroups = groupRepeatedByRegister(registers, repeatedCategories);
   const registersWithRepeats = repeatGroups.filter((g) => g.rows.length > 0).length;
-  const openCategoryCount = dashboard.common_open_categories.length;
+  const openCategoryCount = commonOpenCategories.length;
 
   return (
     <Stack spacing={3}>
@@ -205,7 +209,7 @@ export default function DashboardView({
           }
         >
           <CommonOpenCategoriesTable
-            rows={dashboard.common_open_categories}
+            rows={commonOpenCategories}
             registers={registers}
             registerColors={registerColors}
           />
