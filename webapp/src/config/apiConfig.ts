@@ -186,10 +186,10 @@ export const bankingServiceUrls = {
   // check on this same resource).
   accountAction: (accountId: number, action: "approve" | "reject") =>
     `${bankingBackendUrl}/employee/accounts/${accountId}/${action}`,
-  // GET /employees — the banking backend's OWN employee directory (per ADR
-  // 0002: a ported app's data comes from its own backend only, never
-  // another app's people-search UI, even though one-wso2 has other
-  // directories elsewhere). Backs Employee Operations' employee search.
+  // GET /employees — the banking backend's OWN employee directory. A ported
+  // app's data comes from its own backend only, never another app's
+  // people-search UI, even though one-wso2 has other directories elsewhere.
+  // Backs Employee Operations' employee search.
   // Returns a bare array, not a `{employees: [...]}` wrapper — matches
   // service.bal's own `returns ... entity:Employee[]`.
   employees: `${bankingBackendUrl}/employees`,

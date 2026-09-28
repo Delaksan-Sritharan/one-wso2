@@ -175,6 +175,25 @@ describe("EmployeeOperationsTab", () => {
     expect(deactivateAccount.mutateAsync).toHaveBeenCalledWith({ accountId: 2, employeeEmail: "jane@wso2.com" });
   });
 
+  it("keeps deactivating the remaining Active accounts when one of them fails", async () => {
+    const user = userEvent.setup();
+    accounts.data = [
+      bankAccount({ accountId: 1, accountStatus: "ACTIVE" }),
+      bankAccount({ accountId: 2, accountStatus: "ACTIVE" }),
+    ];
+    deactivateAccount.mutateAsync
+      .mockReset()
+      .mockRejectedValueOnce(new Error("HTTP 500"))
+      .mockResolvedValueOnce(undefined);
+    render(<EmployeeOperationsTab />);
+    await selectEmployee(user);
+    await user.click(screen.getByRole("button", { name: "Resign Employee" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm" }));
+    expect(deactivateAccount.mutateAsync).toHaveBeenCalledTimes(2);
+    expect(deactivateAccount.mutateAsync).toHaveBeenCalledWith({ accountId: 1, employeeEmail: "jane@wso2.com" });
+    expect(deactivateAccount.mutateAsync).toHaveBeenCalledWith({ accountId: 2, employeeEmail: "jane@wso2.com" });
+  });
+
   it("disables the Reimbursement option for an ineligible location", async () => {
     const user = userEvent.setup();
     employees.data = [employee({ workEmail: "john@wso2.com", location: "Germany" })];

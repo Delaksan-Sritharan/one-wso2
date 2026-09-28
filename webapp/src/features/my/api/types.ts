@@ -185,8 +185,9 @@ export interface ReportFilters {
 // GET /employees on the banking backend — its OWN employee directory
 // (mirrors digiops-hr/apps/banking/backend/modules/entity/types.bal's
 // Employee record). Deliberately distinct from the `Employee` interface
-// above, which is people-app's own record with a different field set —
-// per ADR 0002, a ported app's data comes from its own backend only.
+// above, which is people-app's own record with a different field set — a
+// ported app's data comes from its own backend only, never borrowed from
+// another app's, even when the other app already has an equivalent record.
 export interface BankingEmployee {
   employeeId: string | null;
   firstName: string;

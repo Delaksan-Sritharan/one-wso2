@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -29,6 +29,8 @@ import {
   Typography,
 } from "@wso2/oxygen-ui";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
+import { dialogPaperSx } from "@components/confirmation-dialog/dialogPaperSx";
+import { useSingleFlight } from "@components/confirmation-dialog/useSingleFlight";
 import { useApproveAccount } from "@features/my/api/useApproveAccount";
 import { usePendingSalaryAccounts } from "@features/my/api/usePendingSalaryAccounts";
 import { useRejectAccount } from "@features/my/api/useRejectAccount";
@@ -47,11 +49,10 @@ export default function ChangeRequestsTab() {
   const approveAccount = useApproveAccount();
   const rejectAccount = useRejectAccount();
 
-  // One request at a time — same reasoning, and same `sending` ref pattern,
-  // as AdminTab's submitNewBank/requestThresholdUpdate: ConfirmationDialog
-  // closes synchronously on click without awaiting anything, so a quick
-  // second press on Confirm would otherwise fire a second approve request.
-  const sending = useRef(false);
+  // One request at a time: ConfirmationDialog closes synchronously on click
+  // without awaiting anything, so a quick second press on Confirm would
+  // otherwise fire a second approve/reject request.
+  const run = useSingleFlight();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -69,27 +70,16 @@ export default function ChangeRequestsTab() {
     setConfirmation({
       title: "Confirm Acceptance",
       text: "Are you sure you want to accept these changes?",
-      confirmAction: async () => {
-        if (sending.current) return;
-        sending.current = true;
-        try {
-          await approveAccount.mutateAsync(request.accountId);
-        } finally {
-          sending.current = false;
-        }
-      },
+      confirmAction: () => run(async () => await approveAccount.mutateAsync(request.accountId)),
     });
   }
 
-  async function submitReject(reason: string) {
-    if (!rejectTarget || sending.current) return;
-    sending.current = true;
-    try {
+  function submitReject(reason: string) {
+    if (!rejectTarget) return;
+    run(async () => {
       await rejectAccount.mutateAsync({ accountId: rejectTarget.accountId, rejectionReason: reason });
       setRejectTarget(null);
-    } finally {
-      sending.current = false;
-    }
+    });
   }
 
   return (
@@ -206,7 +196,7 @@ function RejectDialog({
   const [reason, setReason] = useState("");
 
   return (
-    <Dialog open onClose={onCancel} fullWidth>
+    <Dialog open onClose={onCancel} fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
       <DialogTitle>Reason for Rejection</DialogTitle>
       <DialogContent>
         <Typography sx={{ mb: 2 }}>You need to mention a reason for rejection</Typography>
@@ -262,7 +252,7 @@ function AccountDetailsDialog({ request, onClose }: { request: BankAccount; onCl
   ];
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
       <DialogTitle>Account Details</DialogTitle>
       <DialogContent>
         <Stack spacing={1}>

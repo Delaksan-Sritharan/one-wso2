@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   Autocomplete,
   Box,
@@ -28,9 +28,9 @@ import {
   TextField,
   Typography,
 } from "@wso2/oxygen-ui";
-import ConfirmationDialog, {
-  type ConfirmationContent,
-} from "@components/confirmation-dialog/ConfirmationDialog";
+import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
+import { dialogPaperSx } from "@components/confirmation-dialog/dialogPaperSx";
+import { useSingleFlight } from "@components/confirmation-dialog/useSingleFlight";
 import { useBanks } from "@features/my/api/useBanks";
 import { useBankingConfig } from "@features/my/api/useBankingConfig";
 import { useCreateBank } from "@features/my/api/useCreateBank";
@@ -53,9 +53,8 @@ export default function AdminTab() {
 
   // One request at a time: ConfirmationDialog closes synchronously on click
   // and doesn't wait for anything, so a quick second press on Confirm would
-  // otherwise fire a second create-bank or threshold-update request — same
-  // guard, same reason, as BankAccountRequestDialog's own `sending` ref.
-  const sending = useRef(false);
+  // otherwise fire a second create-bank or threshold-update request.
+  const run = useSingleFlight();
 
   const [confirmation, setConfirmation] = useState<ConfirmationContent | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,16 +90,11 @@ export default function AdminTab() {
     setConfirmation({
       title: "Confirm Acceptance",
       text: "Are you sure you want to accept these changes?",
-      confirmAction: async () => {
-        if (sending.current) return;
-        sending.current = true;
-        try {
+      confirmAction: () =>
+        run(async () => {
           await createBank.mutateAsync(payload);
           closeAddBank();
-        } finally {
-          sending.current = false;
-        }
-      },
+        }),
     });
   }
 
@@ -108,34 +102,31 @@ export default function AdminTab() {
     setConfirmation({
       title: "Confirm Acceptance",
       text: `Are you sure you want to set the ${label} to ${value}?`,
-      confirmAction: async () => {
-        if (sending.current) return;
-        sending.current = true;
-        try {
+      confirmAction: () =>
+        run(async () => {
           await updateThreshold.mutateAsync({ key, value });
-        } finally {
-          sending.current = false;
-        }
-      },
+        }),
     });
   }
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-      <ThresholdField
-        label="Salary Threshold Day (1-31)"
-        buttonLabel="Update Salary Threshold"
-        currentValue={config?.salaryThreshold}
-        canEdit={isPeopleOperationsAdmin}
-        onUpdate={(value) => requestThresholdUpdate("SALARY_THRESHOLD", value, "Salary Threshold Date")}
-      />
-      <ThresholdField
-        label="Consultancy Threshold Day (1-31)"
-        buttonLabel="Update Consultancy Threshold"
-        currentValue={config?.consultancyThreshold}
-        canEdit={isFinanceAdmin}
-        onUpdate={(value) => requestThresholdUpdate("CONSULTANCY_THRESHOLD", value, "Consultancy Threshold Date")}
-      />
+      <Stack direction="row" spacing={4} flexWrap="wrap">
+        <ThresholdField
+          label="Salary Threshold Day (1-31)"
+          buttonLabel="Update Salary Threshold"
+          currentValue={config?.salaryThreshold}
+          canEdit={isPeopleOperationsAdmin}
+          onUpdate={(value) => requestThresholdUpdate("SALARY_THRESHOLD", value, "Salary Threshold Date")}
+        />
+        <ThresholdField
+          label="Consultancy Threshold Day (1-31)"
+          buttonLabel="Update Consultancy Threshold"
+          currentValue={config?.consultancyThreshold}
+          canEdit={isFinanceAdmin}
+          onUpdate={(value) => requestThresholdUpdate("CONSULTANCY_THRESHOLD", value, "Consultancy Threshold Date")}
+        />
+      </Stack>
 
       <Box>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
@@ -169,7 +160,13 @@ export default function AdminTab() {
         )}
       </Box>
 
-      <Dialog open={addBankOpen} onClose={closeAddBank} maxWidth="sm" fullWidth>
+      <Dialog
+        open={addBankOpen}
+        onClose={closeAddBank}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: dialogPaperSx } }}
+      >
         <DialogTitle>Add New Bank</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
@@ -199,7 +196,6 @@ export default function AdminTab() {
               options={config?.allCountries ?? []}
               value={newBank.bankLocation || null}
               onChange={(_, next) => setNewBank((v) => ({ ...v, bankLocation: next ?? "" }))}
-              disableClearable
               renderInput={(params) => <TextField {...params} label="Location" />}
             />
           </Stack>
@@ -245,6 +241,11 @@ function ThresholdField({
         label={label}
         type="number"
         size="small"
+        // A number input has no intrinsic width of its own, so without one
+        // set here it sizes to the browser's narrow default — too narrow for
+        // this field's own label, which then renders truncated ("Salary...")
+        // in the outline's notch instead of clipping into it as a whole.
+        sx={{ minWidth: 260 }}
         value={value}
         onChange={(e) => {
           const raw = e.target.value;
@@ -256,10 +257,11 @@ function ThresholdField({
       />
       <Button
         variant="contained"
+        aria-label={buttonLabel}
         disabled={value === "" || isUnchanged || !canEdit}
         onClick={() => value !== "" && onUpdate(value)}
       >
-        {buttonLabel}
+        Update
       </Button>
     </Stack>
   );

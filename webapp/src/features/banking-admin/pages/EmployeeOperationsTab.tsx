@@ -14,9 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Autocomplete, Box, Button, Divider, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from "@wso2/oxygen-ui";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
+import { useSingleFlight } from "@components/confirmation-dialog/useSingleFlight";
 import { useBankAccounts } from "@features/my/api/useBankAccounts";
 import { useBankingConfig } from "@features/my/api/useBankingConfig";
 import { useBankingEmployees } from "@features/my/api/useBankingEmployees";
@@ -51,9 +52,8 @@ export default function EmployeeOperationsTab() {
 
   // Shared by Deactivate and Resign: only one ConfirmationDialog is ever
   // open at a time, and it closes synchronously on click without awaiting
-  // anything — same guard, same reason, as every other action site in this
-  // ticket set (AdminTab, ChangeRequestsTab).
-  const sending = useRef(false);
+  // anything.
+  const run = useSingleFlight();
 
   const [confirmation, setConfirmation] = useState<ConfirmationContent | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -67,18 +67,14 @@ export default function EmployeeOperationsTab() {
     setConfirmation({
       title: "Confirm Deactivation",
       text: "Are you sure you want to deactivate these account?",
-      confirmAction: async () => {
-        if (sending.current || !selectedEmployee) return;
-        sending.current = true;
-        try {
+      confirmAction: () =>
+        run(async () => {
+          if (!selectedEmployee) return;
           await deactivateAccount.mutateAsync({
             accountId: account.accountId,
             employeeEmail: selectedEmployee.workEmail,
           });
-        } finally {
-          sending.current = false;
-        }
-      },
+        }),
     });
   }
 
@@ -86,25 +82,29 @@ export default function EmployeeOperationsTab() {
     setConfirmation({
       title: "Confirm Resignation",
       text: "Are you sure you want to resign this employee? This will deactivate employee's all active bank accounts !",
-      confirmAction: async () => {
-        if (sending.current || !selectedEmployee) return;
-        sending.current = true;
-        try {
+      confirmAction: () =>
+        run(async () => {
+          if (!selectedEmployee) return;
           // Matches the source app's own Resign action: no dedicated resign
           // endpoint, just every currently-Active account deactivated in
-          // turn, behind this one confirmation.
+          // turn, behind this one confirmation. Each account is its own
+          // try/catch, same as the source's own loop — one account's
+          // deactivate failing (the backend can 500 on a CONSULTANCY account
+          // with no NetSuite internal id on file, for instance) must not
+          // stop the remaining active accounts from being attempted too.
           for (const account of accounts) {
             if (account.accountStatus === "ACTIVE") {
-              await deactivateAccount.mutateAsync({
-                accountId: account.accountId,
-                employeeEmail: selectedEmployee.workEmail,
-              });
+              try {
+                await deactivateAccount.mutateAsync({
+                  accountId: account.accountId,
+                  employeeEmail: selectedEmployee.workEmail,
+                });
+              } catch (error) {
+                console.error(`Failed to deactivate account ${account.accountId}:`, error);
+              }
             }
           }
-        } finally {
-          sending.current = false;
-        }
-      },
+        }),
     });
   }
 
