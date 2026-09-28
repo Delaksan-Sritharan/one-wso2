@@ -168,6 +168,10 @@ export const bankingServiceUrls = {
   banks: `${bankingBackendUrl}/banks`,
   // POST /employee/accounts — submits a bank account change request.
   createBankAccountRequest: `${bankingBackendUrl}/employee/accounts`,
+  // POST /banks — same route as the GET above; adds a bank to the list.
+  createBank: `${bankingBackendUrl}/banks`,
+  // PATCH /threshold — updates the Salary or Consultancy monthly cutoff day.
+  updateThreshold: `${bankingBackendUrl}/threshold`,
 };
 
 // ---- PAR app backend ---------------------------------------------------------

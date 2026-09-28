@@ -214,6 +214,16 @@ export interface BanksResponse {
   count: number;
 }
 
+// PATCH /threshold body — the backend's own db:ThresholdTypes enum member
+// names, sent verbatim as strings. Each key is owned by a different admin:
+// People Ops owns SALARY_THRESHOLD, Finance owns CONSULTANCY_THRESHOLD.
+export type ThresholdKey = "SALARY_THRESHOLD" | "CONSULTANCY_THRESHOLD";
+
+export interface UpdateThresholdPayload {
+  key: ThresholdKey;
+  value: number;
+}
+
 // POST /employee/accounts body. Every Account Type sends the same shape —
 // branchName/branchCode are simply empty for CONSULTANCY rather than a
 // different payload shape, matching the source app's own form.

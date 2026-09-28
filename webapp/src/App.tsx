@@ -104,6 +104,13 @@ import BankingRoute from "@features/my/banking/components/BankingRoute";
 import BankingPage, { BankingIndex } from "@features/my/banking/pages/BankingPage";
 import MyAccountsTab from "@features/my/banking/pages/MyAccountsTab";
 import SummaryTab from "@features/my/banking/pages/SummaryTab";
+import BankingAdminRoute from "@features/banking-admin/components/BankingAdminRoute";
+import BankingAdminTabRoute from "@features/banking-admin/components/BankingAdminTabRoute";
+import BankingAdminPage, { BankingAdminIndex } from "@features/banking-admin/pages/BankingAdminPage";
+import ChangeRequestsTab from "@features/banking-admin/pages/ChangeRequestsTab";
+import ReportTab from "@features/banking-admin/pages/ReportTab";
+import EmployeeOperationsTab from "@features/banking-admin/pages/EmployeeOperationsTab";
+import AdminTab from "@features/banking-admin/pages/AdminTab";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import PerspectiveLanding from "@components/perspective-landing/PerspectiveLanding";
@@ -912,6 +919,56 @@ export default function App() {
           <Route path="due-diligence/preferences" element={<DueDiligencePreferencesPage />} />
           <Route path="due-diligence/view-pdf" element={<ViewPdfPage />} />
           <Route path="due-diligence/view-image" element={<ViewImagePage />} />
+          {/* Banking's admin/lead screens — ported from digiops-hr's banking
+              webapp's Change Requests, Report, Employee Operations, and
+              Admin views. Route lives OUTSIDE both the People Ops and
+              Finance path prefixes, same reason Due Diligence's own routes
+              do above: a screen reachable from two different rails can't
+              itself live under either one's own prefix. BankingAdminRoute
+              is the "any admin at all" gate; BankingAdminTabRoute is the
+              finer per-tab split (Change Requests is People-Ops-only). */}
+          <Route
+            path="banking/admin"
+            element={
+              <BankingAdminRoute>
+                <BankingAdminPage />
+              </BankingAdminRoute>
+            }
+          >
+            <Route index element={<BankingAdminIndex />} />
+            <Route
+              path="change-requests"
+              element={
+                <BankingAdminTabRoute gateId="people-ops-admin">
+                  <ChangeRequestsTab />
+                </BankingAdminTabRoute>
+              }
+            />
+            <Route
+              path="report"
+              element={
+                <BankingAdminTabRoute gateId="either-admin">
+                  <ReportTab />
+                </BankingAdminTabRoute>
+              }
+            />
+            <Route
+              path="employee-operations"
+              element={
+                <BankingAdminTabRoute gateId="either-admin">
+                  <EmployeeOperationsTab />
+                </BankingAdminTabRoute>
+              }
+            />
+            <Route
+              path="admin"
+              element={
+                <BankingAdminTabRoute gateId="either-admin">
+                  <AdminTab />
+                </BankingAdminTabRoute>
+              }
+            />
+          </Route>
           {/* Me → Email Groups: the mailing-list subscription manager ported
               from the standalone Email Group Manager app (the email-signature
               half of that app is not part of this port). Every employee sees
