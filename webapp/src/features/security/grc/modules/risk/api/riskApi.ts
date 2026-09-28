@@ -447,8 +447,9 @@ export interface DashboardSummary {
   cert_distribution: RegisterCertShare[];
   registers: RegisterAnalytics[];
   repeated_compliance_risks: RepeatedComplianceRisk[];
-  repeated_categories: RepeatedCategory[];
-  common_open_categories: CommonOpenCategory[];
+  // Optional: absent when served by a backend older than these fields.
+  repeated_categories?: RepeatedCategory[];
+  common_open_categories?: CommonOpenCategory[];
   high_risks: HighRiskItem[];
 }
 

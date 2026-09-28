@@ -60,19 +60,18 @@ export default function DashboardView({
   registerId,
   onDrillDown,
 }: DashboardViewProps): JSX.Element {
-  // Absent until the backend that serves them is deployed; default rather than
-  // let one missing field take the whole dashboard down.
-  const repeatedCategories = dashboard.repeated_categories ?? [];
-  const commonOpenCategories = dashboard.common_open_categories ?? [];
+  // Absent until the backend that serves them is deployed: hide the view
+  // rather than present missing data as "nothing repeats".
+  const repeatedCategories = dashboard.repeated_categories;
+  const commonOpenCategories = dashboard.common_open_categories;
   const payloadRegisters = [
     ...dashboard.registers.map((r) => ({ id: r.register_id, name: r.register_name })),
-    ...repeatedCategories.map((r) => ({ id: r.register_id, name: r.register_name })),
+    ...(repeatedCategories ?? []).map((r) => ({ id: r.register_id, name: r.register_name })),
   ];
   const registers = scopeRegisters(teams, payloadRegisters, registerId);
   const registerColors = buildRegisterColorMap(scopeRegisters(teams, payloadRegisters).map((r) => r.name));
-  const repeatGroups = groupRepeatedByRegister(registers, repeatedCategories);
+  const repeatGroups = groupRepeatedByRegister(registers, repeatedCategories ?? []);
   const registersWithRepeats = repeatGroups.filter((g) => g.rows.length > 0).length;
-  const openCategoryCount = commonOpenCategories.length;
 
   return (
     <Stack spacing={3}>
@@ -182,27 +181,29 @@ export default function DashboardView({
         <RegisterSection key={register.register_id} register={register} scores={scores} onDrillDown={onDrillDown} />
       ))}
 
-      <ChartCard
-        title="Repeated Risks Within Each Register"
-        subtitle="Risks covering the same category or root cause logged as separate entries. Open/Closed split shown for each repeated category."
-        headerRight={
-          <Chip
-            label={`${registersWithRepeats} ${registersWithRepeats === 1 ? "Register" : "Registers"} With Repeats`}
-            size="small"
-            sx={{ bgcolor: "#e34948", color: "#fff", fontWeight: 600 }}
-          />
-        }
-      >
-        <RepeatedCategoriesTable groups={repeatGroups} registerColors={registerColors} />
-      </ChartCard>
+      {repeatedCategories && (
+        <ChartCard
+          title="Repeated Risks Within Each Register"
+          subtitle="Risks covering the same category or root cause logged as separate entries. Open/Closed split shown for each repeated category."
+          headerRight={
+            <Chip
+              label={`${registersWithRepeats} ${registersWithRepeats === 1 ? "Register" : "Registers"} With Repeats`}
+              size="small"
+              sx={{ bgcolor: "#e34948", color: "#fff", fontWeight: 600 }}
+            />
+          }
+        >
+          <RepeatedCategoriesTable groups={repeatGroups} registerColors={registerColors} />
+        </ChartCard>
+      )}
 
-      {isAllRegisters && (
+      {isAllRegisters && commonOpenCategories && (
         <ChartCard
           title="Common Open Risks Across All Risk Registers"
           subtitle="Risk categories open in 2 or more registers, each tracked under a separate remediation plan. Closed counts shown for context."
           headerRight={
             <Chip
-              label={`${openCategoryCount} ${openCategoryCount === 1 ? "Category" : "Categories"} Still Open`}
+              label={`${commonOpenCategories.length} ${commonOpenCategories.length === 1 ? "Category" : "Categories"} Still Open`}
               size="small"
               sx={{ bgcolor: "#e34948", color: "#fff", fontWeight: 600 }}
             />
