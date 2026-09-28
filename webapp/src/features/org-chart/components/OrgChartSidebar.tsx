@@ -155,7 +155,14 @@ export default function OrgChartSidebar({
               zIndex: 20,
               maxHeight: 320,
               overflowY: "auto",
-              bgcolor: "background.paper",
+              // Not background.paper: the Acrylic theme's own paper token is
+              // a translucent surface by design (#ffffffc5/#000000c5 —
+              // ~77% opacity, see @wso2/oxygen-ui's AcrylicBaseTheme), which
+              // reads as a visible bug on a floating overlay stacked on top
+              // of the row list — you can see the rows through it. `default`
+              // is the theme's own fully-opaque token in both light and dark,
+              // so this stays theme-driven rather than a hardcoded color.
+              bgcolor: "background.default",
               border: 1,
               borderColor: "divider",
               borderRadius: 1,
