@@ -70,7 +70,10 @@ export default function ChangeRequestsTab() {
     setConfirmation({
       title: "Confirm Acceptance",
       text: "Are you sure you want to accept these changes?",
-      confirmAction: () => run(async () => await approveAccount.mutateAsync(request.accountId)),
+      confirmAction: () =>
+        run(async () => {
+          await approveAccount.mutateAsync(request.accountId);
+        }),
     });
   }
 
