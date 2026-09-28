@@ -19,7 +19,8 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import WideTableNotice, { writeDismissed } from "./WideTableNotice";
+import WideTableNotice from "./WideTableNotice";
+import { writeDismissed } from "./wideTableNoticeStorage";
 
 // The narrow-viewport answer for wide tables — spec §11.8, ticket 08.
 //
@@ -193,6 +194,11 @@ describe("dismissing it", () => {
 // repo's other stored preference guards every access for the same reason. A
 // notice is the last thing that should take a screen down.
 describe("when storage is unavailable", () => {
+  // `localStorage.setItem` is `Storage.prototype.setItem` in this repo's jsdom,
+  // so the spy has to be on the prototype. Spying `window.localStorage` itself
+  // does not sit on the global the module calls, and the guard would look fine
+  // while storage still wrote. `toHaveBeenCalled` is what makes a spy that
+  // missed the path fail, rather than a `try/catch` that never ran.
   const blockStorage = () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("blocked");
@@ -219,6 +225,7 @@ describe("when storage is unavailable", () => {
   it("reports that the dismissal was not remembered", () => {
     blockStorage();
     expect(writeDismissed()).toBe(false);
+    expect(Storage.prototype.setItem).toHaveBeenCalled();
   });
 
   it("reports that it was remembered when storage works", () => {

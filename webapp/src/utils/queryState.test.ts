@@ -169,16 +169,21 @@ describe("the writer", () => {
     expect(changed.toString()).toBe("region=EMEA%2CAPAC");
   });
 
-  // `listParam` reads `region=` as nothing and does not count it. Writing it
-  // for [] would leave a parameter that describes no view, instead of the
-  // empty query a default view owes.
-  it("omits an empty list when there is no fallback", () => {
-    const query = queryWriter();
-    query.setIfChanged("region", [], undefined, listParam);
-    expect(query.toString()).toBe("");
-    const reader = queryReader(query.toString());
+  // `listParam` reads an empty parameter as nothing, so `region=` cannot mean
+  // "cleared". Writing it against a non-empty fallback used to look like a
+  // clear and then come back as that fallback. The codec has no separate token
+  // for an explicit empty list; absence is the reading.
+  it("omits an empty list rather than writing a parameter that reads as nothing", () => {
+    const cleared = queryWriter();
+    cleared.setIfChanged("region", [], ["EMEA"], listParam);
+    expect(cleared.toString()).toBe("");
+    const reader = queryReader(cleared.toString());
     expect(reader.read("region", listParam)).toBeUndefined();
     expect(reader.recognised).toBe(0);
+
+    const absent = queryWriter();
+    absent.setIfChanged("region", [], undefined, listParam);
+    expect(absent.toString()).toBe("");
 
     const kept = queryWriter();
     kept.setIfChanged("region", ["EMEA"], undefined, listParam);

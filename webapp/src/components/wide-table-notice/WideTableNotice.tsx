@@ -18,6 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { Alert, Box, type SxProps, type Theme } from "@wso2/oxygen-ui";
+import { readDismissed, writeDismissed } from "./wideTableNoticeStorage";
 
 // What a table too wide for the viewport says about itself.
 //
@@ -61,9 +62,6 @@ import { Alert, Box, type SxProps, type Theme } from "@wso2/oxygen-ui";
 // 8,170px and a BU Summary at `?years=1` is 380px. A fixed threshold told a
 // reader on a 400px screen that a 380px table was "wider than your screen",
 // which is false, and said nothing at 1,100px about a table needing 8,170px.
-
-/** Namespaced like the app's other browser-stored keys — `one-wso2.*`. */
-const STORAGE_KEY = "one-wso2.wide-table-notice.dismissed";
 
 export interface WideTableNoticeProps {
   /**
@@ -134,40 +132,4 @@ function useNarrowerThan(width: number): boolean {
   }, [width]);
 
   return isNarrow;
-}
-
-/**
- * Whether this reader has dismissed it before.
- *
- * Guarded, because `localStorage` THROWS rather than returning null under
- * private browsing and blocked site data — the case `ScalePreferenceContext`
- * guards for the same reason. A notice is the last thing that should take a
- * screen down, so an unreadable store means "not dismissed": the notice shows,
- * which is the harmless direction to fail in.
- */
-function readDismissed(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Remember the dismissal, and say whether it stuck.
- *
- * The boolean is what lets a test assert the write guard rather than infer it:
- * a `try/catch` that swallows silently is indistinguishable from no `try/catch`
- * at all unless something observes the difference. Deleting this guard used to
- * leave every assertion in the suite passing.
- */
-export function writeDismissed(): boolean {
-  try {
-    localStorage.setItem(STORAGE_KEY, "true");
-    return true;
-  } catch {
-    // Dismissed for this visit and not remembered, which is the same failure
-    // the Scale preference accepts for the same reason.
-    return false;
-  }
 }

@@ -148,9 +148,11 @@ export interface QueryWriter {
    * are never the same object as the default — comparing by identity would put
    * every list filter into every URL and rule 1 would never hold.
    *
-   * An empty list with no fallback is omitted too. `listParam` reads `region=`
-   * as nothing and does not count it, so writing it would leave a parameter in
-   * the address that describes no view state.
+   * A value the codec reads back as nothing is omitted too, whatever the
+   * fallback was. `listParam` treats an empty list as absence — there is no
+   * token for "cleared, and different from the default" — so writing `region=`
+   * for `[]` leaves a parameter the reader ignores, and a caller whose
+   * fallback is a real list falls back to it.
    */
   setIfChanged<T>(param: string, value: T | null | undefined, fallback: T | undefined, codec: QueryParamCodec<T>): void;
   /** Write a value that has no default to be at. */
@@ -163,14 +165,10 @@ export function queryWriter(): QueryWriter {
   const query = new URLSearchParams();
   return {
     setIfChanged(param, value, fallback, codec) {
-      if (
-        value == null ||
-        sameValue(value, fallback) ||
-        (fallback === undefined && Array.isArray(value) && value.length === 0)
-      ) {
-        return;
-      }
-      query.set(param, codec.format(value));
+      if (value == null || sameValue(value, fallback)) return;
+      const formatted = codec.format(value);
+      if (codec.parse(formatted) === undefined) return;
+      query.set(param, formatted);
     },
     set(param, value) {
       query.set(param, value);
