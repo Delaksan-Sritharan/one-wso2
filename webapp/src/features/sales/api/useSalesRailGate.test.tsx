@@ -19,19 +19,33 @@ import { HttpError } from "@api/http";
 
 // The data hook is stubbed so the gate is tested on its own: what it does with each answer
 // meet-app can give, not how that answer is fetched.
-const state: { configured: boolean; isPending: boolean; isLoading: boolean; error: unknown } = {
+const state: {
+  configured: boolean;
+  isPending: boolean;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+} = {
   configured: true,
   isPending: false,
   isLoading: false,
+  isError: false,
   error: null,
 };
+const refetch = vi.fn();
 const enabledSeen: boolean[] = [];
 
 vi.mock("./useSalesData", () => ({
   isSalesBackendConfigured: () => state.configured,
   useSalesUserInfo: (enabled: boolean) => {
     enabledSeen.push(enabled);
-    return { isPending: state.isPending, isLoading: state.isLoading, error: state.error };
+    return {
+      isPending: state.isPending,
+      isLoading: state.isLoading,
+      isError: state.isError,
+      error: state.error,
+      refetch,
+    };
   },
 }));
 
@@ -40,13 +54,19 @@ import { useSalesRailGate } from "./useSalesGate";
 
 const gate = (enabled = true) => renderHook(() => useSalesRailGate(enabled)).result.current;
 const httpError = (status: number) => new HttpError("https://x/user-info", status, "");
+const fail = (status: number) => {
+  state.isError = true;
+  state.error = httpError(status);
+};
 
 beforeEach(() => {
   state.configured = true;
   state.isPending = false;
   state.isLoading = false;
+  state.isError = false;
   state.error = null;
   enabledSeen.length = 0;
+  refetch.mockClear();
 });
 
 describe("useSalesRailGate", () => {
@@ -56,8 +76,11 @@ describe("useSalesRailGate", () => {
 
   // The whole point: the row must not sit beside a "Nothing here for you yet" card.
   it("hides it from a caller meet-app refuses (403)", () => {
-    state.error = httpError(403);
-    expect(gate().canSee("sales-meetings")).toBe(false);
+    fail(403);
+    const g = gate();
+    expect(g.canSee("sales-meetings")).toBe(false);
+    // A 403 is an answer, not a failure: nothing to retry.
+    expect(g.isError).toBe(false);
   });
 
   it("holds it back while the answer is in flight, so it never flashes in for someone refused", () => {
@@ -78,16 +101,22 @@ describe("useSalesRailGate", () => {
     expect(g.isResolving).toBe(true);
   });
 
-  // An outage is not "you have no access" -- the page shows its own error.
-  it("keeps it on a server error rather than telling the caller they have no access", () => {
-    state.error = httpError(503);
-    expect(gate().canSee("sales-meetings")).toBe(true);
+  // Fails closed on an outage, like useMarketingOpsGate and useSecurityGate -- but reports it as
+  // a failure (with a retry), so it is never presented as "you have no access".
+  it("hides it when the check itself fails, and reports the failure with a retry", () => {
+    fail(503);
+    const g = gate();
+    expect(g.canSee("sales-meetings")).toBe(false);
+    expect(g.isError).toBe(true);
+    expect(g.errorMessage).toBeTruthy();
+    g.retry();
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   // With no backend URL the page explains what is missing; hiding the row would bury that.
   it("keeps it when no backend is configured", () => {
     state.configured = false;
-    state.error = httpError(403);
+    fail(403);
     expect(gate().canSee("sales-meetings")).toBe(true);
   });
 

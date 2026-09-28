@@ -24,7 +24,7 @@
 import { useMemo } from "react";
 import { SALES_PRIVILEGE, type Meeting } from "./salesTypes";
 import { isSalesBackendConfigured, useSalesUserInfo } from "./useSalesData";
-import { isForbidden } from "../util/salesError";
+import { describeError, isForbidden } from "../util/salesError";
 
 export interface SalesGate {
   /** True once /user-info has answered, either way. */
@@ -69,30 +69,41 @@ export interface SalesRailGate {
   canSee: (itemId: string) => boolean;
   /** True while the answer is still being fetched. */
   isResolving: boolean;
+  /** True when the access check itself failed (not a 403 -- that is an answer, not a failure). */
+  isError: boolean;
+  /** What went wrong, when isError. */
+  errorMessage: string | undefined;
+  /** Ask again. */
+  retry: () => void;
 }
 
 /**
  * The rail's view of Sales access, alongside useSecurityGate and friends.
  *
- * Hides the rows ONLY on a 403 -- meet-app's answer for a caller in none of its groups, the
- * same answer that puts the "Nothing here for you yet" card on the page. Anything else keeps
- * them: with no backend URL configured the page explains itself, and an outage or a 5xx is not
- * a reason to tell someone they have no access. Rows are also held back while the answer is
- * in flight, so a caller with no access never sees them flash in first.
+ * Shows the rows only once meet-app has let the caller in, exactly like useMarketingOpsGate
+ * and useSecurityGate: hidden while the answer is in flight (so they never flash in for
+ * someone refused), hidden on a 403 (no access), and hidden when the check itself failed --
+ * failing closed, as those gates do. A failure is also reported through isError, so it is
+ * surfaced as "couldn't check" rather than read as "no access". With no backend URL configured
+ * the rows stay: there is nothing to ask, and the page explains what is missing.
  *
  * `enabled` so the request is only made while Sales is the open perspective.
  *
  * @param enabled - Whether Sales is the active perspective
  */
 export function useSalesRailGate(enabled: boolean): SalesRailGate {
-  const { isPending, isLoading, error } = useSalesUserInfo(enabled);
+  const { isPending, isLoading, isError, error, refetch } = useSalesUserInfo(enabled);
   const active = enabled && isSalesBackendConfigured();
   // isPending as well as isLoading: while the caller's identity is still resolving the query
   // is disabled, which React Query reports as pending but NOT loading -- checking isLoading
   // alone let the row show for that moment and then vanish when the 403 arrived.
   const isResolving = active && (isPending || isLoading);
+  const failed = active && isError && !isForbidden(error);
   return {
-    canSee: () => !isResolving && !(active && isForbidden(error)),
+    canSee: () => !isResolving && !(active && isError),
     isResolving,
+    isError: failed,
+    errorMessage: failed ? describeError(error) : undefined,
+    retry: () => void refetch(),
   };
 }
