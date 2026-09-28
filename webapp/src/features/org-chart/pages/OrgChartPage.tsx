@@ -77,11 +77,19 @@ export default function OrgChartPage() {
   const byEmail = useMemo(() => indexByEmail(directory.data ?? []), [directory.data]);
 
   // "Department" here is the directory's `team` field — see
-  // util/departmentColors.ts for why.
-  const stats = useMemo(
-    () => departmentStats((directory.data ?? []).map((employee) => ({ department: employee.team }))),
-    [directory.data],
-  );
+  // util/departmentColors.ts for why. Scoped by company and hideInterns —
+  // cross-cutting filters that should shrink every team's own headcount —
+  // but deliberately NOT by selectedDepartment: that filter IS this legend's
+  // own picker, so isolating one team must not also remove every other team
+  // from the list of things you could switch to.
+  const stats = useMemo(() => {
+    const employees = (directory.data ?? []).filter(
+      (employee) =>
+        (!selectedCompany || employee.company === selectedCompany) &&
+        (!hideInterns || employee.designation !== "Intern"),
+    );
+    return departmentStats(employees.map((employee) => ({ department: employee.team })));
+  }, [directory.data, selectedCompany, hideInterns]);
 
   // Distinct `company` values for the dropdown — shared with the offline
   // export via util/buildOrgTree.ts so the two stay in sync.
