@@ -15,6 +15,7 @@
 // under the License.
 
 import { useState } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import { Alert, Box, Skeleton, Snackbar } from "@wso2/oxygen-ui";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
@@ -50,6 +51,10 @@ export default function MyAccountsTab() {
   const config = useBankingConfig();
   const gate = useBankingGate();
   const configured = isBankingBackendConfigured();
+  // Tracked by mutation key, not by any one dialog instance's own state, so
+  // this still reads true if that dialog was closed and reopened while its
+  // request was still in flight — closing the dialog doesn't cancel it.
+  const submitting = useIsMutating({ mutationKey: ["create-bank-account-request"] }) > 0;
   const [editingType, setEditingType] = useState<AccountType | null>(null);
   const [snack, setSnack] = useState<{ open: boolean; severity: "success" | "error"; message: string }>(
     { open: false, severity: "success", message: "" },
@@ -111,6 +116,7 @@ export default function MyAccountsTab() {
   // role restriction is decided by the gate instead, since that also needs
   // the caller's Asgardeo groups, not just the config.
   function disabledReasonFor(type: AccountType): string | undefined {
+    if (submitting) return "A change request is already being submitted.";
     if (type === "CONSULTANCY" && gate.isResolving) return "Loading…";
     if (type === "CONSULTANCY" && gate.isError) return "Couldn't verify eligibility.";
     if (type !== "CONSULTANCY" && config.isPending) return "Loading…";

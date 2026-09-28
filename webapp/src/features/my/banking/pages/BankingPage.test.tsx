@@ -110,6 +110,15 @@ vi.mock("@features/my/api/useCreateBankAccountRequest", () => ({
   }),
 }));
 
+// MyAccountsTab reads this directly (not through useCreateBankAccountRequest,
+// which is fully mocked above) to guard against a second submission surviving
+// the dialog that started it closing and reopening — see that mutation's own
+// mutationKey.
+const isMutatingCount = vi.hoisted(() => ({ value: 0 }));
+vi.mock("@tanstack/react-query", () => ({
+  useIsMutating: () => isMutatingCount.value,
+}));
+
 function signedInUser(email: string | null = "person@wso2.com", ready = true) {
   return { ready, email: email ?? undefined, initials: "PP" };
 }
@@ -217,6 +226,7 @@ beforeEach(() => {
   useBanksMock.mockReturnValue(banks([bank(), bank({ bankName: "HNB", swiftCode: "HBLILKLX", bankCode: "7" })]));
   mutateAsyncMock.mockReset();
   mutateAsyncMock.mockResolvedValue({ applicationID: 42 });
+  isMutatingCount.value = 0;
 });
 
 describe("tab frame", () => {
@@ -881,6 +891,25 @@ describe("Threshold gating", () => {
     // Consultancy's own threshold (28) hasn't passed — independent of Salary's.
     const consultancyCard = screen.getByText("Consultancy").closest(".MuiCard-root") as HTMLElement;
     expect(editButton(consultancyCard)).toBeEnabled();
+  });
+});
+
+describe("Submission guard survives closing and reopening the dialog", () => {
+  it("disables every panel's Edit action while a request from this employee is still in flight", () => {
+    isMutatingCount.value = 1;
+    renderPage();
+
+    const salaryCard = screen.getByText("Salary").closest(".MuiCard-root") as HTMLElement;
+    expect(editButton(salaryCard)).toBeDisabled();
+    expect(salaryCard).toHaveTextContent("A change request is already being submitted.");
+  });
+
+  it("re-enables Edit once no request is in flight", () => {
+    isMutatingCount.value = 0;
+    renderPage();
+
+    const salaryCard = screen.getByText("Salary").closest(".MuiCard-root") as HTMLElement;
+    expect(editButton(salaryCard)).toBeEnabled();
   });
 });
 

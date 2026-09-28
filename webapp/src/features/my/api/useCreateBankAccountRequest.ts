@@ -34,6 +34,11 @@ export function useCreateBankAccountRequest() {
     Error,
     CreateBankAccountRequestPayload
   >({
+    // A shared key, not tied to any one component instance: lets a caller
+    // that outlives the submitting dialog (MyAccountsTab) see this mutation
+    // is still in flight even after the dialog that started it closes and a
+    // new one, with its own fresh local state, opens in its place.
+    mutationKey: ["create-bank-account-request"],
     mutationFn: async (payload) => {
       const result = await authedPost<CreateBankAccountRequestResponse>(
         bankingServiceUrls.createBankAccountRequest,
