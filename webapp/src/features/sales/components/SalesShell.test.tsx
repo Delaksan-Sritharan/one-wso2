@@ -66,13 +66,18 @@ const refuse = () => {
 };
 
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import SalesShell from "./SalesShell";
 import PerspectiveLanding from "@components/perspective-landing/PerspectiveLanding";
 
-function renderShell(props: { configured: boolean; forbidden?: boolean }) {
+function Where() {
+  return <div data-testid="where">{useLocation().pathname}</div>;
+}
+
+function renderShell(props: { configured: boolean; forbidden?: boolean }, at = "/sales") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[at]}>
+      <Where />
       <SalesShell title="Sales" configKey="ONE_WSO2_REVOPS_BACKEND_URL" {...props}>
         <div>meeting list</div>
       </SalesShell>
@@ -151,12 +156,24 @@ describe("SalesShell", () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
+  // Like MarketingOpsShell: an inner page with no access leaves for the perspective's own page,
+  // which then shows the card -- not a "whole app closed" card under one meeting's URL.
+  it("sends a refused caller on an inner page back to /sales, which shows the card", () => {
+    refuse();
+    renderShell({ configured: true }, "/sales/meetings/523");
+    expect(screen.getByTestId("where")).toHaveTextContent(/^\/sales$/);
+    expect(screen.getByRole("heading", { name: "Nothing here for you yet" })).toBeInTheDocument();
+  });
+
   // The requirement is visual parity with Security and Compliance and Marketing Ops. Both reach
   // their no-access screen through PerspectiveLanding (nothing visible in the rail), so the
   // strongest check is that Sales renders that SAME markup -- title, card, button, no subtitle.
   it("renders exactly the no-access screen Security and Marketing Ops show", () => {
     const { container: sales, unmount } = renderShell({ configured: true, forbidden: true });
-    const salesHtml = sales.innerHTML;
+    // Compare a copy without the test's location probe -- React owns the real nodes.
+    const copy = sales.cloneNode(true) as HTMLElement;
+    copy.querySelector('[data-testid="where"]')?.remove();
+    const salesHtml = copy.innerHTML;
     unmount();
     const { container: landing } = render(
       <MemoryRouter>

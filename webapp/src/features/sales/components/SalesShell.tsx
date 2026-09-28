@@ -15,6 +15,7 @@
 // under the License.
 
 import type { ReactNode } from "react";
+import { Navigate, useLocation } from "react-router";
 import { Alert, Box, CircularProgress, Stack, Typography } from "@wso2/oxygen-ui";
 import PerspectiveHeader from "@components/perspective-header/PerspectiveHeader";
 import { NothingHere, PageTitle } from "@components/perspective-landing/PerspectiveLanding";
@@ -58,6 +59,7 @@ export default function SalesShell({
 }) {
   const active = useActivePerspective();
   const access = useSalesUserInfo();
+  const { pathname } = useLocation();
 
   if (!configured) {
     return (
@@ -91,6 +93,10 @@ export default function SalesShell({
 
   // No access
   if (refused) {
+    // An inner page (a meeting, say) leaves for the perspective's own page first, which then
+    // shows the card -- the way MarketingOpsShell sends a locked caller back to /marketing-ops,
+    // rather than showing a "whole app is closed to you" card under a single meeting's URL.
+    if (active.path && pathname !== active.path) return <Navigate to={active.path} replace />;
     return (
       <Box>
         <PageTitle label={active.label} />
