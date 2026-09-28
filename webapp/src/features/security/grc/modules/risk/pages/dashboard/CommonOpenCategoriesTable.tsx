@@ -29,6 +29,7 @@ import type { JSX } from "react";
 import type { CategoryCounts, CommonOpenCategory } from "../../api/riskApi";
 import { CountCells, CountHeaderCells, LegendRow, RegisterChip } from "./CategoryCounts";
 import { commonOpenStats, spreadColor, type ScopeRegister } from "./categoryViews";
+import { OPEN_COLOR } from "./constants";
 
 const KEYS: (keyof CategoryCounts)[] = ["open", "accept", "remediate", "closed"];
 const FALLBACK_REGISTER_COLOR = "#6b7280";
@@ -81,7 +82,7 @@ export default function CommonOpenCategoriesTable({
   return (
     <>
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 2, mb: 2 }}>
-        <StatCard value={String(stats.totalOpen)} label="Total open risks in category overlap" color="#e34948" />
+        <StatCard value={String(stats.totalOpen)} label="Total open risks in category overlap" color={OPEN_COLOR} />
         <StatCard value={stats.mostPervasive ?? "—"} label="Most pervasive category" />
         <StatCard value={String(stats.registersWithNoOverlap)} label="Registers with no overlap" color="#008300" />
       </Box>

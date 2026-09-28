@@ -18,15 +18,17 @@ import { Box, Chip, Stack, TableCell, Tooltip, Typography } from "@wso2/oxygen-u
 import type { JSX, ReactNode } from "react";
 import type { CategoryCounts } from "../../api/riskApi";
 import type { ScopeRegister } from "./categoryViews";
+import { CLOSED_COLOR, OPEN_COLOR, TREATMENT_COLORS } from "./constants";
 
 // Open / Acc / Rem / Closed column definitions shared by the two category
-// tables. Accept is amber rather than TREATMENT_COLORS' green so it never
-// reads as Closed next to it.
+// tables. Open, Closed and Accept reuse the page's shared colours. Remediate is
+// the exception: TREATMENT_COLORS.REMEDIATE is the same blue as CLOSED_COLOR,
+// and the two sit side by side here, so it takes amber instead.
 const COUNT_COLUMNS: { key: keyof CategoryCounts; header: string; legend: string; color: string }[] = [
-  { key: "open", header: "Open", legend: "Open", color: "#e34948" },
-  { key: "accept", header: "Acc", legend: "Accept", color: "#b87700" },
-  { key: "remediate", header: "Rem", legend: "Remediate", color: "#2a78d6" },
-  { key: "closed", header: "Closed", legend: "Closed", color: "#008300" },
+  { key: "open", header: "Open", legend: "Open", color: OPEN_COLOR },
+  { key: "accept", header: "Acc", legend: "Accept", color: TREATMENT_COLORS.ACCEPT },
+  { key: "remediate", header: "Rem", legend: "Remediate", color: "#b87700" },
+  { key: "closed", header: "Closed", legend: "Closed", color: CLOSED_COLOR },
 ];
 
 export function CountHeaderCells({ keys }: { keys: (keyof CategoryCounts)[] }): JSX.Element {
