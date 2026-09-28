@@ -19,26 +19,28 @@ import { useAsgardeo } from "@asgardeo/react";
 import { authedGet, defaultQueryRetry } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { promotionBackendUrl, promotionServiceUrls } from "@config/apiConfig";
-import type { PromotionEmployeeInfoResponse } from "./types";
-import { digiopsHeaders } from "../util/digiopsHeaders";
+import { digiopsHeaders } from "@features/my/util/digiopsHeaders";
+import type { PromotionHistoryResponse } from "./types";
 
-// Fetches GET /employee-info?employeeWorkEmail=<email> from the digiops-hr
-// promotion app. Non-lead users can only fetch their own record (backend
-// enforces requestedBy === employeeWorkEmail).
+// Fetches the caller's APPROVED promotion history from the digiops-hr
+// promotion app. `enabled` lets a caller defer the request (the profile
+// card's "View promotion history" dialog only fires it once opened);
+// /me/promotion's own page passes `true` unconditionally since showing the
+// history IS the page.
 //
-// Skips the request entirely when ONE_WSO2_PROMOTION_BACKEND_URL isn't
-// configured — the calling component renders a "not configured" fallback.
-export function usePromotionEmployeeInfo(workEmail: string | undefined) {
+// Non-lead / non-admin users can only fetch their own history — the
+// backend authorization rejects cross-user lookups with a 401/403.
+export function usePromotionHistory(workEmail: string | undefined, enabled: boolean) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
   const backendConfigured = Boolean(promotionBackendUrl);
-  return useQuery<PromotionEmployeeInfoResponse>({
-    queryKey: ["promotion-employee-info", workEmail],
-    enabled: isSignedIn && backendConfigured && Boolean(workEmail),
+  return useQuery<PromotionHistoryResponse>({
+    queryKey: ["promotion-history", workEmail],
+    enabled: enabled && isSignedIn && backendConfigured && Boolean(workEmail),
     queryFn: async () => {
       const accessToken = await getAccessToken();
-      return authedGet<PromotionEmployeeInfoResponse>(
-        promotionServiceUrls.employeeInfo(workEmail!),
+      return authedGet<PromotionHistoryResponse>(
+        promotionServiceUrls.promotionHistory(workEmail!),
         accessToken,
         digiopsHeaders(),
       );
@@ -46,8 +48,4 @@ export function usePromotionEmployeeInfo(workEmail: string | undefined) {
     staleTime: 5 * 60 * 1000,
     retry: defaultQueryRetry,
   });
-}
-
-export function isPromotionBackendConfigured(): boolean {
-  return Boolean(promotionBackendUrl);
 }
