@@ -186,6 +186,39 @@ export const bankingServiceUrls = {
   // check on this same resource).
   accountAction: (accountId: number, action: "approve" | "reject") =>
     `${bankingBackendUrl}/employee/accounts/${accountId}/${action}`,
+  // GET /employees — the banking backend's OWN employee directory (per ADR
+  // 0002: a ported app's data comes from its own backend only, never
+  // another app's people-search UI, even though one-wso2 has other
+  // directories elsewhere). Backs Employee Operations' employee search.
+  // Returns a bare array, not a `{employees: [...]}` wrapper — matches
+  // service.bal's own `returns ... entity:Employee[]`.
+  employees: `${bankingBackendUrl}/employees`,
+  // POST /employee/accounts/{accountId}/deactivate — no body.
+  deactivateAccount: (accountId: number) => `${bankingBackendUrl}/employee/accounts/${accountId}/deactivate`,
+  // GET /employee/accounts with the Report tab's admin filters — same
+  // resource as pendingSalaryAccounts above, generalized to whatever
+  // date-range/type/status combination the admin has searched for, and
+  // (like pendingSalaryAccounts) never sending employeeWorkEmail, which is
+  // what makes this the admin-wide query rather than a self-lookup. Array
+  // params repeat the key rather than joining with a comma — Ballerina
+  // binds a repeated query param to an array (db:AccountType[]?/
+  // db:AccountStatus[]?), not a delimited string. An omitted filter is left
+  // out of the query string entirely rather than sent empty, matching the
+  // source app's own `getFilteredBankAccounts` query-building.
+  reportAccounts: (filters: {
+    createdFrom?: string;
+    createdTo?: string;
+    accountTypesArray: string[];
+    statusArray: string[];
+  }) => {
+    const params = new URLSearchParams();
+    if (filters.createdFrom) params.set("createdFrom", filters.createdFrom);
+    if (filters.createdTo) params.set("createdTo", filters.createdTo);
+    filters.accountTypesArray.forEach((t) => params.append("accountTypesArray", t));
+    filters.statusArray.forEach((s) => params.append("statusArray", s));
+    const qs = params.toString();
+    return `${bankingBackendUrl}/employee/accounts${qs ? `?${qs}` : ""}`;
+  },
 };
 
 // ---- PAR app backend ---------------------------------------------------------

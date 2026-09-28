@@ -14,11 +14,106 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { Typography } from "@wso2/oxygen-ui";
+import { useState } from "react";
+import { Autocomplete, Box, Button, TextField } from "@wso2/oxygen-ui";
+import { useReportAccounts } from "@features/my/api/useReportAccounts";
+import type { AccountStatus, AccountType, ReportFilters } from "@features/my/api/types";
+import BankAccountsTable from "../components/BankAccountsTable";
+import {
+  ACCOUNT_ID_COLUMN,
+  ACCOUNT_NAME_COLUMN,
+  ACCOUNT_NUMBER_COLUMN,
+  ACCOUNT_TYPE_COLUMN,
+  BANK_CODE_COLUMN,
+  EFFECTIVE_MONTH_COLUMN,
+  EMPLOYEE_EMAIL_COLUMN,
+  type BankAccountsTableColumn,
+} from "../bankAccountsColumns";
 
-// Placeholder — the real tab (filterable, all-employee bank-account table)
-// lands in a follow-up ticket. Already sits behind BankingAdminTabRoute's
-// either-admin gate.
+const ACCOUNT_TYPES: AccountType[] = ["SALARY", "CONSULTANCY", "REIMBURSEMENT"];
+const ACCOUNT_STATUSES: AccountStatus[] = ["ACTIVE", "INACTIVE", "REJECTED", "REQUESTED"];
+
+const BLANK_FILTERS: ReportFilters = { createdFrom: "", createdTo: "", accountTypesArray: [], statusArray: [] };
+
+// Source's own reportings.tsx default-visible column set for this view, in
+// its own order.
+const COLUMNS: BankAccountsTableColumn[] = [
+  ACCOUNT_ID_COLUMN,
+  EMPLOYEE_EMAIL_COLUMN,
+  ACCOUNT_NAME_COLUMN,
+  ACCOUNT_NUMBER_COLUMN,
+  BANK_CODE_COLUMN,
+  { label: "Branch Name", render: (a) => a.branchName ?? "-" },
+  EFFECTIVE_MONTH_COLUMN,
+  ACCOUNT_TYPE_COLUMN,
+];
+
+// The Report tab — a filterable, all-employee bank-account table. Nothing
+// is fetched until Search is pressed (appliedFilters starts undefined),
+// matching the source app's own Reportings panel, which never dispatches a
+// fetch until handleApplyFilters runs.
 export default function ReportTab() {
-  return <Typography color="text.secondary">Report is coming soon.</Typography>;
+  const [draft, setDraft] = useState<ReportFilters>(BLANK_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<ReportFilters | undefined>(undefined);
+  const accountsQuery = useReportAccounts(appliedFilters);
+
+  // Matches the source app's own handleResetFilters exactly: it clears the
+  // filter controls back to blank but never dispatches a fetch or a reset
+  // action, so a result set already on screen from a previous Search stays
+  // until Search is pressed again. Verified directly against
+  // reportings.tsx — its Reset button has no effect on the grid itself.
+  function handleReset() {
+    setDraft(BLANK_FILTERS);
+  }
+
+  const rows = accountsQuery.data?.bankAccounts ?? [];
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
+        <TextField
+          label="Start Date"
+          type="date"
+          size="small"
+          value={draft.createdFrom}
+          onChange={(e) => setDraft((f) => ({ ...f, createdFrom: e.target.value }))}
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <TextField
+          label="End Date"
+          type="date"
+          size="small"
+          value={draft.createdTo}
+          onChange={(e) => setDraft((f) => ({ ...f, createdTo: e.target.value }))}
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <Autocomplete
+          multiple
+          size="small"
+          options={ACCOUNT_TYPES}
+          value={draft.accountTypesArray}
+          onChange={(_, next) => setDraft((f) => ({ ...f, accountTypesArray: next }))}
+          sx={{ width: 260 }}
+          renderInput={(params) => <TextField {...params} label="Account Type" />}
+        />
+        <Autocomplete
+          multiple
+          size="small"
+          options={ACCOUNT_STATUSES}
+          value={draft.statusArray}
+          onChange={(_, next) => setDraft((f) => ({ ...f, statusArray: next }))}
+          sx={{ width: 260 }}
+          renderInput={(params) => <TextField {...params} label="Account State" />}
+        />
+        <Button variant="contained" onClick={() => setAppliedFilters(draft)}>
+          Search
+        </Button>
+        <Button variant="outlined" onClick={handleReset}>
+          Reset Filters
+        </Button>
+      </Box>
+
+      <BankAccountsTable accounts={rows} columns={COLUMNS} emptyMessage="No bank account records found." />
+    </Box>
+  );
 }

@@ -171,6 +171,35 @@ export interface BankAccountsResponse {
   count: number;
 }
 
+// GET /employee/accounts admin filters (Report tab). `createdFrom`/
+// `createdTo` are "" when unset, matching the source app's own
+// `startDate?.format(...) || ""` — never undefined, so a component can
+// always bind them to a controlled input.
+export interface ReportFilters {
+  createdFrom: string;
+  createdTo: string;
+  accountTypesArray: AccountType[];
+  statusArray: AccountStatus[];
+}
+
+// GET /employees on the banking backend — its OWN employee directory
+// (mirrors digiops-hr/apps/banking/backend/modules/entity/types.bal's
+// Employee record). Deliberately distinct from the `Employee` interface
+// above, which is people-app's own record with a different field set —
+// per ADR 0002, a ported app's data comes from its own backend only.
+export interface BankingEmployee {
+  employeeId: string | null;
+  firstName: string;
+  lastName: string;
+  workEmail: string;
+  department: string | null;
+  team: string | null;
+  employeeThumbnail: string | null;
+  jobRole: string;
+  epf: string | null;
+  location: string;
+}
+
 // GET /employee-info on the banking backend — only what the Banking page
 // reads from it: the employee's HR location (drives the Reimbursement gate
 // and the Bank Location options).
