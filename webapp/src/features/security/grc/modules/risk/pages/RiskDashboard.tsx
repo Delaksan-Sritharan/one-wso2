@@ -134,6 +134,7 @@ export default function RiskDashboard(): JSX.Element {
         <DashboardView
           dashboard={dashboard}
           scores={scores}
+          teams={teams}
           isAllRegisters={registerId === 0}
           registerId={registerId}
           onDrillDown={handleDrillDown}
