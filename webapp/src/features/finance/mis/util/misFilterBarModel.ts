@@ -51,6 +51,7 @@
 import { allowedTypeValues, defaultAppliedFilters, defaultYearsBack } from "./misViewState";
 import {
   CUMULATIVE_KEY_BY_PERIOD,
+  DELAYED_ARR,
   LIST_FILTER_PARAMS,
   MIS_PERIODS,
   MIS_PERIOD_LABELS,
@@ -483,7 +484,7 @@ export function normalisePending(
  */
 function customersYearsBack(typeValue: string, period: MisPeriod): number | null {
   if (period !== MIS_PERIODS.ANNUALLY) return null;
-  if (typeValue === "Delayed ARR") return 1;
+  if (typeValue === DELAYED_ARR) return 1;
   return typeValue === "Total ARR" || typeValue === "Closed Won ARR" ? 5 : null;
 }
 

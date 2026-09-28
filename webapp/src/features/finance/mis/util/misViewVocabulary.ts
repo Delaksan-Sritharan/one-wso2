@@ -275,18 +275,41 @@ export const CUMULATIVE_KEY_BY_PERIOD: Partial<
   [MIS_PERIODS.MONTHLY]: "cumulativeMonthly",
 };
 
+/**
+ * The Delayed type of each Period, named once.
+ *
+ * The vocabulary list, the Customers Years Back rule and the customers table's
+ * short window all ask "is this Delayed?". A prefix test would keep matching
+ * after a rename and then do the wrong thing.
+ */
+export const DELAYED_ARR = "Delayed ARR";
+export const DELAYED_QRR = "Delayed QRR";
+export const DELAYED_MRR = "Delayed MRR";
+
+const FORECASTED_ARR = "Forecasted ARR";
+const FORECASTED_QRR = "Forecasted QRR";
+const FORECASTED_MRR = "Forecasted MRR";
+const RENEWAL_ARR = "Renewal ARR";
+const RENEWAL_QRR = "Renewal QRR";
+const RENEWAL_MRR = "Renewal MRR";
+
 /** Every type value each Period offers, Total first. */
 export const TYPE_VALUES_BY_PERIOD: Record<MisPeriod, readonly string[]> = {
-  [MIS_PERIODS.ANNUALLY]: ["Total ARR", "Closed Won ARR", "Delayed ARR", "Forecasted ARR", "Renewal ARR"],
-  [MIS_PERIODS.QUARTERLY]: ["Total QRR", "Closed Won QRR", "Delayed QRR", "Forecasted QRR", "Renewal QRR"],
-  [MIS_PERIODS.MONTHLY]: ["Total MRR", "Closed Won MRR", "Delayed MRR", "Forecasted MRR", "Renewal MRR"],
+  [MIS_PERIODS.ANNUALLY]: ["Total ARR", "Closed Won ARR", DELAYED_ARR, FORECASTED_ARR, RENEWAL_ARR],
+  [MIS_PERIODS.QUARTERLY]: ["Total QRR", "Closed Won QRR", DELAYED_QRR, FORECASTED_QRR, RENEWAL_QRR],
+  [MIS_PERIODS.MONTHLY]: ["Total MRR", "Closed Won MRR", DELAYED_MRR, FORECASTED_MRR, RENEWAL_MRR],
 };
 
-/** The type values that turn forecast mode on. */
+/** Delayed, across the three Periods. */
+export const DELAYED_TYPE_VALUES: ReadonlySet<string> = new Set([DELAYED_ARR, DELAYED_QRR, DELAYED_MRR]);
+
+/** Renewal only. Customers offers Forecasted, and not this. */
+export const RENEWAL_TYPE_VALUES: ReadonlySet<string> = new Set([RENEWAL_ARR, RENEWAL_QRR, RENEWAL_MRR]);
+
+/** The type values that turn forecast mode on: Forecasted and Renewal. */
 export const FORECAST_TYPE_VALUES: ReadonlySet<string> = new Set([
-  "Forecasted ARR", "Renewal ARR",
-  "Forecasted QRR", "Renewal QRR",
-  "Forecasted MRR", "Renewal MRR",
+  FORECASTED_ARR, FORECASTED_QRR, FORECASTED_MRR,
+  RENEWAL_ARR, RENEWAL_QRR, RENEWAL_MRR,
 ]);
 
 /** Applied-filter key paired with the URL parameter it is written as. */

@@ -49,6 +49,8 @@ import {
 import {
   CUMULATIVE_KEY_BY_PERIOD,
   CUSTOM_UNIT,
+  DELAYED_ARR,
+  DELAYED_TYPE_VALUES,
   ENDING_MONTH_TODAY,
   ENDING_MONTH_VALUES,
   FORECAST_STATES,
@@ -61,6 +63,7 @@ import {
   MIS_TABLES,
   MIS_VIEW_TYPES,
   MIS_WINDOWS,
+  RENEWAL_TYPE_VALUES,
   TYPE_KEY_BY_PERIOD,
   TYPE_VALUES_BY_PERIOD,
   UNIT_CODE_PATTERN,
@@ -159,9 +162,6 @@ export function defaultYearsBack(period: MisPeriod, table: MisTable): number {
   return table === MIS_TABLES.EXIT_ARR_BY_REGION ? 2 : 5;
 }
 
-/** What a TTM window offers whatever the Table: no forecast, and Delayed is in. */
-const TTM_TYPE_VALUES = /^(Total|Closed Won|Delayed)/;
-
 /**
  * The type values a Table offers, mirroring the filter bar's option lists:
  * the summaries take Total and Closed Won only, Customers has no Renewal, and
@@ -194,14 +194,21 @@ export function allowedTypeValues(
   viewWindow: MisWindow = MIS_WINDOWS.CALENDAR,
 ): readonly string[] {
   const all = TYPE_VALUES_BY_PERIOD[period] ?? [];
-  if (isSummaryTable(table)) return all.filter((value) => !/^(Delayed|Forecasted|Renewal)/.test(value));
+  // Membership, not a prefix. A renamed type that no longer starts with
+  // "Delayed" would otherwise sail through and become a view the bar cannot show.
+  if (isSummaryTable(table)) {
+    return all.filter((value) => !DELAYED_TYPE_VALUES.has(value) && !FORECAST_TYPE_VALUES.has(value));
+  }
   // Annually is the only Period with a Window, so one named on either of the
   // others is not a narrowing — it is a parameter that was already ignored.
+  // TTM keeps Total, Closed Won and Delayed: everything that is not a forecast.
   if (period === MIS_PERIODS.ANNUALLY && viewWindow === MIS_WINDOWS.TTM) {
-    return all.filter((value) => TTM_TYPE_VALUES.test(value));
+    return all.filter((value) => !FORECAST_TYPE_VALUES.has(value));
   }
-  if (table === MIS_TABLES.SOFTWARE_CLOUD_CUSTOMERS) return all.filter((value) => !value.startsWith("Renewal"));
-  return all.filter((value) => !value.startsWith("Delayed"));
+  if (table === MIS_TABLES.SOFTWARE_CLOUD_CUSTOMERS) {
+    return all.filter((value) => !RENEWAL_TYPE_VALUES.has(value));
+  }
+  return all.filter((value) => !DELAYED_TYPE_VALUES.has(value));
 }
 
 /**
@@ -444,14 +451,6 @@ export function parseViewState(search: string, { period }: { period: MisPeriod }
 }
 
 /**
- * How an Annually table's column ranges are computed for a Window.
- *
- * Injected rather than imported. Those ranges are computed in Pacific Time,
- * which is ticket 05's to build and is the easiest thing in this port to get
- * silently wrong — so the URL contract is testable, and shippable, without a
- * timezone in it. Omit it and the ranges are simply not computed.
- */
-/**
  * How a screen computes the column ranges for the view it is showing.
  *
  * Takes the Period as well as the Window because the two are not independent:
@@ -520,7 +519,7 @@ export function hydrateAppliedFilters(
   // drops Years Back to 1 unless the link set it. Written against the Annually
   // value in the source, so it reaches only that Period — the other two already
   // start at 1, which is why nobody has noticed.
-  if (table === MIS_TABLES.SOFTWARE_CLOUD_CUSTOMERS && typeValue === "Delayed ARR" && parsed.yearsBack == null) {
+  if (table === MIS_TABLES.SOFTWARE_CLOUD_CUSTOMERS && typeValue === DELAYED_ARR && parsed.yearsBack == null) {
     applied.yearsBack = 1;
   }
   applied.forecast = typeValue !== undefined && FORECAST_TYPE_VALUES.has(typeValue)

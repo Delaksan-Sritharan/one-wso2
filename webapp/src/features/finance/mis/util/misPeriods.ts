@@ -38,7 +38,13 @@ import {
   startOfYear,
   type MisCivilDate,
 } from "./misPacificTime";
-import { CUMULATIVE_KEY_BY_PERIOD, MIS_PERIODS, type MisPeriod } from "./misViewVocabulary";
+import {
+  CUMULATIVE_KEY_BY_PERIOD,
+  DELAYED_MRR,
+  DELAYED_QRR,
+  MIS_PERIODS,
+  type MisPeriod,
+} from "./misViewVocabulary";
 import type { ColumnRangesFor } from "./misViewState";
 import {
   ENDING_MONTH_TODAY,
@@ -542,10 +548,10 @@ export function customerColumnRanges(
   asOf?: MisCivilDate,
 ): readonly MisDateRange[] {
   const today = asOf ?? pacificCivilDate();
-  if (period === MIS_PERIODS.QUARTERLY && filters.qrrType === "Delayed QRR") {
+  if (period === MIS_PERIODS.QUARTERLY && filters.qrrType === DELAYED_QRR) {
     return recentQuarters(today, 2);
   }
-  if (period === MIS_PERIODS.MONTHLY && filters.mrrType === "Delayed MRR") {
+  if (period === MIS_PERIODS.MONTHLY && filters.mrrType === DELAYED_MRR) {
     return recentMonths(today, 6);
   }
   return buildColumnRanges(period, viewWindow, filters);

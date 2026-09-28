@@ -134,6 +134,10 @@ export function useMisViewState(
 
   const current: MisView = { period, table, scale: parsed.scale, viewWindow, filters };
 
+  // Recreated every render on purpose. Each closes over `current`, which is
+  // this render's view, and a memoised callback would write the previous one.
+  // A caller that puts either in an effect's dependency list will re-run it
+  // on every render.
   return {
     period,
     table,

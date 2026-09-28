@@ -337,7 +337,12 @@ function listTags<T extends string | number>(
   }
 }
 
-/** `2026-03-01` — a date on a tag, in the shape the wire uses. */
+/**
+ * `2026-03-01` — a date on a tag, in the shape the analysis wire uses.
+ *
+ * Hyphens, the ISO shape. `formatCivilDate` uses slashes, which is what the
+ * ARR backend wants. The two are not interchangeable.
+ */
 export const isoCivilDate = ({ year, month, day }: MisCivilDate): string =>
   `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
