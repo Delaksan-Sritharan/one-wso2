@@ -18,6 +18,12 @@ import { useMemo } from "react";
 import {
   PAR_ADMIN_PORTAL_ITEM_ID,
   PAR_LEAD_PORTAL_ITEM_ID,
+  PROMOTION_ADMIN_PORTAL_ITEM_ID,
+  PROMOTION_BOARD_PORTAL_ITEM_ID,
+  PROMOTION_CYCLE_HISTORY_ITEM_ID,
+  PROMOTION_FUNCTIONAL_LEAD_PORTAL_ITEM_ID,
+  PROMOTION_LEAD_PORTAL_ITEM_ID,
+  PROMOTION_TEAM_HISTORY_ITEM_ID,
   SRI_LANKA_ONLY_ITEM_IDS,
   SUBSCRIPTION_ITEM_IDS,
   SALES_ITEM_IDS,
@@ -44,6 +50,7 @@ import { useSalesRailGate } from "@features/sales/api/useSalesGate";
 import { useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
 import { useParCanSeeLeadPortal, useParEmployeeItemVisible } from "@features/par/api/useParData";
 import { useParIsAdmin } from "@features/par/api/useParIsAdmin";
+import { usePromotionPrivileges } from "@features/promotion/api/usePromotionRoles";
 import { useUmtGate } from "@features/umt/api/useUmtGate";
 import { isSriLankaWorkLocation } from "@utils/locationGate";
 import { visibleLeavesOf } from "./railActive";
@@ -185,6 +192,12 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     meProfile.isLoading,
   );
 
+  // promotion-app's Lead Portal — same shape of problem as PAR's above: its
+  // Role.LEAD comes from promotion-app's own backend and bears no fixed
+  // relationship to people-app's generic "lead" privilege `caps` is built
+  // from. Only fetched while People Ops is active.
+  const promotionLeadPortalGate = usePromotionPrivileges(userInfo.data?.workEmail, isPeopleOps);
+
   // UMT is the same shape of problem again: Product Management is
   // UMT_ADMIN-only, decided by UMT's own /update/user-info roles, which bear
   // no relation to the people-app privilege numbers `caps` is built from.
@@ -235,6 +248,21 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     if (s.id === PAR_LEAD_PORTAL_ITEM_ID) return parLeadPortalGate.canSee;
     if (s.id === PAR_ADMIN_PORTAL_ITEM_ID) return parAdminPortalGate.isAdmin;
     if (s.id === PAR_EMPLOYEE_ITEM_ID) return parEmployeeItemGate.canSee;
+    if (s.id === PROMOTION_LEAD_PORTAL_ITEM_ID || s.id === PROMOTION_TEAM_HISTORY_ITEM_ID) {
+      return promotionLeadPortalGate.isLead;
+    }
+    if (s.id === PROMOTION_FUNCTIONAL_LEAD_PORTAL_ITEM_ID) {
+      return promotionLeadPortalGate.isFunctionalLead;
+    }
+    if (s.id === PROMOTION_BOARD_PORTAL_ITEM_ID) {
+      return promotionLeadPortalGate.isPromotionBoardMember;
+    }
+    if (s.id === PROMOTION_ADMIN_PORTAL_ITEM_ID) {
+      return promotionLeadPortalGate.isHrAdmin;
+    }
+    if (s.id === PROMOTION_CYCLE_HISTORY_ITEM_ID) {
+      return promotionLeadPortalGate.isHrAdmin || promotionLeadPortalGate.isFunctionalLead;
+    }
     if (UMT_ADMIN_ITEM_IDS.has(s.id)) return umtGate.isAdmin && !umtGate.isResolving;
     if (isMarketingOps) return marketingOpsGate.canSee(s.id);
     if (INFRA_ITEM_IDS.has(s.id)) return infraGate.canSee(s.id);

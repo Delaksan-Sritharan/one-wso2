@@ -158,57 +158,6 @@ export interface BankAccountsResponse {
   count: number;
 }
 
-// Promotion-app /employee-info response. Mirrors digiops-hr/apps/promotion
-// backend/types.bal EmployeeInfo (outer) + EmployeeInfoWithLead (inner).
-// All string? fields default to "" server-side, so treat "" the same as
-// null when rendering.
-export interface PromotionEmployeeInfoWithLead {
-  workEmail: string;
-  startDate: string;
-  jobBand: number | null;
-  joinedJobRole: string | null;
-  joinedBusinessUnit: string | null;
-  joinedDepartment: string | null;
-  joinedTeam: string | null;
-  joinedLocation: string | null;
-  lastPromotedDate: string | null;
-  employeeThumbnail: string | null;
-  reportingLead: string;
-  reportingLeadThumbnail: string;
-}
-
-export interface PromotionEmployeeInfoResponse {
-  employeeInfo: PromotionEmployeeInfoWithLead;
-}
-
-// Approved promotion request from GET /promotion/requests. Subset of the
-// backend's FullPromotionRequest — only the fields we render in the
-// history dialog. Recommendations, notification flags, and drafts are
-// intentionally omitted.
-export type PromotionType = "NORMAL" | "SPECIAL" | "TIME_BASED";
-
-export interface PromotionHistoryEntry {
-  id: number;
-  employeeEmail: string;
-  currentJobBand: number;
-  currentJobRole: string;
-  nextJobBand: number;
-  promotionCycle: string;
-  promotionStatement: string | null;
-  businessUnit: string;
-  department: string;
-  team: string;
-  subTeam: string | null;
-  promotionType: PromotionType;
-  status: string;
-  createdOn: string;
-  updatedOn: string;
-}
-
-export interface PromotionHistoryResponse {
-  promotionRequests: PromotionHistoryEntry[];
-}
-
 // Body for PATCH /employees/{employeeId}/personal-info. Mirrors
 // database:UpdateEmployeePersonalInfoPayload — every field is optional and
 // nullable. Non-admin callers can only update the contact/address block and

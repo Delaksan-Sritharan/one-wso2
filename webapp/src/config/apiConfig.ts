@@ -1184,6 +1184,174 @@ export const promotionServiceUrls = {
   // allows self-lookup for non-admins.
   promotionHistory: (workEmail: string) =>
     `${promotionBackendUrl}/promotion/requests?statusArray=APPROVED&employeeEmail=${encodeURIComponent(workEmail)}`,
+  // GET /employee-privileges — the caller's own numeric privilege codes,
+  // mapped to a Role[] client-side (features/promotion/api/usePromotionRoles.ts)
+  // the same way source's authSlice does. Presentation only — see the
+  // PromotionPrivilegesResponse type's own comment.
+  employeePrivileges: () => `${promotionBackendUrl}/employee-privileges`,
+  // GET /promotion/cycles?statusArray=OPEN|END — every cycle in that status,
+  // newest first is NOT guaranteed by the backend, so callers that care
+  // (the Lead Portal) take promotionCycles[0] the same way source does.
+  promotionCycles: (status: "OPEN" | "END") =>
+    `${promotionBackendUrl}/promotion/cycles?statusArray=${status}`,
+  // GET /promotion/recommendations — leadEmail/statusArray/promotionCycleId
+  // are all optional query params; statusArray is comma-joined (backend
+  // splits on ","). Shared by the Lead Portal's Pending Requests tab
+  // (statusArray=REQUESTED, scoped to the open cycle) and History tab
+  // (statusArray=SUBMITTED,DECLINED,EXPIRED, every cycle).
+  promotionRecommendations: (params: {
+    leadEmail?: string;
+    statusArray?: ("REQUESTED" | "SUBMITTED" | "DECLINED" | "EXPIRED")[];
+    promotionCycleId?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params.leadEmail) qs.set("leadEmail", params.leadEmail);
+    if (params.statusArray?.length) qs.set("statusArray", params.statusArray.join(","));
+    if (params.promotionCycleId !== undefined) qs.set("promotionCycleId", String(params.promotionCycleId));
+    return `${promotionBackendUrl}/promotion/recommendations?${qs.toString()}`;
+  },
+  // PATCH /promotion/recommendations — body is RecommendationUpdateData
+  // (id/statement/comment/leadEmail); statement/comment are base64, matching
+  // the backend's own rejection of anything else (same encoding par-app's
+  // rich-text fields use). Saves a draft; submitting is the separate
+  // endpoint below, called after this one succeeds — same two-call sequence
+  // source's own submitRecommendation thunk uses.
+  promotionRecommendationSave: () => `${promotionBackendUrl}/promotion/recommendations`,
+  // GET .../recommendations/{id}/submit — approves the recommendation
+  // (moves it to SUBMITTED) and, for a TIME_BASED recommendation, also
+  // flips the underlying promotion request to SUBMITTED (or straight to
+  // APPROVED if the caller is also a functional lead) as a server-side side
+  // effect. 403s past the lead deadline (also enforced client-side).
+  promotionRecommendationSubmit: (recommendationId: number) =>
+    `${promotionBackendUrl}/promotion/recommendations/${recommendationId}/submit`,
+  // GET .../recommendations/{id}/decline?comment=<reason> — reason is
+  // required by the backend (a bare GET with no comment 400s).
+  promotionRecommendationDecline: (recommendationId: number, comment: string) =>
+    `${promotionBackendUrl}/promotion/recommendations/${recommendationId}/decline?comment=${encodeURIComponent(comment)}`,
+  // GET /employees?managerEmail=|additionalManagerEmail= — a lead's direct
+  // reports (managerEmail) or dotted-line reports (additionalManagerEmail).
+  // The Team Promotion History tabs each pass exactly one of the two.
+  promotionEmployees: (params: { managerEmail?: string; additionalManagerEmail?: string }) => {
+    const qs = new URLSearchParams();
+    if (params.managerEmail) qs.set("managerEmail", params.managerEmail);
+    if (params.additionalManagerEmail) qs.set("additionalManagerEmail", params.additionalManagerEmail);
+    return `${promotionBackendUrl}/employees?${qs.toString()}`;
+  },
+  // GET /promotion/requests — the Functional Lead Portal's four grids/lists
+  // all read this one resource, varying statusArray/type/cycleId.
+  // enableBuFilter=true scopes results to the caller's own
+  // functionalLeadAccessLevels (business unit/department/team/sub-team) —
+  // the backend 403s if the caller holds no such scope at all.
+  promotionRequests: (params: {
+    statusArray?: string[];
+    enableBuFilter?: boolean;
+    type?: "NORMAL" | "SPECIAL" | "TIME_BASED" | "INDIVIDUAL_CONTRIBUTOR";
+    cycleId?: number;
+    employeeEmail?: string;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params.statusArray?.length) qs.set("statusArray", params.statusArray.join(","));
+    if (params.enableBuFilter !== undefined) qs.set("enableBuFilter", String(params.enableBuFilter));
+    if (params.type) qs.set("type", params.type);
+    if (params.cycleId !== undefined) qs.set("cycleId", String(params.cycleId));
+    if (params.employeeEmail) qs.set("employeeEmail", params.employeeEmail);
+    return `${promotionBackendUrl}/promotion/requests?${qs.toString()}`;
+  },
+  // GET .../requests/{id}/approve|reject?from=functional_lead|promotion_board
+  // — shared by the Functional Lead and (not yet ported) Promotion Board
+  // portals; `from` decides both the authorization check and which status
+  // the request lands in (service.bal's own GET .../approve handler).
+  promotionRequestApprove: (id: number, from: "functional_lead" | "promotion_board") =>
+    `${promotionBackendUrl}/promotion/requests/${id}/approve?from=${from}`,
+  promotionRequestReject: (id: number, from: "functional_lead" | "promotion_board", reason: string) =>
+    `${promotionBackendUrl}/promotion/requests/${id}/reject?from=${from}&reason=${encodeURIComponent(reason)}`,
+  // PATCH /promotion/requests — body is ApplicationUpdateData. Two different
+  // shapes share this one endpoint: {id, promotingJobBand} (Functional
+  // Lead's job-band edit dialog) and {id, reasonForRejection} (the Admin
+  // Portal's Individual Contributor tab, editing a declined reason after
+  // the fact) — same URL, same HR_ADMIN/FUNCTIONAL_LEAD/PROMOTION_BOARD_MEMBER
+  // server-side gate, the caller just sends whichever fields it's editing.
+  promotionRequestUpdate: () => `${promotionBackendUrl}/promotion/requests`,
+
+  // ---- Admin Portal --------------------------------------------------------
+  //
+  // Admin-gated server-side (HR_ADMIN), same backend as everything above.
+
+  // POST /promotion/cycles — creates a new cycle (PromotionCycleManagePanel's
+  // own "Create" form). GET /promotion/cycles/{id}/end — ends the currently
+  // OPEN cycle; a bare GET with the action encoded in the URL suffix, same
+  // convention as approve/reject above (source's own service.bal handler).
+  promotionCycleCreate: () => `${promotionBackendUrl}/promotion/cycles`,
+  promotionCycleEnd: (id: number) => `${promotionBackendUrl}/promotion/cycles/${id}/end`,
+  // GET .../requests/{id}/send-email-notification?effectiveDate=<date> — the
+  // Notification Hub's own "send the outcome email" action, for requests
+  // whose automatic notification hasn't gone out yet
+  // (isNotificationEmailSent === false). effectiveDate is only meaningful
+  // (and only sent) for an APPROVED request; omitted for REJECTED/FL_REJECTED.
+  promotionRequestNotify: (id: number, effectiveDate?: string) =>
+    `${promotionBackendUrl}/promotion/requests/${id}/send-email-notification${
+      effectiveDate ? `?effectiveDate=${encodeURIComponent(effectiveDate)}` : ""
+    }`,
+  // GET .../requests/{id}/remove|submit — the Withdrawal Requests tab's own
+  // approve/reject actions on a WITHDRAW-status request. Named for their
+  // side effect, not the UI verb: "remove" APPROVES the withdrawal (request
+  // becomes REMOVED, terminal); "submit" REJECTS it (request reverts to its
+  // prior submitted/active state) — source's own literal endpoint names,
+  // kept as-is rather than relabelled, since nothing here is a new backend.
+  promotionRequestWithdrawApprove: (id: number) => `${promotionBackendUrl}/promotion/requests/${id}/remove`,
+  promotionRequestWithdrawReject: (id: number) => `${promotionBackendUrl}/promotion/requests/${id}/submit`,
+  // POST /promotion/requests/time-based — bulk-imports TIME_BASED promotion
+  // requests for the open cycle from a Google Sheet. `type: "PAR_APP"` is a
+  // real wire value but has no server implementation yet either (source's
+  // own UI radio option is a same-shaped stub — see the Admin Portal doc's
+  // deviation entry).
+  timeBasedPromotionImport: () => `${promotionBackendUrl}/promotion/requests/time-based`,
+  // GET /users, DELETE /users/{id}, POST/PATCH /users (bare collection URL
+  // for both — the caller's payload shape decides insert vs. update, same
+  // convention promotionRequestUpdate above already follows for PATCH).
+  // Every op here is HR_ADMIN-only server-side. This is promotion-app's own
+  // *system users* resource (an account + its Role[] + optional
+  // functionalLeadAccessLevels) — distinct from the employee directory
+  // (`employeesFilterLeads` below) and from people-app's own admin users.
+  users: () => `${promotionBackendUrl}/users`,
+  userDelete: (id: number) => `${promotionBackendUrl}/users/${id}`,
+  // GET /business-units — promotion-app's own BU→Department→Team tree
+  // (BUAccessLevel[]), used only to populate the Functional Lead ACL
+  // selector when creating/editing a system user. Distinct from people-app's
+  // own /business-units (peopleServiceUrls.businessUnits) — a different
+  // backend, a different shape (this one nests departments/teams inline).
+  businessUnits: () => `${promotionBackendUrl}/business-units`,
+  // GET /business-units/sync?googleSheet=<url> — bulk-imports/refreshes the
+  // system user list from a Google Sheet. A GET despite writing, matching
+  // source's own endpoint (not a mistake to "fix" here — same backend).
+  businessUnitsSync: (googleSheetUrl: string) =>
+    `${promotionBackendUrl}/business-units/sync?googleSheet=${encodeURIComponent(googleSheetUrl)}`,
+  // GET /app-configs?key=<key> — a tiny key/value flag store, polled while a
+  // background sync is running. Two independent keys share this one
+  // endpoint: SYNC_STATE (user sync, above) and TIME_BASED_PROMOTION_STATE
+  // (the time-based import above) — never mix the two up client-side, the
+  // backend tracks them completely separately.
+  appConfig: (key: string) => `${promotionBackendUrl}/app-configs?key=${encodeURIComponent(key)}`,
+  // GET /employees?filterLeads=true|false — promotion-app's own employee
+  // directory lookup, used by the user-insert/transfer-access pickers.
+  // Distinct from promotionEmployees above (managerEmail/additionalManagerEmail
+  // scoped reports) and from people-app's own employee search.
+  employeesFilterLeads: (filterLeads: boolean) =>
+    `${promotionBackendUrl}/employees?filterLeads=${filterLeads}`,
+
+  // GET /promotion/history — pre-HRIS promotions migrated out of the old
+  // People HR system (Promotion Cycle History's own People HR Archive tab).
+  // Every param is optional; omitting all three returns the whole archive
+  // (~338 KB, paged client-side — see ArchivedPromotion's own comment).
+  promotionArchive: (params: { search?: string; startDate?: string; endDate?: string; employeeEmail?: string }) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set("search", params.search);
+    if (params.startDate) qs.set("startDate", params.startDate);
+    if (params.endDate) qs.set("endDate", params.endDate);
+    if (params.employeeEmail) qs.set("employeeEmail", params.employeeEmail);
+    const query = qs.toString();
+    return `${promotionBackendUrl}/promotion/history${query ? `?${query}` : ""}`;
+  },
 };
 
 // ---------------------------------------------------------------------------

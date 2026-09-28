@@ -18,32 +18,32 @@ import { useQuery } from "@tanstack/react-query";
 import { useAsgardeo } from "@asgardeo/react";
 import { authedGet, defaultQueryRetry } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
-import { promotionBackendUrl, promotionServiceUrls } from "@config/apiConfig";
-import type { PromotionHistoryResponse } from "./types";
-import { digiopsHeaders } from "../util/digiopsHeaders";
+import { promotionServiceUrls } from "@config/apiConfig";
+import { digiopsHeaders } from "@features/my/util/digiopsHeaders";
+import { isPromotionBackendConfigured } from "./usePromotionEmployeeInfo";
+import type { PromotionEmployeesResponse } from "./types";
 
-// Fetches the caller's APPROVED promotion history from the digiops-hr
-// promotion app. Only fires when `enabled` is true — used to defer the
-// request until the "View promotion history" dialog is opened.
-//
-// Non-lead / non-admin users can only fetch their own history — the
-// backend authorization rejects cross-user lookups with a 401/403.
-export function usePromotionHistory(workEmail: string | undefined, enabled: boolean) {
+// GET /employees, scoped to one relationship — ports source's own
+// getLeadEmployees (managerEmail) and getAdditionalLeadEmployees
+// (additionalManagerEmail), which are otherwise identical fetches against
+// the same resource. Used by the Lead Portal's Team Promotion History tabs.
+export function usePromotionTeam(kind: "direct" | "indirect", email: string | undefined) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
-  const backendConfigured = Boolean(promotionBackendUrl);
-  return useQuery<PromotionHistoryResponse>({
-    queryKey: ["promotion-history", workEmail],
-    enabled: enabled && isSignedIn && backendConfigured && Boolean(workEmail),
+  const backendConfigured = isPromotionBackendConfigured();
+  return useQuery<PromotionEmployeesResponse>({
+    queryKey: ["promotion-team", kind, email],
+    enabled: isSignedIn && backendConfigured && Boolean(email),
     queryFn: async () => {
       const accessToken = await getAccessToken();
-      return authedGet<PromotionHistoryResponse>(
-        promotionServiceUrls.promotionHistory(workEmail!),
+      const params = kind === "direct" ? { managerEmail: email } : { additionalManagerEmail: email };
+      return authedGet<PromotionEmployeesResponse>(
+        promotionServiceUrls.promotionEmployees(params),
         accessToken,
         digiopsHeaders(),
       );
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
     retry: defaultQueryRetry,
   });
 }
