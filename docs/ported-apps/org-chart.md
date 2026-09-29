@@ -52,8 +52,12 @@ row shows:
   photo or it fails to load.
 - Name and job title.
 - A second line: work email, then business unit and team.
-- A "N reports" pill, N being **direct** reports only — an exact count, derived from the tree built
-  in memory (see §2.2), not a field the backend sends.
+- A "N reports" pill, N being **direct** reports only, derived from the tree built in memory (see
+  §2.2), not a field the backend sends. N reflects whichever of the company filter and "Hide
+  interns" are currently active — the same filtered list that renders when the row is expanded —
+  not the person's raw total; a manager whose entire visible team is filtered out still shows the
+  chevron and "0 reports" rather than losing it, with "All direct reports are hidden by filters."
+  where the list would otherwise be.
 
 Collapsing a branch never discards anything — the whole tree is already in memory (see §2.2), so
 reopening it is instant with no request at all. There is no way to remove a person from the tree
@@ -70,8 +74,11 @@ already in hand.
 
 ### 2.3 Sidebar
 
-- **Stats** — total headcount and department count, from the full directory (department = the
-  directory's `team` field — see `util/departmentColors.ts` for why).
+- **Stats** — total headcount is always the full directory; department count and the legend's
+  per-department headcounts are scoped by the company filter and "Hide interns" (but never by the
+  department filter itself, since that's the legend's own picker — isolating one department must
+  not also remove every other department from the list of things you could switch to). Department =
+  the directory's `team` field — see `util/departmentColors.ts` for why.
 - **Search** — a text field matching name or email against the full directory; a live dropdown
   lists up to 12 matches. Picking one **expands the tree to reveal them** (the ancestor chain is
   walked synchronously from data already in memory — no request of any kind) and scrolls to their
