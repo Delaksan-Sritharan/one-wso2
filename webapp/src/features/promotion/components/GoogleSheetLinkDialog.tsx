@@ -15,12 +15,16 @@
 // under the License.
 
 import { useState } from "react";
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from "@wso2/oxygen-ui";
+import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField } from "@wso2/oxygen-ui";
 
-// A Google Sheet URL, validated with the same permissive regex source uses
-// (userManagement.tsx / timeBasedPromotion.tsx both validate this way, not
-// specifically that the host is docs.google.com — matching source rather
-// than tightening it here).
+// A Google Sheet URL. Source's own validation for this exact regex lives
+// only in userManagement.tsx's urlPatternValidation — and it's UNANCHORED
+// (`regex.test(url)` with no `^`/`$`), so it really just checks "does this
+// string contain something dotted-looking anywhere", far more permissive
+// than it looks. timeBasedPromotion.tsx's own dialog has no JS validation
+// at all (only a native `type="url"` + `required` field). Anchoring the
+// pattern here is a deliberate tightening, not a reproduction of either —
+// worth knowing if a previously-accepted sheet link ever gets rejected.
 const URL_PATTERN = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})[/\w .\-?=&%]*\/?$/i;
 
 // Shared by two Admin Portal sync flows: User Management's "Import users
@@ -30,11 +34,16 @@ const URL_PATTERN = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})[/\w .\-?=&%]*\/?
 export default function GoogleSheetLinkDialog({
   open,
   title,
+  description,
   onClose,
   onSubmit,
 }: {
   open: boolean;
   title: string;
+  /** Only Time Based Promotions' own bootstrap dialog has explanatory copy
+   * in source (`timeBasedPromotion.tsx`) — User Management's own sheet-sync
+   * dialog has none, so this is opt-in per call site rather than always-on. */
+  description?: string;
   onClose: () => void;
   onSubmit: (url: string) => void;
 }) {
@@ -50,6 +59,7 @@ export default function GoogleSheetLinkDialog({
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent dividers>
+        {description && <DialogContentText sx={{ mb: 2 }}>{description}</DialogContentText>}
         <TextField
           fullWidth
           type="url"
