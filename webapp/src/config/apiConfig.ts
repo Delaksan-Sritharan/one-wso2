@@ -283,11 +283,6 @@ export const parServiceUrls = {
   // caller being a lead in the active cycle (or admin), not scoped to their
   // own participation the way parCycles(email, "CLOSED") above is.
   parAllClosedCycles: () => `${parBackendUrl}/par-cycles?status=CLOSED`,
-  // GET .../participants?leadEmail= — same endpoint parServiceUrls.par360Participants
-  // hits with no leadEmail (org-wide); EmployeeHistoryView.tsx's own
-  // fetchParticipants scopes it to the calling lead's own reports instead.
-  parHistoryParticipants: (parCycleId: number, leadEmail: string) =>
-    `${parBackendUrl}/par-cycles/${parCycleId}/participants?leadEmail=${encodeURIComponent(leadEmail)}`,
   // GET .../employees/{email}/reviews — every review ABOUT that employee
   // (reviewer, rating, comment, status), regardless of who's asking, as
   // opposed to par360Review (the caller's OWN review of someone else).
