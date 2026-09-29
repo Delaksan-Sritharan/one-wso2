@@ -224,7 +224,7 @@ export default function AdminTimeBasedPromotionsTab() {
         // (source's own inline TODO) — kept selectable here for the same
         // reason: not reproducing it would silently drop something a real
         // admin can currently click, but confirming it is deliberately a
-        // no-op, matching source exactly (see docs/ported-apps/promotion-app.md).
+        // no-op, matching source exactly.
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, py: 4 }}>
           <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
             No time-based promotions exist for this cycle yet

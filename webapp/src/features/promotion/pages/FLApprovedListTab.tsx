@@ -35,8 +35,8 @@ import type { PromotionRequestFull } from "../api/types";
 // Source's own transformFLState — the Promotion Board's decision, in the
 // functional lead's own terms (FL_APPROVED just means "still with the
 // board"). A TIME_BASED request never reaches the board at all (the Lead
-// Portal's own submit already finalizes it — docs/ported-apps/
-// promotion-app.md §6), so it reads "N/A" here rather than a real status.
+// Portal's own submit already finalizes it), so it reads "N/A" here rather
+// than a real status.
 function boardStatusLabel(request: PromotionRequestFull): string {
   if (request.promotionType === "TIME_BASED") return "N/A";
   if (request.status === "FL_APPROVED") return "Pending";
