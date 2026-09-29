@@ -78,7 +78,15 @@ export type PreviewFeature =
    * feature can ship to `main` without going live in production before
    * it's ready.
    */
-  | "promotion";
+  | "promotion"
+  /**
+   * The whole Engineering perspective — waffle tile, rail, favourites,
+   * landing choices, and the Product Download Stats screens. Product Download
+   * Stats is the first app here and is still being ported, so the perspective
+   * stays hidden until this is on. A direct visit while it is off says
+   * Engineering is not available, rather than redirecting away with no answer.
+   */
+  | "engineering";
 
 /**
  * Whether a preview feature should be shown.

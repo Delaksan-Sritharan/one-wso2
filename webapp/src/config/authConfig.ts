@@ -144,6 +144,11 @@ declare global {
       // requests. Privileges on this service (987 / 762 / 123) are not
       // people-app's.
       ONE_WSO2_INFRA_BACKEND_URL?: string;
+      // Base URL for the Product Download Stats API. Optional — when absent,
+      // Engineering Overview says it isn't connected and makes no requests.
+      // The gateway rewrites the Bearer token into the assertion that API
+      // already checks. Read at call time by the engineering feature.
+      ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL?: string;
       // Base URL of the Pardot UI, used to deep-link to an email template
       // after Email Workbench pushes it. Not an API — a link target.
       // Optional; defaults to https://pi.pardot.com, which is correct for

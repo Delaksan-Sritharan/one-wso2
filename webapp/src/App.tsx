@@ -206,6 +206,7 @@ import UmtReleaseChunksPage from "@features/umt/pages/UmtReleaseChunksPage";
 import UmtStatisticsPage from "@features/umt/pages/UmtStatisticsPage";
 import UmtUpdateView from "@features/umt/pages/UmtUpdateView";
 import UmtUpdatesPage from "@features/umt/pages/UmtUpdatesPage";
+import EngineeringOverviewPage from "@features/engineering/pages/EngineeringOverviewPage";
 import InfraHomePage from "@features/infra/pages/InfraHomePage";
 import InfraNewRepositoryPage from "@features/infra/pages/InfraNewRepositoryPage";
 
@@ -234,6 +235,10 @@ export default function App() {
               <Route path="umt/statistics" element={<UmtStatisticsPage />} />
             </>
           )}
+          {/* Registered even while the engineering preview flag is off. The page
+              says Engineering is not available; omitting the route would send a
+              direct visit home with no answer. */}
+          <Route path="engineering" element={<EngineeringOverviewPage />} />
           {isPreviewEnabled("infra") && (
             <>
               <Route path="infra" element={<InfraHomePage />} />
