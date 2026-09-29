@@ -21,8 +21,49 @@ import { landingPath } from "@config/landingConfig";
 import SettingsPage from "@features/settings/pages/SettingsPage";
 import MenuHomePage from "@features/menu/pages/MenuHomePage";
 import OrgChartPage from "@features/org-chart/pages/OrgChartPage";
-import RevOpsMeetingsPage from "@features/revops/pages/RevOpsMeetingsPage";
-import MeetingDetailPage from "@features/revops/pages/MeetingDetailPage";
+import SalesMeetingsPage from "@features/sales/pages/SalesMeetingsPage";
+import MeetingDetailPage from "@features/sales/pages/MeetingDetailPage";
+import PromotionHistoryPage from "@features/promotion/pages/PromotionHistoryPage";
+import PromotionRequiresLeadRoute from "@features/promotion/components/PromotionRequiresLeadRoute";
+import LeadPortalPage, { LeadPortalIndex } from "@features/promotion/pages/LeadPortalPage";
+import LeadPendingRequestsTab from "@features/promotion/pages/LeadPendingRequestsTab";
+import LeadHistoryTab from "@features/promotion/pages/LeadHistoryTab";
+import TeamPromotionHistoryPage, {
+  TeamPromotionHistoryIndex,
+} from "@features/promotion/pages/TeamPromotionHistoryPage";
+import TeamDirectReportsTab from "@features/promotion/pages/TeamDirectReportsTab";
+import TeamIndirectReportsTab from "@features/promotion/pages/TeamIndirectReportsTab";
+import PromotionRequiresFunctionalLeadRoute from "@features/promotion/components/PromotionRequiresFunctionalLeadRoute";
+import FunctionalLeadPortalPage, {
+  FunctionalLeadPortalIndex,
+} from "@features/promotion/pages/FunctionalLeadPortalPage";
+import FLActiveRequestsTab from "@features/promotion/pages/FLActiveRequestsTab";
+import FLApprovedListTab from "@features/promotion/pages/FLApprovedListTab";
+import FLRejectedListTab from "@features/promotion/pages/FLRejectedListTab";
+import FLTimeBasedTab from "@features/promotion/pages/FLTimeBasedTab";
+import PromotionRequiresPromotionBoardRoute from "@features/promotion/components/PromotionRequiresPromotionBoardRoute";
+import PromotionBoardPortalPage, {
+  PromotionBoardPortalIndex,
+} from "@features/promotion/pages/PromotionBoardPortalPage";
+import PBActiveRequestsTab from "@features/promotion/pages/PBActiveRequestsTab";
+import PBApprovedListTab from "@features/promotion/pages/PBApprovedListTab";
+import PBRejectedListTab from "@features/promotion/pages/PBRejectedListTab";
+import PBFLRejectedListTab from "@features/promotion/pages/PBFLRejectedListTab";
+import PromotionRequiresHrAdminRoute from "@features/promotion/components/PromotionRequiresHrAdminRoute";
+import PromotionAdminPortalPage, {
+  PromotionAdminPortalIndex,
+} from "@features/promotion/pages/PromotionAdminPortalPage";
+import AdminPromotionCycleTab from "@features/promotion/pages/AdminPromotionCycleTab";
+import AdminTimeBasedPromotionsTab from "@features/promotion/pages/AdminTimeBasedPromotionsTab";
+import AdminIndividualContributorTab from "@features/promotion/pages/AdminIndividualContributorTab";
+import AdminWithdrawalRequestsTab from "@features/promotion/pages/AdminWithdrawalRequestsTab";
+import AdminUserManagementTab from "@features/promotion/pages/AdminUserManagementTab";
+import PromotionRequiresCycleHistoryRoute from "@features/promotion/components/PromotionRequiresCycleHistoryRoute";
+import PromotionCycleHistoryPage, {
+  PromotionCycleHistoryIndex,
+} from "@features/promotion/pages/PromotionCycleHistoryPage";
+import CycleHistoryTab from "@features/promotion/pages/CycleHistoryTab";
+import PeopleHrArchiveTab from "@features/promotion/pages/PeopleHrArchiveTab";
 import AuthGuard from "@layouts/AuthGuard";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import AppLayout from "@layouts/AppLayout";
@@ -37,6 +78,7 @@ import ParGroupPage, {
   ParGroupIndex,
   ParRequiresActiveCycleRoute,
   ParRequiresLeadRoute,
+  ParRequiresSomethingToShowRoute,
 } from "@features/par/pages/ParGroupPage";
 import ParLeadGroupPage, { ParLeadGroupIndex, ParRequiresTeamLeadRoute } from "@features/par/pages/ParLeadGroupPage";
 import ParAdminGroupPage, { ParAdminGroupIndex, ParRequiresAdminRoute } from "@features/par/pages/ParAdminGroupPage";
@@ -58,10 +100,15 @@ const ParAdminHistoryTab = lazy(() => import("@features/par/pages/ParAdminHistor
 const ParAdminGlobalConfigTab = lazy(() => import("@features/par/pages/ParAdminGlobalConfigTab"));
 import EmailGroupsPage from "@features/my/email-groups/pages/EmailGroupsPage";
 import EmailSignaturePage from "@features/my/email-signature/pages/EmailSignaturePage";
+import BankingRoute from "@features/my/banking/components/BankingRoute";
+import BankingPage, { BankingIndex } from "@features/my/banking/pages/BankingPage";
+import MyAccountsTab from "@features/my/banking/pages/MyAccountsTab";
+import SummaryTab from "@features/my/banking/pages/SummaryTab";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import PerspectiveLanding from "@components/perspective-landing/PerspectiveLanding";
 import SriLankaRoute from "@components/route-guards/SriLankaRoute";
+import MasterDataRoute from "@components/route-guards/MasterDataRoute";
 import AdCampaignsAnalyticsPage from "@features/marketing-ops/ad-campaigns/pages/AdCampaignsAnalyticsPage";
 import CampaignTrackerPage from "@features/marketing-ops/ad-campaigns/pages/CampaignTrackerPage";
 import UtmGeneratorPage from "@features/marketing-ops/utilities/pages/UtmGeneratorPage";
@@ -138,6 +185,7 @@ import DecidedTab from "@features/finance/approvals/DecidedTab";
 import { riskRoutes } from "@features/security/grc/modules/risk/routes";
 import { auditRoutes } from "@features/security/grc/modules/audit/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
+import { evidenceRoutes } from "@features/security/evidence-portal/routes";
 import PartnersListPage from "@features/due-diligence/partners/pages/PartnersListPage";
 import PartnerPendingPage from "@features/due-diligence/partners/pages/PartnerPendingPage";
 import PartnerDashboardPage from "@features/due-diligence/partners/pages/PartnerDashboardPage";
@@ -153,9 +201,11 @@ import UmtCreateReleaseChunkPage from "@features/umt/pages/UmtCreateReleaseChunk
 import UmtHomePage from "@features/umt/pages/UmtHomePage";
 import UmtProductsPage from "@features/umt/pages/UmtProductsPage";
 import UmtReleaseChunksPage from "@features/umt/pages/UmtReleaseChunksPage";
+import UmtStatisticsPage from "@features/umt/pages/UmtStatisticsPage";
 import UmtUpdateView from "@features/umt/pages/UmtUpdateView";
 import UmtUpdatesPage from "@features/umt/pages/UmtUpdatesPage";
 import InfraHomePage from "@features/infra/pages/InfraHomePage";
+import InfraNewRepositoryPage from "@features/infra/pages/InfraNewRepositoryPage";
 
 export default function App() {
   return (
@@ -179,10 +229,17 @@ export default function App() {
               <Route path="umt/products" element={<UmtProductsPage />} />
               <Route path="umt/release-chunks" element={<UmtReleaseChunksPage />} />
               <Route path="umt/release-chunks/new" element={<UmtCreateReleaseChunkPage />} />
+              <Route path="umt/statistics" element={<UmtStatisticsPage />} />
             </>
           )}
           {isPreviewEnabled("infra") && (
-            <Route path="infra" element={<InfraHomePage />} />
+            <>
+              <Route path="infra" element={<InfraHomePage />} />
+              <Route
+                  path="infra/github/repository-requests"
+                  element={<InfraNewRepositoryPage />}
+              />
+            </>
           )}
           {/* My Team — placeholder for now; the real subordinates view is on
               hold this iteration (mirrors people-app's lead-only nav item). */}
@@ -341,11 +398,27 @@ export default function App() {
           <Route path="finance/opd/dashboard" element={<OpdDashboardScreen />} />
           {/* Finance → Master Data: the four reference tables the other
               finance apps are keyed against. One route per table, matching
-              the source app's own tab urls (constants.ts:40-45). */}
-          <Route path="finance/master-data/subsidiaries" element={<SubsidiariesPage />} />
-          <Route path="finance/master-data/departments" element={<DepartmentsPage />} />
-          <Route path="finance/master-data/expense-types" element={<ExpenseTypesPage />} />
-          <Route path="finance/master-data/credit-cards" element={<CreditCardsPage />} />
+              the source app's own tab urls (constants.ts:40-45).
+              MasterDataRoute-guarded: this backend has no role scheme of its
+              own, so the frontend's admin + preview-flag check is the only
+              access control in front of it — it has to hold at the route,
+              not just hide the rail item. */}
+          <Route
+            path="finance/master-data/subsidiaries"
+            element={<MasterDataRoute><SubsidiariesPage /></MasterDataRoute>}
+          />
+          <Route
+            path="finance/master-data/departments"
+            element={<MasterDataRoute><DepartmentsPage /></MasterDataRoute>}
+          />
+          <Route
+            path="finance/master-data/expense-types"
+            element={<MasterDataRoute><ExpenseTypesPage /></MasterDataRoute>}
+          />
+          <Route
+            path="finance/master-data/credit-cards"
+            element={<MasterDataRoute><CreditCardsPage /></MasterDataRoute>}
+          />
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
               from the standalone org-chart app. Unlike every other People Ops
@@ -383,13 +456,30 @@ export default function App() {
               </SriLankaRoute>
             }
           />
+          {/* Me → Promotion: promotion-app's own employee route ("Self
+              Promotion History"). Behind the same preview flag as every
+              other promotion-app route (People Ops → Promotion below) — the
+              whole app isn't released yet. See
+              docs/ported-apps/promotion-app.md. */}
+          {isPreviewEnabled("promotion") && <Route path="me/promotion" element={<PromotionHistoryPage />} />}
           {/* Me → PAR: the employee half of par-app, ported one screen at a
               time. Tab names match par-app's own OngoingCycleView tab bar
               (Employee Feedback / Request 360° Feedback / Provide 360°
               Feedback / F2F) rather than invented ones. See
               docs/ported-apps/par-app.md. Not gated beyond signing in —
-              every employee has their own PAR. */}
-          <Route path="me/performance" element={<ParGroupPage />}>
+              every employee has their own PAR — except an intern, who
+              never does, regardless of lead or active-cycle status;
+              ParRequiresSomethingToShowRoute redirects them to /me. Same
+              shape as ParRequiresAdminRoute below. See
+              useParEmployeeItemVisible for the full reasoning. */}
+          <Route
+            path="me/performance"
+            element={
+              <ParRequiresSomethingToShowRoute>
+                <ParGroupPage />
+              </ParRequiresSomethingToShowRoute>
+            }
+          >
             <Route index element={<ParGroupIndex />} />
             {/* Employee Feedback and Request 360° are hidden from a leadless
                 employee entirely in the source (OngoingCycleView.tsx), not
@@ -549,6 +639,117 @@ export default function App() {
               }
             />
           </Route>
+          {/* People Ops → Promotion (Lead/Team History/Functional Lead/
+              Board/Admin/Cycle History portals). Behind the same preview
+              flag as the Me → Promotion route above and the rail's own
+              "Promotion" group (perspectives.ts) — hiding only the
+              rail/launcher entry would leave every route below reachable by
+              URL. Each portal's own role guard (PromotionRequires*Route)
+              keeps working the same regardless of this flag — see
+              docs/ported-apps/promotion-app.md. */}
+          {isPreviewEnabled("promotion") && (
+            <>
+              {/* Lead Portal: promotion-app's own lead.tsx ("Time Based
+                  Promotions"). Reviewing/deciding on other people's
+                  promotions is People-Ops-team work, the same split PAR's own
+                  Lead Portal above already applies. Gated on
+                  PromotionRequiresLeadRoute (promotion-app's own Role.LEAD,
+                  read back from GET /employee-privileges). */}
+              <Route
+                path="people-ops/promotion/lead"
+                element={
+                  <PromotionRequiresLeadRoute>
+                    <LeadPortalPage />
+                  </PromotionRequiresLeadRoute>
+                }
+              >
+                <Route index element={<LeadPortalIndex />} />
+                <Route path="pending" element={<LeadPendingRequestsTab />} />
+                <Route path="history" element={<LeadHistoryTab />} />
+              </Route>
+              {/* Team Promotion History: a SEPARATE Lead-role screen from the
+                  Lead Portal above (source's own /lead-employee-history
+                  route, distinct from /time-based-promotions). */}
+              <Route
+                path="people-ops/promotion/team-history"
+                element={
+                  <PromotionRequiresLeadRoute>
+                    <TeamPromotionHistoryPage />
+                  </PromotionRequiresLeadRoute>
+                }
+              >
+                <Route index element={<TeamPromotionHistoryIndex />} />
+                <Route path="direct-reports" element={<TeamDirectReportsTab />} />
+                <Route path="indirect-reports" element={<TeamIndirectReportsTab />} />
+              </Route>
+              {/* Functional Lead Portal: promotion-app's own
+                  functionalLead.tsx. Gated on Role.FUNCTIONAL_LEAD via
+                  PromotionRequiresFunctionalLeadRoute. */}
+              <Route
+                path="people-ops/promotion/functional-lead"
+                element={
+                  <PromotionRequiresFunctionalLeadRoute>
+                    <FunctionalLeadPortalPage />
+                  </PromotionRequiresFunctionalLeadRoute>
+                }
+              >
+                <Route index element={<FunctionalLeadPortalIndex />} />
+                <Route path="active" element={<FLActiveRequestsTab />} />
+                <Route path="approved" element={<FLApprovedListTab />} />
+                <Route path="rejected" element={<FLRejectedListTab />} />
+                <Route path="time-based" element={<FLTimeBasedTab />} />
+              </Route>
+              {/* Promotion Board Portal: promotion-app's own
+                  promotionBoard.tsx. Gated on Role.PROMOTION_BOARD_MEMBER via
+                  PromotionRequiresPromotionBoardRoute. */}
+              <Route
+                path="people-ops/promotion/board"
+                element={
+                  <PromotionRequiresPromotionBoardRoute>
+                    <PromotionBoardPortalPage />
+                  </PromotionRequiresPromotionBoardRoute>
+                }
+              >
+                <Route index element={<PromotionBoardPortalIndex />} />
+                <Route path="active" element={<PBActiveRequestsTab />} />
+                <Route path="approved" element={<PBApprovedListTab />} />
+                <Route path="rejected" element={<PBRejectedListTab />} />
+                <Route path="fl-rejected" element={<PBFLRejectedListTab />} />
+              </Route>
+              {/* Admin Portal: promotion-app's own administration.tsx.
+                  Gated on Role.HR_ADMIN via PromotionRequiresHrAdminRoute. */}
+              <Route
+                path="people-ops/promotion/admin"
+                element={
+                  <PromotionRequiresHrAdminRoute>
+                    <PromotionAdminPortalPage />
+                  </PromotionRequiresHrAdminRoute>
+                }
+              >
+                <Route index element={<PromotionAdminPortalIndex />} />
+                <Route path="cycle" element={<AdminPromotionCycleTab />} />
+                <Route path="time-based" element={<AdminTimeBasedPromotionsTab />} />
+                <Route path="individual-contributor" element={<AdminIndividualContributorTab />} />
+                <Route path="withdrawal-requests" element={<AdminWithdrawalRequestsTab />} />
+                <Route path="users" element={<AdminUserManagementTab />} />
+              </Route>
+              {/* Promotion Cycle History: promotion-app's own
+                  promotionCycleHistory.tsx. Gated on Role.HR_ADMIN OR
+                  Role.FUNCTIONAL_LEAD via PromotionRequiresCycleHistoryRoute. */}
+              <Route
+                path="people-ops/promotion/cycle-history"
+                element={
+                  <PromotionRequiresCycleHistoryRoute>
+                    <PromotionCycleHistoryPage />
+                  </PromotionRequiresCycleHistoryRoute>
+                }
+              >
+                <Route index element={<PromotionCycleHistoryIndex />} />
+                <Route path="by-cycle" element={<CycleHistoryTab />} />
+                <Route path="people-hr-archive" element={<PeopleHrArchiveTab />} />
+              </Route>
+            </>
+          )}
           {/* People Ops reports. Admin-only, but enforced by the backend and
               explained by PeopleOpsShell — there is no route-level guard, so
               a non-admin reaching this URL gets the shell's "no access"
@@ -666,19 +867,19 @@ export default function App() {
             path="marketing-ops/design-studio/post-builder"
             element={<PostBuilderPage />}
           />
-          {/* RevOps — auto-recorded meetings. The meeting history ported from
+          {/* Sales — auto-recorded meetings. The meeting history ported from
               meet-app; scheduling stays in the calendar add-on and the
               analytics dashboard was out of scope. No route-level guard: the
               meet-app backend refuses a caller in no authorised group on
-              every endpoint, and RevOpsShell turns that 403 into an
+              every endpoint, and SalesShell turns that 403 into an
               explanation, so someone reaching this URL gets an answer rather
-              than a blank page. See docs/ported-apps/revops-meetings.md. */}
-          <Route path="revops" element={<RevOpsMeetingsPage />} />
+              than a blank page. See docs/ported-apps/sales-meetings.md. */}
+          <Route path="sales" element={<SalesMeetingsPage />} />
           {/* One meeting: the recording, and the call's details. A route rather than a
               dialog because a recording is something people send each other, and a dialog
               has no address — this survives a refresh, a bookmark and a paste into Slack.
               The transcript and smart notes land in its left column. */}
-          <Route path="revops/meetings/:meetingId" element={<MeetingDetailPage />} />
+          <Route path="sales/meetings/:meetingId" element={<MeetingDetailPage />} />
           <Route path="settings" element={<SettingsPage />} />
           {/* Me → Menu: the cafeteria screen ported from the standalone
               menu app. One page, as the original was. The functional spec and
@@ -703,11 +904,17 @@ export default function App() {
               /security/admin/*
               without touching either file. Their per-route PrivilegeGuards come
               along with them, including the deliberate absence of one on
-              Risk Registers. */}
+              Risk Registers.
+
+              evidenceRoutes is a second, separate lift — Evidence Portal, from
+              grc-tools/apps/evidence-app rather than grc-platform — spread the
+              same way to turn its own /evidence/* into /security/evidence/*.
+              See @features/security/evidence-portal/routes for what it mounts. */}
           <Route path="security">
             <Route index element={<PerspectiveLanding />} />
             {auditRoutes}
             {riskRoutes}
+            {evidenceRoutes}
             {adminRoutes}
           </Route>
           {/* Due Diligence — ported from digiops-finance/apps/due_diligence's
@@ -750,6 +957,25 @@ export default function App() {
               its own menu item rather than a tab — it shares no data or
               backend with Email Groups. Pure client-side HTML generator. */}
           <Route path="me/email-signature" element={<EmailSignaturePage />} />
+          {/* Me → Banking: the employee-facing panels ported from
+              digiops-hr's banking webapp "Change Bank Account" tab — its
+              own page rather than a dashboard card, since three Account
+              Types with their own edit forms and eligibility rules don't
+              fit in one. Tabbed like Claim Approval, so a later
+              admin-facing tab is a new route here, not a reshape of
+              BankingPage. */}
+          <Route
+            path="me/banking"
+            element={
+              <BankingRoute>
+                <BankingPage />
+              </BankingRoute>
+            }
+          >
+            <Route index element={<BankingIndex />} />
+            <Route path="my-accounts" element={<MyAccountsTab />} />
+            <Route path="summary" element={<SummaryTab />} />
+          </Route>
           {/* Catch-all → landing */}
           <Route path="*" element={<Navigate to={landingPath()} replace />} />
         </Route>

@@ -19,10 +19,12 @@ import { Box, Button, Card, Skeleton, Stack, Tooltip, Typography } from "@wso2/o
 import { Link as RouterLink } from "react-router";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
+import { useParEmployeeItemVisible } from "@features/par/api/useParData";
 import VehiclesCard from "./VehiclesCard";
-import { isPromotionBackendConfigured } from "../api/usePromotionEmployeeInfo";
-import { usePromotionHistory } from "../api/usePromotionHistory";
-import { latestPromotion, promotionSummary } from "../api/derive";
+import { isPromotionBackendConfigured } from "@features/promotion/api/usePromotionEmployeeInfo";
+import { usePromotionHistory } from "@features/promotion/api/usePromotionHistory";
+import { latestPromotion, promotionSummary } from "@features/promotion/util/promotionHistory";
+import { useMeProfile } from "../api/useMeProfile";
 import PromotionHistoryDialog from "./PromotionHistoryDialog";
 import PerformanceStages from "./PerformanceStages";
 import BankAccountsCard from "./BankAccountsCard";
@@ -48,6 +50,14 @@ export default function ConnectedServices() {
   const lastPromotion = latestPromotion(promotionInfo.data?.promotionRequests);
   const promotionConfigured = isPromotionBackendConfigured();
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Same query key as MyProfilePage's own useMeProfile() call, so this
+  // shares its cache rather than firing a second request. Gates the "Open
+  // employee feedback" button below with the exact same check that hides
+  // the PAR menu item and redirects away from /me/performance — without
+  // it, someone the menu is hiding PAR from would see this button anyway,
+  // click it, and land right back here (ParRequiresSomethingToShowRoute).
+  const meProfile = useMeProfile();
+  const parGate = useParEmployeeItemVisible(meProfile.data?.employee?.employmentType, meProfile.isLoading);
 
   return (
     <>
@@ -89,11 +99,13 @@ export default function ConnectedServices() {
             ) : null}
           </Stack>
           <PerformanceStages workEmail={ownerEmail} />
-          <Box sx={{ mt: 1.25 }}>
-            <Button variant="outlined" size="small" component={RouterLink} to="/me/performance" fullWidth>
-              Open employee feedback
-            </Button>
-          </Box>
+          {!parGate.isLoading && parGate.canSee && (
+            <Box sx={{ mt: 1.25 }}>
+              <Button variant="outlined" size="small" component={RouterLink} to="/me/performance" fullWidth>
+                Open employee feedback
+              </Button>
+            </Box>
+          )}
         </Card>
 
         <BankAccountsCard ownerEmail={ownerEmail} />

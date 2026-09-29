@@ -102,7 +102,9 @@ export default function PerspectiveLanding(): JSX.Element {
 
 // An h1, not a styled div — a screen-reader user navigating by headings needs
 // something to land on, and the card's heading below is an h2 under it.
-function PageTitle({ label }: { label: string }): JSX.Element {
+//
+// Exported with NothingHere so SalesShell's no-access screen is this exact screen.
+export function PageTitle({ label }: { label: string }): JSX.Element {
   return (
     <Typography component="h1" variant="h5" sx={{ mb: 0.5, mt: 0 }}>
       {label}
@@ -116,7 +118,7 @@ function PageTitle({ label }: { label: string }): JSX.Element {
 // generic glyph wouldn't.
 //
 // Exported so a perspective that learns "nothing for you" from its backend rather than from
-// the rail (RevOps: meet-app answers 403) shows the same card, not its own variant of it.
+// the rail (Sales: meet-app answers 403) shows the same card, not its own variant of it.
 export function NothingHere({
   label,
   icon: Icon,

@@ -15,7 +15,7 @@
 // under the License.
 
 import { describe, expect, it } from "vitest";
-import { buildMergedCycleOptions, filterEmployeesForCycle } from "./parEmployeeHistory";
+import { buildMergedCycleOptions, filterEmployeesForCycle, sortClosedCyclesLatestFirst } from "./parEmployeeHistory";
 import type { ParCycle, ParEmployee, ParLegacyHistory } from "../api/types";
 import type { ParLegacyHistoryByEmail } from "../api/useLeadHistory";
 
@@ -66,6 +66,35 @@ function legacyRecord(overrides: Partial<ParLegacyHistory>): ParLegacyHistory {
     ...overrides,
   };
 }
+
+describe("sortClosedCyclesLatestFirst", () => {
+  it("sorts by id (creation order), latest first — NOT by start date", () => {
+    // The reported bug, with real row data: id 4 ("2026 H2 Test Performance
+    // Cycle") was created last despite having the EARLIEST start date of the
+    // four — a test/demo cycle backdated relative to when it was actually
+    // set up. Sorting by start date would put it last again; sorting by id
+    // (the only creation-order signal the API exposes) puts it first.
+    const cycles = [
+      realCycle({ parCycleId: 1, parCycleName: "test 2026 H2", parCycleStartDate: "2026-09-10" }),
+      realCycle({ parCycleId: 2, parCycleName: "testing lead portal", parCycleStartDate: "2026-09-17" }),
+      realCycle({ parCycleId: 3, parCycleName: "2030 H1", parCycleStartDate: "2026-09-18" }),
+      realCycle({ parCycleId: 4, parCycleName: "2026 H2 Test Performance Cycle", parCycleStartDate: "2026-07-01" }),
+    ];
+    expect(sortClosedCyclesLatestFirst(cycles).map((c) => c.parCycleName)).toEqual([
+      "2026 H2 Test Performance Cycle",
+      "2030 H1",
+      "testing lead portal",
+      "test 2026 H2",
+    ]);
+  });
+
+  it("does not mutate the input array", () => {
+    const cycles = [realCycle({ parCycleId: 1 }), realCycle({ parCycleId: 2 })];
+    const original = [...cycles];
+    sortClosedCyclesLatestFirst(cycles);
+    expect(cycles).toEqual(original);
+  });
+});
 
 describe("buildMergedCycleOptions", () => {
   it("includes one option per real cycle", () => {

@@ -94,7 +94,7 @@ describe("perspective hues", () => {
     // tripwire: when it fires, the answer is a different encoding — hue per
     // domain family, or back to monochrome — not more hues.
     //
-    // RAISED TO NINE for RevOps, and this is the tripwire having fired rather
+    // RAISED TO NINE for Sales, and this is the tripwire having fired rather
     // than a considered new ceiling. The honest position: eight was the number,
     // the ninth was added because the perspective shipped and the wheel still
     // had a 64-degree opening at 301 to put it in. There is no tenth opening —

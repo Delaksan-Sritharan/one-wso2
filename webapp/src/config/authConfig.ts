@@ -52,9 +52,10 @@ declare global {
       // Groups mailing-list subscriptions). Optional — when absent the Email
       // Groups screen shows a not-connected state.
       ONE_WSO2_EMAIL_GROUPS_BACKEND_URL?: string;
-      // Base URL for the RevOps (auto-recorded meetings) backend — people-ops-
+      // Base URL for the Sales (auto-recorded meetings) backend — people-ops-
       // suite's meet-app service, reused unchanged. Optional — when absent the
-      // RevOps app shows a not-connected state and makes no requests.
+      // Sales app shows a not-connected state and makes no requests.
+      // The key keeps its original "REVOPS" name deliberately -- see salesBackendUrl.
       ONE_WSO2_REVOPS_BACKEND_URL?: string;
       // Base URL for the digiops-hr promotion-app backend. Optional — when
       // absent, ConnectedServices' "Last promotion" row falls back to a
@@ -107,6 +108,11 @@ declare global {
       // screens are lifted rather than rewritten and a GRC deployment already
       // publishes this exact key. See apiConfig.ts.
       ONE_WSO2_GRC_PLATFORM_BACKEND_URL?: string;
+      // Base URL for the grc-tools evidence-app backend — the Evidence
+      // Portal, the third app under the Security perspective, lifted
+      // alongside GRC Platform above. Optional/"not connected" like the
+      // others. See apiConfig.ts's evidencePortalBackendUrl.
+      ONE_WSO2_EVIDENCE_PORTAL_BACKEND_URL?: string;
       // Base URL for the standalone Updates Manager service. Optional — when
       // absent, UmtShell shows a not-connected state and makes no UMT requests.
       // Its /update/user-info roles are local to UMT, not People capabilities.

@@ -32,6 +32,7 @@ import { ArrowLeftIcon, ChevronRightIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useMeProfile } from "@features/my/api/useMeProfile";
 import { formatShortDate } from "../util/parDate";
+import { sortClosedCyclesLatestFirst } from "../util/parEmployeeHistory";
 import { useClosedParCycles, useParRating } from "../api/useParData";
 import ParRatingSummary from "../components/ParRatingSummary";
 import type { ParCycle } from "../api/types";
@@ -64,7 +65,7 @@ export default function ParHistoryTab() {
     );
   }
 
-  const rows = cycles.data ?? [];
+  const rows = sortClosedCyclesLatestFirst(cycles.data ?? []);
 
   return (
     <Box sx={{ maxWidth: 880 }}>

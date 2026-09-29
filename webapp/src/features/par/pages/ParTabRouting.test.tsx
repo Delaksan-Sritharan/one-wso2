@@ -42,16 +42,23 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
 vi.mock("@hooks/useAccessToken", () => ({ useAccessToken: () => async () => "token" }));
 
-const profile = { data: { userInfo: { workEmail: "someone@wso2.com" } }, isLoading: false };
+const profile = {
+  data: { userInfo: { workEmail: "someone@wso2.com" }, employee: { employmentType: "Permanent" } },
+  isLoading: false,
+};
 vi.mock("@features/my/api/useMeProfile", () => ({ useMeProfile: () => profile }));
 
 vi.mock("../components/ParShell", () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-const { default: ParGroupPage, ParGroupIndex, ParRequiresLeadRoute, ParRequiresActiveCycleRoute } = await import(
-  "./ParGroupPage"
-);
+const {
+  default: ParGroupPage,
+  ParGroupIndex,
+  ParRequiresLeadRoute,
+  ParRequiresActiveCycleRoute,
+  ParRequiresSomethingToShowRoute,
+} = await import("./ParGroupPage");
 
 /** Always mounted, so a redirect is visible even when the route renders nothing. */
 function UrlProbe() {
@@ -69,6 +76,7 @@ beforeEach(() => {
   openCycles.isSuccess = false;
   openCycles.data = undefined;
   profile.isLoading = false;
+  profile.data.employee.employmentType = "Permanent";
 });
 
 function hasLead(leadEmail: string | null) {
@@ -81,13 +89,29 @@ function hasNoActiveCycle() {
   openCycles.data = [];
 }
 
+function hasActiveCycle() {
+  openCycles.isSuccess = true;
+  openCycles.data = [{ parCycleId: 1 }];
+}
+
+function isIntern() {
+  profile.data.employee.employmentType = "Internship";
+}
+
 /** The group, wired the way App.tsx wires it. */
 function show(initial = "/me/performance") {
   return render(
     <MemoryRouter initialEntries={[initial]}>
       <UrlProbe />
       <Routes>
-        <Route path="/me/performance" element={<ParGroupPage />}>
+        <Route
+          path="/me/performance"
+          element={
+            <ParRequiresSomethingToShowRoute>
+              <ParGroupPage />
+            </ParRequiresSomethingToShowRoute>
+          }
+        >
           <Route index element={<ParGroupIndex />} />
           <Route
             path="employee-feedback"
@@ -214,6 +238,42 @@ describe("an employee with an active lead but no open PAR cycle", () => {
   it("is redirected to PAR History when deep-linking straight to a cycle-scoped tab", async () => {
     show("/me/performance/f2f");
     expect(await screen.findByTestId("url")).toHaveTextContent("/me/performance/history");
+  });
+});
+
+// Interns do not participate in PAR, full stop — confirmed directly,
+// unconditionally. An earlier version of this gate only redirected an
+// intern with no active cycle and no history, on the theory that par-app's
+// employeeTypes config lists INTERNSHIP as cycle-eligible — but a test
+// intern account with a lead and an active cycle assigned still saw the
+// full tab set, which was wrong. See useParEmployeeItemVisible.
+describe("an intern", () => {
+  beforeEach(() => isIntern());
+
+  it("is redirected to /me even leadless with no active cycle", async () => {
+    hasLead(null);
+    hasNoActiveCycle();
+    show();
+    // Exact match, not a substring: "/me" is itself a prefix of
+    // "/me/performance", so a substring check here would also pass if the
+    // redirect never fired at all.
+    expect(await screen.findByTestId("url")).toHaveTextContent(/^\/me$/);
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+  });
+
+  it("is redirected to /me even with a lead and an active cycle assigned", async () => {
+    hasLead("lead@wso2.com");
+    hasActiveCycle();
+    show();
+    expect(await screen.findByTestId("url")).toHaveTextContent(/^\/me$/);
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+  });
+
+  it("still reaches the group directly by URL — the redirect is not fooled by a deep link", async () => {
+    hasLead("lead@wso2.com");
+    hasActiveCycle();
+    show("/me/performance/history");
+    expect(await screen.findByTestId("url")).toHaveTextContent(/^\/me$/);
   });
 });
 

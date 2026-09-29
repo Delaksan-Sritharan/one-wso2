@@ -144,6 +144,23 @@ export const bankingServiceUrls = {
   // accounts. Backend allows self-lookup for non-admin callers.
   employeeAccounts: (workEmail: string) =>
     `${bankingBackendUrl}/employee/accounts?employeeWorkEmail=${encodeURIComponent(workEmail)}`,
+  // GET /employee-privileges — what the caller may do (employee / People Ops
+  // admin / Finance admin), decided by the backend from the same roles it
+  // enforces, so the frontend keeps no role names of its own.
+  employeePrivileges: `${bankingBackendUrl}/employee-privileges`,
+  // GET /employee-info?employeeWorkEmail=<email> — the caller's own HR
+  // record as the banking backend sees it (its `location` is what the
+  // Reimbursement gate and Bank Location options key on). Backend answers
+  // only for the caller's own email.
+  employeeInfo: (workEmail: string) =>
+    `${bankingBackendUrl}/employee-info?employeeWorkEmail=${encodeURIComponent(workEmail)}`,
+  // GET /app-config — thresholds + eligibility config. Deployment
+  // configuration, not per-employee state.
+  appConfig: `${bankingBackendUrl}/app-config`,
+  // GET /banks — the lookup list for the edit/add flow's bank autocomplete.
+  banks: `${bankingBackendUrl}/banks`,
+  // POST /employee/accounts — submits a bank account change request.
+  createBankAccountRequest: `${bankingBackendUrl}/employee/accounts`,
 };
 
 // ---- PAR app backend ---------------------------------------------------------
@@ -559,6 +576,14 @@ export const umtServiceUrls = {
   meta: `${umtBackendUrl}/meta`,
   // GET — aggregate update lifecycle and release-chunk build counts.
   updatesStats: `${umtBackendUrl}/update/stats`,
+  // GET — Statistics page's monthly stacked-bar chart data, one endpoint per
+  // breakdown; "all" has no per-series split.
+  platformStats: `${umtBackendUrl}/update/platform-stats`,
+  platformStatsProductWise: `${umtBackendUrl}/update/platform-stats/product-wise`,
+  platformStatsVersionWise: `${umtBackendUrl}/update/platform-stats/version-wise`,
+  platformStatsUpdateOrigin: `${umtBackendUrl}/update/platform-stats/update-origin`,
+  platformStatsUpdateLifecycle: `${umtBackendUrl}/update/platform-stats/update-lifecycle`,
+  platformStatsExtendedSupport: `${umtBackendUrl}/update/platform-stats/extended-support`,
   // POST — filtered, server-paginated update summaries.
   updatesSearch: `${umtBackendUrl}/update/search`,
   // GET — every update in one lifecycle state, unpaginated. Distinct from the
@@ -1180,6 +1205,19 @@ export const infraServiceUrls = {
   // GET /user-info — privileges, name, workEmail, githubUsername.
   // Callers not in employee/approver/admin groups get HTTP 403.
   userInfo: `${infraBackendUrl}/user-info`,
+  // GET /leads — active functional leads for the creation form.
+  leads: `${infraBackendUrl}/leads`,
+  // GET /employees — directory used by the CC picker.
+  employees: `${infraBackendUrl}/employees`,
+  // GET /organizations — active GitHub orgs. Drives visibility, plan, issues, and PR protection.
+  organizations: `${infraBackendUrl}/organizations`,
+  // GET /topics — topic catalog for the creation form.
+  topics: `${infraBackendUrl}/topics`,
+  // GET /teams?organization= — internal committer teams for that GitHub org.
+  teams: (organization: string) =>
+    `${infraBackendUrl}/teams?organization=${encodeURIComponent(organization)}`,
+  // GET /repository-requests — repository requests for the caller.
+  repositoryRequests: `${infraBackendUrl}/repository-requests`,
 };
 
 export const promotionServiceUrls = {
@@ -1193,6 +1231,174 @@ export const promotionServiceUrls = {
   // allows self-lookup for non-admins.
   promotionHistory: (workEmail: string) =>
     `${promotionBackendUrl}/promotion/requests?statusArray=APPROVED&employeeEmail=${encodeURIComponent(workEmail)}`,
+  // GET /employee-privileges — the caller's own numeric privilege codes,
+  // mapped to a Role[] client-side (features/promotion/api/usePromotionRoles.ts)
+  // the same way source's authSlice does. Presentation only — see the
+  // PromotionPrivilegesResponse type's own comment.
+  employeePrivileges: () => `${promotionBackendUrl}/employee-privileges`,
+  // GET /promotion/cycles?statusArray=OPEN|END — every cycle in that status,
+  // newest first is NOT guaranteed by the backend, so callers that care
+  // (the Lead Portal) take promotionCycles[0] the same way source does.
+  promotionCycles: (status: "OPEN" | "END") =>
+    `${promotionBackendUrl}/promotion/cycles?statusArray=${status}`,
+  // GET /promotion/recommendations — leadEmail/statusArray/promotionCycleId
+  // are all optional query params; statusArray is comma-joined (backend
+  // splits on ","). Shared by the Lead Portal's Pending Requests tab
+  // (statusArray=REQUESTED, scoped to the open cycle) and History tab
+  // (statusArray=SUBMITTED,DECLINED,EXPIRED, every cycle).
+  promotionRecommendations: (params: {
+    leadEmail?: string;
+    statusArray?: ("REQUESTED" | "SUBMITTED" | "DECLINED" | "EXPIRED")[];
+    promotionCycleId?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params.leadEmail) qs.set("leadEmail", params.leadEmail);
+    if (params.statusArray?.length) qs.set("statusArray", params.statusArray.join(","));
+    if (params.promotionCycleId !== undefined) qs.set("promotionCycleId", String(params.promotionCycleId));
+    return `${promotionBackendUrl}/promotion/recommendations?${qs.toString()}`;
+  },
+  // PATCH /promotion/recommendations — body is RecommendationUpdateData
+  // (id/statement/comment/leadEmail); statement/comment are base64, matching
+  // the backend's own rejection of anything else (same encoding par-app's
+  // rich-text fields use). Saves a draft; submitting is the separate
+  // endpoint below, called after this one succeeds — same two-call sequence
+  // source's own submitRecommendation thunk uses.
+  promotionRecommendationSave: () => `${promotionBackendUrl}/promotion/recommendations`,
+  // GET .../recommendations/{id}/submit — approves the recommendation
+  // (moves it to SUBMITTED) and, for a TIME_BASED recommendation, also
+  // flips the underlying promotion request to SUBMITTED (or straight to
+  // APPROVED if the caller is also a functional lead) as a server-side side
+  // effect. 403s past the lead deadline (also enforced client-side).
+  promotionRecommendationSubmit: (recommendationId: number) =>
+    `${promotionBackendUrl}/promotion/recommendations/${recommendationId}/submit`,
+  // GET .../recommendations/{id}/decline?comment=<reason> — reason is
+  // required by the backend (a bare GET with no comment 400s).
+  promotionRecommendationDecline: (recommendationId: number, comment: string) =>
+    `${promotionBackendUrl}/promotion/recommendations/${recommendationId}/decline?comment=${encodeURIComponent(comment)}`,
+  // GET /employees?managerEmail=|additionalManagerEmail= — a lead's direct
+  // reports (managerEmail) or dotted-line reports (additionalManagerEmail).
+  // The Team Promotion History tabs each pass exactly one of the two.
+  promotionEmployees: (params: { managerEmail?: string; additionalManagerEmail?: string }) => {
+    const qs = new URLSearchParams();
+    if (params.managerEmail) qs.set("managerEmail", params.managerEmail);
+    if (params.additionalManagerEmail) qs.set("additionalManagerEmail", params.additionalManagerEmail);
+    return `${promotionBackendUrl}/employees?${qs.toString()}`;
+  },
+  // GET /promotion/requests — the Functional Lead Portal's four grids/lists
+  // all read this one resource, varying statusArray/type/cycleId.
+  // enableBuFilter=true scopes results to the caller's own
+  // functionalLeadAccessLevels (business unit/department/team/sub-team) —
+  // the backend 403s if the caller holds no such scope at all.
+  promotionRequests: (params: {
+    statusArray?: string[];
+    enableBuFilter?: boolean;
+    type?: "NORMAL" | "SPECIAL" | "TIME_BASED" | "INDIVIDUAL_CONTRIBUTOR";
+    cycleId?: number;
+    employeeEmail?: string;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params.statusArray?.length) qs.set("statusArray", params.statusArray.join(","));
+    if (params.enableBuFilter !== undefined) qs.set("enableBuFilter", String(params.enableBuFilter));
+    if (params.type) qs.set("type", params.type);
+    if (params.cycleId !== undefined) qs.set("cycleId", String(params.cycleId));
+    if (params.employeeEmail) qs.set("employeeEmail", params.employeeEmail);
+    return `${promotionBackendUrl}/promotion/requests?${qs.toString()}`;
+  },
+  // GET .../requests/{id}/approve|reject?from=functional_lead|promotion_board
+  // — shared by the Functional Lead and (not yet ported) Promotion Board
+  // portals; `from` decides both the authorization check and which status
+  // the request lands in (service.bal's own GET .../approve handler).
+  promotionRequestApprove: (id: number, from: "functional_lead" | "promotion_board") =>
+    `${promotionBackendUrl}/promotion/requests/${id}/approve?from=${from}`,
+  promotionRequestReject: (id: number, from: "functional_lead" | "promotion_board", reason: string) =>
+    `${promotionBackendUrl}/promotion/requests/${id}/reject?from=${from}&reason=${encodeURIComponent(reason)}`,
+  // PATCH /promotion/requests — body is ApplicationUpdateData. Two different
+  // shapes share this one endpoint: {id, promotingJobBand} (Functional
+  // Lead's job-band edit dialog) and {id, reasonForRejection} (the Admin
+  // Portal's Individual Contributor tab, editing a declined reason after
+  // the fact) — same URL, same HR_ADMIN/FUNCTIONAL_LEAD/PROMOTION_BOARD_MEMBER
+  // server-side gate, the caller just sends whichever fields it's editing.
+  promotionRequestUpdate: () => `${promotionBackendUrl}/promotion/requests`,
+
+  // ---- Admin Portal --------------------------------------------------------
+  //
+  // Admin-gated server-side (HR_ADMIN), same backend as everything above.
+
+  // POST /promotion/cycles — creates a new cycle (PromotionCycleManagePanel's
+  // own "Create" form). GET /promotion/cycles/{id}/end — ends the currently
+  // OPEN cycle; a bare GET with the action encoded in the URL suffix, same
+  // convention as approve/reject above (source's own service.bal handler).
+  promotionCycleCreate: () => `${promotionBackendUrl}/promotion/cycles`,
+  promotionCycleEnd: (id: number) => `${promotionBackendUrl}/promotion/cycles/${id}/end`,
+  // GET .../requests/{id}/send-email-notification?effectiveDate=<date> — the
+  // Notification Hub's own "send the outcome email" action, for requests
+  // whose automatic notification hasn't gone out yet
+  // (isNotificationEmailSent === false). effectiveDate is only meaningful
+  // (and only sent) for an APPROVED request; omitted for REJECTED/FL_REJECTED.
+  promotionRequestNotify: (id: number, effectiveDate?: string) =>
+    `${promotionBackendUrl}/promotion/requests/${id}/send-email-notification${
+      effectiveDate ? `?effectiveDate=${encodeURIComponent(effectiveDate)}` : ""
+    }`,
+  // GET .../requests/{id}/remove|submit — the Withdrawal Requests tab's own
+  // approve/reject actions on a WITHDRAW-status request. Named for their
+  // side effect, not the UI verb: "remove" APPROVES the withdrawal (request
+  // becomes REMOVED, terminal); "submit" REJECTS it (request reverts to its
+  // prior submitted/active state) — source's own literal endpoint names,
+  // kept as-is rather than relabelled, since nothing here is a new backend.
+  promotionRequestWithdrawApprove: (id: number) => `${promotionBackendUrl}/promotion/requests/${id}/remove`,
+  promotionRequestWithdrawReject: (id: number) => `${promotionBackendUrl}/promotion/requests/${id}/submit`,
+  // POST /promotion/requests/time-based — bulk-imports TIME_BASED promotion
+  // requests for the open cycle from a Google Sheet. `type: "PAR_APP"` is a
+  // real wire value but has no server implementation yet either (source's
+  // own UI radio option is a same-shaped stub — see the Admin Portal doc's
+  // deviation entry).
+  timeBasedPromotionImport: () => `${promotionBackendUrl}/promotion/requests/time-based`,
+  // GET /users, DELETE /users/{id}, POST/PATCH /users (bare collection URL
+  // for both — the caller's payload shape decides insert vs. update, same
+  // convention promotionRequestUpdate above already follows for PATCH).
+  // Every op here is HR_ADMIN-only server-side. This is promotion-app's own
+  // *system users* resource (an account + its Role[] + optional
+  // functionalLeadAccessLevels) — distinct from the employee directory
+  // (`employeesFilterLeads` below) and from people-app's own admin users.
+  users: () => `${promotionBackendUrl}/users`,
+  userDelete: (id: number) => `${promotionBackendUrl}/users/${id}`,
+  // GET /business-units — promotion-app's own BU→Department→Team tree
+  // (BUAccessLevel[]), used only to populate the Functional Lead ACL
+  // selector when creating/editing a system user. Distinct from people-app's
+  // own /business-units (peopleServiceUrls.businessUnits) — a different
+  // backend, a different shape (this one nests departments/teams inline).
+  businessUnits: () => `${promotionBackendUrl}/business-units`,
+  // GET /business-units/sync?googleSheet=<url> — bulk-imports/refreshes the
+  // system user list from a Google Sheet. A GET despite writing, matching
+  // source's own endpoint (not a mistake to "fix" here — same backend).
+  businessUnitsSync: (googleSheetUrl: string) =>
+    `${promotionBackendUrl}/business-units/sync?googleSheet=${encodeURIComponent(googleSheetUrl)}`,
+  // GET /app-configs?key=<key> — a tiny key/value flag store, polled while a
+  // background sync is running. Two independent keys share this one
+  // endpoint: SYNC_STATE (user sync, above) and TIME_BASED_PROMOTION_STATE
+  // (the time-based import above) — never mix the two up client-side, the
+  // backend tracks them completely separately.
+  appConfig: (key: string) => `${promotionBackendUrl}/app-configs?key=${encodeURIComponent(key)}`,
+  // GET /employees?filterLeads=true|false — promotion-app's own employee
+  // directory lookup, used by the user-insert/transfer-access pickers.
+  // Distinct from promotionEmployees above (managerEmail/additionalManagerEmail
+  // scoped reports) and from people-app's own employee search.
+  employeesFilterLeads: (filterLeads: boolean) =>
+    `${promotionBackendUrl}/employees?filterLeads=${filterLeads}`,
+
+  // GET /promotion/history — pre-HRIS promotions migrated out of the old
+  // People HR system (Promotion Cycle History's own People HR Archive tab).
+  // Every param is optional; omitting all three returns the whole archive
+  // (~338 KB, paged client-side — see ArchivedPromotion's own comment).
+  promotionArchive: (params: { search?: string; startDate?: string; endDate?: string; employeeEmail?: string }) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set("search", params.search);
+    if (params.startDate) qs.set("startDate", params.startDate);
+    if (params.endDate) qs.set("endDate", params.endDate);
+    if (params.employeeEmail) qs.set("employeeEmail", params.employeeEmail);
+    const query = qs.toString();
+    return `${promotionBackendUrl}/promotion/history${query ? `?${query}` : ""}`;
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -1346,52 +1552,70 @@ export function isSecurityBackendConfigured(): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// RevOps backend. RevOps is the One WSO2 perspective for the call-review
-// experience; the service behind it is people-ops-suite's meet-app backend,
-// reused unchanged. The naming difference is deliberate and worth knowing: the
-// config key and everything in this app say "revops" because that is what a
-// user opens, while the contract, the roles and the error messages all belong
-// to meet-app. See docs/ported-apps/revops-meetings.md.
-export const revOpsBackendUrl: string = window.config?.ONE_WSO2_REVOPS_BACKEND_URL ?? "";
+// Evidence Portal backend — the third app under Security and Compliance,
+// lifted from grc-tools/apps/evidence-app alongside the GRC Platform above.
+// A separate service with its own backend, so its own key and its own
+// trailing-slash strip (every endpoint below it is built by appending a
+// leading "/", the same convention securityBackendUrl and every other
+// backend URL in this file follow).
+export const evidencePortalBackendUrl: string = (
+  window.config?.ONE_WSO2_EVIDENCE_PORTAL_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
 
-export function isRevOpsBackendConfigured(): boolean {
-  return Boolean(revOpsBackendUrl);
+export function isEvidencePortalBackendConfigured(): boolean {
+  return Boolean(evidencePortalBackendUrl);
 }
 
-export const revOpsServiceUrls = {
-  // Employee profile + privileges. The privileges array is what useRevOpsGate
+// ---------------------------------------------------------------------------
+// Sales backend. Sales is the One WSO2 perspective for the call-review
+// experience; the service behind it is people-ops-suite's meet-app backend,
+// reused unchanged. The naming difference is deliberate and worth knowing: the
+// config key and everything in this app say "sales" because that is what a
+// user opens, while the contract, the roles and the error messages all belong
+// to meet-app. See docs/ported-apps/sales-meetings.md.
+//
+// The config key keeps its original name, ONE_WSO2_REVOPS_BACKEND_URL, on purpose: it is set in
+// every environment's config.js, and renaming it would need each deployment changed in step.
+export const salesBackendUrl: string = window.config?.ONE_WSO2_REVOPS_BACKEND_URL ?? "";
+
+export function isSalesBackendConfigured(): boolean {
+  return Boolean(salesBackendUrl);
+}
+
+export const salesServiceUrls = {
+  // Employee profile + privileges. The privileges array is what useSalesGate
   // reads to tell a meet-app ADMIN from an ordinary TEAM member.
-  userInfo: `${revOpsBackendUrl}/user-info`,
+  userInfo: `${salesBackendUrl}/user-info`,
   // The regions the region filter offers. A bare string list, not objects.
-  regions: `${revOpsBackendUrl}/regions`,
+  regions: `${salesBackendUrl}/regions`,
   // The meeting list. Every filter is a query parameter and paging is
   // server-side, so the caller passes limit/offset rather than slicing a
   // full list client-side — see buildMeetingsUrl below.
-  meetings: `${revOpsBackendUrl}/meetings`,
+  meetings: `${salesBackendUrl}/meetings`,
   // Drive files attached to one meeting's calendar event: the recording, and
   // whatever else was attached. Returns links, never file content.
   attachments: (meetingId: number): string =>
-    `${revOpsBackendUrl}/meetings/${meetingId}/attachments`,
+    `${salesBackendUrl}/meetings/${meetingId}/attachments`,
   // Cancels a meeting. The backend refuses unless the caller is the host or a
   // meet-app admin, so the UI's own check is a courtesy, not the control.
-  meeting: (meetingId: number): string => `${revOpsBackendUrl}/meetings/${meetingId}`,
+  meeting: (meetingId: number): string => `${salesBackendUrl}/meetings/${meetingId}`,
   // One meeting, for the detail page. The list endpoint cannot serve a direct link: it is
   // paged and filtered, so the meeting asked for may be on no page the caller would fetch.
-  meetingById: (meetingId: number): string => `${revOpsBackendUrl}/meetings/${meetingId}`,
+  meetingById: (meetingId: number): string => `${salesBackendUrl}/meetings/${meetingId}`,
   // The conversation as timed, speaker-attributed lines — what a synchronised transcript
   // is built from. 404 when the meeting predates the transcript resource name being stored,
   // in which case there is only the Drive document.
   transcript: (meetingId: number): string =>
-    `${revOpsBackendUrl}/meetings/${meetingId}/transcript`,
+    `${salesBackendUrl}/meetings/${meetingId}/transcript`,
   // Gemini's notes, as plain text. Meet writes these only as a Google Doc.
   smartNotes: (meetingId: number): string =>
-    `${revOpsBackendUrl}/meetings/${meetingId}/smart-notes`,
+    `${salesBackendUrl}/meetings/${meetingId}/smart-notes`,
   // A signed, time-limited URL for streaming this meeting's recording. The URL it returns
   // points at drive-service, NOT here — streaming is deliberately not this backend's job.
   // 404 means either playback isn't configured or no recording is attached yet; the two
   // are distinguished by the message, and neither is an error worth a banner.
   playback: (meetingId: number): string =>
-    `${revOpsBackendUrl}/meetings/${meetingId}/playback`,
+    `${salesBackendUrl}/meetings/${meetingId}/playback`,
 };
 
 /**
@@ -1417,5 +1641,5 @@ export function buildMeetingsUrl(params: {
   if (params.endTime?.trim()) qs.set("endTime", params.endTime.trim());
   qs.set("limit", String(params.limit));
   qs.set("offset", String(params.offset));
-  return `${revOpsServiceUrls.meetings}?${qs.toString()}`;
+  return `${salesServiceUrls.meetings}?${qs.toString()}`;
 }

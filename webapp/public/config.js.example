@@ -33,11 +33,11 @@ window.config = {
   // absent the Email Groups screen shows a not-connected state and makes no
   // requests. See docs/ported-apps/email-group-manager.md for the contract.
   // ONE_WSO2_EMAIL_GROUPS_BACKEND_URL: "<your-email-group-manager-backend-url>",
-  // RevOps (auto-recorded meetings) backend — people-ops-suite's meet-app
-  // service, reused unchanged. Powers the RevOps app's meeting history.
+  // Sales (auto-recorded meetings) backend — people-ops-suite's meet-app
+  // service, reused unchanged. Powers the Sales app's meeting history.
   // Optional, and note what "optional" means here: leaving it unset does NOT hide
-  // RevOps. The perspective is registered regardless, so the launcher tile and rail
-  // stay, and /revops renders its own "not connected" notice — that is how an
+  // Sales. The perspective is registered regardless, so the launcher tile and rail
+  // stay, and /sales renders its own "not connected" notice — that is how an
   // operator finds out the key is missing, rather than the app looking like the
   // feature was never built. Visibility is controlled by the preview flag below,
   // not by this URL.
@@ -83,6 +83,12 @@ window.config = {
   // or every request from here 401s. Already done for stage. See
   // src/config/apiConfig.ts.
   // ONE_WSO2_GRC_PLATFORM_BACKEND_URL: "<your-grc-platform-backend-url>",
+
+  // grc-tools evidence-app backend base URL — the Evidence Portal, the
+  // third app under Security and Compliance, lifted alongside GRC Platform
+  // above. Optional — when absent the Evidence Portal shows a not connected
+  // notice and makes no requests. Same audience requirement as GRC Platform.
+  // ONE_WSO2_EVIDENCE_PORTAL_BACKEND_URL: "<your-evidence-app-backend-url>",
 
   // digiops-finance backend base URLs — the apps in the Finance
   // perspective. Each is a separate Ballerina service with its own

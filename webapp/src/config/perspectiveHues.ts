@@ -151,7 +151,7 @@ export const PERSPECTIVE_HUES: Record<string, PerspectiveHue> = {
     dark: { bg: "#20281A", fg: "#8ABF42" },
   },
 
-  // RevOps. Orchid at 301 degrees, and the ninth hue — see the cap note in
+  // Sales. Orchid at 301 degrees, and the ninth hue — see the cap note in
   // perspectiveHues.test.ts for why a ninth exists at all.
   //
   // It is NOT the green it was originally given (#678F3D, 89 degrees). Upstream
@@ -167,7 +167,7 @@ export const PERSPECTIVE_HUES: Record<string, PerspectiveHue> = {
   // Saturation and lightness deliberately copy csm's (0.68/0.58): this sits in
   // the same violet-pink quadrant, so matching its weight keeps it reading as a
   // sibling rather than a louder cousin. Measured 4.49:1 light and 4.29:1 dark.
-  revops: {
+  sales: {
     hue: "#DD4BDA",
     light: { bg: "#FAE6FA", fg: "#AC3BAA" },
     dark: { bg: "#352135", fg: "#DD4BDA" },

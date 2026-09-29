@@ -146,6 +146,47 @@ export function useParHasActiveCycle(
   };
 }
 
+/**
+ * Whether the "PAR" item under Me should be shown at all.
+ *
+ * Interns do not participate in PAR — confirmed directly, unconditionally:
+ * this hides the item for any intern regardless of whether they happen to
+ * have a lead or an active cycle in the data. Legacy par-app never hides
+ * its own menu entry for anyone (it always shows "Employee Portal"/"PAR
+ * History" and falls back to an empty state), so this intentionally
+ * diverges from legacy for this one employment type.
+ *
+ * An earlier version of this hook hid the item ONLY when an intern also had
+ * no active cycle and no real/legacy history — on the theory that par-app's
+ * own `employeeTypes` config listing INTERNSHIP as cycle-eligible
+ * (config.toml) meant an intern could legitimately be mid-cycle. In
+ * practice a test intern account with a lead and an active cycle assigned
+ * still saw the full tab set, which is wrong: interns don't have PAR, full
+ * stop, so eligibility-for-sync is not the same thing as "should see this
+ * screen." Simplified to a flat employment-type check — no cycle or
+ * history lookups needed here at all anymore.
+ *
+ * `employmentType` is compared case-insensitively against "internship". The
+ * actual wire value is `"INTERNSHIP"` (uppercase): people-app's own
+ * `/employees/{id}` and par-app both source this field from the SAME
+ * `employment_type` master-data table via digiops-hr's shared `entity`
+ * GraphQL service, whose own README documents the field's value set as
+ * uppercase strings (`"PERMANENT" | "CONSULTANCY" | "INTERNSHIP" | ...`).
+ * Comparing case-insensitively means the exact casing doesn't matter either
+ * way.
+ *
+ * Fails OPEN (visible) while `employmentType` hasn't loaded yet, same
+ * reasoning as useParHasLead: a UX-only visibility decision must never hide
+ * the item from someone just because a fetch hasn't landed yet.
+ */
+export function useParEmployeeItemVisible(
+  employmentType: string | undefined,
+  isLoading: boolean,
+): { canSee: boolean; isLoading: boolean } {
+  const isIntern = employmentType?.toLowerCase() === "internship";
+  return { canSee: !isIntern, isLoading };
+}
+
 // Returns the caller's currently-OPEN par cycle (if any). Non-lead/non-admin
 // callers can only query their own email; backend enforces that.
 export function useActiveParCycle(workEmail: string | undefined) {

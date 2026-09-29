@@ -54,10 +54,10 @@ describe("PAR's People Ops rail entry", () => {
   });
 });
 
-// RevOps shipped out of preview: its entry is unconditional now, so it must be
+// Sales shipped out of preview: its entry is unconditional now, so it must be
 // there with no flags set at all -- which is exactly what production's config
 // looks like.
-describe("the RevOps perspective", () => {
+describe("the Sales perspective", () => {
   it("is present, built and routable with no preview flags set", async () => {
     const {
       PERSPECTIVES,
@@ -66,18 +66,18 @@ describe("the RevOps perspective", () => {
       findPerspectiveByKey,
       findPerspectiveByPath,
     } = await load();
-    expect(keys(PERSPECTIVES)).toContain("revops");
-    expect(keys(FUNCTIONAL_PERSPECTIVES)).toContain("revops");
-    expect(keys(reachablePerspectives())).toContain("revops");
-    expect(findPerspectiveByKey("revops")?.path).toBe("/revops");
-    expect(findPerspectiveByPath("/revops")?.key).toBe("revops");
+    expect(keys(PERSPECTIVES)).toContain("sales");
+    expect(keys(FUNCTIONAL_PERSPECTIVES)).toContain("sales");
+    expect(keys(reachablePerspectives())).toContain("sales");
+    expect(findPerspectiveByKey("sales")?.path).toBe("/sales");
+    expect(findPerspectiveByPath("/sales")?.key).toBe("sales");
   });
 
   it("brings its rail, not just the tile", async () => {
     // The rail is what a deep link lands beside.
     const { findPerspectiveByKey } = await load();
-    expect(findPerspectiveByKey("revops")?.sections?.map((section) => section.id)).toContain(
-      "revops-meetings",
+    expect(findPerspectiveByKey("sales")?.sections?.map((section) => section.id)).toContain(
+      "sales-meetings",
     );
   });
 });

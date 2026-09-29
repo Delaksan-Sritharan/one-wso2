@@ -42,9 +42,11 @@ by the rail rather than re-fetched (`useFinanceGate.ts`).
 | Credit Cards | `credit-cards` | `GET` | `employeeEmail` |
 
 All four take `POST /{collection}`, `PATCH /{collection}/{id}` and
-`DELETE /{collection}/{id}`. Every success is a bare 200/201 with no body — the service
-returns Ballerina's `http:OK` / `http:CREATED` constants — which `authedPost` and
-`authedPatch` already read as `null` rather than trying to parse.
+`DELETE /{collection}/{id}`. A successful create, patch, or delete is a bare
+200/201 with no body — the service returns Ballerina's `http:OK` / `http:CREATED`
+constants — which `authedPost` and `authedPatch` already read as `null` rather
+than trying to parse. The list (`GET`) and expense-type search (`POST
+/search-expense-types`) requests are the exception: both return the actual rows.
 
 Three supporting endpoints feed the forms and filters: `GET /gl-codes`,
 `GET /employees/email`, `GET /expense-types/autocomplete-values`.

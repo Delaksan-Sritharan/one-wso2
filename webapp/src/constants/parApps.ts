@@ -40,3 +40,11 @@ export const ME_PAR_APPS: readonly MenuApp[] = [
     ],
   },
 ];
+
+/**
+ * This item's own rail id, which the rail must route through
+ * useParEmployeeItemVisible rather than through `requires`/`caps` — see the
+ * comment on that hook. Same treatment as PAR_LEAD_PORTAL_ITEM_ID /
+ * PAR_ADMIN_PORTAL_ITEM_ID in constants/perspectives.
+ */
+export const PAR_EMPLOYEE_ITEM_ID = "par-employee-feedback";

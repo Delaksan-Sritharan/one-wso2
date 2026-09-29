@@ -27,6 +27,19 @@ export interface MergedCycleOption {
   sortDate: string | null;
 }
 
+// ParHistoryTab.tsx's own row order — GET /par-cycles?status=CLOSED has no
+// ORDER BY on the backend, so "My History" sorts it itself, latest CREATED
+// first. Deliberately `parCycleId` (an auto-increment PK, so it only ever
+// grows), not `parCycleStartDate`: a cycle's start date is business data an
+// admin can set to anything — a test/demo cycle backdated or postdated
+// relative to when it was actually set up — so it doesn't reliably track
+// creation order. The backend's own `par_cycle_created_on` timestamp isn't
+// on the wire at all (par-app's getParCycleFrom in manager.bal strips it
+// before building the API response), so the id is the only signal we have.
+export function sortClosedCyclesLatestFirst(cycles: ParCycle[]): ParCycle[] {
+  return [...cycles].sort((a, b) => b.parCycleId - a.parCycleId);
+}
+
 // Ports EmployeeHistoryView.tsx's own mergedCycleOptions useMemo: every real
 // closed cycle plus one entry per DISTINCT legacy cycle name across every
 // one of the lead's reports (deduplicated — however many reports have a
