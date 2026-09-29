@@ -28,7 +28,7 @@ See [`webapp/README.md`](webapp/README.md) for configuration, scripts, and proje
 ## Contributing
 
 1. Fork the repository and clone your fork.
-2. Branch off the latest `upstream/main` — never commit to `main` directly.
+2. Add the original repository as the `upstream` remote and fetch it. Branch off its latest `main` — never commit to `main` directly.
 3. Follow [`docs/conventions.md`](docs/conventions.md).
 4. Before opening a PR, run `npx tsc -b && npm test && npm run lint` in `webapp/`.
 5. Open the PR against `main`. CodeRabbit reviews every PR automatically.
