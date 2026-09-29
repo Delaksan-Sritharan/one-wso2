@@ -28,10 +28,16 @@ Two capabilities, both from the Marketing Ops access map (§4):
 | Capability | Replaces source role | Gets |
 |---|---|---|
 | `eventplatform` | admin | everything |
-| `eventplatform-shop` | shop | the Shop tab of any event, and the event list (§8, Q1) |
+| `eventplatform-shop` | shop | the Shop tab of any event, and a read-only event list to reach it (§8, Q1) |
 
 They are **siblings, not a hierarchy**: holding one does not imply the other. The Marketing Ops
 admin master key (`isAdmin`) grants both, as it does every Marketing Ops feature.
+
+Either capability also makes the caller a Marketing Ops user (§4), and every Marketing Ops user gets
+the ungated Utilities (UTM Link Generator, Asset Name Generator). That is deliberate and the same as
+for every other Marketing Ops feature group: the Utilities read and write no feature data. "Siblings"
+is about the two Event Platform capabilities, not about Utilities. If shop operators must not have
+them, Utilities need a capability of their own; that is a Marketing Ops change, out of scope here.
 
 The source backend also knows a third, read-only `user` role. The source UI
 never admits it — `RoleGuard` lets only admin or shop through — so it has no screen to port and is
@@ -52,10 +58,10 @@ Picked from the rail, not a tab row.
 
 | Rail item | Target | Source route | Source page | Access |
 |---|---|---|---|---|
-| All Events | `/events` | `/` | `EventsDashboard` | admin (shop: see §8, Q1) |
+| All Events | `/events` | `/` | `EventsDashboard` | admin or shop (shop: read-only list, §8 Q1) |
 | Speakers | `/speakers` | `/speakers` | `SpeakersPage` | admin |
 
-`/marketing-ops/event-platform` → `firstAllowedPath`.
+`/marketing-ops/event-platform` → `firstAllowedPath`: `/events` for admin and shop alike.
 
 ### 2.2 Inside an event (`/events/:eventId`)
 
@@ -95,7 +101,8 @@ label becomes **Shop**, which is what its routes and backend already call it.
 
 Behaviour is ported as-is unless §7 says otherwise. One line each, to fix scope per phase:
 
-- **Events** — card list and create. Card opens the event. (Delete lives in Settings.)
+- **Events** — card list and create. Card opens the event. (Delete lives in Settings.) A shop-only
+  user gets the same list read-only, without create; a card opens that event's `shop/inventory`.
 - **Speakers** — global library shared by all events; create, edit, delete, visibility toggle, CSV
   import (row-by-row create/update).
 - **Agenda** — day picker, tracks per day, track and keynote sections, footnotes, unscheduled
@@ -106,7 +113,12 @@ Behaviour is ported as-is unless §7 says otherwise. One line each, to fix scope
   "reapply rooms".
 - **Activities** — venue activities with per-day open windows, saved as one whole-schedule PUT.
 - **Export** — JSON previews and downloads for agenda and speakers, plus a static HTML agenda built
-  client-side from `public/agenda-template.html` and `utils/staticAgenda/runtime.js?raw`.
+  client-side from `public/agenda-template.html` and `utils/staticAgenda/runtime.js?raw`. The page
+  is published to the public conference site, so the port keeps the source's output hygiene: rich
+  text (session titles and descriptions) goes through DOMPurify with the source's tag allow-list
+  before it reaches the DOM, every other admin-entered string is HTML-escaped, and URLs are checked
+  for a safe scheme. That holds both where the data is written into the template and in the `?raw`
+  runtime; the backend's own sanitising on write is not relied on.
 - **Inventory** — shop item CRUD (`ItemFormDialog`), stock and sold counts from orders.
 - **Orders** — order table, `ShopOrderDrawer`, status changes.
 - **Settings** — event fields (name, dates, timezone, venue, shop closing time, artifact labels,
@@ -117,7 +129,9 @@ Behaviour is ported as-is unless §7 says otherwise. One line each, to fix scope
 ## 4. RBAC
 
 one-wso2 has no backend; the UI mirrors what each backend enforces. Event Platform reuses the
-Marketing Ops gate rather than adding its own `/api/me`:
+Marketing Ops gate rather than adding its own `/api/me`. That gate only decides what the UI offers.
+The agenda-organizer backend enforces admin and shop itself, on every route (the Access column in
+§5), and must keep doing so against one-wso2's token (§6):
 
 - **Source of truth:** `digiops-marketing/agents/marketing-ops/backend/shared/access_map.yaml` gains
   an `eventplatform` feature — `general` → group `eventplatform`, `shop` → group
@@ -130,12 +144,13 @@ Marketing Ops gate rather than adding its own `/api/me`:
 
   | Id | Capability | Used by |
   |---|---|---|
-  | `mops-event-platform-events` | `eventplatform` **or** `eventplatform-shop` | All Events rail item |
+  | `mops-event-platform-events` | `eventplatform` **or** `eventplatform-shop` | All Events rail item **and** the Events route |
   | `mops-event-platform-speakers` | `eventplatform` | Speakers rail item |
-  | `mops-event-platform-admin` | `eventplatform` | Events\*, Speakers, Sessions/*, Settings |
+  | `mops-event-platform-admin` | `eventplatform` | Speakers route, Sessions/*, Settings, and create on Events |
   | `mops-event-platform-shop` | `eventplatform` **or** `eventplatform-shop` | Shop/* |
 
-  \* Events is `admin` until §8 Q1 is settled.
+  The All Events rail item and the route it opens share one id, so the rail never offers a shop
+  user an entry that the route then refuses (§8, Q1).
 
   `ITEM_CAPABILITY` maps one id to one capability today. "Admin or shop" needs any-of, so phase 1
   widens the value to `MarketingOpsCapability | readonly MarketingOpsCapability[]` (any-of). The
@@ -198,8 +213,8 @@ shop. Types are those in source `types/api.ts`.
 | Method | Path | Body → Response | Access |
 |---|---|---|---|
 | GET | `/api/sessions?configId=&dayId=&scheduled=` | → `Session[]`; `scheduled=false` requires `configId` | R |
-| POST | `/api/sessions` | session fields + `speakers[{speakerId, role}]` → `Session` | A |
-| PATCH | `/api/sessions/{id}` | partial → `Session` | A |
+| POST | `/api/sessions` | session fields + `speakerAssignments[{speakerId, role}]` → `Session` | A |
+| PATCH | `/api/sessions/{id}` | every editable field (title is required, so not partial) + `speakerAssignments` → `Session` | A |
 | PUT | `/api/sessions/{id}/placement` | `{dayId, trackId, slotIndex, sectionId}` (all null = unschedule) → `Session` | A |
 | PATCH | `/api/sessions/{id}/artifacts` | `{artifacts: SessionArtifact[]}` → `Session` | A |
 | DELETE | `/api/sessions/{id}` | → 204 | A |
@@ -253,8 +268,25 @@ Out of scope for the frontend PRs; tracked with the backend owners.
    its groups per environment.
 2. **Same groups on the agenda-organizer backend,** with the Marketing Ops admin group counted as an
    admin there too — otherwise the frontend's master key shows admins tabs whose calls 403.
-3. **Token and gateway:** the backend must accept the token one-wso2 sends, and the gateway must allow
-   one-wso2's origin and expose `Content-Disposition` for export filenames.
+3. **Token and gateway.** The UI roles move to the Marketing Ops gate (§7), but the backend still
+   decides admin, shop and member on its own, from the token it verifies. In the source that token
+   was minted for the source app's own client. one-wso2's is minted for a different client, so the
+   audience and the claims differ. Four things have to be settled before the data layer goes live:
+   1. **Which credential the backend verifies.** one-wso2 sends `Authorization: Bearer <access
+      token>` from its IdP. The backend either verifies that token (the IdP's keys and issuer, with
+      one-wso2's client as the audience), or a gateway-minted assertion, which has its own signer
+      and keys and is only present where the gateway is set to add it, per endpoint and per
+      environment. The source verifies the gateway assertion. Pick one per deployment, and verify
+      exactly that one; never accept whichever of the two happens to arrive.
+   2. **Where the roles come from.** The groups claim on the verified token, or a lookup on the
+      server by subject. Either way the result must include the groups in §4 and the Marketing Ops
+      admin group (item 2).
+   3. **No `email` on an access token.** An access token carries `sub`, `aud`, `iss` and scopes,
+      not `email`. The source requires an `email` claim, so as it stands it refuses every one-wso2
+      call. Key on `sub`, or look the email up.
+   4. **CORS.** The gateway must allow one-wso2's origin and the `Authorization` header, and expose
+      `Content-Disposition` for export filenames. A browser cannot add the gateway assertion header
+      itself, so that header is never a client-side workaround.
 
 ---
 
@@ -277,7 +309,8 @@ Out of scope for the frontend PRs; tracked with the backend owners.
 - **Shared components.** `ConfirmationDialog` for `ConfirmDialog`, `ErrorNotice` for errors,
   `MarketingOpsShell` for the frame. Orders stay a plain MUI `Table`.
 - **Forms.** Hand-written `useState` forms → `react-hook-form`.
-- **Rich text.** `quill` 2 → the repo's `react-quill-new`; `dompurify` kept for render.
+- **Rich text.** `quill` 2 → the repo's `react-quill-new`; `dompurify` kept for render and for the
+  static export (§3, Export).
 - **Config.** The source `public/config.js` is not copied (it holds a real client id); one new key,
   placeholder only, in `config.js.example`.
 - **Fixed, not reproduced:**
@@ -294,15 +327,16 @@ Out of scope for the frontend PRs; tracked with the backend owners.
 
 ## 8. Open questions
 
-**Q1. Shop-only users have no event list.** The Events dashboard is admin-only in the source, so a
-shop user opening All Events has nowhere to pick an event.
+**Q1. Shop-only users have no event list.** *Decided: (b).* The Events dashboard is admin-only in
+the source, so a shop user opening All Events had nowhere to pick an event.
 
 - (a) Open the event switcher to shop users only — still leaves the landing page empty.
-- (b) **Recommended:** open the Events tab to shop users as a read-only list (no create, no delete);
+- (b) **Adopted:** open the Events tab to shop users as a read-only list (no create, no delete);
   a card opens that event's `firstAllowedPath`, i.e. `shop/inventory`. It needs no backend change:
   `GET /api/events` and `GET /api/events/{id}` are already open to any app member (§5, **R**). The
-  Events gate id becomes the any-of `mops-event-platform-shop`, with create/delete checked against
-  `mops-event-platform-admin`.
+  rail item and the Events route are both gated on the any-of `mops-event-platform-events` (§4);
+  create is checked against `mops-event-platform-admin`. The skeleton opens the route to both
+  capabilities; phase 3 builds the page's two faces.
 
 **Q2. `DataGrid` for orders?** Plain `Table` unless asked for.
 
@@ -329,7 +363,8 @@ Phases 3, 4 and 6 can run in parallel once 2 merges.
 
 ## 10. Risks
 
-- **Token path** (§6.3): if the backend does not accept one-wso2's token, every call 401s.
+- **Token path** (§6.3): if the backend does not accept one-wso2's token, or requires a claim
+  that token lacks, every call 401s.
 - **Admin master key vs backend** (§6.2): a Marketing Ops admin sees every tab; unless the backend
   counts that group as admin, those calls 403.
 - **Fail-closed gate:** a missing `ITEM_CAPABILITY` line hides the item from everyone.
