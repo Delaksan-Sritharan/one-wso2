@@ -123,6 +123,10 @@ import CcPendingPage from "@features/finance/cc/pages/CcPendingPage";
 import CcApprovePage from "@features/finance/cc/pages/CcApprovePage";
 import CcHistoryPage from "@features/finance/cc/pages/CcHistoryPage";
 import CcSettingsPage from "@features/finance/cc/pages/CcSettingsPage";
+import SubsidiariesPage from "@features/finance/masterdata/pages/SubsidiariesPage";
+import DepartmentsPage from "@features/finance/masterdata/pages/DepartmentsPage";
+import ExpenseTypesPage from "@features/finance/masterdata/pages/ExpenseTypesPage";
+import CreditCardsPage from "@features/finance/masterdata/pages/CreditCardsPage";
 import ExpenseNewClaimPage from "@features/finance/expense/pages/ExpenseNewClaimPage";
 import ExpenseClaimsTab from "@features/finance/expense/pages/ExpenseHistoryPage";
 import ClaimApprovalPage, {
@@ -335,6 +339,13 @@ export default function App() {
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
           <Route path="finance/opd/dashboard" element={<OpdDashboardScreen />} />
+          {/* Finance → Master Data: the four reference tables the other
+              finance apps are keyed against. One route per table, matching
+              the source app's own tab urls (constants.ts:40-45). */}
+          <Route path="finance/master-data/subsidiaries" element={<SubsidiariesPage />} />
+          <Route path="finance/master-data/departments" element={<DepartmentsPage />} />
+          <Route path="finance/master-data/expense-types" element={<ExpenseTypesPage />} />
+          <Route path="finance/master-data/credit-cards" element={<CreditCardsPage />} />
           <Route path="people-ops" element={<PerspectiveLanding />} />
           {/* People Ops → Org Chart: the company's reporting hierarchy, ported
               from the standalone org-chart app. Unlike every other People Ops

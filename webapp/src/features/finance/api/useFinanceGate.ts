@@ -15,6 +15,8 @@
 // under the License.
 
 import { FINANCE_APPS } from "@constants/financeApps";
+import type { Capability } from "@constants/appMenu";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import { useCcUserInfo } from "../cc/useCc";
 import { ccHasAccess } from "../cc/ccTypes";
 import { useOpdUserInfo } from "../opd/useOpd";
@@ -61,10 +63,22 @@ export interface FinanceGate {
   opdErrored: boolean;
 }
 
-export function useFinanceGate(enabled = true): FinanceGate {
+/**
+ * @param caps The portal's coarse capabilities, for the finance items that
+ *   have no backend role of their own — currently just master data. Passed
+ *   in rather than read here: the rail has already derived it from the
+ *   people-app `/user-info` this hook would otherwise call a second time.
+ */
+export function useFinanceGate(enabled = true, caps?: ReadonlySet<Capability>): FinanceGate {
   const cc = useCcUserInfo(enabled);
   const opd = useOpdUserInfo(enabled);
   const expense = useExpenseAppData(enabled);
+  // Master data is the one finance app with no role of its own to ask about:
+  // its backend's /user-info returns an email and an avatar, and access is
+  // decided upstream by Asgardeo group membership. So its items fall back to
+  // the portal's coarse capabilities — and to a no, not a yes, when the
+  // caller did not supply them.
+  const isAdmin = caps?.has("admin") ?? false;
 
   const ccLeadOrFinance = ccHasAccess(cc.data, "lead") || ccHasAccess(cc.data, "finance");
   const ccFinance = ccHasAccess(cc.data, "finance");
@@ -116,6 +130,23 @@ export function useFinanceGate(enabled = true): FinanceGate {
       // `opdErrored` on `FinanceGate` above.
       case "finance-overview":
         return ccHasOwnCard || opdFinance || opdErrored;
+      // The four master-data tables. Finance reference data that the other
+      // apps read and only finance writes, so all four answer the same way —
+      // listed individually rather than as a prefix match so that a new tab
+      // has to be named here before it appears, the same fail-closed rule
+      // the default case enforces.
+      //
+      // Gated on BOTH the preview flag and `admin`, not either alone: the
+      // flag answers "does this environment have it yet" (off by default —
+      // see previewFeatures.ts — so prod stays untouched by this merging),
+      // while `admin` is the actual per-reader permission, same shape as
+      // every other restricted item here. Turning the flag on in an
+      // environment does not hand the tables to every employee in it.
+      case "master-data-subsidiaries":
+      case "master-data-departments":
+      case "master-data-expense-types":
+      case "master-data-credit-cards":
+        return isPreviewEnabled("finance-master-data") && isAdmin;
       default:
         // Per-user views (New / Pending / History) are open; any other item
         // that declares `requires` but reaches here fails closed rather than

@@ -84,7 +84,7 @@ window.config = {
   // src/config/apiConfig.ts.
   // ONE_WSO2_GRC_PLATFORM_BACKEND_URL: "<your-grc-platform-backend-url>",
 
-  // digiops-finance backend base URLs — the three apps in the Finance
+  // digiops-finance backend base URLs — the apps in the Finance
   // perspective. Each is a separate Ballerina service with its own
   // /user-info + role scheme. Optional — when a URL is absent, that app's
   // screens show a "not connected" state. Same Choreo API gateway URL
@@ -92,6 +92,7 @@ window.config = {
   // ONE_WSO2_OPD_BACKEND_URL: "<your-opd-claims-backend-url>",
   // ONE_WSO2_CC_EXPENSES_BACKEND_URL: "<your-cc-expenses-backend-url>",
   // ONE_WSO2_EXPENSE_CLAIMS_BACKEND_URL: "<your-expense-claims-backend-url>",
+  // ONE_WSO2_FINANCE_MASTER_DATA_BACKEND_URL: "<your-finance-master-data-backend-url>",
 
   // Updates Manager backend base URL. Optional — when absent, UMT shows a
   // not-connected state and makes no requests. The value is the service root;

@@ -67,7 +67,17 @@ export type PreviewFeature =
   /* The whole Infra Portal perspective. Still being ported, so the waffle
    * tile, landing option, and `/infra` route stay hidden until this is on.
    */
-  | "infra";
+  | "infra"
+  /**
+   * Finance → Master Data (Subsidiaries, Departments, Expense Types, Credit
+   * Cards) — see useFinanceGate.ts's master-data case. Waiting on two things
+   * that are outside this codebase: a Choreo deployment of the backend for
+   * whichever environment is reading this flag, and confirmation that the
+   * real Asgardeo admin group maps onto the `admin` capability this gate
+   * also checks — until both are true, real users should not see it even
+   * where this flag is on.
+   */
+  | "finance-master-data";
 
 /**
  * Whether a preview feature should be shown.

@@ -113,7 +113,9 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // Both perspectives: the claim apps' own screens are under Me, and Claim
   // approval is under Finance. One gate answers for both, so it has to be
   // asked in either place.
-  const financeGate = useFinanceGate(active.key === "me" || active.key === "finance");
+  // `caps` for the master-data items, which have no finance backend role of
+  // their own — see useFinanceGate's own note.
+  const financeGate = useFinanceGate(active.key === "me" || active.key === "finance", caps);
 
   // Leave is the same problem again: its backend numbers LEAD 879 /
   // PEOPLE_OPS_TEAM 789, unrelated to people-app's 993 / 999. Reading
