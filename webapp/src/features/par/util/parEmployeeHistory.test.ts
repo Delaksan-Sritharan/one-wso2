@@ -203,42 +203,50 @@ describe("resolveEmployeeCycleRating", () => {
     const ratingByEmail: ParRatingByEmail = {
       "jane@wso2.com": rating({ parRating: "EXCEEDS_EXPECTATIONS", parSpecialRating: "NOT_ASSIGNED" }),
     };
-    const result = resolveEmployeeCycleRating(jane, true, undefined, {}, ratingByEmail, {});
-    expect(result).toEqual({ rating: "EXCEEDS_EXPECTATIONS", special: null, hasRecord: true, isLoading: false });
+    const result = resolveEmployeeCycleRating(jane, true, undefined, {}, ratingByEmail, {}, {});
+    expect(result).toEqual({ rating: "EXCEEDS_EXPECTATIONS", special: null, hasRecord: true, isLoading: false, isError: false });
   });
 
   it("real cycle: still fetching reports isLoading, not a missing record", () => {
-    const result = resolveEmployeeCycleRating(jane, true, undefined, {}, {}, { "jane@wso2.com": true });
-    expect(result).toEqual({ rating: null, special: null, hasRecord: false, isLoading: true });
+    const result = resolveEmployeeCycleRating(jane, true, undefined, {}, {}, { "jane@wso2.com": true }, {});
+    expect(result).toEqual({ rating: null, special: null, hasRecord: false, isLoading: true, isError: false });
   });
 
   it("real cycle: fetched with no record (404 → null) reports hasRecord false", () => {
     const ratingByEmail: ParRatingByEmail = { "jane@wso2.com": null };
-    const result = resolveEmployeeCycleRating(jane, true, undefined, {}, ratingByEmail, {});
-    expect(result).toEqual({ rating: null, special: null, hasRecord: false, isLoading: false });
+    const result = resolveEmployeeCycleRating(jane, true, undefined, {}, ratingByEmail, {}, {});
+    expect(result).toEqual({ rating: null, special: null, hasRecord: false, isLoading: false, isError: false });
+  });
+
+  // A failed fetch (403/500/...) must read as a distinct error, not fall
+  // through to "no record" — the lead can't otherwise tell a genuine
+  // failure apart from an employee who simply wasn't rated that cycle.
+  it("real cycle: a fetch error reports isError, not hasRecord false alone", () => {
+    const result = resolveEmployeeCycleRating(jane, true, undefined, {}, {}, {}, { "jane@wso2.com": true });
+    expect(result).toEqual({ rating: null, special: null, hasRecord: false, isLoading: false, isError: true });
   });
 
   it("legacy cycle: reads overallRating/overallSpecialRating off the matching cycleName", () => {
     const legacyByEmail: ParLegacyHistoryByEmail = {
       "jane@wso2.com": [legacyRecord({ cycleName: "2023 H1", overallRating: "Successful", overallSpecialRating: "TOP20P" })],
     };
-    const result = resolveEmployeeCycleRating(jane, false, "2023 H1", legacyByEmail, {}, {});
-    expect(result).toEqual({ rating: "Successful", special: "TOP20P", hasRecord: true, isLoading: false });
+    const result = resolveEmployeeCycleRating(jane, false, "2023 H1", legacyByEmail, {}, {}, {});
+    expect(result).toEqual({ rating: "Successful", special: "TOP20P", hasRecord: true, isLoading: false, isError: false });
   });
 
   it("legacy cycle: falls back to deriveLegacyRatingFromScore when overallRating is absent", () => {
     const legacyByEmail: ParLegacyHistoryByEmail = {
       "jane@wso2.com": [legacyRecord({ cycleName: "2023 H1", overallRating: null, overallSpecialRating: null, managerScoreCode: 1 })],
     };
-    const result = resolveEmployeeCycleRating(jane, false, "2023 H1", legacyByEmail, {}, {});
-    expect(result).toEqual({ rating: "Successful", special: "TOP5P", hasRecord: true, isLoading: false });
+    const result = resolveEmployeeCycleRating(jane, false, "2023 H1", legacyByEmail, {}, {}, {});
+    expect(result).toEqual({ rating: "Successful", special: "TOP5P", hasRecord: true, isLoading: false, isError: false });
   });
 
   it("legacy cycle: no record for that cycle name reports hasRecord false", () => {
     const legacyByEmail: ParLegacyHistoryByEmail = {
       "jane@wso2.com": [legacyRecord({ cycleName: "2022 H2" })],
     };
-    const result = resolveEmployeeCycleRating(jane, false, "2023 H1", legacyByEmail, {}, {});
-    expect(result).toEqual({ rating: null, special: null, hasRecord: false, isLoading: false });
+    const result = resolveEmployeeCycleRating(jane, false, "2023 H1", legacyByEmail, {}, {}, {});
+    expect(result).toEqual({ rating: null, special: null, hasRecord: false, isLoading: false, isError: false });
   });
 });

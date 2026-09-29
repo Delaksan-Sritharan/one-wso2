@@ -105,6 +105,7 @@ function AllEmployeesTable({
   legacyByEmail,
   ratingByEmail,
   isRatingLoadingByEmail,
+  isRatingErrorByEmail,
   onSelect,
 }: {
   employees: ParEmployee[];
@@ -114,6 +115,7 @@ function AllEmployeesTable({
   legacyByEmail: ParLegacyHistoryByEmail;
   ratingByEmail: ParRatingByEmail;
   isRatingLoadingByEmail: Record<string, boolean>;
+  isRatingErrorByEmail: Record<string, boolean>;
   onSelect: (employee: ParEmployee) => void;
 }) {
   if (employees.length === 0) {
@@ -131,13 +133,14 @@ function AllEmployeesTable({
         </TableHead>
         <TableBody>
           {employees.map((employee) => {
-            const { rating, special, hasRecord, isLoading } = resolveEmployeeCycleRating(
+            const { rating, special, hasRecord, isLoading, isError } = resolveEmployeeCycleRating(
               employee,
               isRealCycle,
               legacyCycleName,
               legacyByEmail,
               ratingByEmail,
               isRatingLoadingByEmail,
+              isRatingErrorByEmail,
             );
             return (
               <TableRow
@@ -175,6 +178,10 @@ function AllEmployeesTable({
                 <TableCell>
                   {isLoading ? (
                     <Skeleton variant="text" width={80} />
+                  ) : isError ? (
+                    <Typography variant="body2" color="error.main">
+                      Couldn't load
+                    </Typography>
                   ) : (
                     <Stack direction="row" spacing={0.75} flexWrap="wrap" alignItems="center">
                       {special && <ParStatusChip content={special} />}
@@ -443,6 +450,7 @@ export default function ParLeadEmployeeHistoryTab() {
           legacyByEmail={legacyFanOut.byEmail}
           ratingByEmail={ratingFanOut.byEmail}
           isRatingLoadingByEmail={ratingFanOut.isLoadingByEmail}
+          isRatingErrorByEmail={ratingFanOut.isErrorByEmail}
           onSelect={(employee) => {
             setSelectedEmployee(employee);
             setInputValue(`${employee.employeeName} (${employee.workEmail})`);

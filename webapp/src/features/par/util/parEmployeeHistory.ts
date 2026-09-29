@@ -135,6 +135,10 @@ export interface EmployeeCycleRating {
   special: string | null;
   hasRecord: boolean;
   isLoading: boolean;
+  // A fetch failure (403/500/...), distinct from "no record" (404) — the
+  // row can't tell those apart from hasRecord alone, so callers need to
+  // show this as its own state rather than a silent "No record".
+  isError: boolean;
 }
 
 // One row's rating in ParLeadEmployeeHistoryTab.tsx's "all employees" table.
@@ -147,6 +151,7 @@ export function resolveEmployeeCycleRating(
   legacyByEmail: ParLegacyHistoryByEmail,
   ratingByEmail: ParRatingByEmail,
   isRatingLoadingByEmail: Record<string, boolean>,
+  isRatingErrorByEmail: Record<string, boolean>,
 ): EmployeeCycleRating {
   if (isRealCycle) {
     const record = ratingByEmail[employee.workEmail];
@@ -155,12 +160,13 @@ export function resolveEmployeeCycleRating(
       special: record?.parSpecialRating && record.parSpecialRating !== "NOT_ASSIGNED" ? record.parSpecialRating : null,
       hasRecord: Boolean(record),
       isLoading: isRatingLoadingByEmail[employee.workEmail] ?? false,
+      isError: isRatingErrorByEmail[employee.workEmail] ?? false,
     };
   }
   const record = legacyCycleName
     ? legacyByEmail[employee.workEmail]?.find((r) => r.cycleName === legacyCycleName)
     : undefined;
-  if (!record) return { rating: null, special: null, hasRecord: false, isLoading: false };
+  if (!record) return { rating: null, special: null, hasRecord: false, isLoading: false, isError: false };
   const derived = deriveLegacyRatingFromScore(record.managerScoreCode);
   const rating = record.overallRating ?? derived.rating;
   const special = record.overallSpecialRating ?? derived.special;
@@ -169,5 +175,6 @@ export function resolveEmployeeCycleRating(
     special: special && special !== "NOT_ASSIGNED" ? special : null,
     hasRecord: true,
     isLoading: false,
+    isError: false,
   };
 }

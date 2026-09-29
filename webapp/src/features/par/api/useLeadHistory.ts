@@ -160,6 +160,7 @@ export interface ParRatingByEmail {
 export function useParRatingFanOut(parCycleId: number | undefined, emails: string[]): {
   byEmail: ParRatingByEmail;
   isLoadingByEmail: Record<string, boolean>;
+  isErrorByEmail: Record<string, boolean>;
 } {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
@@ -186,9 +187,11 @@ export function useParRatingFanOut(parCycleId: number | undefined, emails: strin
 
   const byEmail: ParRatingByEmail = {};
   const isLoadingByEmail: Record<string, boolean> = {};
+  const isErrorByEmail: Record<string, boolean> = {};
   results.forEach((result, index) => {
     byEmail[emails[index]] = result.data;
     isLoadingByEmail[emails[index]] = result.isLoading;
+    isErrorByEmail[emails[index]] = result.isError;
   });
-  return { byEmail, isLoadingByEmail };
+  return { byEmail, isLoadingByEmail, isErrorByEmail };
 }
