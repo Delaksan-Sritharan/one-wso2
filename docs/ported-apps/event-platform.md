@@ -325,7 +325,15 @@ Out of scope for the frontend PRs; tracked with the backend owners.
     reported as such, not as a revert.
   - Request bodies the backend would reject are trimmed to the fields it accepts (for example the
     order-status `transactionHash`), and the event upsert always sends `keynoteRoomId` so Settings
-    no longer clears it.
+    no longer clears it. Settings does not own that field: the keynote room is edited in Rooms
+    (`PUT /api/event/room-mappings`), and the upsert re-places keynote sessions from whatever it
+    receives. So Settings takes `keynoteRoomId` at submit time from the current
+    `["marketing-ops", "event-platform", "room-mappings", …]` cache (fetching it if absent), never
+    from the form's initial values; and the room-mappings mutation also invalidates
+    `["marketing-ops", "event-platform", "events", id]`. Otherwise saving Settings after a Rooms
+    change writes the old room back and silently moves every keynote session on the public agenda.
+    Phase 4 carries a test that saves Settings after a mapping change and asserts the new room is
+    sent.
 
 ---
 
