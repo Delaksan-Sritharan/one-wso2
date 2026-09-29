@@ -237,7 +237,10 @@ function MisBody({
   }
 
   if (!gate.canSee(gateId)) {
-    return <MisLocked />;
+    // ARR Analysis can be closed by the backend while the reader still holds
+    // the ARR privilege. That is not "you have no Finance MIS access".
+    const unavailable = gateId === "mis-analysis" && gate.canSee("mis-arr-build");
+    return <MisLocked unavailable={unavailable} />;
   }
 
   return <>{children}</>;

@@ -330,19 +330,14 @@ export default function MisAnalysisFilters({
               civil dates with no zone, and `<input type="date">` is the one
               control that cannot introduce one. Every picker in this stack
               speaks `Date`, which would put the viewer's midnight into a
-              Pacific-Time screen. Spec §3. */}
+              Pacific-Time screen. */}
           {/* No `Segmented` wrapper: a TextField brings its own visible label,
               so a caption above it would print the words twice on screen and
               read them twice to a screen reader. */}
-          <TextField
-            type="date"
-            size="small"
-            fullWidth
-            label="As Of Date"
-            value={filters.asOf ? isoCivilDate(filters.asOf) : ""}
-            onChange={(event) => set({ asOf: civilDateFrom(event.target.value) ?? today })}
-            slotProps={{ inputLabel: { shrink: true } }}
-            sx={{ alignSelf: "end" }}
+          <AsOfDateField
+            value={filters.asOf}
+            today={today}
+            onCommit={(asOf) => set({ asOf })}
           />
         </Box>
       )}
@@ -516,6 +511,47 @@ const Adornment = () => (
     $
   </Typography>
 );
+
+/**
+ * As Of Date, with a draft while the field is empty.
+ *
+ * Clearing a controlled date input fires `""`. Resolving that to today inside
+ * `onChange` writes today back into `value` before the reader can type a
+ * replacement. The empty draft stays until blur, and blur is what means "no
+ * date", which is today.
+ */
+function AsOfDateField({
+  value,
+  today,
+  onCommit,
+}: {
+  value: MisCivilDate | null;
+  today: MisCivilDate;
+  onCommit: (date: MisCivilDate) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <TextField
+      type="date"
+      size="small"
+      fullWidth
+      label="As Of Date"
+      value={draft ?? (value ? isoCivilDate(value) : "")}
+      onChange={(event) => {
+        const next = event.target.value;
+        setDraft(next);
+        const parsed = civilDateFrom(next);
+        if (parsed) onCommit(parsed);
+      }}
+      onBlur={() => {
+        if (draft != null && !civilDateFrom(draft)) onCommit(today);
+        setDraft(null);
+      }}
+      slotProps={{ inputLabel: { shrink: true } }}
+      sx={{ alignSelf: "end" }}
+    />
+  );
+}
 
 /**
  * `2026-09-21` → a civil date, or nothing.

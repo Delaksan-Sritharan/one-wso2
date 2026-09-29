@@ -19,7 +19,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DataGrid } from "@wso2/oxygen-ui";
-import AnalysisAccountGrid from "./AnalysisAccountGrid";
+import AnalysisAccountGrid, { analysisAccountColumns } from "./AnalysisAccountGrid";
 import { analysisAccountRows, type AnalysisAccountsResponse } from "./analysisAccountRows";
 import { MIS_SCALES, type MisScale } from "../util/misViewVocabulary";
 
@@ -125,6 +125,18 @@ describe("the account table", () => {
     expect(screen.getByText("Choreo")).toBeInTheDocument();
   });
 
+  it("finds a row by the scaled amount on screen, and still by the raw figure", () => {
+    const column = analysisAccountColumns(MIS_SCALES.THOUSANDS).find((item) => item.field === "apimBu");
+    expect(column?.getApplyQuickFilterFn).toBeTypeOf("function");
+    const match = column!.getApplyQuickFilterFn!("1,235", column as never, { current: null } as never);
+    const raw = column!.getApplyQuickFilterFn!("1234567.89", column as never, { current: null } as never);
+    const miss = column!.getApplyQuickFilterFn!("999", column as never, { current: null } as never);
+    const value = 1_234_567.89;
+    expect(match!(value, {} as never, column as never, { current: null } as never)).toBe(true);
+    expect(raw!(value, {} as never, column as never, { current: null } as never)).toBe(true);
+    expect(miss!(value, {} as never, column as never, { current: null } as never)).toBe(false);
+  });
+
   it("writes a lifetime in years", () => {
     showGrid([account({ customerLifetime: "1" })]);
     expect(screen.getByText("1 yr")).toBeInTheDocument();
@@ -141,14 +153,12 @@ describe("the CSV", () => {
     expect(csv()).not.toContain("1,235");
   });
 
-  // Ticket 11's decision, one export along: a figure in a file Finance opens is
-  // a NUMBER. A CSV has no number formats, so the only way to say that is to
-  // write the digits plainly — `"1,234,567.89"` parses back to a number only in
-  // a locale whose thousands separator is a comma, and reads as text in the
-  // rest. The `number` column type fits `toLocaleString` by default
-  // (gridNumericColDef.js:12), so this is a formatter the columns have to
-  // actively displace rather than merely decline to add.
-  it("carries a figure Excel reads as a number in any locale", () => {
+  // A CSV has no number formats. The `number` column type fits `toLocaleString`
+  // by default (gridNumericColDef.js:12), which writes `"1,234,567.89"` — a
+  // number only where the thousands separator is a comma. The export writes a
+  // dot decimal with no grouping instead. That is the file format, not a
+  // promise that every Excel locale will parse the dot as a decimal.
+  it("writes a dot decimal with no thousands separator", () => {
     const { csv } = showGrid([account()]);
     expect(csv()).toContain("1234567.89");
     expect(csv()).not.toContain("1,234,567.89");

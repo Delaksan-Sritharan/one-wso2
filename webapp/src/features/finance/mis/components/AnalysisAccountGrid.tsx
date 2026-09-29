@@ -55,11 +55,11 @@ import type { AnalysisAccountRow } from "./analysisAccountRows";
 // formatter already fitted — `value.toLocaleString()`
 // (`gridNumericColDef.js:12`) — so leaving the field unset does not mean "no
 // formatting": it means the grid's, and the CSV then carries `"1,234,567.89"`.
-// That is in units, so it passes §10.18 on the letter, and it is still the
-// defect ticket 11 fixed for the workbook: a figure Excel parses back to a
-// number only in a locale whose thousands separator is a comma. The identity
-// formatter gives Finance `1234567.89`, which every locale reads as a number
-// and the source's export does not. Spec §7.
+// That string is a number only in a locale whose thousands separator is a
+// comma. The identity formatter writes `1234567.89` instead: a dot decimal
+// and no thousands separator. It is still a CSV, not an Excel number. A
+// decimal-comma locale may not parse the dot as a decimal when the file is
+// opened directly. The toolbar says so.
 //
 // The same trade decides the Products column: chips have no text for the
 // exporter to take, so its VALUE is the backend's comma string and the chips
@@ -158,7 +158,7 @@ function AnalysisGridToolbar() {
           <DataGrid.GridFilterListIcon fontSize="small" />
         </DataGrid.FilterPanelTrigger>
       </Tooltip>
-      <Tooltip title="Download as CSV">
+      <Tooltip title="Download as CSV. Amounts use a dot decimal and no thousands separator.">
         <DataGrid.ExportCsv render={<DataGrid.ToolbarButton aria-label="Download as CSV" />}>
           <DataGrid.GridDownloadIcon fontSize="small" />
         </DataGrid.ExportCsv>
@@ -192,6 +192,18 @@ export function analysisAccountColumns(scale: MisScale): DataGrid.GridColDef<Ana
     minWidth,
     type: "number",
     valueFormatter: RAW_NUMBER,
+    // The CSV reads `valueFormatter` (the raw figure). The quick filter would
+    // then search that same raw figure, so a reader looking for the amount on
+    // screen — `1,235` when Scale is thousands — would miss the row.
+    getApplyQuickFilterFn: (search) => {
+      const needle = normalizeSearch(String(search ?? ""));
+      if (!needle) return null;
+      return (value) => {
+        const shown = normalizeSearch(amount(typeof value === "number" ? value : Number(value)));
+        const raw = normalizeSearch(String(value ?? ""));
+        return shown.includes(needle) || raw.includes(needle);
+      };
+    },
     renderCell: (params) => <Typography sx={CELL_SX}>{amount(params.value as number)}</Typography>,
   });
 
@@ -253,5 +265,7 @@ export function analysisAccountColumns(scale: MisScale): DataGrid.GridColDef<Ana
  * decides what Finance opens. See the note at the top of this file.
  */
 const RAW_NUMBER = (value: number): number => value;
+
+const normalizeSearch = (value: string): string => value.replace(/[,\s]/g, "").toLowerCase();
 
 const CELL_SX = { fontSize: 12.5, fontWeight: 600 } as const;

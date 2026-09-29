@@ -18,7 +18,7 @@
 
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import MisAnalysisFilters from "./MisAnalysisFilters";
 import {
@@ -233,6 +233,28 @@ describe("the tags", () => {
     });
     await userEvent.setup().click(screen.getByRole("button", { name: /clear all/i }));
     expect(latest()).toEqual(defaultAnalysisFilters(ON));
+  });
+});
+
+describe("As Of Date", () => {
+  it("stays empty while it is cleared, and returns to today when the field is left", () => {
+    const { latest } = showPanel({ asOf: { year: 2020, month: 1, day: 1 } });
+    const field = screen.getByLabelText("As Of Date");
+    expect(field).toHaveValue("2020-01-01");
+
+    fireEvent.change(field, { target: { value: "" } });
+    expect(field).toHaveValue("");
+    expect(latest()).toBeUndefined();
+
+    fireEvent.blur(field);
+    expect(latest().asOf).toEqual(ON);
+    expect(field).toHaveValue("2026-09-21");
+  });
+
+  it("applies a complete date without waiting to leave the field", () => {
+    const { latest } = showPanel();
+    fireEvent.change(screen.getByLabelText("As Of Date"), { target: { value: "2024-06-01" } });
+    expect(latest().asOf).toEqual({ year: 2024, month: 6, day: 1 });
   });
 });
 

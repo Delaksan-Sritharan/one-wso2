@@ -27,9 +27,10 @@ import { Link as RouterLink } from "react-router";
 //
 // There were two while the Flash Dashboard was being ported: MIS grants it on a
 // privilege of its own, so "you have MIS access, just not to this screen" was
-// an ordinary state. The Flash Dashboard stays in the MIS app, so
-// One WSO2 reads the ARR privilege alone, every screen here opens on it, and
-// anyone locked out of one is locked out of all of them.
+// an ordinary state. The Flash Dashboard stays in the MIS app, so the Builds
+// all open on the ARR privilege. ARR Analysis is the exception: the backend
+// can turn that one screen off while the reader still holds ARR access, and
+// that is not a missing permission.
 //
 // ---- what it does not say -------------------------------------------------
 //
@@ -43,7 +44,7 @@ import { Link as RouterLink } from "react-router";
 // is also where App.tsx sends "/" and any unmatched route. Without it the only
 // exit is the browser's back button, which is what makes a locked door feel
 // like a wall.
-export default function MisLocked() {
+export default function MisLocked({ unavailable = false }: { unavailable?: boolean }) {
   return (
     <Card variant="outlined" sx={{ mt: 1.5, p: 3, maxWidth: 620 }}>
       <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.75 }}>
@@ -74,12 +75,12 @@ export default function MisLocked() {
             component="h2"
             sx={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.02em", mb: 0.6 }}
           >
-            You don&apos;t have access to Finance MIS
+            {unavailable ? "ARR Analysis isn't available" : "You don't have access to Finance MIS"}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2, maxWidth: "60ch" }}>
-            Finance MIS reports company-wide recurring revenue, so access is granted to
-            specific finance and leadership groups rather than to everyone. Ask a Finance MIS
-            administrator if you need it.
+            {unavailable
+              ? "This screen is turned off. Your Finance MIS access is unchanged, and the other MIS screens stay open."
+              : "Finance MIS reports company-wide recurring revenue, so access is granted to specific finance and leadership groups rather than to everyone. Ask a Finance MIS administrator if you need it."}
           </Typography>
           <Button
             component={RouterLink}
