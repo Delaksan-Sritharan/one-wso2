@@ -15,9 +15,26 @@
 // under the License.
 
 import { describe, expect, it } from "vitest";
-import { buildMergedCycleOptions, filterEmployeesForCycle, sortClosedCyclesLatestFirst } from "./parEmployeeHistory";
-import type { ParCycle, ParEmployee, ParLegacyHistory } from "../api/types";
-import type { ParLegacyHistoryByEmail } from "../api/useLeadHistory";
+import {
+  buildMergedCycleOptions,
+  filterEmployeesForCycle,
+  resolveEmployeeCycleRating,
+  sortClosedCyclesLatestFirst,
+} from "./parEmployeeHistory";
+import type { ParCycle, ParEmployee, ParLegacyHistory, ParRating } from "../api/types";
+import type { ParLegacyHistoryByEmail, ParRatingByEmail } from "../api/useLeadHistory";
+
+function rating(overrides: Partial<ParRating>): ParRating {
+  return {
+    parRatingId: 1,
+    parCycleId: 1,
+    parEmployeeEmail: "jane@wso2.com",
+    parEmployeeStatus: "SHARED",
+    parLeadStatus: "SHARED",
+    parF2fStatus: "COMPLETED",
+    ...overrides,
+  };
+}
 
 function realCycle(overrides: Partial<ParCycle>): ParCycle {
   return {
@@ -176,5 +193,52 @@ describe("filterEmployeesForCycle", () => {
     const amy = employee({ employeeName: "Amy Lee", workEmail: "amy@wso2.com" });
     const result = filterEmployeesForCycle([jane, amy], "Jane Doe (jane@wso2.com)", undefined, null, jane);
     expect(result).toEqual([jane, amy]);
+  });
+});
+
+describe("resolveEmployeeCycleRating", () => {
+  const jane = employee({ employeeName: "Jane Doe", workEmail: "jane@wso2.com" });
+
+  it("real cycle: reads rating/special off the fan-out record, dropping NOT_ASSIGNED", () => {
+    const ratingByEmail: ParRatingByEmail = {
+      "jane@wso2.com": rating({ parRating: "EXCEEDS_EXPECTATIONS", parSpecialRating: "NOT_ASSIGNED" }),
+    };
+    const result = resolveEmployeeCycleRating(jane, true, undefined, {}, ratingByEmail, {});
+    expect(result).toEqual({ rating: "EXCEEDS_EXPECTATIONS", special: null, hasRecord: true, isLoading: false });
+  });
+
+  it("real cycle: still fetching reports isLoading, not a missing record", () => {
+    const result = resolveEmployeeCycleRating(jane, true, undefined, {}, {}, { "jane@wso2.com": true });
+    expect(result).toEqual({ rating: null, special: null, hasRecord: false, isLoading: true });
+  });
+
+  it("real cycle: fetched with no record (404 → null) reports hasRecord false", () => {
+    const ratingByEmail: ParRatingByEmail = { "jane@wso2.com": null };
+    const result = resolveEmployeeCycleRating(jane, true, undefined, {}, ratingByEmail, {});
+    expect(result).toEqual({ rating: null, special: null, hasRecord: false, isLoading: false });
+  });
+
+  it("legacy cycle: reads overallRating/overallSpecialRating off the matching cycleName", () => {
+    const legacyByEmail: ParLegacyHistoryByEmail = {
+      "jane@wso2.com": [legacyRecord({ cycleName: "2023 H1", overallRating: "Successful", overallSpecialRating: "TOP20P" })],
+    };
+    const result = resolveEmployeeCycleRating(jane, false, "2023 H1", legacyByEmail, {}, {});
+    expect(result).toEqual({ rating: "Successful", special: "TOP20P", hasRecord: true, isLoading: false });
+  });
+
+  it("legacy cycle: falls back to deriveLegacyRatingFromScore when overallRating is absent", () => {
+    const legacyByEmail: ParLegacyHistoryByEmail = {
+      "jane@wso2.com": [legacyRecord({ cycleName: "2023 H1", overallRating: null, overallSpecialRating: null, managerScoreCode: 1 })],
+    };
+    const result = resolveEmployeeCycleRating(jane, false, "2023 H1", legacyByEmail, {}, {});
+    expect(result).toEqual({ rating: "Successful", special: "TOP5P", hasRecord: true, isLoading: false });
+  });
+
+  it("legacy cycle: no record for that cycle name reports hasRecord false", () => {
+    const legacyByEmail: ParLegacyHistoryByEmail = {
+      "jane@wso2.com": [legacyRecord({ cycleName: "2022 H2" })],
+    };
+    const result = resolveEmployeeCycleRating(jane, false, "2023 H1", legacyByEmail, {}, {});
+    expect(result).toEqual({ rating: null, special: null, hasRecord: false, isLoading: false });
   });
 });
