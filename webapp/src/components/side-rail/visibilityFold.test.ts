@@ -157,6 +157,19 @@ describe("foldVisibility", () => {
     expect(folded.canSee({ id: "mops-email-create", requires: ["admin"] })).toBe(false);
   });
 
+  it("hides a claimed section when its adapter is not in play", () => {
+    const folded = foldVisibility(
+      claimsForPerspective("me").map((name) => adapter({ name, canSee: () => true })),
+      shell({
+        perspectiveKey: "me",
+        sectionIds: new Set([PROMOTION_LEAD_PORTAL_ITEM_ID]),
+        capabilities: new Set(),
+      }),
+    );
+
+    expect(folded.canSee({ id: PROMOTION_LEAD_PORTAL_ITEM_ID })).toBe(false);
+  });
+
   it("fails the authoring check when two adapters claim one section", () => {
     const overlapped = [
       adapter({ name: "finance", claim: { kind: "sections", ids: new Set(["shared"]) } }),
@@ -216,9 +229,50 @@ describe("foldVisibility", () => {
 });
 
 describe("claimsForPerspective", () => {
-  it("includes promotion on People Ops, so that wait cannot be left off the list", () => {
+  it("includes promotion on People Ops only while the preview flag is on", () => {
+    const previous = window.config;
+    window.config = { ...(previous ?? {}), ONE_WSO2_PREVIEW_FEATURES: {} } as Window["config"];
+    expect(claimsForPerspective("people")).not.toContain("promotion");
+
+    window.config = {
+      ...(previous ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { promotion: true },
+    } as Window["config"];
     expect(claimsForPerspective("people")).toContain("promotion");
     expect(claimsForPerspective("me")).not.toContain("promotion");
+    window.config = previous;
+  });
+
+  it("puts the claiming adapter in play for every section of each real perspective", () => {
+    const names = [
+      "par",
+      "marketing",
+      "due-diligence",
+      "finance",
+      "leave",
+      "banking",
+      "banking-admin",
+      "infra",
+      "sales",
+      "promotion",
+      "security",
+      "umt",
+      "subscriptions",
+    ] as const;
+    for (const perspective of PERSPECTIVES) {
+      const sectionIds = sectionIdsIn(perspective.sections ?? []);
+      const inPlay = new Set(claimsForPerspective(perspective.key));
+      for (const id of sectionIds) {
+        for (const name of names) {
+          const claim = claimOf(name);
+          const covers =
+            claim.kind === "sections"
+              ? claim.ids.has(id)
+              : claim.key === perspective.key && sectionIds.has(id);
+          if (covers) expect(inPlay.has(name), `${perspective.key} ${id} claimed by ${name}`).toBe(true);
+        }
+      }
+    }
   });
 
   it("gives every real perspective a single owner per section", () => {

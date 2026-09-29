@@ -15,6 +15,7 @@
 // under the License.
 
 import type { Capability } from "@constants/appMenu";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import { DUE_DILIGENCE_ITEM_IDS } from "@constants/dueDiligenceApps";
 import { FINANCE_ITEM_IDS } from "@constants/financeApps";
 import { INFRA_ITEM_IDS } from "@constants/infraApps";
@@ -70,6 +71,22 @@ export type AdapterName =
   | "security"
   | "umt"
   | "subscriptions";
+
+const ADAPTER_NAMES: readonly AdapterName[] = [
+  "par",
+  "marketing",
+  "due-diligence",
+  "finance",
+  "leave",
+  "banking",
+  "banking-admin",
+  "infra",
+  "sales",
+  "promotion",
+  "security",
+  "umt",
+  "subscriptions",
+];
 
 /** Which sections this adapter answers. A perspective claim answers every section of that perspective. */
 export type SectionClaim =
@@ -170,7 +187,10 @@ export function claimsForPerspective(perspectiveKey: string): AdapterName[] {
   if (perspectiveKey === "me") names.push("leave", "banking");
   if (perspectiveKey === "infra") names.push("infra");
   if (perspectiveKey === "sales") names.push("sales");
-  if (perspectiveKey === "people") names.push("promotion");
+  // The promotion sections exist only while the preview flag is on. Asking
+  // for privileges when they are absent holds the People Ops landing on a
+  // backend that has nothing to show.
+  if (perspectiveKey === "people" && isPreviewEnabled("promotion")) names.push("promotion");
   if (perspectiveKey === "security") names.push("security");
   if (perspectiveKey === "umt") names.push("umt");
   names.push("subscriptions");
@@ -212,6 +232,10 @@ export function foldVisibility(
     if (shell.sriLankaOnlyIds.has(section.id) && !shell.isSriLankaEmployee) return false;
     const owner = adapters.find((adapter) => claimedIds(adapter, shell).has(section.id));
     if (owner) return owner.canSee(section.id);
+    // An id some adapter claims, asked while that adapter is not in play,
+    // stays hidden. Falling through to people-app capabilities would show a
+    // lead or admin section to everyone when it has no `requires`.
+    if (ADAPTER_NAMES.some((name) => claimCovers(name, section.id, shell))) return false;
     return allowedByCapabilities(section.requires, shell.capabilities);
   };
 
@@ -234,8 +258,23 @@ export function foldVisibility(
 }
 
 function claimedIds(adapter: VisibilityAdapter, shell: VisibilityShell): ReadonlySet<string> {
-  if (adapter.claim.kind === "sections") return adapter.claim.ids;
-  return adapter.claim.key === shell.perspectiveKey ? shell.sectionIds : new Set();
+  return idsCoveredBy(adapter.claim, shell);
+}
+
+function claimCovers(
+  name: AdapterName,
+  sectionId: string,
+  shell: Pick<VisibilityShell, "perspectiveKey" | "sectionIds">,
+): boolean {
+  return idsCoveredBy(claimOf(name), shell).has(sectionId);
+}
+
+function idsCoveredBy(
+  claim: SectionClaim,
+  shell: Pick<VisibilityShell, "perspectiveKey" | "sectionIds">,
+): ReadonlySet<string> {
+  if (claim.kind === "sections") return claim.ids;
+  return claim.key === shell.perspectiveKey ? shell.sectionIds : new Set();
 }
 
 function allowedByCapabilities(

@@ -17,6 +17,7 @@
 import { useMemo } from "react";
 import { SRI_LANKA_ONLY_ITEM_IDS, type PerspectiveSection } from "@constants/perspectives";
 import { capabilitiesFromPrivileges } from "@constants/appMenu";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import { infraVisibility, useInfraGate } from "@features/infra/api/useInfraGate";
 import { useActivePerspective } from "@context/perspective/PerspectiveContext";
 import { useUserInfo } from "@api/useUserInfo";
@@ -194,7 +195,10 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // Role.LEAD comes from promotion-app's own backend and bears no fixed
   // relationship to people-app's generic "lead" privilege `caps` is built
   // from. Only fetched while People Ops is active.
-  const promotionLeadPortalGate = usePromotionPrivileges(userInfo.data?.workEmail, isPeopleOps);
+  const promotionLeadPortalGate = usePromotionPrivileges(
+    userInfo.data?.workEmail,
+    isPeopleOps && isPreviewEnabled("promotion"),
+  );
 
   // UMT is the same shape of problem again: Product Management is
   // UMT_ADMIN-only, decided by UMT's own /update/user-info roles, which bear
