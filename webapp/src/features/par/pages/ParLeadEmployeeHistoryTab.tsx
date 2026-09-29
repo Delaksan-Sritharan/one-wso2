@@ -55,6 +55,7 @@ import {
   ALL_EMPLOYEES_OPTION,
   buildMergedCycleOptions,
   filterEmployeesForCycle,
+  filterOwnedByLead,
   resolveEmployeeCycleRating,
 } from "../util/parEmployeeHistory";
 import type { MergedCycleOption } from "../util/parEmployeeHistory";
@@ -237,8 +238,11 @@ export default function ParLeadEmployeeHistoryTab() {
   const [userChangedCycle, setUserChangedCycle] = useState(false);
 
   const cycleOptions = buildMergedCycleOptions(realCycles.data ?? [], legacyFanOut.byEmail);
+  // cycleOptions[0] isn't stable until every source feeding it has settled
+  // — picking it earlier risks swapping the cycle under an already-selected employee.
+  const cycleDataReady = employees.isSuccess && realCycles.isSuccess && !legacyFanOut.isLoading;
   const cycleSelection: CycleSelection =
-    !userChangedCycle && rawCycleSelection.kind === "none" && cycleOptions.length > 0
+    !userChangedCycle && rawCycleSelection.kind === "none" && cycleDataReady && cycleOptions.length > 0
       ? toCycleSelection(cycleOptions[0])
       : rawCycleSelection;
 
@@ -287,7 +291,10 @@ export default function ParLeadEmployeeHistoryTab() {
   const scope = isLegacyCycle
     ? { legacyCycleName: cycleSelection.cycleName, legacyHistoryByEmail: legacyFanOut.byEmail }
     : null;
-  const filteredEmployees = filterEmployeesForCycle(employeeList, inputValue, workEmail, scope, selectedEmployee);
+  const scopedEmployees = filterEmployeesForCycle(employeeList, inputValue, workEmail, scope, selectedEmployee);
+  const filteredEmployees = isRealCycle
+    ? filterOwnedByLead(scopedEmployees, ratingFanOut.byEmail, workEmail)
+    : scopedEmployees;
 
   const cyclePickerValue = isLegacyCycle ? `legacy-${cycleSelection.cycleName}` : isRealCycle ? String(cycleSelection.parCycleId) : "none";
 
@@ -329,10 +336,16 @@ export default function ParLeadEmployeeHistoryTab() {
   // the lead's other reports still has one in flight.
   const legacyIsLoadingForSelected = selectedEmployeeEmail ? (legacyFanOut.isLoadingByEmail[selectedEmployeeEmail] ?? false) : false;
 
+  // Belt-and-suspenders for a table row clicked before filterOwnedByLead
+  // could filter it out (see filteredEmployees above).
+  const isOwnRecord = !rating.data || rating.data.parLeadEmail === workEmail;
+
   // "No record" wording stays deliberately vague: the backend can't tell "no
   // rating exists for this cycle" apart from a genuine fetch error here.
   const realCycleNotAvailable =
-    isRealCycle && Boolean(selectedEmployeeEmail) && (rating.isError || reviews.isError || (rating.isSuccess && !rating.data));
+    isRealCycle &&
+    Boolean(selectedEmployeeEmail) &&
+    (rating.isError || reviews.isError || (rating.isSuccess && (!rating.data || !isOwnRecord)));
   const legacyCycleNotAvailable =
     isLegacyCycle && Boolean(selectedEmployeeEmail) && !legacyIsLoadingForSelected && !selectedLegacyRecord;
 
@@ -340,7 +353,7 @@ export default function ParLeadEmployeeHistoryTab() {
   // — otherwise the details section and the loading skeleton can render at
   // once if the rating resolves first.
   const showRealDetails =
-    isRealCycle && Boolean(selectedEmployeeEmail) && rating.isSuccess && Boolean(rating.data) && reviews.isSuccess;
+    isRealCycle && Boolean(selectedEmployeeEmail) && rating.isSuccess && Boolean(rating.data) && isOwnRecord && reviews.isSuccess;
   const showLegacyDetails = isLegacyCycle && Boolean(selectedLegacyRecord);
 
   const isLoadingSelection =
@@ -437,7 +450,13 @@ export default function ParLeadEmployeeHistoryTab() {
         </Grid>
       </Grid>
 
-      {cycleSelection.kind === "none" && (
+      {/* Not yet cycleDataReady reads as "none" too — a skeleton, not a
+          "choose a cycle" prompt implying the lead needs to act. */}
+      {cycleSelection.kind === "none" && !cycleDataReady && (
+        <Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />
+      )}
+
+      {cycleSelection.kind === "none" && cycleDataReady && (
         <ParEmptyState text="Choose a PAR cycle to view your team's PAR history." />
       )}
 

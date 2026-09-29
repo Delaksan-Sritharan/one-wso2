@@ -178,3 +178,18 @@ export function resolveEmployeeCycleRating(
     isError: false,
   };
 }
+
+// A current report may have moved teams since a past cycle — restores the
+// scoping the old participants?leadEmail= fetch enforced, checked against
+// data already fetched for the table. A still-loading or absent record
+// stays visible.
+export function filterOwnedByLead(
+  employees: ParEmployee[],
+  ratingByEmail: ParRatingByEmail,
+  callerEmail: string | undefined,
+): ParEmployee[] {
+  return employees.filter((employee) => {
+    const record = ratingByEmail[employee.workEmail];
+    return !record || record.parLeadEmail === callerEmail;
+  });
+}
