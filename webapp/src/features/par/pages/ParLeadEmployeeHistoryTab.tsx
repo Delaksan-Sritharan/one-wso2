@@ -22,6 +22,7 @@ import {
   Autocomplete,
   Avatar,
   Box,
+  Button,
   Card,
   Chip,
   ComplexSelect,
@@ -29,10 +30,16 @@ import {
   Grid,
   Skeleton,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from "@wso2/oxygen-ui";
-import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useMeProfile } from "@features/my/api/useMeProfile";
 import { useLeaveEmployees } from "@features/leave/api/useLeaveData";
@@ -40,11 +47,17 @@ import { useParRating } from "../api/useParData";
 import {
   useAllClosedParCycles,
   useParEmployeeReviews,
-  useParHistoryParticipants,
   useParLeadEmployees,
   useParLegacyHistoryFanOut,
+  useParRatingFanOut,
 } from "../api/useLeadHistory";
-import { buildMergedCycleOptions, filterEmployeesForCycle } from "../util/parEmployeeHistory";
+import {
+  ALL_EMPLOYEES_OPTION,
+  buildMergedCycleOptions,
+  filterEmployeesForCycle,
+  resolveEmployeeCycleRating,
+} from "../util/parEmployeeHistory";
+import type { MergedCycleOption } from "../util/parEmployeeHistory";
 import { deriveLegacyRatingFromScore, parseLegacyQuestionAnswers } from "../util/parLegacyHistory";
 import { decodeParComment } from "../util/parComment";
 import ParEmptyState from "../components/ParEmptyState";
@@ -53,8 +66,13 @@ import ParHistoryReviewSection from "../components/ParHistoryReviewSection";
 import ParLegacyReviewSection from "../components/ParLegacyReviewSection";
 import ParStatusChip from "../components/ParStatusChip";
 import type { ParEmployee } from "../api/types";
+import type { ParLegacyHistoryByEmail, ParRatingByEmail } from "../api/useLeadHistory";
 
 type CycleSelection = { kind: "none" } | { kind: "real"; parCycleId: number } | { kind: "legacy"; cycleName: string };
+
+function toCycleSelection(option: MergedCycleOption): CycleSelection {
+  return option.isLegacy ? { kind: "legacy", cycleName: option.cycleName } : { kind: "real", parCycleId: option.parCycleId! };
+}
 
 function InfoItem({ label, value, secondaryValue }: { label: string; value: string; secondaryValue: string }) {
   return (
@@ -76,6 +94,111 @@ function InfoItem({ label, value, secondaryValue }: { label: string; value: stri
   );
 }
 
+/** Every in-scope employee for the selected cycle, shown by default —
+ * click a row to drill into that person's full record below (the existing
+ * single-employee detail view). */
+function AllEmployeesTable({
+  employees,
+  thumbnailByEmail,
+  isRealCycle,
+  legacyCycleName,
+  legacyByEmail,
+  ratingByEmail,
+  isRatingLoadingByEmail,
+  onSelect,
+}: {
+  employees: ParEmployee[];
+  thumbnailByEmail: Map<string, string | null>;
+  isRealCycle: boolean;
+  legacyCycleName: string | undefined;
+  legacyByEmail: ParLegacyHistoryByEmail;
+  ratingByEmail: ParRatingByEmail;
+  isRatingLoadingByEmail: Record<string, boolean>;
+  onSelect: (employee: ParEmployee) => void;
+}) {
+  if (employees.length === 0) {
+    return <ParEmptyState text="None of your reports have a record for this cycle." />;
+  }
+  return (
+    <TableContainer>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 700 }}>Employee</TableCell>
+            <TableCell sx={{ fontWeight: 700 }}>Rating</TableCell>
+            <TableCell />
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {employees.map((employee) => {
+            const { rating, special, hasRecord, isLoading } = resolveEmployeeCycleRating(
+              employee,
+              isRealCycle,
+              legacyCycleName,
+              legacyByEmail,
+              ratingByEmail,
+              isRatingLoadingByEmail,
+            );
+            return (
+              <TableRow
+                key={employee.workEmail}
+                hover
+                tabIndex={0}
+                role="button"
+                aria-label={`View ${employee.employeeName}'s PAR history`}
+                sx={{ cursor: "pointer" }}
+                onClick={() => onSelect(employee)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelect(employee);
+                  }
+                }}
+              >
+                <TableCell>
+                  <Box display="flex" alignItems="center" gap={1.5}>
+                    <Avatar
+                      src={thumbnailByEmail.get(employee.workEmail) || undefined}
+                      alt={employee.employeeName}
+                      sx={{ height: "2rem", width: "2rem" }}
+                    />
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {employee.employeeName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {employee.workEmail}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  {isLoading ? (
+                    <Skeleton variant="text" width={80} />
+                  ) : (
+                    <Stack direction="row" spacing={0.75} flexWrap="wrap" alignItems="center">
+                      {special && <ParStatusChip content={special} />}
+                      {rating && <ParStatusChip content={rating} />}
+                      {!special && !rating && (
+                        <Typography variant="body2" color="text.secondary">
+                          {hasRecord ? "—" : "No record"}
+                        </Typography>
+                      )}
+                    </Stack>
+                  )}
+                </TableCell>
+                <TableCell align="right">
+                  <ChevronRightIcon size={16} />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
+
 // Lead Portal → Employee History: par-app's EmployeeHistoryView.tsx
 // (lead-facing side only). A cycle is picked first — merged real (closed)
 // and legacy (pre-migration) options, latest first — then an employee among
@@ -93,18 +216,35 @@ export default function ParLeadEmployeeHistoryTab() {
     [thumbnails.data],
   );
 
-  const [cycleSelection, setCycleSelection] = useState<CycleSelection>({ kind: "none" });
+  const [rawCycleSelection, setRawCycleSelection] = useState<CycleSelection>({ kind: "none" });
   const [selectedEmployee, setSelectedEmployee] = useState<ParEmployee | null>(null);
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(ALL_EMPLOYEES_OPTION.employeeName);
+  // Only true for a table-row selection — the Employee field is already
+  // visible and already clears back to All employees, so only a table
+  // click (which has no field of its own) needs the extra back button.
+  const [selectedFromTable, setSelectedFromTable] = useState(false);
+  // True once the lead has explicitly changed the cycle — including
+  // clearing it back to "none". Until then, `cycleSelection` below
+  // defaults to the most recent cycle instead. Derived at render time
+  // rather than an effect+setState.
+  const [userChangedCycle, setUserChangedCycle] = useState(false);
+
+  const cycleOptions = buildMergedCycleOptions(realCycles.data ?? [], legacyFanOut.byEmail);
+  const cycleSelection: CycleSelection =
+    !userChangedCycle && rawCycleSelection.kind === "none" && cycleOptions.length > 0
+      ? toCycleSelection(cycleOptions[0])
+      : rawCycleSelection;
 
   const isRealCycle = cycleSelection.kind === "real";
   const isLegacyCycle = cycleSelection.kind === "legacy";
   const realCycleId = isRealCycle ? cycleSelection.parCycleId : undefined;
   const selectedEmployeeEmail = selectedEmployee?.workEmail;
 
-  const participants = useParHistoryParticipants(realCycleId, workEmail);
   const rating = useParRating(realCycleId, selectedEmployeeEmail, isRealCycle && Boolean(selectedEmployeeEmail));
   const reviews = useParEmployeeReviews(realCycleId, isRealCycle ? selectedEmployeeEmail : undefined);
+  // Powers the "all employees" table; picking one employee afterwards
+  // reuses this cache (same query key as useParRating).
+  const ratingFanOut = useParRatingFanOut(realCycleId, (employees.data ?? []).map((e) => e.workEmail));
 
   if (profile.isLoading) {
     return <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 1.5 }} />;
@@ -132,27 +272,30 @@ export default function ParLeadEmployeeHistoryTab() {
   }
 
   const employeeList = employees.data ?? [];
-  const cycleOptions = buildMergedCycleOptions(realCycles.data ?? [], legacyFanOut.byEmail);
 
-  const scope = isRealCycle
-    ? { participantEmails: new Set((participants.data ?? []).map((p) => p.workEmail)) }
-    : isLegacyCycle
-      ? { legacyCycleName: cycleSelection.cycleName, legacyHistoryByEmail: legacyFanOut.byEmail }
-      : null;
+  // Real cycles show every direct report unscoped — resolveEmployeeCycleRating's
+  // "No record" fallback communicates who wasn't actually a participant,
+  // without waiting on a separate participants fetch first. Legacy still
+  // scopes by cycle name since legacyFanOut is already fetched unconditionally.
+  const scope = isLegacyCycle
+    ? { legacyCycleName: cycleSelection.cycleName, legacyHistoryByEmail: legacyFanOut.byEmail }
+    : null;
   const filteredEmployees = filterEmployeesForCycle(employeeList, inputValue, workEmail, scope, selectedEmployee);
 
   const cyclePickerValue = isLegacyCycle ? `legacy-${cycleSelection.cycleName}` : isRealCycle ? String(cycleSelection.parCycleId) : "none";
 
   const handleCycleChange = (value: string) => {
+    setUserChangedCycle(true);
     if (value === "none") {
-      setCycleSelection({ kind: "none" });
+      setRawCycleSelection({ kind: "none" });
     } else if (value.startsWith("legacy-")) {
-      setCycleSelection({ kind: "legacy", cycleName: value.slice("legacy-".length) });
+      setRawCycleSelection({ kind: "legacy", cycleName: value.slice("legacy-".length) });
     } else {
-      setCycleSelection({ kind: "real", parCycleId: Number(value) });
+      setRawCycleSelection({ kind: "real", parCycleId: Number(value) });
     }
     setSelectedEmployee(null);
-    setInputValue("");
+    setInputValue(ALL_EMPLOYEES_OPTION.employeeName);
+    setSelectedFromTable(false);
   };
 
   const legacyRecords = selectedEmployeeEmail ? (legacyFanOut.byEmail[selectedEmployeeEmail] ?? []) : [];
@@ -224,42 +367,103 @@ export default function ParLeadEmployeeHistoryTab() {
         <Grid size={{ xs: 12, sm: 6 }}>
           <Autocomplete
             size="small"
-            options={filteredEmployees}
-            getOptionLabel={(option) => `${option.employeeName} (${option.workEmail})`}
+            options={[ALL_EMPLOYEES_OPTION, ...filteredEmployees]}
+            getOptionLabel={(option) =>
+              option.workEmail === ALL_EMPLOYEES_OPTION.workEmail
+                ? option.employeeName
+                : `${option.employeeName} (${option.workEmail})`
+            }
             loading={employees.isLoading}
             disabled={employees.isLoading || cycleSelection.kind === "none"}
-            value={selectedEmployee}
+            value={selectedEmployee ?? ALL_EMPLOYEES_OPTION}
             inputValue={inputValue}
             onInputChange={(_, value) => setInputValue(value)}
             onChange={(_, value) => {
+              if (!value || value.workEmail === ALL_EMPLOYEES_OPTION.workEmail) {
+                setSelectedEmployee(null);
+                setInputValue(ALL_EMPLOYEES_OPTION.employeeName);
+                setSelectedFromTable(false);
+                return;
+              }
               setSelectedEmployee(value);
-              if (value) setInputValue(`${value.employeeName} (${value.workEmail})`);
+              setSelectedFromTable(false);
+              setInputValue(`${value.employeeName} (${value.workEmail})`);
             }}
-            renderInput={(params) => <TextField {...params} placeholder="Select an employee" fullWidth />}
+            renderInput={(params) => (
+              // Click-to-choose, not type-to-search, same as the PAR
+              // Cycle picker beside it — readOnly blocks typing but the
+              // field still opens on click.
+              <TextField
+                {...params}
+                fullWidth
+                slotProps={{ htmlInput: { ...params.inputProps, readOnly: true } }}
+                sx={{ "& .MuiInputBase-input": { caretColor: "transparent", cursor: "pointer" } }}
+              />
+            )}
             slotProps={{ listbox: { style: { maxHeight: "400px" } } }}
-            renderOption={(props, option) => (
-              <Box component="li" {...props} key={option.workEmail}>
-                <Box display="flex" alignItems="center" gap={2} width="100%">
-                  <Avatar
-                    src={thumbnailByEmail.get(option.workEmail) || undefined}
-                    alt={option.employeeName}
-                    sx={{ height: "2.2rem", width: "2.2rem" }}
-                  />
-                  <Box>
-                    <Typography variant="body1">{option.employeeName}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {option.workEmail}
-                    </Typography>
+            renderOption={(props, option) =>
+              option.workEmail === ALL_EMPLOYEES_OPTION.workEmail ? (
+                <Box component="li" {...props} key={option.workEmail}>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    {option.employeeName}
+                  </Typography>
+                </Box>
+              ) : (
+                <Box component="li" {...props} key={option.workEmail}>
+                  <Box display="flex" alignItems="center" gap={2} width="100%">
+                    <Avatar
+                      src={thumbnailByEmail.get(option.workEmail) || undefined}
+                      alt={option.employeeName}
+                      sx={{ height: "2.2rem", width: "2.2rem" }}
+                    />
+                    <Box>
+                      <Typography variant="body1">{option.employeeName}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {option.workEmail}
+                      </Typography>
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
-            )}
+              )
+            }
           />
         </Grid>
       </Grid>
 
-      {!selectedEmployeeEmail && (
-        <ParEmptyState text="Choose a PAR cycle and subordinate to view previous PARs." />
+      {cycleSelection.kind === "none" && (
+        <ParEmptyState text="Choose a PAR cycle to view your team's PAR history." />
+      )}
+
+      {cycleSelection.kind !== "none" && !selectedEmployeeEmail && (
+        <AllEmployeesTable
+          employees={filteredEmployees}
+          thumbnailByEmail={thumbnailByEmail}
+          isRealCycle={isRealCycle}
+          legacyCycleName={isLegacyCycle ? cycleSelection.cycleName : undefined}
+          legacyByEmail={legacyFanOut.byEmail}
+          ratingByEmail={ratingFanOut.byEmail}
+          isRatingLoadingByEmail={ratingFanOut.isLoadingByEmail}
+          onSelect={(employee) => {
+            setSelectedEmployee(employee);
+            setInputValue(`${employee.employeeName} (${employee.workEmail})`);
+            setSelectedFromTable(true);
+          }}
+        />
+      )}
+
+      {selectedEmployeeEmail && selectedFromTable && (
+        <Button
+          size="small"
+          startIcon={<ArrowLeftIcon size={14} />}
+          onClick={() => {
+            setSelectedEmployee(null);
+            setInputValue(ALL_EMPLOYEES_OPTION.employeeName);
+            setSelectedFromTable(false);
+          }}
+          sx={{ alignSelf: "flex-start" }}
+        >
+          All employees
+        </Button>
       )}
 
       {isLoadingSelection && <Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1.5 }} />}
