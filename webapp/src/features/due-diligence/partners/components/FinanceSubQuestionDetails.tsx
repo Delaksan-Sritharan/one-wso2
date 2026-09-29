@@ -15,7 +15,7 @@
 // under the License.
 
 import { useRef, useState, type DragEvent } from "react";
-import { Alert, Box, Button, FormControl, FormControlLabel, Radio, RadioGroup, Snackbar, Stack, TextField, Typography } from "@wso2/oxygen-ui";
+import { Alert, Box, Button, CircularProgress, FormControl, FormControlLabel, Radio, RadioGroup, Snackbar, Stack, TextField, Typography } from "@wso2/oxygen-ui";
 import { CloudUploadIcon, FileIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { FILE_UPLOAD_LIMIT, FINANCE_CHOOSE_FILE_SUBQUESTION_ID } from "@features/due-diligence/constants";
@@ -249,7 +249,7 @@ export default function FinanceSubQuestionDetails({
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => !fileLimitReached && inputRef.current?.click()}
+                onClick={() => !fileLimitReached && !uploadFile.isPending && inputRef.current?.click()}
                 sx={{
                   border: 1,
                   borderStyle: "dashed",
@@ -258,27 +258,38 @@ export default function FinanceSubQuestionDetails({
                   bgcolor: isDragging ? "action.hover" : "background.default",
                   p: 3,
                   textAlign: "center",
-                  cursor: fileLimitReached ? "default" : "pointer",
+                  cursor: fileLimitReached || uploadFile.isPending ? "default" : "pointer",
                 }}
               >
-                <CloudUploadIcon size={22} style={{ opacity: 0.6 }} />
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {fileLimitReached ? (
-                    "Maximum files reached"
-                  ) : (
-                    <>
-                      <Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
-                        Click to upload
-                      </Typography>{" "}
-                      or drag and drop
-                    </>
-                  )}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {fileLimitReached
-                    ? `(${savedFiles.length + pendingFiles.length}/${FILE_UPLOAD_LIMIT} files uploaded)`
-                    : "PDF, JPEG, PNG, JPG (max 5 files)"}
-                </Typography>
+                {uploadFile.isPending ? (
+                  <>
+                    <CircularProgress size={22} />
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      Uploading…
+                    </Typography>
+                  </>
+                ) : (
+                  <>
+                    <CloudUploadIcon size={22} style={{ opacity: 0.6 }} />
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {fileLimitReached ? (
+                        "Maximum files reached"
+                      ) : (
+                        <>
+                          <Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                            Click to upload
+                          </Typography>{" "}
+                          or drag and drop
+                        </>
+                      )}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {fileLimitReached
+                        ? `(${savedFiles.length + pendingFiles.length}/${FILE_UPLOAD_LIMIT} files uploaded)`
+                        : "PDF, JPEG, PNG, JPG (max 5 files)"}
+                    </Typography>
+                  </>
+                )}
               </Box>
             )}
             {subQuestion.subQuestionId === FINANCE_CHOOSE_FILE_SUBQUESTION_ID && (
