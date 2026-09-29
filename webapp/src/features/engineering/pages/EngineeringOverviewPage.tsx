@@ -87,8 +87,7 @@ export default function EngineeringOverviewPage(): JSX.Element {
     );
   }
 
-  const loading = summary.isPending || daily.isPending || repositories.isPending;
-  if (loading) {
+  if (summary.isPending) {
     return (
       <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", mt: 2 }}>
         <CircularProgress size={16} />
@@ -97,14 +96,9 @@ export default function EngineeringOverviewPage(): JSX.Element {
     );
   }
 
-  if (summary.isError || daily.isError) {
-    const refetch = () => {
-      void summary.refetch();
-      void daily.refetch();
-      void repositories.refetch();
-    };
+  if (summary.isError || summary.data == null) {
     return (
-      <ErrorNotice onRetry={refetch} error={summary.error ?? daily.error}>
+      <ErrorNotice onRetry={() => void summary.refetch()} error={summary.error}>
         Couldn't load release downloads.
       </ErrorNotice>
     );
@@ -151,7 +145,15 @@ export default function EngineeringOverviewPage(): JSX.Element {
         <Typography component="h2" variant="h6" id="daily-downloads">
           Daily Downloads (last 30 days)
         </Typography>
-        {series.length === 0 ? (
+        {daily.isPending || repositories.isPending ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            Loading the daily chart…
+          </Typography>
+        ) : daily.isError ? (
+          <ErrorNotice onRetry={() => void daily.refetch()} error={daily.error} sx={{ mt: 2 }}>
+            Couldn't load the daily chart.
+          </ErrorNotice>
+        ) : series.length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
             No data for the selected range
           </Typography>
@@ -218,10 +220,11 @@ function DailyChart({
 }): JSX.Element {
   const dates = [...new Set(series.flatMap((item) => item.points.map((point) => point.date)))].sort();
   const data = dates.map((date) => {
-    const row: Record<string, string | number> = { date };
+    const row: Record<string, string | number | null> = { date };
     for (const item of series) {
       const point = item.points.find((candidate) => candidate.date === date);
-      row[names.get(item.repoId) ?? item.repoName] = point?.value ?? 0;
+      // A day the API omitted is a gap, not a zero download.
+      row[names.get(item.repoId) ?? item.repoName] = point ? point.value : null;
     }
     return row;
   });
@@ -233,9 +236,9 @@ function DailyChart({
         <XAxis dataKey="date" />
         <YAxis />
         <Tooltip />
-        {keys.map((key) => (
-          <Line key={key} type="monotone" dataKey={key} dot={false} />
-        ))}
+          {keys.map((key) => (
+            <Line key={key} type="monotone" dataKey={key} dot={false} connectNulls={false} />
+          ))}
       </LineChart>
     </Box>
   );
