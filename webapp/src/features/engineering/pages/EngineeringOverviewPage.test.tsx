@@ -15,6 +15,7 @@
 // under the License.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ReactElement } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -35,6 +36,19 @@ const auth = vi.hoisted(() => {
     isSignedIn: true,
     isLoading: false,
     signIn: vi.fn(),
+  };
+});
+
+// jsdom does not lay a percentage-sized chart out, so the responsive container
+// would measure 0×0 and draw nothing. Give it a fixed size in tests; the page
+// still asks for 100% of its parent.
+vi.mock("recharts", async () => {
+  const React = await import("react");
+  const actual = await vi.importActual<typeof import("recharts")>("recharts");
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: ReactElement }) =>
+      React.createElement(actual.ResponsiveContainer, { width: 640, height: 280, children }),
   };
 });
 
@@ -91,7 +105,7 @@ describe("Engineering Overview", () => {
       ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "https://stats.example",
     } as Window["config"];
 
-    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+    const fetchMock = vi.fn(async (url: string) => {
       if (url.startsWith("https://stats.example/api/v1/stats/summary")) {
         return jsonResponse({
           trackedRepositories: 10,
@@ -178,7 +192,7 @@ describe("Engineering Overview", () => {
 
     const summaryCall = fetchMock.mock.calls.find((call) =>
       String(call[0]).startsWith("https://stats.example/api/v1/stats/summary"),
-    );
+    ) as [string, RequestInit] | undefined;
     expect(summaryCall?.[1]).toMatchObject({
       headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
     });
@@ -186,6 +200,97 @@ describe("Engineering Overview", () => {
       String(call[0]).includes("/api/v1/stats/daily"),
     );
     expect(String(dailyCall?.[0])).toContain("interval=day");
+  });
+
+  it("keeps the minus sign when yesterday's downloads fell", async () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { engineering: true },
+      ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "https://stats.example",
+    } as Window["config"];
+    vi.stubGlobal("fetch", async (url: string) => {
+      if (url.includes("/stats/summary")) {
+        return jsonResponse({
+          trackedRepositories: 1,
+          totalDownloads: 1,
+          totalClonesLast14d: 1,
+          todayDownloads: 10,
+          todayDeltaPct: -3,
+          monthDownloads: 1,
+          topProducts: [],
+        });
+      }
+      if (url.includes("/stats/daily")) return jsonResponse({ series: [] });
+      return jsonResponse({ repositories: [] });
+    });
+
+    renderOverview();
+
+    expect(await screen.findByText("-3.0%")).toBeInTheDocument();
+  });
+
+  it("draws the daily chart before repository labels arrive", async () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { engineering: true },
+      ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "https://stats.example",
+    } as Window["config"];
+    vi.stubGlobal("fetch", async (url: string) => {
+      if (url.includes("/stats/summary")) {
+        return jsonResponse({
+          trackedRepositories: 1,
+          totalDownloads: 1,
+          totalClonesLast14d: 1,
+          todayDownloads: 10,
+          todayDeltaPct: null,
+          monthDownloads: 1,
+          topProducts: [],
+        });
+      }
+      if (url.includes("/stats/daily")) {
+        return jsonResponse({
+          series: [{ repoId: 1, repoName: "product-apim", points: [{ date: "2026-09-28", value: 40 }] }],
+        });
+      }
+      return new Promise(() => {});
+    });
+
+    renderOverview();
+
+    expect(await screen.findByText("40")).toBeInTheDocument();
+    expect(screen.queryByText(/loading the daily chart/i)).not.toBeInTheDocument();
+  });
+
+  it("does not send the access token to an http address", () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { engineering: true },
+      ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "http://stats.example",
+    } as Window["config"];
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderOverview();
+
+    expect(screen.getByText(/needs an https address/i)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Overview" })).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("allows an http address on localhost", async () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { engineering: true },
+      ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "http://localhost:8080",
+    } as Window["config"];
+    const fetchMock = vi.fn<(url: string) => Promise<Response>>();
+    fetchMock.mockImplementation(() => new Promise(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderOverview();
+
+    expect(await screen.findByText(/loading release downloads/i)).toBeInTheDocument();
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/^http:\/\/localhost:8080\//);
   });
 
   it("says Product Download Stats is not connected when the API address is missing", () => {

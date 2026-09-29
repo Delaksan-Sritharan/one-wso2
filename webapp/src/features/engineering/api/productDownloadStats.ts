@@ -31,6 +31,30 @@ export function isProductDownloadStatsConfigured(): boolean {
   return productDownloadStatsBackendUrl().length > 0;
 }
 
+// The access token goes on every Product Download Stats request. An http
+// address would put that token on the wire in the clear. Localhost is the
+// only http host allowed, for a developer running the API on their machine.
+const LOCAL_HTTP_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+export function isCredentialedProductDownloadStatsUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol === "https:") return true;
+  return parsed.protocol === "http:" && LOCAL_HTTP_HOSTS.has(parsed.hostname);
+}
+
+function credentialedBase(): string {
+  const base = productDownloadStatsBackendUrl();
+  if (!isCredentialedProductDownloadStatsUrl(base)) {
+    throw new Error("Product Download Stats requires an https URL");
+  }
+  return base;
+}
+
 export interface TopProduct {
   repoId: number;
   repoName: string;
@@ -76,7 +100,7 @@ export interface RepositoriesResponse {
 }
 
 export function getSummary(accessToken: string): Promise<Summary> {
-  return authedGet(`${productDownloadStatsBackendUrl()}/api/v1/stats/summary`, accessToken);
+  return authedGet(`${credentialedBase()}/api/v1/stats/summary`, accessToken);
 }
 
 // Last 30 days through today, UTC, matching the existing Overview chart.
@@ -88,15 +112,28 @@ export function dailyRange(now = new Date()): { from: string; to: string } {
   return { from: fromDate.toISOString().slice(0, 10), to };
 }
 
+/** Every UTC calendar date from `from` through `to`, inclusive. */
+export function utcDatesInclusive(from: string, to: string): string[] {
+  const cursor = new Date(`${from}T00:00:00.000Z`);
+  const end = new Date(`${to}T00:00:00.000Z`);
+  if (Number.isNaN(cursor.getTime()) || Number.isNaN(end.getTime()) || cursor > end) return [];
+  const dates: string[] = [];
+  while (cursor.getTime() <= end.getTime()) {
+    dates.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return dates;
+}
+
 export function getDaily(accessToken: string, now = new Date()): Promise<DailyResponse> {
   const { from, to } = dailyRange(now);
   const params = new URLSearchParams({ from, to, interval: "day" });
   return authedGet(
-    `${productDownloadStatsBackendUrl()}/api/v1/stats/daily?${params}`,
+    `${credentialedBase()}/api/v1/stats/daily?${params}`,
     accessToken,
   );
 }
 
 export function getRepositories(accessToken: string): Promise<RepositoriesResponse> {
-  return authedGet(`${productDownloadStatsBackendUrl()}/api/v1/repositories`, accessToken);
+  return authedGet(`${credentialedBase()}/api/v1/repositories`, accessToken);
 }

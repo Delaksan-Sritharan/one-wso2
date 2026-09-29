@@ -27,19 +27,22 @@ import {
   TableRow,
   Typography,
 } from "@wso2/oxygen-ui";
-import { Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { JSX } from "react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import { useAccessToken } from "@hooks/useAccessToken";
 import {
+  dailyRange,
   getDaily,
   getRepositories,
   getSummary,
+  isCredentialedProductDownloadStatsUrl,
   isProductDownloadStatsConfigured,
   productDownloadStatsBackendUrl,
   type DailySeries,
 } from "@features/engineering/api/productDownloadStats";
+import { dailyChartModel } from "./dailyChartModel";
 
 const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
 
@@ -53,10 +56,11 @@ function productLabel(productName: string | null, repoName: string): string {
 
 export default function EngineeringOverviewPage(): JSX.Element {
   const preview = isPreviewEnabled("engineering");
-  const configured = isProductDownloadStatsConfigured();
-  const getToken = useAccessToken();
   const base = productDownloadStatsBackendUrl();
-  const enabled = preview && configured;
+  const configured = isProductDownloadStatsConfigured();
+  const allowed = isCredentialedProductDownloadStatsUrl(base);
+  const getToken = useAccessToken();
+  const enabled = preview && configured && allowed;
 
   const summary = useQuery({
     queryKey: ["product-download-stats", "summary", base],
@@ -83,6 +87,15 @@ export default function EngineeringOverviewPage(): JSX.Element {
       <Typography>
         Product Download Stats isn't connected yet. Set{" "}
         <code>ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL</code> in config.js.
+      </Typography>
+    );
+  }
+
+  if (!allowed) {
+    return (
+      <Typography>
+        Product Download Stats needs an https address. An http address is only accepted for
+        localhost.
       </Typography>
     );
   }
@@ -145,7 +158,7 @@ export default function EngineeringOverviewPage(): JSX.Element {
         <Typography component="h2" variant="h6" id="daily-downloads">
           Daily Downloads (last 30 days)
         </Typography>
-        {daily.isPending || repositories.isPending ? (
+        {daily.isPending ? (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
             Loading the daily chart…
           </Typography>
@@ -203,7 +216,7 @@ function Figure({
       </Typography>
       {trend != null && !Number.isNaN(trend) && (
         <Typography sx={{ fontWeight: 700, color: trend >= 0 ? "success.main" : "error.main" }}>
-          {Math.abs(trend).toFixed(1)}%
+          {trend.toFixed(1)}%
         </Typography>
       )}
       <Typography variant="h4">{value}</Typography>
@@ -218,28 +231,27 @@ function DailyChart({
   series: DailySeries[];
   names: Map<number, string>;
 }): JSX.Element {
-  const dates = [...new Set(series.flatMap((item) => item.points.map((point) => point.date)))].sort();
-  const data = dates.map((date) => {
-    const row: Record<string, string | number | null> = { date };
-    for (const item of series) {
-      const point = item.points.find((candidate) => candidate.date === date);
-      // A day the API omitted is a gap, not a zero download.
-      row[names.get(item.repoId) ?? item.repoName] = point ? point.value : null;
-    }
-    return row;
-  });
-  const keys = series.map((item) => names.get(item.repoId) ?? item.repoName);
+  const { data, lines } = dailyChartModel(series, names, dailyRange());
 
   return (
-    <Box sx={{ width: "100%", mt: 1 }}>
-      <LineChart width={640} height={280} data={data}>
-        <XAxis dataKey="date" />
-        <YAxis />
-        <Tooltip />
-          {keys.map((key) => (
-            <Line key={key} type="monotone" dataKey={key} dot={false} connectNulls={false} />
+    <Box sx={{ width: "100%", height: 280, mt: 1 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data}>
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip />
+          {lines.map((line) => (
+            <Line
+              key={line.repoId}
+              name={line.name}
+              type="monotone"
+              dataKey={line.dataKey}
+              dot={false}
+              connectNulls={false}
+            />
           ))}
-      </LineChart>
+        </LineChart>
+      </ResponsiveContainer>
     </Box>
   );
 }
