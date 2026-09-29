@@ -35,9 +35,8 @@ import {
 function adapter(overrides: Partial<VisibilityAdapter> & Pick<VisibilityAdapter, "name">): VisibilityAdapter {
   return {
     claim: claimOf(overrides.name),
-    shown: () => true,
+    canSee: () => true,
     resolving: false,
-    failed: false,
     retry: () => undefined,
     ...overrides,
   };
@@ -63,7 +62,7 @@ describe("foldVisibility", () => {
       [
         adapter({
           name: "promotion",
-          shown: () => false,
+          canSee: () => false,
           resolving: true,
         }),
       ],
@@ -71,14 +70,14 @@ describe("foldVisibility", () => {
     );
 
     expect(folded.resolving).toBe(true);
-    expect(folded.shown({ id: PROMOTION_LEAD_PORTAL_ITEM_ID })).toBe(false);
+    expect(folded.canSee({ id: PROMOTION_LEAD_PORTAL_ITEM_ID })).toBe(false);
     expect(folded.failed).toBe(false);
   });
 
   it("hides a Sri Lanka section before the adapter is asked", () => {
     const shown = vi.fn(() => true);
     const folded = foldVisibility(
-      [adapter({ name: "subscriptions", shown })],
+      [adapter({ name: "subscriptions", canSee: shown })],
       shell({
         perspectiveKey: "me",
         sectionIds: new Set(["people-subscriptions-mine"]),
@@ -86,13 +85,13 @@ describe("foldVisibility", () => {
       }),
     );
 
-    expect(folded.shown({ id: "people-subscriptions-mine" })).toBe(false);
+    expect(folded.canSee({ id: "people-subscriptions-mine" })).toBe(false);
     expect(shown).not.toHaveBeenCalled();
   });
 
   it("asks the adapter for a Sri Lanka section when the employee is in Sri Lanka", () => {
     const folded = foldVisibility(
-      [adapter({ name: "subscriptions", shown: () => true })],
+      [adapter({ name: "subscriptions", canSee: () => true })],
       shell({
         perspectiveKey: "me",
         sectionIds: new Set(["people-subscriptions-mine"]),
@@ -100,20 +99,20 @@ describe("foldVisibility", () => {
       }),
     );
 
-    expect(folded.shown({ id: "people-subscriptions-mine" })).toBe(true);
+    expect(folded.canSee({ id: "people-subscriptions-mine" })).toBe(true);
   });
 
   it("uses people-app capabilities only when no adapter claims the section", () => {
     const folded = foldVisibility([], shell({ capabilities: new Set(["lead"]) }));
 
-    expect(folded.shown({ id: "me-my-team", requires: ["lead"] })).toBe(true);
-    expect(folded.shown({ id: "me-my-team", requires: ["admin"] })).toBe(false);
-    expect(folded.shown({ id: "open-section" })).toBe(true);
+    expect(folded.canSee({ id: "me-my-team", requires: ["lead"] })).toBe(true);
+    expect(folded.canSee({ id: "me-my-team", requires: ["admin"] })).toBe(false);
+    expect(folded.canSee({ id: "open-section" })).toBe(true);
   });
 
   it("lets the Marketing Ops adapter answer a restricted section instead of people-app capabilities", () => {
     const folded = foldVisibility(
-      [adapter({ name: "marketing", shown: () => true })],
+      [adapter({ name: "marketing", canSee: () => true })],
       shell({
         perspectiveKey: "marketing",
         sectionIds: new Set(["mops-email-create"]),
@@ -121,7 +120,7 @@ describe("foldVisibility", () => {
       }),
     );
 
-    expect(folded.shown({ id: "mops-email-create", requires: ["admin"] })).toBe(true);
+    expect(folded.canSee({ id: "mops-email-create", requires: ["admin"] })).toBe(true);
   });
 
   it("asks the Marketing Ops adapter for a group, not only its leaves", () => {
@@ -133,7 +132,7 @@ describe("foldVisibility", () => {
     };
     const shown = vi.fn(() => true);
     const folded = foldVisibility(
-      [adapter({ name: "marketing", shown })],
+      [adapter({ name: "marketing", canSee: shown })],
       shell({
         perspectiveKey: "marketing",
         sectionIds: sectionIdsIn([group]),
@@ -141,13 +140,13 @@ describe("foldVisibility", () => {
       }),
     );
 
-    expect(folded.shown(group)).toBe(true);
+    expect(folded.canSee(group)).toBe(true);
     expect(shown).toHaveBeenCalledWith("mops-email");
   });
 
   it("hides a Marketing Ops section the adapter does not allow", () => {
     const folded = foldVisibility(
-      [adapter({ name: "marketing", shown: () => false })],
+      [adapter({ name: "marketing", canSee: () => false })],
       shell({
         perspectiveKey: "marketing",
         sectionIds: new Set(["mops-email-create"]),
@@ -155,7 +154,7 @@ describe("foldVisibility", () => {
       }),
     );
 
-    expect(folded.shown({ id: "mops-email-create", requires: ["admin"] })).toBe(false);
+    expect(folded.canSee({ id: "mops-email-create", requires: ["admin"] })).toBe(false);
   });
 
   it("fails the authoring check when two adapters claim one section", () => {
@@ -174,7 +173,7 @@ describe("foldVisibility", () => {
     const retryEmployeeRecord = vi.fn();
     const retryAdapter = vi.fn();
     const folded = foldVisibility(
-      [adapter({ name: "sales", failed: true, error: "sales", retry: retryAdapter })],
+      [adapter({ name: "sales", error: "sales", retry: retryAdapter })],
       shell({
         employeeRecordResolving: true,
         employeeRecordFailed: true,
@@ -196,8 +195,8 @@ describe("foldVisibility", () => {
     const retrySubscriptions = vi.fn();
     const folded = foldVisibility(
       [
-        adapter({ name: "sales", failed: true, error: "sales", retry: retrySales }),
-        adapter({ name: "subscriptions", failed: true, error: "subscriptions", retry: retrySubscriptions }),
+        adapter({ name: "sales", error: "sales", retry: retrySales }),
+        adapter({ name: "subscriptions", error: "subscriptions", retry: retrySubscriptions }),
       ],
       shell(),
     );
@@ -209,10 +208,10 @@ describe("foldVisibility", () => {
   });
 
   it("does not treat a feature that folds failure into not-allowed as a landing failure", () => {
-    const folded = foldVisibility([adapter({ name: "finance", shown: () => false, failed: false })], shell());
+    const folded = foldVisibility([adapter({ name: "finance", canSee: () => false })], shell());
 
     expect(folded.failed).toBe(false);
-    expect(folded.shown({ id: "claim-approval" })).toBe(false);
+    expect(folded.canSee({ id: "claim-approval" })).toBe(false);
   });
 });
 
@@ -253,16 +252,14 @@ describe("claimsForPerspective", () => {
 describe("claimOf", () => {
   it("is exhaustive", () => {
     const names: AdapterName[] = [
-      "par-admin",
+      "par",
       "marketing",
       "due-diligence",
       "finance",
       "leave",
       "banking",
-      "par-employee",
       "infra",
       "sales",
-      "par-lead",
       "promotion",
       "security",
       "umt",

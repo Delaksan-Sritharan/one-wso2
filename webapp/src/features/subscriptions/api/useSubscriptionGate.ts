@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import type { VisibilityAnswer } from "@components/side-rail/visibilityFold";
 import { describeError } from "@api/errors";
 import { hasAnyGroup, useAsgardeoGroups } from "@hooks/useAsgardeoGroups";
 import { useSubscriptionsMetaInfo } from "./useSubscriptionData";
@@ -119,4 +120,12 @@ export function useSubscriptionGate(enabled = true): SubscriptionGate {
       identity.retry();
     },
   };
+}
+
+export function subscriptionVisibility(gate: SubscriptionGate): VisibilityAnswer {
+  const canSee = (id: string) =>
+    id === "people-subscriptions-manage" ? gate.isAdmin && !gate.isResolving : true;
+  return gate.isError
+    ? { canSee, resolving: gate.isResolving, error: gate.errorMessage, retry: gate.retry }
+    : { canSee, resolving: gate.isResolving, retry: () => undefined };
 }

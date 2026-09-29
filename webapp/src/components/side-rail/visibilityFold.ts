@@ -37,38 +37,35 @@ import {
 import { SECURITY_ITEM_IDS } from "@constants/securityApps";
 
 /**
- * One feature's answer about visibility.
- *
- * `resolving`, `failed`, and `retry` travel with the claim. A feature cannot
- * decide whether a section is shown and forget to say it is still resolving.
+ * The four facts every feature presents to the fold.
+ * Anything else about that feature stays in the feature.
  */
-export interface VisibilityAdapter {
-  name: AdapterName;
-  claim: SectionClaim;
-  shown: (sectionId: string) => boolean;
+export interface VisibilityAnswer {
+  canSee: (sectionId: string) => boolean;
   resolving: boolean;
   /**
    * A failed read the landing should retry.
-   *
-   * Features that treat a failed read as "not allowed" leave this false.
-   * That is their own meaning, preserved on purpose.
+   * Omitted when a failed read means the section is not allowed.
    */
-  failed: boolean;
   error?: unknown;
   retry: () => void;
 }
 
+/** One feature's answer, plus which sections it claims. */
+export interface VisibilityAdapter extends VisibilityAnswer {
+  name: AdapterName;
+  claim: SectionClaim;
+}
+
 export type AdapterName =
-  | "par-admin"
+  | "par"
   | "marketing"
   | "due-diligence"
   | "finance"
   | "leave"
   | "banking"
-  | "par-employee"
   | "infra"
   | "sales"
-  | "par-lead"
   | "promotion"
   | "security"
   | "umt"
@@ -102,7 +99,7 @@ export interface VisibilityShell {
 }
 
 export interface FoldedVisibility {
-  shown: (section: VisibilitySection) => boolean;
+  canSee: (section: VisibilitySection) => boolean;
   resolving: boolean;
   failed: boolean;
   error?: unknown;
@@ -123,8 +120,8 @@ const ids = (values: readonly string[]): SectionClaim => ({ kind: "sections", id
 /** The sections each adapter answers. Independent of whether that adapter is in play. */
 export function claimOf(name: AdapterName): SectionClaim {
   switch (name) {
-    case "par-admin":
-      return ids([PAR_ADMIN_PORTAL_ITEM_ID]);
+    case "par":
+      return ids([PAR_ADMIN_PORTAL_ITEM_ID, PAR_LEAD_PORTAL_ITEM_ID, PAR_EMPLOYEE_ITEM_ID]);
     case "marketing":
       // People-app capabilities must not answer these sections. `requires: ["admin"]`
       // on a Marketing Ops section means "restricted", and this adapter decides who.
@@ -137,14 +134,10 @@ export function claimOf(name: AdapterName): SectionClaim {
       return { kind: "sections", ids: LEAVE_ITEM_IDS };
     case "banking":
       return { kind: "sections", ids: BANKING_ITEM_IDS };
-    case "par-employee":
-      return ids([PAR_EMPLOYEE_ITEM_ID]);
     case "infra":
       return { kind: "sections", ids: INFRA_ITEM_IDS };
     case "sales":
       return { kind: "sections", ids: SALES_ITEM_IDS };
-    case "par-lead":
-      return ids([PAR_LEAD_PORTAL_ITEM_ID]);
     case "promotion":
       return { kind: "sections", ids: PROMOTION_SECTION_IDS };
     case "security":
@@ -170,14 +163,14 @@ export function claimOf(name: AdapterName): SectionClaim {
  * failure is reported wherever the landing asks).
  */
 export function claimsForPerspective(perspectiveKey: string): AdapterName[] {
-  const names: AdapterName[] = ["par-admin"];
+  const names: AdapterName[] = ["par"];
   if (perspectiveKey === "marketing") names.push("marketing");
   if (perspectiveKey === "finance" || perspectiveKey === "legal") names.push("due-diligence");
   if (perspectiveKey === "finance" || perspectiveKey === "me") names.push("finance");
-  if (perspectiveKey === "me") names.push("leave", "banking", "par-employee");
+  if (perspectiveKey === "me") names.push("leave", "banking");
   if (perspectiveKey === "infra") names.push("infra");
   if (perspectiveKey === "sales") names.push("sales");
-  if (perspectiveKey === "people") names.push("par-lead", "promotion");
+  if (perspectiveKey === "people") names.push("promotion");
   if (perspectiveKey === "security") names.push("security");
   if (perspectiveKey === "umt") names.push("umt");
   names.push("subscriptions");
@@ -215,14 +208,14 @@ export function foldVisibility(
   adapters: readonly VisibilityAdapter[],
   shell: VisibilityShell,
 ): FoldedVisibility {
-  const shown = (section: VisibilitySection): boolean => {
+  const canSee = (section: VisibilitySection): boolean => {
     if (shell.sriLankaOnlyIds.has(section.id) && !shell.isSriLankaEmployee) return false;
     const owner = adapters.find((adapter) => claimedIds(adapter, shell).has(section.id));
-    if (owner) return owner.shown(section.id);
+    if (owner) return owner.canSee(section.id);
     return allowedByCapabilities(section.requires, shell.capabilities);
   };
 
-  const failedAdapters = adapters.filter((adapter) => adapter.failed);
+  const failedAdapters = adapters.filter((adapter) => adapter.error !== undefined);
   const failed = shell.employeeRecordFailed || failedAdapters.length > 0;
   const error = shell.employeeRecordFailed ? shell.employeeRecordError : failedAdapters[0]?.error;
 
@@ -232,7 +225,7 @@ export function foldVisibility(
   };
 
   return {
-    shown,
+    canSee,
     resolving: shell.employeeRecordResolving || adapters.some((adapter) => adapter.resolving),
     failed,
     error,
