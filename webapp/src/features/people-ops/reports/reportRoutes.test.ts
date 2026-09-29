@@ -111,6 +111,12 @@ describe("People Ops rail sections", () => {
     // out: gated on isHrAdmin OR isFunctionalLead, the only two-role gate
     // among this section's children (see perspectives.ts's own comment
     // above it).
+    //
+    // banking-admin is the same shape of exception as the PAR/Promotion ones
+    // above: gated on the banking backend's own GET /employee-privileges via
+    // useBankingAdminAccess (dispatched in usePerspectiveVisibility), unrelated
+    // to people-app's "admin" capability — see perspectives.ts's own comment
+    // above BANKING_ADMIN_SECTION.
     const NOT_ADMIN_GATED = new Set([
       "people-org-chart",
       "people-subscriptions-mine",
@@ -123,6 +129,7 @@ describe("People Ops rail sections", () => {
       "promotion-board-portal",
       "promotion-admin-portal",
       "promotion-cycle-history",
+      "banking-admin",
     ]);
     const live = PEOPLE_OPS_SECTIONS.flatMap((s) => [s, ...(s.children ?? [])]).filter(
       (s) => s.path,

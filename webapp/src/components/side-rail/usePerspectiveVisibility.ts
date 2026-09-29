@@ -16,6 +16,7 @@
 
 import { useMemo } from "react";
 import {
+  BANKING_ADMIN_ITEM_ID,
   PAR_ADMIN_PORTAL_ITEM_ID,
   PAR_LEAD_PORTAL_ITEM_ID,
   PROMOTION_ADMIN_PORTAL_ITEM_ID,
@@ -44,6 +45,7 @@ import { useMeProfile } from "@features/my/api/useMeProfile";
 import { useFinanceGate } from "@features/finance/api/useFinanceGate";
 import { useLeaveGate } from "@features/leave/api/useLeaveGate";
 import { useBankingAccess } from "@features/my/api/useBankingAccess";
+import { useBankingAdminAccess } from "@features/my/api/useBankingAdminAccess";
 import { useMarketingOpsGate } from "@features/marketing-ops/api/useMarketingOpsGate";
 import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
 import { useSecurityGate } from "@features/security/api/useSecurityGate";
@@ -136,6 +138,11 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // Banking is open to callers the banking backend says are employees. Its
   // entry lives under Me, so only ask while Me is active.
   const bankingAccess = useBankingAccess(active.key === "me");
+
+  // Banking's admin screens are the same shape of problem again, reachable
+  // from two perspectives (People Ops and Finance — see BANKING_ADMIN_SECTION
+  // in perspectives.ts), so only fetched while either is active.
+  const bankingAdminAccess = useBankingAdminAccess(active.key === "people" || active.key === "finance");
 
   // Marketing Ops is the same shape of problem and needs the same treatment:
   // its rail gates on the MARKETING OPS backend's own Asgardeo groups
@@ -253,6 +260,7 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     if (FINANCE_ITEM_IDS.has(s.id)) return financeGate.canSee(s.id);
     if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
     if (BANKING_ITEM_IDS.has(s.id)) return bankingAccess.canSee;
+    if (s.id === BANKING_ADMIN_ITEM_ID) return bankingAdminAccess.canSee;
     if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
     if (s.id === PAR_LEAD_PORTAL_ITEM_ID) return parLeadPortalGate.canSee;
     if (s.id === PAR_ADMIN_PORTAL_ITEM_ID) return parAdminPortalGate.isAdmin;
@@ -297,6 +305,7 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     financeGate.isResolving ||
     leaveGate.isResolving ||
     bankingAccess.isResolving ||
+    bankingAdminAccess.isResolving ||
     marketingOpsGate.isResolving ||
     dueDiligenceGate.isResolving ||
     securityGate.isResolving ||

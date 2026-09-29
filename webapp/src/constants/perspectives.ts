@@ -27,6 +27,7 @@ import {
   ClipboardCheckIcon,
   DatabaseIcon,
   HouseIcon,
+  LandmarkIcon,
   LifeBuoyIcon,
   LayoutDashboard,
   LucideLayoutGrid,
@@ -120,6 +121,27 @@ function appsToSections(apps: readonly MenuApp[]): PerspectiveSection[] {
 // people-app backend as everything else here, but a different endpoint
 // (/employees/basic-info) with its own access model: any employee in that
 // endpoint's configured group, not a people-app admin privilege.
+
+// Banking's admin/lead screens (Change Requests, Report, Employee
+// Operations, Admin — see features/banking-admin/bankingAdminTabs.ts).
+// Reachable from BOTH People Ops and Finance, because the four tabs split
+// across both admin types. ONE object, included in both perspectives'
+// sections below, so the two rails can't drift apart — same pattern
+// DUE_DILIGENCE_APPS already uses for Finance+Legal. Gated on the banking
+// backend's own GET /employee-privileges, not `requires` — see
+// useBankingAdminAccess and this id's dispatch in usePerspectiveVisibility.
+// Its route lives OUTSIDE both perspectives, at a neutral top-level
+// /banking/admin (see App.tsx), the same reason Due Diligence's own routes
+// live outside Finance/Legal: a screen reached from two rails can't itself
+// live under either rail's own path prefix.
+export const BANKING_ADMIN_ITEM_ID = "banking-admin";
+const BANKING_ADMIN_SECTION: PerspectiveSection = {
+  id: BANKING_ADMIN_ITEM_ID,
+  label: "Banking",
+  icon: LandmarkIcon,
+  path: "/banking/admin",
+};
+
 export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   {
     id: "people-org-chart",
@@ -294,6 +316,7 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
       },
     ],
   },
+  BANKING_ADMIN_SECTION,
 ];
 
 /**
@@ -585,6 +608,10 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
       // roles, not the coarse capability model — see useDueDiligenceGate and
       // its dispatch in SideRail.
       ...appsToSections(DUE_DILIGENCE_APPS),
+      // Banking's admin/lead screens — also surfaced under People Ops (see
+      // BANKING_ADMIN_SECTION above). Same object, included in both places,
+      // so the two rails can't drift.
+      BANKING_ADMIN_SECTION,
     ],
   },
   // Legal. Currently just a second entry point into Due Diligence (see the
