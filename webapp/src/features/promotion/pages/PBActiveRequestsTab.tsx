@@ -47,6 +47,10 @@ import { formatDate } from "../util/promotionHistory";
 import type { PromotionRequestFull } from "../api/types";
 import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
 
+const STRIPE_SX = {
+  "& .row-stripe": { bgcolor: "action.hover" },
+};
+
 export default function PBActiveRequestsTab() {
   const cycle = useActivePromotionCycle();
   const deadlinePast = isPromotionDeadlinePast(cycle.cycle?.promotionBoardDeadline);
@@ -214,9 +218,10 @@ export default function PBActiveRequestsTab() {
           onRowSelectionModelChange={(model) =>
             setSelectedIds(resolveGridSelectedIds(model, rows))
           }
+          getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? "row-stripe" : "")}
           showToolbar
           slots={{ toolbar: PromotionGridToolbar }}
-          sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+          sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX, ...STRIPE_SX }}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           pageSizeOptions={[10, 25, 50]}
         />

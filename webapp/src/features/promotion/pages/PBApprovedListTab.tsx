@@ -31,6 +31,10 @@ import PromotionRequestDetailDialog from "../components/PromotionRequestDetailDi
 import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
 import type { PromotionRequestFull } from "../api/types";
 
+const STRIPE_SX = {
+  "& .row-stripe": { bgcolor: "action.hover" },
+};
+
 export default function PBApprovedListTab() {
   const requests = usePromotionRequests({ statusArray: ["APPROVED"] });
   const [viewingRequest, setViewingRequest] = useState<PromotionRequestFull | null>(null);
@@ -82,9 +86,10 @@ export default function PBApprovedListTab() {
         <DataGrid.DataGrid
           rows={rows}
           columns={columns}
+          getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? "row-stripe" : "")}
           showToolbar
           slots={{ toolbar: PromotionGridToolbar }}
-          sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+          sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX, ...STRIPE_SX }}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           pageSizeOptions={[10, 25, 50]}
         />
