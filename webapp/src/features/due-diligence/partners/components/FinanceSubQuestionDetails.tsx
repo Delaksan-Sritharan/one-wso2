@@ -16,7 +16,7 @@
 
 import { useRef, useState, type DragEvent } from "react";
 import { Alert, Box, Button, FormControl, FormControlLabel, Radio, RadioGroup, Snackbar, Stack, TextField, Typography } from "@wso2/oxygen-ui";
-import { CloudUploadIcon, FileIcon, UploadIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
+import { CloudUploadIcon, FileIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { FILE_UPLOAD_LIMIT, FINANCE_CHOOSE_FILE_SUBQUESTION_ID } from "@features/due-diligence/constants";
 import { useDeletePartnerFile, useSavePartnerFilesMetadata, useUploadPartnerFile } from "../api/useFinance";
@@ -236,65 +236,54 @@ export default function FinanceSubQuestionDetails({
                 <XIcon size={14} style={{ cursor: "pointer" }} onClick={() => removePendingFile(f.fileName)} />
               </Stack>
             ))}
-            {
-              // Not gated on fieldDisabled: unlike the radio/description
-              // answers above, the source never checks fieldDisabled inside
-              // its own file-upload block at all — attaching a supporting
-              // document is available regardless of whether this question is
-              // in edit mode. Gating it here hid the whole "Attach files"
-              // zone (and the plain button, for every other file question)
-              // any time the question wasn't actively being edited.
-              (subQuestion.subQuestionId === FINANCE_CHOOSE_FILE_SUBQUESTION_ID ? (
-                <Box
-                  onDragEnter={handleDragEnter}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => !fileLimitReached && inputRef.current?.click()}
-                  sx={{
-                    border: 1,
-                    borderStyle: "dashed",
-                    borderColor: isDragging ? "primary.main" : "divider",
-                    borderRadius: 1,
-                    bgcolor: isDragging ? "action.hover" : "background.default",
-                    p: 3,
-                    textAlign: "center",
-                    cursor: fileLimitReached ? "default" : "pointer",
-                  }}
-                >
-                  <CloudUploadIcon size={22} style={{ opacity: 0.6 }} />
-                  <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    {fileLimitReached ? (
-                      "Maximum files reached"
-                    ) : (
-                      <>
-                        <Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
-                          Click to upload
-                        </Typography>{" "}
-                        or drag and drop
-                      </>
-                    )}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {fileLimitReached
-                      ? `(${savedFiles.length + pendingFiles.length}/${FILE_UPLOAD_LIMIT} files uploaded)`
-                      : "PDF, JPEG, PNG, JPG (max 5 files)"}
-                  </Typography>
-                </Box>
-              ) : (
-                !fileLimitReached && (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<UploadIcon size={15} />}
-                    onClick={() => inputRef.current?.click()}
-                    sx={{ alignSelf: "flex-start", textTransform: "none" }}
-                  >
-                    Upload file
-                  </Button>
-                )
-              ))}
-            <input ref={inputRef} type="file" multiple hidden onChange={(e) => void handleFileSelect(e.target.files)} disabled={fileLimitReached} />
+            {// Only the shared "Attach files" dropzone (subQuestion 100)
+            // gets its own upload trigger — every other file-upload
+            // sub-question here is a per-year document the partner already
+            // submitted, so it only ever shows the read-only file list
+            // above. One upload control at the bottom instead of one
+            // repeated per file avoids the same action appearing three
+            // times in a row for what's really one attach-a-document step.
+            subQuestion.subQuestionId === FINANCE_CHOOSE_FILE_SUBQUESTION_ID && (
+              <Box
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => !fileLimitReached && inputRef.current?.click()}
+                sx={{
+                  border: 1,
+                  borderStyle: "dashed",
+                  borderColor: isDragging ? "primary.main" : "divider",
+                  borderRadius: 1,
+                  bgcolor: isDragging ? "action.hover" : "background.default",
+                  p: 3,
+                  textAlign: "center",
+                  cursor: fileLimitReached ? "default" : "pointer",
+                }}
+              >
+                <CloudUploadIcon size={22} style={{ opacity: 0.6 }} />
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  {fileLimitReached ? (
+                    "Maximum files reached"
+                  ) : (
+                    <>
+                      <Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                        Click to upload
+                      </Typography>{" "}
+                      or drag and drop
+                    </>
+                  )}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {fileLimitReached
+                    ? `(${savedFiles.length + pendingFiles.length}/${FILE_UPLOAD_LIMIT} files uploaded)`
+                    : "PDF, JPEG, PNG, JPG (max 5 files)"}
+                </Typography>
+              </Box>
+            )}
+            {subQuestion.subQuestionId === FINANCE_CHOOSE_FILE_SUBQUESTION_ID && (
+              <input ref={inputRef} type="file" multiple hidden onChange={(e) => void handleFileSelect(e.target.files)} disabled={fileLimitReached} />
+            )}
             {pendingFiles.length > 0 && (
               <Stack direction="row" spacing={1}>
                 <Button size="small" variant="contained" onClick={saveNewFiles} disabled={saveMetadata.isPending}>
