@@ -26,8 +26,11 @@ import {
   Stack,
   Typography,
 } from "@wso2/oxygen-ui";
+import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useCreatePromotionCycle } from "../api/useAdminPromotionCycle";
+import PromotionFeedbackSnackbar from "./PromotionFeedbackSnackbar";
+import { usePromotionFeedback } from "../util/usePromotionFeedback";
 
 const { DatePicker, LocalizationProvider } = DatePickers;
 
@@ -68,6 +71,7 @@ export default function PromotionCycleCreateForm() {
   const [functionalLeadDeadline, setFunctionalLeadDeadline] = useState<Date | null>(addDays(today, 2));
   const [promotionBoardDeadline, setPromotionBoardDeadline] = useState<Date | null>(addDays(today, 3));
   const [confirm, setConfirm] = useState<ConfirmationContent | null>(null);
+  const { feedback, notifySuccess, notifyError, close } = usePromotionFeedback();
 
   const create = useCreatePromotionCycle();
 
@@ -91,14 +95,20 @@ export default function PromotionCycleCreateForm() {
       text: "Please note that creating a promotion cycle, allowing eligible employees to apply for a promotion.",
       confirmLabel: "create",
       confirmAction: () => {
-        create.mutate({
-          name: `${year}-${half}`,
-          startDate: toDateOnly(startDate),
-          endDate: toDateOnly(endDate),
-          leadDeadline: toDateOnly(leadDeadline),
-          functionalLeadDeadline: toDateOnly(functionalLeadDeadline),
-          promotionBoardDeadline: toDateOnly(promotionBoardDeadline),
-        });
+        create.mutate(
+          {
+            name: `${year}-${half}`,
+            startDate: toDateOnly(startDate),
+            endDate: toDateOnly(endDate),
+            leadDeadline: toDateOnly(leadDeadline),
+            functionalLeadDeadline: toDateOnly(functionalLeadDeadline),
+            promotionBoardDeadline: toDateOnly(promotionBoardDeadline),
+          },
+          {
+            onSuccess: () => notifySuccess("Promotion cycle created."),
+            onError: (error) => notifyError(`Unable to create the promotion cycle. ${humanizeHttpError(error)}`),
+          },
+        );
       },
     });
   };
@@ -106,6 +116,7 @@ export default function PromotionCycleCreateForm() {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <ConfirmationDialog content={confirm} onClose={() => setConfirm(null)} />
+      <PromotionFeedbackSnackbar feedback={feedback} onClose={close} />
       <Stack spacing={2}>
         <Grid container spacing={2}>
           <Grid size={6}>
