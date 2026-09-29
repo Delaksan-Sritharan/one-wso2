@@ -191,10 +191,13 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // means this is a fresh request only the first time something asks, on
   // Me. Only fetched while Me is active — every other perspective has no
   // business asking.
-  const meProfile = useMeProfile(undefined, active.key === "me");
+  const isMe = active.key === "me";
+  const meProfile = useMeProfile(undefined, isMe);
+  // `isMe &&`: a disabled query's isPending stays true forever, so without
+  // this isResolving would read true on every other perspective too.
   const parEmployeeItemGate = useParEmployeeItemVisible(
     meProfile.data?.employee?.employmentType,
-    meProfile.isLoading,
+    isMe && meProfile.isPending,
   );
 
   // promotion-app's Lead Portal — same shape of problem as PAR's above: its
@@ -253,7 +256,11 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
     if (s.id === PAR_LEAD_PORTAL_ITEM_ID) return parLeadPortalGate.canSee;
     if (s.id === PAR_ADMIN_PORTAL_ITEM_ID) return parAdminPortalGate.isAdmin;
-    if (s.id === PAR_EMPLOYEE_ITEM_ID) return parEmployeeItemGate.canSee;
+    // canSee fails OPEN (route guard's call); the rail additionally hides
+    // while loading and on a profile error, purely cosmetic.
+    if (s.id === PAR_EMPLOYEE_ITEM_ID) {
+      return parEmployeeItemGate.canSee && !parEmployeeItemGate.isLoading && !meProfile.isError;
+    }
     if (s.id === PROMOTION_LEAD_PORTAL_ITEM_ID || s.id === PROMOTION_TEAM_HISTORY_ITEM_ID) {
       return promotionLeadPortalGate.isLead;
     }
