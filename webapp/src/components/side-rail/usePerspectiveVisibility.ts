@@ -16,9 +16,6 @@
 
 import { useMemo } from "react";
 import {
-  BANKING_ADMIN_ITEM_ID,
-  PAR_ADMIN_PORTAL_ITEM_ID,
-  PAR_LEAD_PORTAL_ITEM_ID,
   PROMOTION_ADMIN_PORTAL_ITEM_ID,
   PROMOTION_BOARD_PORTAL_ITEM_ID,
   PROMOTION_CYCLE_HISTORY_ITEM_ID,
@@ -26,18 +23,9 @@ import {
   PROMOTION_LEAD_PORTAL_ITEM_ID,
   PROMOTION_TEAM_HISTORY_ITEM_ID,
   SRI_LANKA_ONLY_ITEM_IDS,
-  SUBSCRIPTION_ITEM_IDS,
-  SALES_ITEM_IDS,
-  UMT_ADMIN_ITEM_IDS,
   type PerspectiveSection,
 } from "@constants/perspectives";
-import { capabilitiesFromPrivileges, type Capability } from "@constants/appMenu";
-import { FINANCE_ITEM_IDS } from "@constants/financeApps";
-import { BANKING_ITEM_IDS, LEAVE_ITEM_IDS } from "@constants/meApps";
-import { PAR_EMPLOYEE_ITEM_ID } from "@constants/parApps";
-import { DUE_DILIGENCE_ITEM_IDS } from "@constants/dueDiligenceApps";
-import { SECURITY_ITEM_IDS } from "@constants/securityApps";
-import { INFRA_ITEM_IDS } from "@constants/infraApps";
+import { capabilitiesFromPrivileges } from "@constants/appMenu";
 import { useInfraGate } from "@features/infra/api/useInfraGate";
 import { useActivePerspective } from "@context/perspective/PerspectiveContext";
 import { useUserInfo } from "@api/useUserInfo";
@@ -45,7 +33,6 @@ import { useMeProfile } from "@features/my/api/useMeProfile";
 import { useFinanceGate } from "@features/finance/api/useFinanceGate";
 import { useLeaveGate } from "@features/leave/api/useLeaveGate";
 import { useBankingAccess } from "@features/my/api/useBankingAccess";
-import { useBankingAdminAccess } from "@features/my/api/useBankingAdminAccess";
 import { useMarketingOpsGate } from "@features/marketing-ops/api/useMarketingOpsGate";
 import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
 import { useSecurityGate } from "@features/security/api/useSecurityGate";
@@ -57,6 +44,14 @@ import { usePromotionPrivileges } from "@features/promotion/api/usePromotionRole
 import { useUmtGate } from "@features/umt/api/useUmtGate";
 import { isSriLankaWorkLocation } from "@utils/locationGate";
 import { visibleLeavesOf } from "./railActive";
+import {
+  claimOf,
+  claimsForPerspective,
+  foldVisibility,
+  sectionIdsIn,
+  type AdapterName,
+  type VisibilityAdapter,
+} from "./visibilityFold";
 
 /**
  * Who can see what in the active perspective.
@@ -99,11 +94,11 @@ export interface PerspectiveVisibility {
    * someone as a verdict — "you have nothing here" and "we could not find out"
    * are different sentences, and only one of them is worth a Retry button.
    *
-   * Partial, and deliberately so: only four of the gates report a failure at
-   * all (Marketing Ops, Due Diligence, Subscriptions, Infra Portal). Finance, Leave and
-   * Security fold a failed privilege read into "no privileges" — their source
-   * apps do the same, and unpicking that is its own change. So this means
-   * "something we needed definitely failed", never "everything else succeeded".
+   * Partial, and deliberately so. Marketing Ops, Due Diligence, Sales,
+   * Subscriptions, and Infra report a failed read here. Finance, Leave,
+   * Security, and the others fold a failed read into "not allowed" — their
+   * source apps do the same. So this means "something we needed definitely
+   * failed", never "everything else succeeded".
    */
   isError: boolean;
   /** The first failure worth naming, for ErrorNotice. */
@@ -138,11 +133,6 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // Banking is open to callers the banking backend says are employees. Its
   // entry lives under Me, so only ask while Me is active.
   const bankingAccess = useBankingAccess(active.key === "me");
-
-  // Banking's admin screens are the same shape of problem again, reachable
-  // from two perspectives (People Ops and Finance — see BANKING_ADMIN_SECTION
-  // in perspectives.ts), so only fetched while either is active.
-  const bankingAdminAccess = useBankingAdminAccess(active.key === "people" || active.key === "finance");
 
   // Marketing Ops is the same shape of problem and needs the same treatment:
   // its rail gates on the MARKETING OPS backend's own Asgardeo groups
@@ -241,109 +231,203 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // it a moment later reads as the rail flickering, and failing CLOSED is the
   // right default for an admin entry point either way.
   const isSriLankaEmployee = isSriLankaWorkLocation(userInfo.data?.workLocation);
-  // Location is handled once, for every id, in resolveVisible below — so this
-  // is only the admin-group question.
-  const subscriptionCanSee = (id: string): boolean => {
-    return id === "people-subscriptions-manage"
-      ? subscriptionGate.isAdmin && !subscriptionGate.isResolving
-      : true;
-  };
-
-  const resolveVisible = (s: PerspectiveSection): boolean => {
-    // Location first, and as an AND rather than a branch: a Colombo-office perk
-    // is hidden from everyone else no matter which backend's gate would
-    // otherwise answer for the id.
-    if (SRI_LANKA_ONLY_ITEM_IDS.has(s.id) && !isSriLankaEmployee) return false;
-    if (DUE_DILIGENCE_ITEM_IDS.has(s.id)) return dueDiligenceGate.canSee(s.id);
-    if (SECURITY_ITEM_IDS.has(s.id)) return securityGate.canSee(s.id);
-    if (SALES_ITEM_IDS.has(s.id)) return salesGate.canSee(s.id);
-    if (FINANCE_ITEM_IDS.has(s.id)) return financeGate.canSee(s.id);
-    if (LEAVE_ITEM_IDS.has(s.id)) return leaveGate.canSee(s.id);
-    if (BANKING_ITEM_IDS.has(s.id)) return bankingAccess.canSee;
-    if (s.id === BANKING_ADMIN_ITEM_ID) return bankingAdminAccess.canSee;
-    if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
-    if (s.id === PAR_LEAD_PORTAL_ITEM_ID) return parLeadPortalGate.canSee;
-    if (s.id === PAR_ADMIN_PORTAL_ITEM_ID) return parAdminPortalGate.isAdmin;
-    // canSee fails OPEN (route guard's call); the rail additionally hides
-    // while loading and on a profile error, purely cosmetic.
-    if (s.id === PAR_EMPLOYEE_ITEM_ID) {
-      return parEmployeeItemGate.canSee && !parEmployeeItemGate.isLoading && !meProfile.isError;
-    }
-    if (s.id === PROMOTION_LEAD_PORTAL_ITEM_ID || s.id === PROMOTION_TEAM_HISTORY_ITEM_ID) {
-      return promotionLeadPortalGate.isLead;
-    }
-    if (s.id === PROMOTION_FUNCTIONAL_LEAD_PORTAL_ITEM_ID) {
-      return promotionLeadPortalGate.isFunctionalLead;
-    }
-    if (s.id === PROMOTION_BOARD_PORTAL_ITEM_ID) {
-      return promotionLeadPortalGate.isPromotionBoardMember;
-    }
-    if (s.id === PROMOTION_ADMIN_PORTAL_ITEM_ID) {
-      return promotionLeadPortalGate.isHrAdmin;
-    }
-    if (s.id === PROMOTION_CYCLE_HISTORY_ITEM_ID) {
-      return promotionLeadPortalGate.isHrAdmin || promotionLeadPortalGate.isFunctionalLead;
-    }
-    if (UMT_ADMIN_ITEM_IDS.has(s.id)) return umtGate.isAdmin && !umtGate.isResolving;
-    if (isMarketingOps) return marketingOpsGate.canSee(s.id);
-    if (INFRA_ITEM_IDS.has(s.id)) return infraGate.canSee(s.id);
-    return sectionAllowed(s.requires, caps);
-  };
 
   // Memoised because `?? []` would otherwise hand a fresh array to the
   // dependency lists in SideRail on every render, defeating its useMemos.
   const sections = useMemo(() => active.sections ?? [], [active.sections]);
 
-  const visibleLeaves = visibleLeavesOf(sections, resolveVisible);
-
-  // Each gate answers only for its own perspective, and reports `isResolving`
-  // only while it is enabled — so an OR across all of them is the aggregate
-  // for whichever perspective is active, with no per-perspective branching to
-  // keep in step with the dispatch above.
-  const isResolving =
-    userInfo.isLoading ||
-    financeGate.isResolving ||
-    leaveGate.isResolving ||
-    bankingAccess.isResolving ||
-    bankingAdminAccess.isResolving ||
-    marketingOpsGate.isResolving ||
-    dueDiligenceGate.isResolving ||
-    securityGate.isResolving ||
-    salesGate.isResolving ||
-    subscriptionGate.isResolving ||
-    infraGate.isResolving ||
-    parLeadPortalGate.isLoading ||
-    parAdminPortalGate.isLoading ||
-    parEmployeeItemGate.isLoading ||
-    umtGate.isResolving;
-
-  const isError =
-    userInfo.isError ||
-    marketingOpsGate.isError ||
-    dueDiligenceGate.isError ||
-    infraGate.isError ||
-    salesGate.isError ||
-    subscriptionGate.isError;
-  const error = userInfo.isError
-    ? userInfo.error
-    : marketingOpsGate.errorMessage ??
-      dueDiligenceGate.errorMessage ??
-      infraGate.errorMessage ??
-      salesGate.errorMessage ??
-      subscriptionGate.errorMessage;
-  const retry = (): void => {
-    if (userInfo.isError) void userInfo.refetch();
-    if (marketingOpsGate.isError) marketingOpsGate.retry();
-    if (dueDiligenceGate.isError) dueDiligenceGate.retry();
-    if (subscriptionGate.isError) subscriptionGate.retry();
-    if (infraGate.isError) infraGate.retry();
-    if (salesGate.isError) salesGate.retry();
+  const noop = (): void => undefined;
+  const snapshot = (name: AdapterName): VisibilityAdapter => {
+    switch (name) {
+      case "par-admin":
+        return {
+          name,
+          claim: claimOf(name),
+          // A failed admin check hides the portal. The landing does not retry it.
+          shown: () => parAdminPortalGate.isAdmin,
+          resolving: parAdminPortalGate.isLoading,
+          failed: false,
+          retry: noop,
+        };
+      case "marketing":
+        return {
+          name,
+          claim: claimOf(name),
+          shown: (id) => marketingOpsGate.canSee(id),
+          resolving: marketingOpsGate.isResolving,
+          failed: marketingOpsGate.isError,
+          error: marketingOpsGate.errorMessage,
+          retry: marketingOpsGate.retry,
+        };
+      case "due-diligence":
+        return {
+          name,
+          claim: claimOf(name),
+          shown: (id) => dueDiligenceGate.canSee(id),
+          resolving: dueDiligenceGate.isResolving,
+          failed: dueDiligenceGate.isError,
+          error: dueDiligenceGate.errorMessage,
+          retry: dueDiligenceGate.retry,
+        };
+      case "finance":
+        return {
+          name,
+          claim: claimOf(name),
+          shown: (id) => financeGate.canSee(id),
+          resolving: financeGate.isResolving,
+          failed: false,
+          retry: noop,
+        };
+      case "leave":
+        return {
+          name,
+          claim: claimOf(name),
+          shown: (id) => leaveGate.canSee(id),
+          resolving: leaveGate.isResolving,
+          failed: false,
+          retry: noop,
+        };
+      case "banking":
+        // BankingRoute retries a failed privileges read. The landing does not:
+        // a failure here hides the section, the same as before this fold.
+        return {
+          name,
+          claim: claimOf(name),
+          shown: () => bankingAccess.canSee,
+          resolving: bankingAccess.isResolving,
+          failed: false,
+          retry: noop,
+        };
+      case "par-employee":
+        // canSee fails open once loading clears. The rail also hides the item
+        // while the profile is loading or has failed. The route does not.
+        return {
+          name,
+          claim: claimOf(name),
+          shown: () => parEmployeeItemGate.canSee && !parEmployeeItemGate.isLoading && !meProfile.isError,
+          resolving: parEmployeeItemGate.isLoading,
+          failed: false,
+          retry: noop,
+        };
+      case "infra":
+        return {
+          name,
+          claim: claimOf(name),
+          shown: (id) => infraGate.canSee(id),
+          resolving: infraGate.isResolving,
+          failed: infraGate.isError,
+          error: infraGate.errorMessage,
+          retry: infraGate.retry,
+        };
+      case "sales":
+        return {
+          name,
+          claim: claimOf(name),
+          shown: () => salesGate.canSee(),
+          resolving: salesGate.isResolving,
+          failed: salesGate.isError,
+          error: salesGate.errorMessage,
+          retry: salesGate.retry,
+        };
+      case "par-lead":
+        return {
+          name,
+          claim: claimOf(name),
+          shown: () => parLeadPortalGate.canSee,
+          resolving: parLeadPortalGate.isLoading,
+          failed: false,
+          retry: noop,
+        };
+      case "promotion":
+        return {
+          name,
+          claim: claimOf(name),
+          shown: (id) => promotionShown(id, promotionLeadPortalGate),
+          resolving: promotionLeadPortalGate.isLoading,
+          // A failed privileges read leaves every role false, which hides the
+          // sections. The landing does not offer a retry for that.
+          failed: false,
+          retry: noop,
+        };
+      case "security":
+        return {
+          name,
+          claim: claimOf(name),
+          shown: (id) => securityGate.canSee(id),
+          resolving: securityGate.isResolving,
+          failed: false,
+          retry: noop,
+        };
+      case "umt":
+        return {
+          name,
+          claim: claimOf(name),
+          shown: () => umtGate.isAdmin && !umtGate.isResolving,
+          resolving: umtGate.isResolving,
+          failed: false,
+          retry: noop,
+        };
+      case "subscriptions":
+        return {
+          name,
+          claim: claimOf(name),
+          // Self-service is open to every Sri Lanka employee. Manage-on-behalf
+          // also needs the admin group, and stays hidden while that is resolving.
+          shown: (id) =>
+            id === "people-subscriptions-manage" ? subscriptionGate.isAdmin && !subscriptionGate.isResolving : true,
+          resolving: subscriptionGate.isResolving,
+          failed: subscriptionGate.isError,
+          error: subscriptionGate.errorMessage,
+          retry: subscriptionGate.retry,
+        };
+      default: {
+        const neverName: never = name;
+        return neverName;
+      }
+    }
   };
 
-  return { resolveVisible, isResolving, visibleLeaves, isError, error, retry };
+  const folded = foldVisibility(
+    claimsForPerspective(active.key).map(snapshot),
+    {
+      perspectiveKey: active.key,
+      sectionIds: sectionIdsIn(sections),
+      sriLankaOnlyIds: SRI_LANKA_ONLY_ITEM_IDS,
+      isSriLankaEmployee,
+      employeeRecordResolving: userInfo.isLoading,
+      employeeRecordFailed: userInfo.isError,
+      employeeRecordError: userInfo.error,
+      retryEmployeeRecord: () => void userInfo.refetch(),
+      capabilities: caps,
+    },
+  );
+
+  const resolveVisible = (section: PerspectiveSection): boolean => folded.shown(section);
+  const visibleLeaves = visibleLeavesOf(sections, resolveVisible);
+
+  return {
+    resolveVisible,
+    isResolving: folded.resolving,
+    visibleLeaves,
+    isError: folded.failed,
+    error: folded.error,
+    retry: folded.retry,
+  };
 }
 
-function sectionAllowed(requires: Capability[] | undefined, caps: Set<Capability>): boolean {
-  if (!requires || requires.length === 0) return true;
-  return requires.some((r) => caps.has(r));
+function promotionShown(
+  id: string,
+  privileges: {
+    isLead: boolean;
+    isFunctionalLead: boolean;
+    isPromotionBoardMember: boolean;
+    isHrAdmin: boolean;
+  },
+): boolean {
+  if (id === PROMOTION_LEAD_PORTAL_ITEM_ID || id === PROMOTION_TEAM_HISTORY_ITEM_ID) return privileges.isLead;
+  if (id === PROMOTION_FUNCTIONAL_LEAD_PORTAL_ITEM_ID) return privileges.isFunctionalLead;
+  if (id === PROMOTION_BOARD_PORTAL_ITEM_ID) return privileges.isPromotionBoardMember;
+  if (id === PROMOTION_ADMIN_PORTAL_ITEM_ID) return privileges.isHrAdmin;
+  if (id === PROMOTION_CYCLE_HISTORY_ITEM_ID) return privileges.isHrAdmin || privileges.isFunctionalLead;
+  return false;
 }
