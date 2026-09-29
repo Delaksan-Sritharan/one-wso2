@@ -89,9 +89,9 @@ export interface PerspectiveVisibility {
    *
    * Partial, and deliberately so. Marketing Ops, Due Diligence, Sales,
    * Subscriptions, and Infra report a failed read here. Finance, Leave,
-   * Security, and the others fold a failed read into "not allowed" — their
-   * source apps do the same. So this means "something we needed definitely
-   * failed", never "everything else succeeded".
+   * Security, and the others fold a failed read into "not allowed", so an
+   * entry that could not be checked stays hidden. So this means "something
+   * we needed definitely failed", never "everything else succeeded".
    */
   isError: boolean;
   /** The first failure worth naming, for ErrorNotice. */
