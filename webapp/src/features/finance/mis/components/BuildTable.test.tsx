@@ -25,7 +25,7 @@ import {
   type BuildSubColumn,
 } from "./buildTableModel";
 
-// This port hand-rolls the table rather than use a data grid (spec §1), and
+// This port hand-rolls the table rather than use a data grid, and
 // that obliges four mechanisms MUI declines to provide, which this repo now owns
 // forever. Each one is invisible when it works and each one breaks silently —
 // a header row that covers the labels it belongs to, a highlight that stops at
@@ -138,7 +138,7 @@ const realGetBoundingClientRect = HTMLTableRowElement.prototype.getBoundingClien
 
 beforeEach(() => {
   // Wide enough that the narrow-viewport notice stays out of the way. It is
-  // rendered by this component (spec §11.8) and is a real focusable element
+  // rendered by this component and is a real focusable element
   // above the table, so at jsdom's default 1024 it would sit in front of every
   // keyboard assertion below — which is about the TABLE, not about the notice.
   // The notice has its own tests, and one here for the fact it is mounted.
@@ -471,7 +471,7 @@ describe("opening and closing a section", () => {
 
 describe("the figures themselves", () => {
   // Formatting is injected. The Build shows currency, counts and percentages in
-  // the same column and only currency is scaled (spec §3), so the row's own
+  // the same column and only currency is scaled, so the row's own
   // formatter decides — this table must not second-guess it.
   it("shows exactly what the caller formatted, in the right cell", () => {
     renderTable(5);
@@ -562,7 +562,7 @@ describe("the figures themselves", () => {
 // a suite to fail. Raised to a bound the machine cannot cross rather than
 // trimmed to a number that looks better.
 describe("a Build with more rows than a document should hold", { timeout: 30_000 }, () => {
-  // The hand-rolled `<table>` was chosen (spec §1) with row windowing as required
+  // The hand-rolled `<table>` was chosen with row windowing as required
   // scope in the same breath, because a hand-rolled table has no virtualization
   // and the per-customer Builds are hundreds of customers per business unit.
   //
@@ -708,7 +708,7 @@ describe("a Build with more rows than a document should hold", { timeout: 30_000
   });
 
   it("still holds the sub-header below the Period row, not on top of it", () => {
-    // The one hand-rolled mechanism (spec §1) with no precedent and no help
+    // The one hand-rolled mechanism with no precedent and no help
     // from MUI, checked in the state most likely to disturb it: the header is
     // measured from a row that is now sitting above a windowed body.
     renderTable(5, customers(3000));
@@ -784,8 +784,8 @@ describe("a table whose rows need more than a name to identify them", () => {
   // movement's name — and the Software/Cloud Customers table needs eighteen
   // before the first figure: Account Name, Account ID, Owner, Source, both
   // countries, Industry, Sub Industry, Region, Sub Region, Activation and Churn
-  // dates, Lost Reason, Rating, Employee Count. The frozen first column is ours
-  // (spec §1); this is that mechanism widened from one column to a run of them,
+  // dates, Lost Reason, Rating, Employee Count. The frozen first column is ours;
+  // this is that mechanism widened from one column to a run of them,
   // and the one-column Build is now the degenerate case of the same code.
 
   const LEAD = [

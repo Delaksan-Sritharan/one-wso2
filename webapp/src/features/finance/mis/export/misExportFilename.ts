@@ -55,7 +55,7 @@ export const misFilenameRange = (text: string): string =>
  * ---- the one rule not ported ----------------------------------------------
  *
  * The source stamps `new Date().toISOString().split('T')[0]` — a UTC date —
- * while every other date in MIS is Pacific (spec §3: not the viewer's
+ * while every other date in MIS is Pacific (not the viewer's
  * timezone and not UTC). Between 5pm and midnight in California those two are
  * different days, so an export taken on a Pacific evening is filed under
  * tomorrow. It is the quiet kind of wrong: the file is correct, its name is

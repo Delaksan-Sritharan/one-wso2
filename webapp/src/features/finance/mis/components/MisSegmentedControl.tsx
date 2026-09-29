@@ -21,7 +21,7 @@ import { Stack, ToggleButton, ToggleButtonGroup, Typography } from "@wso2/oxygen
 // The shape the MIS Build screens' Table-level controls share: Region Type,
 // the Region Summary's View, and the customer table's Breakdown. Each of them
 // chooses between two arrangements of a table the reader is already looking at,
-// none of them is in the URL (`docs/ported-apps/mis.md` §11.11), and all three
+// none of them is in the URL, and all three
 // were the same twenty lines with different words in them.
 //
 // It stays a presentational control and holds no state: what the choices mean,

@@ -71,7 +71,7 @@ describe("the customers behind a figure, as a sheet", () => {
 
   it("keeps the words the dialog shows where a value is missing", () => {
     // "N/A" in the columns the source guards, blank in the four it does not —
-    // spec §8, and reproduced for parity rather than tidied. The sheet
+    // reproduced for parity rather than tidied. The sheet
     // shows the reader what the dialog showed them.
     const cells = misDrillDownSheet(INPUT).rows[4].cells;
     const labels = misDrillDownSheet(INPUT).rows[2].cells.map((cell) => cell.value);

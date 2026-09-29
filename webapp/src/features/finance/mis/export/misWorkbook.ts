@@ -29,11 +29,11 @@
 // sheets, which rows, which number formats — so the builders that produce one
 // are pure functions over the figures a screen already has, and a test can read
 // their output directly. `writeMisWorkbook` is the only code that knows ExcelJS
-// exists, it is the same nine lines whatever is being exported, and spec §10.17
+// exists, it is the same nine lines whatever is being exported, and a test
 // pins it by loading its bytes back.
 //
 // (The source's Flash workbook, where its ExcelJS work began, is not ported:
-// the Flash Dashboard stays in the MIS app — spec §1.)
+// the Flash Dashboard stays in the MIS app.)
 
 import { saveBlob } from "@utils/saveFile";
 
@@ -173,7 +173,7 @@ export const MIS_WORKBOOK_MEDIA_TYPE =
  * The spec, in the reader's downloads.
  *
  * The edge, and deliberately the whole of it: everything above this line is
- * data and pure functions, which is what lets spec §10.17 assert on a workbook
+ * data and pure functions, which is what lets a test assert on a workbook
  * at all. There is nothing here to test beyond the two lines themselves, and
  * `saveBlob` carries its own hard-won note about Safari.
  */

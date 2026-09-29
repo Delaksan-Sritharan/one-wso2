@@ -31,8 +31,7 @@ import MisSegmentedControl from "./MisSegmentedControl";
 // Component state rather than the address bar, like the Region Type control
 // beside it and for the same reason: the source keeps it in the table's own
 // state, so it reaches no link anyone holds, and moving it into the URL extends
-// the contract ticket 02 pinned. `docs/ported-apps/mis.md` §11 carries the
-// question for both controls at once.
+// the contract ticket 02 pinned. The same question stands for both controls.
 
 /** The two views, and the word each is known by. */
 export const MIS_REGION_SUMMARY_VIEWS = {

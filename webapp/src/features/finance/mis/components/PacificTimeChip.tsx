@@ -18,7 +18,7 @@ import { Chip } from "@wso2/oxygen-ui";
 import { ClockIcon } from "@wso2/oxygen-ui-icons-react";
 import { pacificTimeLabel } from "../util/misPacificTime";
 
-// The permanent `Pacific Time (PST|PDT)` chip every MIS screen carries — spec §3.
+// The permanent `Pacific Time (PST|PDT)` chip every MIS screen carries.
 //
 // It is on screen always, not only when something looks odd, because the whole
 // point is that nothing ever looks odd: a reader in Colombo opening a Build at
@@ -27,7 +27,7 @@ import { pacificTimeLabel } from "../util/misPacificTime";
 // year was decided in California.
 //
 // The label comes from `pacificTimeLabel`, which is the same module the
-// boundaries come from. That is the criterion in spec §10.9 and it is the
+// boundaries come from. That is the criterion, and it is the
 // reason there is no string constant here: a chip that said "PST" from its own
 // source would be wrong for eight months of the year and would still be there,
 // looking authoritative, beside dates that had moved.

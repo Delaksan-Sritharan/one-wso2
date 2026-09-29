@@ -33,8 +33,7 @@ import MisSegmentedControl from "./MisSegmentedControl";
 // Component state, and not in the address bar, for the same reason as
 // `MisRegionTypeTabs`: the source keeps it in the table's own state, so it is
 // in no link anyone holds, and moving it into the URL is an extension of the
-// contract ticket 02 pinned rather than a side effect of building this. The
-// same open question, recorded in `docs/ported-apps/mis.md` §11.
+// contract ticket 02 pinned rather than a side effect of building this.
 
 const BREAKDOWN_OPTIONS = [
   { value: "bu", label: "BU only" },

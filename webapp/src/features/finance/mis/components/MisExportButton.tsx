@@ -16,7 +16,7 @@
 
 // The one control that takes a MIS table out of the browser.
 //
-// An export is required scope (spec §1) rather than a caveat: a hand-rolled
+// An export is required scope rather than a caveat: a hand-rolled
 // `<table>` gets none of the select-and-paste a data grid gives free, and that
 // paste is Finance's existing workflow.
 

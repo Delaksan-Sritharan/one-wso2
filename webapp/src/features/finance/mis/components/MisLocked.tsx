@@ -27,7 +27,7 @@ import { Link as RouterLink } from "react-router";
 //
 // There were two while the Flash Dashboard was being ported: MIS grants it on a
 // privilege of its own, so "you have MIS access, just not to this screen" was
-// an ordinary state. The Flash Dashboard stays in the MIS app (spec §1), so
+// an ordinary state. The Flash Dashboard stays in the MIS app, so
 // One WSO2 reads the ARR privilege alone, every screen here opens on it, and
 // anyone locked out of one is locked out of all of them.
 //

@@ -16,7 +16,7 @@
 
 // A Build table, described as a sheet.
 //
-// An export path is required scope (spec §1) rather than a caveat: a
+// An export path is required scope rather than a caveat: a
 // hand-rolled `<table>` gets none of the select-and-paste a data grid gives
 // free, and that paste IS Finance's existing workflow.
 //
@@ -25,8 +25,8 @@
 // `BuildTable`'s cells are already formatted — `BuildCell.text` is what
 // `formatMisValue` returned, so at Scale "Values in '000" it is a figure
 // already divided by a thousand, written as a string with separators in it.
-// An export that walked the table would inherit both, and spec §10.18 is the
-// rule against exactly that: "a finance export that is silently 1000x wrong is
+// An export that walked the table would inherit both, and the rule against
+// exactly that is: "a finance export that is silently 1000x wrong is
 // worse than no export at all, because it is believed."
 //
 // Both halves are real, and the second is not hypothetical either — the
@@ -40,7 +40,7 @@
 // than documentary — the same shape `formatMisValue` uses for the same rule.
 //
 // (Ticket 18 extended this for the Flash's workbook; ticket 18's Flash work
-// was removed when the Flash Dashboard was kept in the MIS app (spec §1),
+// was removed when the Flash Dashboard was kept in the MIS app,
 // and only its percentage rule, below, stayed.)
 
 import type { BuildColumnGroup, BuildRow } from "../components/buildTableModel";
@@ -104,7 +104,7 @@ export interface MisBuildSheetInput<L extends MisLeadColumn = MisLeadColumn> {
    *
    * Defaults to `misValueTypeForRow`, which is what the Subscription Build
    * needs: its rows are the named metric lines that mix money, headcounts and
-   * ratios in one column, and that function is where spec §3's rule lives.
+   * ratios in one column, and that function is where the Scale rule lives.
    *
    * The other three tables pass their own, because they KNOW: every figure on
    * the Customers table and on both summaries is currency, and each of them
@@ -168,7 +168,7 @@ const NUMBER_FORMAT_BY_VALUE_TYPE: Readonly<Record<MisValueType, string>> = {
  * The three cases are `formatMisValue`'s three, answered for a spreadsheet
  * instead of for a screen. A number keeps being a number and gets a format; a
  * string is one of the words the ARR backend answers where it cannot compute
- * ("N/A", "%" — spec §8) and is text; anything else leaves the cell empty,
+ * ("N/A", "%") and is text; anything else leaves the cell empty,
  * because a zero written where there was no figure reads as a figure.
  *
  * A percentage is the one figure that changes on the way in: the ARR backend

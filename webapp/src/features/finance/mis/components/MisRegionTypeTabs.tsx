@@ -32,8 +32,7 @@ import MisSegmentedControl from "./MisSegmentedControl";
 // query string would be the port promising something the source never did, and
 // it would have to be added to the URL contract ticket 02 pinned — including
 // what an unrecognised value degrades to and what a stale link means. Worth its
-// own decision rather than a side effect of building the table. Recorded as an
-// open question in `docs/ported-apps/mis.md` §11.
+// own decision rather than a side effect of building the table.
 //
 // The consequence, stated plainly so nobody has to discover it: a reader who
 // shares a Sub Region view sends a Sales Region one.

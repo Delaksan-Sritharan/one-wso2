@@ -28,7 +28,7 @@ import type { AnalysisAccountRow } from "./analysisAccountRows";
 //
 // ---- the one screen in MIS that takes the DataGrid --------------------------
 //
-// The Build tables are hand-rolled, not a data grid (spec §1); this is the exception.
+// The Build tables are hand-rolled, not a data grid; this is the exception.
 // The Build needs pinned columns, three-level collapsible sections, hand-
 // computed totals and row windowing over thousands of rows, none of which the
 // community grid has. This table needs none of them: it is flat, it sorts, and

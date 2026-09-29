@@ -59,7 +59,7 @@ import { ScalePreferenceProvider } from "../util/ScalePreferenceContext";
 // because one screen has a condition of its own: ARR Analysis exists only while
 // its `productsUsageEnabled` flag is on. (It asked per screen for a second
 // reason while the Flash Dashboard was being ported, which MIS grants on a
-// privilege of its own; that screen stays in the MIS app — spec §1.)
+// privilege of its own; that screen stays in the MIS app.)
 //
 // ---- and why it checks the ARR key specifically ---------------------------
 //
@@ -135,7 +135,7 @@ export default function MisShell({
             variant="outlined"
             size="small"
           />
-          {/* Permanent, on every rung — spec §3 and ticket 05 both say the word.
+          {/* Permanent, on every rung — ticket 05 says the word.
               Unconditional beats "only where there are figures": the reader who
               most needs to know which clock MIS runs on is the one who has just
               arrived, and a chip that comes and goes is one more thing on the

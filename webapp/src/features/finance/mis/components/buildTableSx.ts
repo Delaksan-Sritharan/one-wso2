@@ -196,7 +196,7 @@ export const ROW_LABEL_CELL_SX = {
 /**
  * Where one identity cell sits horizontally.
  *
- * The hand-rolled frozen pane (spec §1), widened from one column to a run of them: the
+ * The hand-rolled frozen pane, widened from one column to a run of them: the
  * Subscription Build names a row with a movement, and the Software/Cloud
  * Customers table needs seventeen columns to say which account a row is. A
  * frozen cell must also be OPAQUE — a translucent one lets the figures moving

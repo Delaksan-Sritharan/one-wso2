@@ -159,7 +159,7 @@ function CustomUnits({
       >
         {/* The source's words (`TableNavigation.js:356`), and so its "Product
             Units": a second list beside the Business Units, the source's label
-            kept for parity (spec §8). */}
+            kept for parity. */}
         <Typography variant="body2" color="text.secondary">
           Select a combination of either a set of Business Units or Product Units.
         </Typography>

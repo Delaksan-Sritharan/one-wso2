@@ -22,7 +22,7 @@ import { misBuildSheet, type MisBuildSheetInput } from "./misBuildWorkbook";
 
 // A Subscription Build, cut down to the three rows that differ in KIND —
 // money, a headcount and a ratio — because the one rule this has to get right
-// is spec §3's, and those three are the only three answers it has.
+// is that only currency is scaled, and those three are the only three answers it has.
 const ROWS: readonly BuildRow[] = [
   {
     id: "arr-movement",
@@ -79,13 +79,13 @@ describe("a Build, as a sheet", () => {
 
   it("puts the Periods over their sub-columns, and the identity columns beside", () => {
     const sheet = misBuildSheet(INPUT);
-    // Two header rows, the same two the hand-rolled table draws (spec §1).
+    // Two header rows, the same two the hand-rolled table draws.
     expect(sheet.rows[2].cells.map((cell) => cell.value)).toEqual([null, "2024", "2025"]);
     expect(sheet.rows[3].cells.map((cell) => cell.value)).toEqual(["Summary", "ARR", "ARR"]);
   });
 
   it("writes a figure as a NUMBER, at units, whatever the screen is showing", () => {
-    // The foot-gun spec §10.18 exists for, and the one the source's own Flash
+    // The foot-gun this test exists for, and the one the source's own Flash
     // export has: `generateAnnualSheet.js` writes `formatNumber(value)` — a
     // STRING — into every figure cell, so a column of them cannot be summed.
     //
@@ -139,7 +139,7 @@ describe("a Build, as a sheet", () => {
   });
 
   it("passes through the words the backend answers where it cannot compute", () => {
-    // "N/A" and "%" are already the display value — spec §8. They are text, so
+    // "N/A" and "%" are already the display value. They are text, so
     // they carry no number format.
     const sheet = misBuildSheet({ ...INPUT, value: () => "N/A" });
     expect(at(sheet, 6, 2).value).toBe("N/A");
