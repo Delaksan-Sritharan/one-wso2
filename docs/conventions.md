@@ -66,7 +66,6 @@ them tells someone whose gateway timed out that they lack a permission they alre
   refuse.
 - **Deep links rebuild the whole screen from the URL** — never from router state carried from the
   previous page.
-- **One WSO2 has no production users yet.** Moved routes are moved, not aliased.
 
 ## Data fetching
 
@@ -75,7 +74,8 @@ them tells someone whose gateway timed out that they lack a permission they alre
 - **Client errors (4xx) are not retried, and mutations are not retried.** A closed window (400) or a
   missing role (403) is a final answer; retrying only delays the message.
 - **A successful mutation invalidates exactly what it affects** — the detail, the list, and any
-  summary built from them — and nothing is written into a cache by hand first.
+  summary built from them. Write into the cache by hand only for a deliberate immediate update (an
+  edit shown before it is saved, a cancelled item removed on the click), and say why beside it.
 - **A query that fails blanks only its own part of the screen.** When a screen reads two backends,
   one failing shows a notice above whatever did load; an empty result from a failed request is never
   presented as "nothing to do".

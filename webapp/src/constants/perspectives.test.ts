@@ -40,8 +40,7 @@ const keys = (perspectives: readonly { key: string }[]) => perspectives.map((p) 
 
 // PAR shipped out of preview once the Lead Portal, Admin Portal, Report
 // Chain and F2F all followed the Employee Portal over. Its rail entry is
-// unconditional now, so
-// there's nothing left to gate-test here.
+// unconditional now, so there's nothing left to gate-test here.
 describe("PAR's People Ops rail entry", () => {
   it("is always present", async () => {
     const { PEOPLE_OPS_SECTIONS } = await load();

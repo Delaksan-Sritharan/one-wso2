@@ -433,8 +433,8 @@ export default function App() {
           {/* Me → PAR: the employee half of par-app, ported one screen at a
               time. Tab names match par-app's own OngoingCycleView tab bar
               (Employee Feedback / Request 360° Feedback / Provide 360°
-              Feedback / F2F) rather than invented ones. Not gated beyond signing in —
-              every employee has their own PAR — except an intern, who
+              Feedback / F2F) rather than invented ones. Not gated beyond
+              signing in — every employee has their own PAR — except an intern, who
               never does, regardless of lead or active-cycle status;
               ParRequiresSomethingToShowRoute redirects them to /me. Same
               shape as ParRequiresAdminRoute below. See
