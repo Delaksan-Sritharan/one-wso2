@@ -57,12 +57,12 @@ describe("the option lists a response carries", () => {
     technicalOwners: ["Tess Tucker"],
     channelManagers: ["Chan Mann"],
     accountOwners: [
-      { name: "Zoe Zed", email: "zoe@wso2.com" },
-      { name: "Ada Ames", email: "ada@wso2.com" },
+      { name: "Zoe Zed", email: "zoe@example.com" },
+      { name: "Ada Ames", email: "ada@example.com" },
     ],
     businessUnits: ["IAM_BU", "APIM_BU"],
     productUnits: ["IAM_CLOUD", "APIM_SOFTWARE"],
-    helpEmail: "finance@wso2.com",
+    helpEmail: "finance@example.com",
     productsUsageEnabled: true,
   };
 
@@ -110,7 +110,7 @@ describe("a response with nothing in it", () => {
 
   it("skips an account owner with no name rather than offering a blank option", () => {
     const options = misFilterOptions({
-      accountOwners: [{ email: "ghost@wso2.com" }, { name: "", email: "" }, { name: "Ada Ames" }],
+      accountOwners: [{ email: "ghost@example.com" }, { name: "", email: "" }, { name: "Ada Ames" }],
     });
     expect(options.accountOwners).toEqual(["Ada Ames"]);
   });

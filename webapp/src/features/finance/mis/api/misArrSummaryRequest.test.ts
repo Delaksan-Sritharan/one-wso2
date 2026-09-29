@@ -165,8 +165,8 @@ describe("which Applied filters the backend is told about", () => {
 
   it("renames each list filter to the plural the backend uses", () => {
     expect(bodyWith({ salesRegion: ["EMEA"] })).toMatchObject({ salesRegions: ["EMEA"] });
-    expect(bodyWith({ accountOwner: ["a@wso2.com"] })).toMatchObject({
-      accountOwners: ["a@wso2.com"],
+    expect(bodyWith({ accountOwner: ["a@example.com"] })).toMatchObject({
+      accountOwners: ["a@example.com"],
     });
     expect(bodyWith({ subIndustry: ["Banking"] })).toMatchObject({ subIndustries: ["Banking"] });
   });

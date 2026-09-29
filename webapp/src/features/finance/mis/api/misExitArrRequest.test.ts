@@ -147,7 +147,7 @@ describe("the filters a summary forwards", () => {
       salesRegion: ["NA"],
       subRegion: ["ANZ"],
       industry: ["Banking"],
-      accountOwner: ["someone@wso2.com"],
+      accountOwner: ["someone@example.com"],
     };
     expect(Object.keys(buExitRequests(RANGES, narrowed)[0]).sort()).toEqual([
       "arrType",

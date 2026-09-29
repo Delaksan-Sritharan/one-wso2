@@ -375,8 +375,8 @@ describe("the identity columns, left of the first figure", () => {
 
   it("reads the account's own answer through customerIdentityText", () => {
     const owner = customerLeadColumns("Total ARR").find((c) => c.label === "Account Owner")!;
-    const one = account("a1", "Northwind Bank", { accountOwnerName: "R. Perera" });
-    expect(customerIdentityText("a1", one, owner)).toBe("R. Perera");
+    const one = account("a1", "Northwind Bank", { accountOwnerName: "Jane Doe" });
+    expect(customerIdentityText("a1", one, owner)).toBe("Jane Doe");
   });
 
   it("reads blank for a customer this column's book does not have", () => {

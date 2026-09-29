@@ -75,7 +75,7 @@ beforeEach(() => {
     salesRegions: ["EMEA", "APAC"],
     shippingCountries: ["Sri Lanka"],
     industries: ["Utilities"],
-    accountOwners: [{ name: "Ada Ames", email: "ada@wso2.com" }],
+    accountOwners: [{ name: "Ada Ames", email: "ada@example.com" }],
     businessUnits: ["IAM_BU", "APIM_BU"],
   };
 });
