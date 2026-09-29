@@ -25,6 +25,7 @@ import { useMeProfile } from "@features/my/api/useMeProfile";
 import { financeVisibility, useFinanceGate } from "@features/finance/api/useFinanceGate";
 import { leaveVisibility, useLeaveGate } from "@features/leave/api/useLeaveGate";
 import { bankingVisibility, useBankingAccess } from "@features/my/api/useBankingAccess";
+import { bankingAdminVisibility, useBankingAdminAccess } from "@features/my/api/useBankingAdminAccess";
 import { marketingVisibility, useMarketingOpsGate } from "@features/marketing-ops/api/useMarketingOpsGate";
 import { dueDiligenceVisibility, useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
 import { securityVisibility, useSecurityGate } from "@features/security/api/useSecurityGate";
@@ -127,6 +128,11 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // Banking is open to callers the banking backend says are employees. Its
   // entry lives under Me, so only ask while Me is active.
   const bankingAccess = useBankingAccess(active.key === "me");
+
+  // Banking's admin screens are the same shape of problem again, reachable
+  // from two perspectives (People Ops and Finance — see BANKING_ADMIN_SECTION
+  // in perspectives.ts), so only fetched while either is active.
+  const bankingAdminAccess = useBankingAdminAccess(active.key === "people" || active.key === "finance");
 
   // Marketing Ops is the same shape of problem and needs the same treatment:
   // its rail gates on the MARKETING OPS backend's own Asgardeo groups
@@ -252,6 +258,8 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
         return leaveVisibility(leaveGate);
       case "banking":
         return bankingVisibility(bankingAccess);
+      case "banking-admin":
+        return bankingAdminVisibility(bankingAdminAccess);
       case "infra":
         return infraVisibility(infraGate);
       case "sales":

@@ -312,6 +312,7 @@ describe("claimOf", () => {
       "finance",
       "leave",
       "banking",
+      "banking-admin",
       "infra",
       "sales",
       "promotion",

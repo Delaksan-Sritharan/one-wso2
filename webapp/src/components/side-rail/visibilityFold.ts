@@ -22,6 +22,7 @@ import { INFRA_ITEM_IDS } from "@constants/infraApps";
 import { BANKING_ITEM_IDS, LEAVE_ITEM_IDS } from "@constants/meApps";
 import { PAR_EMPLOYEE_ITEM_ID } from "@constants/parApps";
 import {
+  BANKING_ADMIN_ITEM_ID,
   PAR_ADMIN_PORTAL_ITEM_ID,
   PAR_LEAD_PORTAL_ITEM_ID,
   PROMOTION_ADMIN_PORTAL_ITEM_ID,
@@ -65,6 +66,7 @@ export type AdapterName =
   | "finance"
   | "leave"
   | "banking"
+  | "banking-admin"
   | "infra"
   | "sales"
   | "promotion"
@@ -151,6 +153,8 @@ export function claimOf(name: AdapterName): SectionClaim {
       return { kind: "sections", ids: LEAVE_ITEM_IDS };
     case "banking":
       return { kind: "sections", ids: BANKING_ITEM_IDS };
+    case "banking-admin":
+      return ids([BANKING_ADMIN_ITEM_ID]);
     case "infra":
       return { kind: "sections", ids: INFRA_ITEM_IDS };
     case "sales":
@@ -185,6 +189,7 @@ export function claimsForPerspective(perspectiveKey: string): AdapterName[] {
   if (perspectiveKey === "finance" || perspectiveKey === "legal") names.push("due-diligence");
   if (perspectiveKey === "finance" || perspectiveKey === "me") names.push("finance");
   if (perspectiveKey === "me") names.push("leave", "banking");
+  if (perspectiveKey === "people" || perspectiveKey === "finance") names.push("banking-admin");
   if (perspectiveKey === "infra") names.push("infra");
   if (perspectiveKey === "sales") names.push("sales");
   // The promotion sections exist only while the preview flag is on. Asking

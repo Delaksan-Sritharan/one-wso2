@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import type { VisibilityAnswer } from "@components/side-rail/visibilityFold";
 import { HttpError } from "@api/http";
 import { bankingBackendUrl } from "@config/apiConfig";
 import { useBankingPrivileges } from "./useBankingPrivileges";
@@ -75,5 +76,14 @@ export function useBankingAdminAccess(enabled = true): BankingAdminAccess {
     isResolving: false,
     isError: false,
     retry,
+  };
+}
+
+/** Rail and landing facts. A failed read hides the admin section; the landing does not retry it. */
+export function bankingAdminVisibility(access: BankingAdminAccess): VisibilityAnswer {
+  return {
+    canSee: () => access.canSee,
+    resolving: access.isResolving,
+    retry: () => undefined,
   };
 }
