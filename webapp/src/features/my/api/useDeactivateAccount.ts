@@ -27,8 +27,8 @@ export interface DeactivateAccountPayload {
 
 // POST /employee/accounts/{accountId}/deactivate — no body. Used both for a
 // single row's Deactivate action and, called once per account, for "Resign
-// Employee" (see EmployeeOperationsTab — the source app does the same: a
-// loop of individual deactivate calls, not a dedicated resign endpoint).
+// Employee" (see EmployeeOperationsTab — a loop of individual deactivate
+// calls, since there's no dedicated resign endpoint).
 export function useDeactivateAccount() {
   const getAccessToken = useAccessToken();
   const qc = useQueryClient();

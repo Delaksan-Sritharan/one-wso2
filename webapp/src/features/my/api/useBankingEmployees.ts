@@ -22,9 +22,8 @@ import { bankingBackendUrl, bankingServiceUrls } from "@config/apiConfig";
 import type { BankingEmployee } from "./types";
 
 // GET /employees — every employee, fetched once and searched client-side by
-// Employee Operations' Autocomplete, same as the source app's own
-// fetchEmployees (one unfiltered fetch, filtered locally, capped to 10
-// options in the component).
+// Employee Operations' Autocomplete (one unfiltered fetch, filtered
+// locally, capped to 10 options in the component).
 export function useBankingEmployees() {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();

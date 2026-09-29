@@ -919,9 +919,9 @@ export default function App() {
           <Route path="due-diligence/preferences" element={<DueDiligencePreferencesPage />} />
           <Route path="due-diligence/view-pdf" element={<ViewPdfPage />} />
           <Route path="due-diligence/view-image" element={<ViewImagePage />} />
-          {/* Banking's admin/lead screens — ported from digiops-hr's banking
-              webapp's Change Requests, Report, Employee Operations, and
-              Admin views. Route lives OUTSIDE both the People Ops and
+          {/* Banking's admin/lead screens — Change Requests, Report,
+              Employee Operations, and Admin views. Route lives OUTSIDE both
+              the People Ops and
               Finance path prefixes, same reason Due Diligence's own routes
               do above: a screen reachable from two different rails can't
               itself live under either one's own prefix. BankingAdminRoute

@@ -22,11 +22,10 @@ import { bankingBackendUrl, bankingServiceUrls } from "@config/apiConfig";
 import type { BankAccountsResponse, ReportFilters } from "./types";
 
 // GET /employee/accounts with the Report tab's admin filters. `filters` is
-// `undefined` until the admin presses Search — matching the source app's
-// own Reportings panel, which shows nothing until `handleApplyFilters` first
-// dispatches a fetch. Keyed on the filters object itself (only replaced when
-// Search is pressed again, not on every keystroke), so typing in the filter
-// controls doesn't refetch until the admin asks for it.
+// `undefined` until the admin presses Search, so nothing is fetched before
+// then. Keyed on the filters object itself (only replaced when Search is
+// pressed again, not on every keystroke), so typing in the filter controls
+// doesn't refetch until the admin asks for it.
 export function useReportAccounts(filters: ReportFilters | undefined) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();

@@ -51,12 +51,12 @@ import {
   type BankAccountsTableColumn,
 } from "../bankAccountsColumns";
 
-// The Employee Operations tab — search any employee, act on their behalf.
-// Ported from digiops-hr's own employeeDetails.tsx: employee search, account
-// history, Deactivate, Resign, and Add Bank Account on-behalf-of, all
-// against the SAME banking-backend resources the employee-facing port
-// already uses (useBankAccounts, BankAccountRequestDialog) — just pointed at
-// the selected employee instead of the caller.
+// The Employee Operations tab — search any employee, act on their behalf:
+// employee search, account history, Deactivate, Resign, and Add Bank
+// Account on-behalf-of, all against the SAME banking-backend resources the
+// employee-facing screens already use (useBankAccounts,
+// BankAccountRequestDialog) — just pointed at the selected employee instead
+// of the caller.
 export default function EmployeeOperationsTab() {
   const employeesQuery = useBankingEmployees();
   const configQuery = useBankingConfig();
@@ -101,13 +101,12 @@ export default function EmployeeOperationsTab() {
       confirmAction: () => {
         if (!selectedEmployee) return;
         void (async () => {
-          // Matches the source app's own Resign action: no dedicated resign
-          // endpoint, just every currently-Active account deactivated in
-          // turn, behind this one confirmation. Each account is its own
-          // try/catch, same as the source's own loop — one account's
-          // deactivate failing (the backend can 500 on a CONSULTANCY account
-          // with no NetSuite internal id on file, for instance) must not
-          // stop the remaining active accounts from being attempted too.
+          // Resign has no dedicated backend endpoint — every currently-Active
+          // account is deactivated in turn, behind this one confirmation.
+          // Each account gets its own try/catch, so one account's deactivate
+          // failing (the backend can 500 on a CONSULTANCY account with no
+          // NetSuite internal id on file, for instance) must not stop the
+          // remaining active accounts from being attempted too.
           for (const account of accounts) {
             if (account.accountStatus === "ACTIVE") {
               try {

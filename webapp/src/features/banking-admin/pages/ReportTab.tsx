@@ -49,19 +49,15 @@ const COLUMNS: BankAccountsTableColumn[] = [
 ];
 
 // The Report tab — a filterable, all-employee bank-account table. Nothing
-// is fetched until Search is pressed (appliedFilters starts undefined),
-// matching the source app's own Reportings panel, which never dispatches a
-// fetch until handleApplyFilters runs.
+// is fetched until Search is pressed (appliedFilters starts undefined).
 export default function ReportTab() {
   const [draft, setDraft] = useState<ReportFilters>(BLANK_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters | undefined>(undefined);
   const accountsQuery = useReportAccounts(appliedFilters);
 
-  // Matches the source app's own handleResetFilters exactly: it clears the
-  // filter controls back to blank but never dispatches a fetch or a reset
-  // action, so a result set already on screen from a previous Search stays
-  // until Search is pressed again. Verified directly against
-  // reportings.tsx — its Reset button has no effect on the grid itself.
+  // Clears the filter controls back to blank but never dispatches a fetch
+  // or a reset action, so a result set already on screen from a previous
+  // Search stays until Search is pressed again.
   function handleReset() {
     setDraft(BLANK_FILTERS);
   }

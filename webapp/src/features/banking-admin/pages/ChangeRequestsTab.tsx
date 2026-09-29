@@ -41,14 +41,12 @@ import { usePendingSalaryAccounts } from "@features/my/api/usePendingSalaryAccou
 import { useRejectAccount } from "@features/my/api/useRejectAccount";
 import type { BankAccount } from "@features/my/api/types";
 
-// Matches the source app's own bankAccountChangeRequest.tsx pagination size.
 const REQUESTS_PER_PAGE = 4;
 
 // The Change Requests tab — every pending Salary bank-account request,
 // People-Ops-only (BankingAdminTabRoute already keeps everyone else out of
-// this route). Approve/Reject/Info mirror the source app's own
-// BankAccountChangeRequests panel: a searchable, paginated card list with
-// per-card actions, not a grid.
+// this route). Approve/Reject/Info are laid out as a searchable, paginated
+// card list with per-card actions, not a grid.
 export default function ChangeRequestsTab() {
   const accountsQuery = usePendingSalaryAccounts();
   const approveAccount = useApproveAccount();
@@ -249,9 +247,8 @@ function RejectDialog({
   );
 }
 
-// The Info action's detail view — the same field set as the source app's own
-// AccountDetailsDialog, just rendered with this app's own components. Not a
-// unit-test target of its own (no branching logic), only exercised through
+// The Info action's detail view — a read-only field dump, no branching
+// logic, so not a unit-test target of its own; only exercised through
 // ChangeRequestsTab's own "opens the Info dialog" test.
 function AccountDetailsDialog({ request, onClose }: { request: BankAccount; onClose: () => void }) {
   const rows: [string, string][] = [

@@ -36,8 +36,8 @@ import type { BankAccountsTableColumn } from "../bankAccountsColumns";
 // Report adds Branch Name, Employee Operations adds a Status chip and a
 // per-row action) — see bankAccountsColumns.ts for the shared ones.
 
-// Matches the source app's own rowsPerPageOptions on both reportings.tsx and
-// employeeDetails.tsx exactly.
+// Same page-size choices across every tab that lists bank accounts (Report
+// and Employee Operations), so the control feels consistent between them.
 const ROWS_PER_PAGE_OPTIONS = [6, 10, 25, 50];
 
 type ChipColor = "default" | "success" | "warning" | "error";

@@ -58,10 +58,9 @@ export default function AdminTab() {
   // anything, so nothing else stops a second press from firing a second
   // create-bank or threshold-update request while the first is still in
   // flight. Gate on the mutation itself, not a local ref, so this holds
-  // across BOTH actions sharing this tab, the same coarse "one submission
-  // at a time" guarantee the source app's own global submitState gives —
-  // just read back from React Query's mutation cache instead of a Redux
-  // slice (see MyAccountsTab's own use of the same pattern).
+  // across BOTH actions sharing this tab — a coarse "one submission at a
+  // time" guarantee read back from React Query's mutation cache (see
+  // MyAccountsTab's own use of the same pattern).
   const creatingBankCount = useIsMutating({ mutationKey: ["create-bank"] });
   const updatingThresholdCount = useIsMutating({ mutationKey: ["update-threshold"] });
   const submitting = creatingBankCount > 0 || updatingThresholdCount > 0;
@@ -251,9 +250,8 @@ function ThresholdField({
   // exactly what causes an extra render on every fetch). Once they type,
   // their edit takes over until the field resets — which happens the
   // instant a refetch (this admin's own successful update, or someone
-  // else's) makes `currentValue` catch up to what they typed, the same
-  // "sync back to source" outcome digiops-hr's own addBanks.tsx gets from
-  // its useEffect on appConfig.config, without needing an effect here.
+  // else's) makes `currentValue` catch up to what they typed — a render-time
+  // reset rather than a `useEffect` on `appConfig.config`.
   const [draft, setDraft] = useState<number | "" | undefined>(undefined);
   if (draft !== undefined && draft === currentValue) setDraft(undefined);
   const value = draft !== undefined ? draft : (currentValue ?? "");

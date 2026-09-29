@@ -14,8 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Banking's admin/lead screens — ported from digiops-hr's banking webapp's
-// Change Requests, Report, Employee Operations, and Admin views. Reachable
+// Banking's admin/lead screens — Change Requests, Report, Employee
+// Operations, and Admin views. Reachable
 // from both the People Ops and Finance perspectives (see BANKING_ADMIN_PATH
 // in perspectives.ts), because the four tabs split across both admin types:
 // Change Requests is People-Ops-only (the backend's own approve/reject

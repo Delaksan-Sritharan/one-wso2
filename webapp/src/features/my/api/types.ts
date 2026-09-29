@@ -129,9 +129,8 @@ export interface EmployeePersonalInfo {
   emergencyContacts: EmergencyContact[] | null;
 }
 
-// Banking app types. Mirrors digiops-hr/apps/banking backend types —
-// AccountType + AccountStatus enums, and the subset of EmployeeBankAccount
-// fields we render.
+// Banking backend types — AccountType + AccountStatus enums, and the
+// subset of EmployeeBankAccount fields we render.
 
 export type AccountType = "SALARY" | "REIMBURSEMENT" | "CONSULTANCY";
 export type AccountStatus = "ACTIVE" | "INACTIVE" | "REQUESTED" | "REJECTED";
@@ -172,8 +171,7 @@ export interface BankAccountsResponse {
 }
 
 // GET /employee/accounts admin filters (Report tab). `createdFrom`/
-// `createdTo` are "" when unset, matching the source app's own
-// `startDate?.format(...) || ""` — never undefined, so a component can
+// `createdTo` are "" when unset, never undefined, so a component can
 // always bind them to a controlled input.
 export interface ReportFilters {
   createdFrom: string;
@@ -182,12 +180,12 @@ export interface ReportFilters {
   statusArray: AccountStatus[];
 }
 
-// GET /employees on the banking backend — its OWN employee directory
-// (mirrors digiops-hr/apps/banking/backend/modules/entity/types.bal's
-// Employee record). Deliberately distinct from the `Employee` interface
-// above, which is people-app's own record with a different field set — a
-// ported app's data comes from its own backend only, never borrowed from
-// another app's, even when the other app already has an equivalent record.
+// GET /employees on the banking backend (ONE_WSO2_BANKING_BACKEND_URL) —
+// its OWN employee directory. Deliberately distinct from the `Employee`
+// interface above, which is a different record with a different field set:
+// this data comes from the banking backend only, never borrowed from
+// another backend's, even when the other backend already has an equivalent
+// record.
 export interface BankingEmployee {
   employeeId: string | null;
   firstName: string;
@@ -262,7 +260,7 @@ export interface UpdateThresholdPayload {
 
 // POST /employee/accounts body. Every Account Type sends the same shape —
 // branchName/branchCode are simply empty for CONSULTANCY rather than a
-// different payload shape, matching the source app's own form.
+// different payload shape.
 export interface CreateBankAccountRequestPayload {
   employeeEmail: string;
   accountType: AccountType;
