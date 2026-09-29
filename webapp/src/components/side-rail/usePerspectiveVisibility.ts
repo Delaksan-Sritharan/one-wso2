@@ -253,7 +253,9 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
     if (SUBSCRIPTION_ITEM_IDS.has(s.id)) return subscriptionCanSee(s.id);
     if (s.id === PAR_LEAD_PORTAL_ITEM_ID) return parLeadPortalGate.canSee;
     if (s.id === PAR_ADMIN_PORTAL_ITEM_ID) return parAdminPortalGate.isAdmin;
-    if (s.id === PAR_EMPLOYEE_ITEM_ID) return parEmployeeItemGate.canSee;
+    // canSee fails OPEN while loading (see useParEmployeeItemVisible); AND
+    // with !isLoading here so the rail doesn't flash the item then hide it.
+    if (s.id === PAR_EMPLOYEE_ITEM_ID) return parEmployeeItemGate.canSee && !parEmployeeItemGate.isLoading;
     if (s.id === PROMOTION_LEAD_PORTAL_ITEM_ID || s.id === PROMOTION_TEAM_HISTORY_ITEM_ID) {
       return promotionLeadPortalGate.isLead;
     }
