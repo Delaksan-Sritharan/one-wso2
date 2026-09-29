@@ -198,7 +198,7 @@ shop. Types are those in source `types/api.ts`.
 | GET | `/api/event/days/{dayId}/keynote-sections` | → `TrackSection[]` | R |
 | POST | `/api/event/days/{dayId}/keynote-sections` | as above → `TrackSection` | A |
 | PATCH | `/api/track-sections/{id}` | partial → `TrackSection` | A |
-| DELETE | `/api/track-sections/{id}` | → 204 (client first unplaces its sessions) | A |
+| DELETE | `/api/track-sections/{id}` | → 204 (clears its sessions' track and slot; client then unplaces them, §5.3) | A |
 | GET | `/api/event/days/{dayId}/footnotes` | → `TimeslotFootnote[]` | R |
 | POST | `/api/event/days/{dayId}/footnotes` | `{slotIndex, text}` → `TimeslotFootnote` | A |
 | PATCH | `/api/footnotes/{id}` | partial → `TimeslotFootnote` | A |
@@ -319,6 +319,10 @@ Out of scope for the frontend PRs; tracked with the backend owners.
   - The agenda palette lists unscheduled sessions with `dayId === null` from **every** event,
     because `useListSessions()` is called unscoped. The port passes `configId`, which the backend
     already supports. Same for Event speakers, which filters client-side today.
+  - The source unplaced a section's sessions *before* deleting it, so a failure partway left
+    sessions unscheduled on the server under a "changes reverted" toast. The port deletes first,
+    then unplaces, as it does for tracks; an unplace that fails after a successful delete is
+    reported as such, not as a revert.
   - Request bodies the backend would reject are trimmed to the fields it accepts (for example the
     order-status `transactionHash`), and the event upsert always sends `keynoteRoomId` so Settings
     no longer clears it.
