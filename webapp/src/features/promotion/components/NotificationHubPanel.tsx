@@ -26,19 +26,28 @@ import { CheckIcon, InboxIcon, MailCheckIcon, SendIcon, XIcon } from "@wso2/oxyg
 import { useNotifyPromotionRequest } from "../api/usePromotionRequests";
 import { basePromotionRequestColumns } from "../components/promotionRequestColumns";
 import PromotionEmptyState from "./PromotionEmptyState";
+import PromotionFeedbackSnackbar from "./PromotionFeedbackSnackbar";
+import { usePromotionFeedback } from "../util/usePromotionFeedback";
 import { PromotionGridToolbar } from "./PromotionGridToolbar";
 import NotifyApplicantDialog from "./NotifyApplicantDialog";
 import { resolveGridSelectedIds } from "../util/promotionGridSelection";
 import { formatDate } from "../util/promotionHistory";
 import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
-import type { PromotionRequestFull } from "../api/types";
+import type { PromotionCycle, PromotionRequestFull } from "../api/types";
 
 type SubTab = "approved" | "rejected" | "sent";
 
 export default function NotificationHubPanel({
+  cycle,
   requests,
   loading,
 }: {
+  /** The active cycle this panel's `requests` were scoped to — source's own
+   * notificationHub.tsx re-checks the cycle's own status before rendering
+   * its tabs, since a caller can already be sitting on this drill-in when
+   * the cycle it was showing ends underneath them. `undefined` = still
+   * loading; `null` = confirmed no active cycle. */
+  cycle: PromotionCycle | null | undefined;
   requests: PromotionRequestFull[];
   loading: boolean;
 }) {
@@ -51,6 +60,18 @@ export default function NotificationHubPanel({
   const sent = requests.filter(
     (r) => (r.status === "APPROVED" || r.status === "REJECTED" || r.status === "FL_REJECTED") && r.isNotificationEmailSent,
   );
+
+  if (cycle === null) {
+    return <PromotionEmptyState icon={<InboxIcon size={28} />} message="No promotion cycle found" />;
+  }
+  if (cycle && cycle.status !== "OPEN") {
+    return (
+      <PromotionEmptyState
+        icon={<InboxIcon size={28} />}
+        message="The Notification Hub is only available while a promotion cycle is open."
+      />
+    );
+  }
 
   return (
     <Box>
@@ -85,6 +106,7 @@ function NotifyGrid({
   const notify = useNotifyPromotionRequest();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [dialog, setDialog] = useState<{ ids: number[]; message: string } | null>(null);
+  const { feedback, notifySuccess, notifyError, close } = usePromotionFeedback();
 
   const columns: DataGrid.GridColDef<PromotionRequestFull>[] = [
     ...basePromotionRequestColumns(),
@@ -115,6 +137,7 @@ function NotifyGrid({
 
   return (
     <>
+      <PromotionFeedbackSnackbar feedback={feedback} onClose={close} />
       <NotifyApplicantDialog
         open={Boolean(dialog)}
         message={dialog?.message ?? ""}
@@ -122,8 +145,16 @@ function NotifyGrid({
         onClose={() => setDialog(null)}
         onConfirm={(effectiveDate) => {
           if (!dialog) return;
-          for (const id of dialog.ids) notify.mutate({ id, effectiveDate });
+          const ids = dialog.ids;
           setSelectedIds([]);
+          void Promise.allSettled(ids.map((id) => notify.mutateAsync({ id, effectiveDate }))).then((results) => {
+            const failed = results.filter((r) => r.status === "rejected").length;
+            if (failed === 0) {
+              notifySuccess(ids.length > 1 ? "Notifications sent." : "Notification sent.");
+            } else {
+              notifyError(`${failed} of ${ids.length} notification${ids.length > 1 ? "s" : ""} failed to send.`);
+            }
+          });
         }}
       />
       {rows.length === 0 ? (
@@ -171,6 +202,7 @@ function SentGrid({ rows }: { rows: PromotionRequestFull[] }) {
       headerName: "Notified Timestamp",
       flex: 1,
       minWidth: 160,
+      sortable: false,
       valueFormatter: (value: string) => formatDate(value),
     },
   ];

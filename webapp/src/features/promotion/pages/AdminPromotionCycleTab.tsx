@@ -33,6 +33,8 @@ import PromotionCycleCreateForm from "../components/PromotionCycleCreateForm";
 import PromotionCycleStatsPanel from "../components/PromotionCycleStatsPanel";
 import NotificationHubPanel from "../components/NotificationHubPanel";
 import PromotionEmptyState from "../components/PromotionEmptyState";
+import PromotionFeedbackSnackbar from "../components/PromotionFeedbackSnackbar";
+import { usePromotionFeedback } from "../util/usePromotionFeedback";
 import { formatDate } from "../util/promotionHistory";
 
 export default function AdminPromotionCycleTab() {
@@ -41,6 +43,7 @@ export default function AdminPromotionCycleTab() {
   const endCycle = useEndPromotionCycle();
   const [view, setView] = useState<"home" | "notifications">("home");
   const [confirmEnd, setConfirmEnd] = useState<ConfirmationContent | null>(null);
+  const { feedback, notifySuccess, notifyError, close } = usePromotionFeedback();
 
   if (cycle.isPending) return <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />;
   if (cycle.isError) {
@@ -58,10 +61,17 @@ export default function AdminPromotionCycleTab() {
   return (
     <>
       <ConfirmationDialog content={confirmEnd} onClose={() => setConfirmEnd(null)} />
+      <PromotionFeedbackSnackbar feedback={feedback} onClose={close} />
 
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
         <Tooltip title="Refresh">
-          <IconButton size="small" onClick={() => void cycle.refetch()}>
+          <IconButton
+            size="small"
+            onClick={() => {
+              void cycle.refetch();
+              void requests.refetch();
+            }}
+          >
             <RefreshCwIcon size={16} />
           </IconButton>
         </Tooltip>
@@ -76,7 +86,7 @@ export default function AdminPromotionCycleTab() {
       </Box>
 
       {view === "notifications" ? (
-        <NotificationHubPanel requests={rows} loading={requests.isPending} />
+        <NotificationHubPanel cycle={cycle.cycle ?? null} requests={rows} loading={requests.isPending} />
       ) : !cycle.cycle ? (
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, py: 4 }}>
           <Typography variant="h5">Active promotion cycle not found</Typography>
@@ -118,7 +128,11 @@ export default function AdminPromotionCycleTab() {
                     text: "This will close the currently open promotion cycle. This action cannot be undone.",
                     confirmLabel: "End Cycle",
                     confirmAction: () => {
-                      if (cycle.cycle) endCycle.mutate(cycle.cycle.id);
+                      if (!cycle.cycle) return;
+                      endCycle.mutate(cycle.cycle.id, {
+                        onSuccess: () => notifySuccess("Promotion cycle ended."),
+                        onError: (error) => notifyError(`Unable to end the promotion cycle. ${humanizeHttpError(error)}`),
+                      });
                     },
                   })
                 }
