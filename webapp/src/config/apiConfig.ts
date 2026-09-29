@@ -19,6 +19,13 @@
 // that as "backend not available" and render an appropriate state instead
 // of firing broken requests.
 
+// A configured base URL ending in "/" produces "//path" on every builder that
+// concatenates onto it, and whether that 404s is up to the gateway. Operators
+// paste these out of a console, so it happens. Applied only where the value is
+// path-like enough to invite it — this was three identical inline copies before
+// Finance MIS needed a fourth.
+const stripTrailingSlashes = (url: string): string => url.replace(/\/+$/, "");
+
 export const peopleBackendUrl: string =
   window.config?.ONE_WSO2_PEOPLE_BACKEND_URL ?? "";
 
@@ -710,9 +717,9 @@ export const umtServiceUrls = {
 // Trailing slashes stripped, because every builder below concatenates "/api/..."
 // onto this — a configured value ending in "/" produced "//api/..." on all 52 of
 // them, and whether that 404s depends on the gateway.
-export const marketingOpsBackendUrl: string = (
-  window.config?.ONE_WSO2_MARKETINGOPS_BACKEND_URL ?? ""
-).replace(/\/+$/, "");
+export const marketingOpsBackendUrl: string = stripTrailingSlashes(
+  window.config?.ONE_WSO2_MARKETINGOPS_BACKEND_URL ?? "",
+);
 
 export function isMarketingOpsBackendConfigured(): boolean {
   return Boolean(marketingOpsBackendUrl);
@@ -1103,9 +1110,9 @@ export const dueDiligenceServiceUrls = {
 // every WSO2 environment today; the key exists so a sandbox can point elsewhere.
 //
 // Trailing slashes are stripped so pardotTemplateUrl() can concatenate safely.
-export const pardotBaseUrl: string = (
-  window.config?.ONE_WSO2_PARDOT_BASE_URL ?? "https://pi.pardot.com"
-).replace(/\/+$/, "");
+export const pardotBaseUrl: string = stripTrailingSlashes(
+  window.config?.ONE_WSO2_PARDOT_BASE_URL ?? "https://pi.pardot.com",
+);
 
 export function pardotTemplateUrl(id: number | string): string {
   return `${pardotBaseUrl}/emailTemplate/read/id/${encodeURIComponent(String(id))}`;
@@ -1120,9 +1127,9 @@ export function pardotTemplateUrl(id: number | string): string {
 // to window.config — and it carries WSO2's own Lightning host as the default, since
 // an unset key producing a link that goes nowhere is worse than one that works
 // everywhere but a sandbox.
-export const salesforceBaseUrl: string = (
-  window.config?.ONE_WSO2_SALESFORCE_BASE_URL ?? "https://wso2.lightning.force.com"
-).replace(/\/+$/, "");
+export const salesforceBaseUrl: string = stripTrailingSlashes(
+  window.config?.ONE_WSO2_SALESFORCE_BASE_URL ?? "https://wso2.lightning.force.com",
+);
 
 export function salesforceRecordUrl(object: "Lead" | "Account", id: string): string {
   return `${salesforceBaseUrl}/lightning/r/${object}/${encodeURIComponent(id)}/view`;
@@ -1368,8 +1375,7 @@ export const promotionServiceUrls = {
 
 // ---------------------------------------------------------------------------
 // Menu (cafeteria) backend. Daily menu, lunch feedback, and dinner-on-demand
-// orders. The service is reused unchanged from the standalone app; see
-// docs/ported-apps/menu-app.md for the contract and the behaviour it defines.
+// orders. The service is reused unchanged from the standalone app.
 //
 // Every path is fixed — no builder takes an argument, because the caller is
 // always identified by the token rather than by a path segment.
@@ -1397,7 +1403,6 @@ export const menuServiceUrls = {
 // Subscription backend (digiops-hr subscription-app). The two paid staff
 // services an employee opts in and out of — PickMe Commute and LaaS (lunch as
 // a service) — plus the admin screens that manage them on someone's behalf.
-// See docs/ported-apps/subscription-app.md for the contract.
 //
 // Unlike every builder above, the subject's email is a PATH SEGMENT rather
 // than something the token alone decides. The service reads it and compares it
@@ -1416,8 +1421,7 @@ export function isSubscriptionBackendConfigured(): boolean {
 // Email Group Manager backend (digiops-infra/apps/email-group-manager). Lets
 // an employee browse the company's Google Groups mailing lists, subscribe or
 // unsubscribe themselves, and — client-side only, no backend of its own —
-// build an email signature. See docs/ported-apps/email-group-manager.md for
-// the contract.
+// build an email signature.
 //
 // The source app's own GET /user-info is NOT reused here: this webapp already
 // has an identical call (people-app's, via @api/useUserInfo) for the
@@ -1484,7 +1488,7 @@ export const subscriptionServiceUrls = {
 // token's `aud`, and each Asgardeo application mints its own. It used to accept
 // a single AUTH_AUDIENCE — the GRC webapp's client id — so every request from
 // here 401'd with `token has invalid audience`. That backend now takes a
-// comma-separated set (grc-tools #82, merged and deployed), and AUTH_AUDIENCE
+// comma-separated set, and AUTH_AUDIENCE
 // names this app's client id too.
 //
 // Left here because the failure is otherwise unrecognisable: a 401 on EVERY
@@ -1537,7 +1541,7 @@ export function isEvidencePortalBackendConfigured(): boolean {
 // reused unchanged. The naming difference is deliberate and worth knowing: the
 // config key and everything in this app say "sales" because that is what a
 // user opens, while the contract, the roles and the error messages all belong
-// to meet-app. See docs/ported-apps/sales-meetings.md.
+// to meet-app.
 //
 // The config key keeps its original name, ONE_WSO2_REVOPS_BACKEND_URL, on purpose: it is set in
 // every environment's config.js, and renaming it would need each deployment changed in step.
@@ -1608,3 +1612,78 @@ export function buildMeetingsUrl(params: {
   qs.set("offset", String(params.offset));
   return `${salesServiceUrls.meetings}?${qs.toString()}`;
 }
+
+// Finance MIS backend (digiops-finance/apps/mis) — the ARR service. The port
+// replaces the MIS frontend only; the Ballerina services are untouched.
+//
+// MIS has two more services, Flash and Admin, and neither is configured here:
+// they serve only the Flash Dashboard (its P&L, forecasts and comments), which
+// stays in the MIS app.
+//
+// Three things differ from every sibling above, all of them load-bearing:
+//
+//  1. /user-info lives on this service and answers with both of MIS's numbers
+//     in one array — 987 (ARR) and 789 (Flash) — of which only 987 means
+//     anything here (arr-backend service.bal:55-69; misTypes.ts).
+//
+//  2. The version segment belongs to the configured URL, not to the builders,
+//     because it differs by environment: production ends /v1, staging ends
+//     /v1.0.
+//
+//  3. Trailing slashes are stripped, as they are for marketing-ops. The
+//     configured value ends in a path-like version segment, which is exactly
+//     the kind of value an operator pastes with a slash on the end; unstripped
+//     it yields `//user-info` and whether that 404s is up to the gateway.
+//
+// A *.choreoapis.dev URL here is a DEFECT, not an alternative. Choreo
+// advertises one for every endpoint beside the vanity URL, and the CSP in
+// vite.config.ts allows only *.wso2.com and *.asgardeo.io — so a production
+// build fails those calls with nothing in the console.
+export const misArrBackendUrl: string = stripTrailingSlashes(
+  window.config?.ONE_WSO2_MIS_ARR_BACKEND_URL ?? "",
+);
+
+export function isMisArrConfigured(): boolean {
+  return Boolean(misArrBackendUrl);
+}
+
+export const misArrServiceUrls = {
+  // Privileges for both dashboards, plus the employee's display fields.
+  // Drives useMisGate.
+  userInfo: `${misArrBackendUrl}/user-info`,
+  // Every option list the filter bar's menus are made of, in one response —
+  // and the ARR Analysis feature flag. A plain GET, so the URL is the key.
+  appConfigs: `${misArrBackendUrl}/app-configs`,
+  // A read that takes a filter body, so it is a POST — which makes the React
+  // Query key the body rather than the URL. See §6 of the port spec.
+  arrSummary: `${misArrBackendUrl}/arr-summary`,
+  // The customer book as at one date, behind the Software/Cloud Customers
+  // table. A POST for the same reason, and one call per column. NOT the same
+  // endpoint as the drill-down dialog's `/arr-summary/customers`, despite both
+  // returning customers — this one is the table's rows.
+  accounts: `${misArrBackendUrl}/accounts`,
+  // The customers behind ONE figure in a Build — the drill-down dialog. Takes
+  // the clicked row and column in its body, so one call per opened figure.
+  drillDownCustomers: `${misArrBackendUrl}/arr-summary/customers`,
+  // Exit ARR as at one date, split by business unit within each region. One
+  // call per column, like the two above. Its body carries the Sales Region /
+  // Sub Region cut, so the two cuts are two cache entries.
+  regionExit: `${misArrBackendUrl}/arr-summary/region-exit`,
+  // The same balance without the regional split — one `BuType` per column.
+  buExit: `${misArrBackendUrl}/arr-summary/bu-exit`,
+  // The Region Summary's other view: each region's MOVEMENT over the column
+  // rather than its balance at the end of it. Its body carries the reader's
+  // unit selection, which is what makes it the one summary a Unit tab reaches.
+  regionMetrics: `${misArrBackendUrl}/arr-summary/region-metrics`,
+  // ARR ANALYSIS ONLY, despite the name reading like a Build endpoint. It
+  // answers with a bare `decimal` rather than a record — one figure, not a
+  // table — and nothing under the source's `arrDashboard/` calls it. It backs
+  // the summary above the account table here, and ticket 14's partner-model and
+  // per-industry breakdowns, which are this same body asked repeatedly.
+  exitArrSearch: `${misArrBackendUrl}/exit-arr/search`,
+  // The opportunities behind ONE account on the Software/Cloud Customers
+  // table. The only MIS read that is a GET with query parameters rather than a
+  // POST carrying a filter body — so it is the only one whose URL is its own
+  // cache key. Takes `accountId` and `endDate`, and nothing else.
+  opportunities: `${misArrBackendUrl}/opportunities`,
+};

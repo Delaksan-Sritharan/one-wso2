@@ -19,8 +19,7 @@
 // when one is open), its own stats, and the Notification Hub drill-in.
 // Source drives the home/notification-hub split with a `subView` query
 // param; this uses local state instead — a two-pane drill-down within one
-// tab, not a linkable top-level tab the way the portal's own five tabs are
-// (see docs/ported-apps/promotion-app.md's own deviation entry).
+// tab, not a linkable top-level tab the way the portal's own five tabs are.
 import { useState } from "react";
 import { Box, Breadcrumbs, Button, Grid, IconButton, Link, Skeleton, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { BellIcon, RefreshCwIcon, TriangleAlertIcon, XCircleIcon } from "@wso2/oxygen-ui-icons-react";

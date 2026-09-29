@@ -61,7 +61,7 @@ export const REGION_LABELS: Readonly<Record<string, string>> = {
  * ordinary ones: "Middle East" — a region named in that function's own comment
  * — renders "Middle EAST". Here the rule applies only when the whole key IS one
  * short word, which is when it is an acronym; a multi-word key is prose and is
- * title-cased instead. Recorded in `docs/ported-apps/mis.md` §7.
+ * title-cased instead.
  *
  * Capitals the wire already sent are kept, so a backend that sends display
  * names gets them back unchanged rather than re-cased on a guess.
