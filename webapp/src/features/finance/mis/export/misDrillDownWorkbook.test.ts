@@ -79,6 +79,16 @@ describe("the customers behind a figure, as a sheet", () => {
     expect(cells[labels.indexOf("Sales Region")].value).toBe("AMER");
   });
 
+  it("records the filters the list was computed under, under the units caption", () => {
+    const sheet = misDrillDownSheet({
+      ...INPUT,
+      filterLabels: ["Region: EMEA", "Business Unit: APIM"],
+    });
+    expect(sheet.rows[0].cells[0].value).toBe("All amounts in USD");
+    expect(sheet.rows[1].cells[0].value).toBe("Region: EMEA · Business Unit: APIM");
+    expect(sheet.rows[3].cells[0].value).toBe("Account ID");
+  });
+
   it("takes its Lost columns from the row that was opened", () => {
     const labels = misDrillDownSheet({ rowId: "lost", customers: CUSTOMERS }).rows[2].cells.map(
       (cell) => cell.value,

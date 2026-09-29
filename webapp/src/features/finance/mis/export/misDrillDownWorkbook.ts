@@ -40,6 +40,8 @@ export interface MisDrillDownSheetInput {
   /** The Build row that was opened. Decides the columns, as in the dialog. */
   rowId: string;
   customers: readonly DrillDownCustomer[];
+  /** The Applied filter labels the list was computed under. */
+  filterLabels?: readonly string[];
 }
 
 /** A dialog column, plus what the sheet needs to know about its kind. */
@@ -48,6 +50,7 @@ type DrillDownSheetColumn = DrillDownColumn & { valueType?: typeof MIS_VALUE_TYP
 export function misDrillDownSheet({
   rowId,
   customers,
+  filterLabels = [],
 }: MisDrillDownSheetInput): MisWorkbookSheet {
   const rows = drillDownRows(customers);
   // Zipped by POSITION, exactly as the dialog does and for its reason:
@@ -64,7 +67,7 @@ export function misDrillDownSheet({
     valueType: column.rawValue ? MIS_VALUE_TYPES.CURRENCY : undefined,
   }));
 
-  return misBuildSheet<DrillDownSheetColumn>({
+  const sheet = misBuildSheet<DrillDownSheetColumn>({
     name: "Customers",
     leadColumns: columns,
     leadCell: (row, column) => {
@@ -85,4 +88,13 @@ export function misDrillDownSheet({
     rows,
     value: () => null,
   });
+
+  if (filterLabels.length === 0) return sheet;
+  // Under the units caption, before the blank row and the headers. The
+  // filename only carries the row and the Period, so without this line a
+  // filtered list and a whole-book list of the same cell look identical.
+  return {
+    ...sheet,
+    rows: [sheet.rows[0], { cells: [{ value: filterLabels.join(" · ") }] }, ...sheet.rows.slice(1)],
+  };
 }

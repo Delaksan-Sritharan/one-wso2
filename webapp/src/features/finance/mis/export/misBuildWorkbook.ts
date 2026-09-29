@@ -166,10 +166,11 @@ const NUMBER_FORMAT_BY_VALUE_TYPE: Readonly<Record<MisValueType, string>> = {
  * One figure, as a cell.
  *
  * The three cases are `formatMisValue`'s three, answered for a spreadsheet
- * instead of for a screen. A number keeps being a number and gets a format; a
- * string is one of the words the ARR backend answers where it cannot compute
- * ("N/A", "%") and is text; anything else leaves the cell empty,
- * because a zero written where there was no figure reads as a figure.
+ * instead of for a screen. A number keeps being a number and gets a format. A
+ * string that parses as a finite number is that number — a Ballerina decimal
+ * can arrive as text — and only a string that does not ("N/A", "%") stays
+ * text. Anything else leaves the cell empty, because a zero written where
+ * there was no figure reads as a figure.
  *
  * A percentage is the one figure that changes on the way in: the ARR backend
  * sends per cent (98.25 for 98.25%), and Excel's percent format shows the
@@ -178,7 +179,11 @@ const NUMBER_FORMAT_BY_VALUE_TYPE: Readonly<Record<MisValueType, string>> = {
  * that one, it is keyed on the kind of number rather than left to a caller.
  */
 function figureCell(raw: MisRawValue, valueType: MisValueType): MisWorkbookCell {
-  if (typeof raw === "string") return { value: raw };
+  if (typeof raw === "string") {
+    const parsed = raw.trim() === "" ? Number.NaN : Number(raw);
+    if (!Number.isFinite(parsed)) return { value: raw };
+    raw = parsed;
+  }
   if (typeof raw !== "number" || !Number.isFinite(raw)) return { value: null };
   const value = valueType === MIS_VALUE_TYPES.PERCENTAGE ? raw / 100 : raw;
   return { value, numFmt: NUMBER_FORMAT_BY_VALUE_TYPE[valueType] };

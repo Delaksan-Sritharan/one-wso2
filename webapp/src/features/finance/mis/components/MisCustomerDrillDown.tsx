@@ -140,7 +140,13 @@ export default function MisCustomerDrillDown({
           <Stack direction="row" sx={{ justifyContent: "flex-end", mb: 0.75 }}>
             <MisExportButton
               workbook={() => ({
-                sheets: [misDrillDownSheet({ rowId, customers: state.customers })],
+                sheets: [
+                  misDrillDownSheet({
+                    rowId,
+                    customers: state.customers,
+                    filterLabels: chips.map((chip) => chip.label),
+                  }),
+                ],
               })}
               filename={filename}
             />

@@ -138,6 +138,21 @@ describe("a Build, as a sheet", () => {
     expect(at(sheet, 6, 2).value).toBeNull();
   });
 
+  it("writes a numeric string as a number, and a percentage string as the fraction", () => {
+    const sheet = misBuildSheet({
+      ...INPUT,
+      value: (row, group) => {
+        if (row.id === "opening-arr" && group.key === "2024") return "1234567.5";
+        if (row.id === "ndr" && group.key === "2024") return "98.25";
+        return FIGURES[row.id]?.[group.key];
+      },
+    });
+    expect(at(sheet, 6, 2).value).toBe(1_234_567.5);
+    expect(at(sheet, 6, 2).numFmt).toBe(MIS_NUMBER_FORMATS.CURRENCY);
+    expect(at(sheet, 11, 2).value).toBe(0.9825);
+    expect(at(sheet, 11, 2).numFmt).toBe(MIS_NUMBER_FORMATS.PERCENTAGE);
+  });
+
   it("passes through the words the backend answers where it cannot compute", () => {
     // "N/A" and "%" are already the display value. They are text, so
     // they carry no number format.

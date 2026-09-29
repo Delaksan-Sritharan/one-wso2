@@ -19,8 +19,8 @@
 // Ported from `ArrSummaryCustomersDialog.js:191-216`, which builds the same
 // name out of a prefix, the row that was opened, the Period column and the
 // date. It is worth porting rather than inventing: a folder of these sorts into
-// something a reader can navigate, and the name is the only thing carrying the
-// filters a figure was taken under once the file has left the browser.
+// something a reader can navigate. The name carries the row and the Period.
+// The Applied filters are written into the sheet, under the units caption.
 //
 // Two of its three rules are kept and the third is not.
 
