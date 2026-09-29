@@ -29,6 +29,10 @@ export function useUpdateThreshold() {
   const getAccessToken = useAccessToken();
   const qc = useQueryClient();
   return useMutation<{ message: string } | null, Error, UpdateThresholdPayload>({
+    // Shared, not tied to one component instance — lets AdminTab tell
+    // whether a threshold update is still in flight even after the
+    // ConfirmationDialog that started it has already closed.
+    mutationKey: ["update-threshold"],
     mutationFn: async (payload) =>
       authedPatch<{ message: string }>(bankingServiceUrls.updateThreshold, await getAccessToken(), payload),
     onSuccess: async () => {

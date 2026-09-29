@@ -15,6 +15,7 @@
 // under the License.
 
 import { useState } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import {
   Box,
   Button,
@@ -24,13 +25,16 @@ import {
   DialogContent,
   DialogTitle,
   Pagination,
+  Skeleton,
+  Snackbar,
   Stack,
   TextField,
   Typography,
 } from "@wso2/oxygen-ui";
+import { describeError } from "@api/errors";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { dialogPaperSx } from "@components/confirmation-dialog/dialogPaperSx";
-import { useSingleFlight } from "@components/confirmation-dialog/useSingleFlight";
+import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useApproveAccount } from "@features/my/api/useApproveAccount";
 import { usePendingSalaryAccounts } from "@features/my/api/usePendingSalaryAccounts";
 import { useRejectAccount } from "@features/my/api/useRejectAccount";
@@ -49,16 +53,21 @@ export default function ChangeRequestsTab() {
   const approveAccount = useApproveAccount();
   const rejectAccount = useRejectAccount();
 
-  // One request at a time: ConfirmationDialog closes synchronously on click
-  // without awaiting anything, so a quick second press on Confirm would
-  // otherwise fire a second approve/reject request.
-  const run = useSingleFlight();
+  // ConfirmationDialog closes synchronously on click without awaiting
+  // anything, so nothing else stops a second press from firing a second
+  // approve/reject request while the first is still in flight. Gate on the
+  // mutation itself so this holds across BOTH actions sharing this tab —
+  // see AdminTab's own use of the same pattern.
+  const approving = useIsMutating({ mutationKey: ["approve-account"] });
+  const rejecting = useIsMutating({ mutationKey: ["reject-account"] });
+  const submitting = approving > 0 || rejecting > 0;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [confirmation, setConfirmation] = useState<ConfirmationContent | null>(null);
   const [rejectTarget, setRejectTarget] = useState<BankAccount | null>(null);
   const [infoTarget, setInfoTarget] = useState<BankAccount | null>(null);
+  const [snack, setSnack] = useState<{ open: boolean; message: string }>({ open: false, message: "" });
 
   const requests = accountsQuery.data?.bankAccounts ?? [];
   const filtered = requests.filter((r) => r.employeeEmail.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -70,19 +79,20 @@ export default function ChangeRequestsTab() {
     setConfirmation({
       title: "Confirm Acceptance",
       text: "Are you sure you want to accept these changes?",
-      confirmAction: () =>
-        run(async () => {
-          await approveAccount.mutateAsync(request.accountId);
-        }),
+      confirmAction: () => {
+        approveAccount
+          .mutateAsync(request.accountId)
+          .catch((error: unknown) => setSnack({ open: true, message: `Failed to approve the request. ${describeError(error)}` }));
+      },
     });
   }
 
   function submitReject(reason: string) {
     if (!rejectTarget) return;
-    run(async () => {
-      await rejectAccount.mutateAsync({ accountId: rejectTarget.accountId, rejectionReason: reason });
-      setRejectTarget(null);
-    });
+    rejectAccount
+      .mutateAsync({ accountId: rejectTarget.accountId, rejectionReason: reason })
+      .then(() => setRejectTarget(null))
+      .catch((error: unknown) => setSnack({ open: true, message: `Failed to reject the request. ${describeError(error)}` }));
   }
 
   return (
@@ -100,7 +110,17 @@ export default function ChangeRequestsTab() {
         />
       </Box>
 
-      {filtered.length === 0 ? (
+      {accountsQuery.isPending ? (
+        <Stack spacing={1.5}>
+          {Array.from({ length: REQUESTS_PER_PAGE }).map((_, i) => (
+            <Skeleton key={i} variant="rectangular" height={72} sx={{ borderRadius: 1.5 }} />
+          ))}
+        </Stack>
+      ) : accountsQuery.isError ? (
+        <ErrorNotice error={accountsQuery.error} onRetry={() => accountsQuery.refetch()}>
+          Couldn&apos;t load pending bank account change requests.
+        </ErrorNotice>
+      ) : filtered.length === 0 ? (
         <Typography color="text.secondary">No pending bank account change requests.</Typography>
       ) : (
         <Stack spacing={1.5}>
@@ -108,6 +128,7 @@ export default function ChangeRequestsTab() {
             <RequestCard
               key={request.accountId}
               request={request}
+              disabled={submitting}
               onApprove={() => requestApprove(request)}
               onReject={() => setRejectTarget(request)}
               onInfo={() => setInfoTarget(request)}
@@ -125,25 +146,30 @@ export default function ChangeRequestsTab() {
       <ConfirmationDialog content={confirmation} onClose={() => setConfirmation(null)} />
 
       {rejectTarget && (
-        <RejectDialog
-          isSubmitting={rejectAccount.isPending}
-          onCancel={() => setRejectTarget(null)}
-          onSubmit={submitReject}
-        />
+        <RejectDialog isSubmitting={submitting} onCancel={() => setRejectTarget(null)} onSubmit={submitReject} />
       )}
 
       {infoTarget && <AccountDetailsDialog request={infoTarget} onClose={() => setInfoTarget(null)} />}
+
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={6000}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        message={snack.message}
+      />
     </Box>
   );
 }
 
 function RequestCard({
   request,
+  disabled,
   onApprove,
   onReject,
   onInfo,
 }: {
   request: BankAccount;
+  disabled: boolean;
   onApprove: () => void;
   onReject: () => void;
   onInfo: () => void;
@@ -172,10 +198,10 @@ function RequestCard({
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button size="small" onClick={onApprove}>
+          <Button size="small" disabled={disabled} onClick={onApprove}>
             Approve
           </Button>
-          <Button size="small" color="error" onClick={onReject}>
+          <Button size="small" color="error" disabled={disabled} onClick={onReject}>
             Reject
           </Button>
           <Button size="small" onClick={onInfo}>

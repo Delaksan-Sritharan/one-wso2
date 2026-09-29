@@ -33,6 +33,11 @@ export function useDeactivateAccount() {
   const getAccessToken = useAccessToken();
   const qc = useQueryClient();
   return useMutation<{ message: string } | null, Error, DeactivateAccountPayload>({
+    // Shared, not tied to one component instance — lets EmployeeOperationsTab
+    // tell whether a Deactivate (or a Resign loop's own deactivate calls) is
+    // still in flight, to keep Deactivate/Resign from being fired again on a
+    // different account while one is running.
+    mutationKey: ["deactivate-account"],
     mutationFn: async ({ accountId }) =>
       authedPost<{ message: string }>(bankingServiceUrls.deactivateAccount(accountId), await getAccessToken(), null),
     onSuccess: async (_, { employeeEmail }) => {

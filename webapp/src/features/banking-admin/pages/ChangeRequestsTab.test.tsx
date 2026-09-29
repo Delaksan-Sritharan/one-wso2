@@ -21,6 +21,10 @@ import type { BankAccount } from "@features/my/api/types";
 
 const accounts = vi.hoisted(() => ({
   data: [] as BankAccount[],
+  isPending: false,
+  isError: false,
+  error: null as unknown,
+  refetch: vi.fn(),
 }));
 const approveAccount = vi.hoisted(() => ({
   mutate: vi.fn(),
@@ -32,12 +36,22 @@ const rejectAccount = vi.hoisted(() => ({
   mutateAsync: vi.fn().mockResolvedValue(undefined),
   isPending: false,
 }));
+// ChangeRequestsTab reads this directly (not through useApproveAccount/
+// useRejectAccount, which are fully mocked below) to tell whether either
+// action is still in flight — see those mutations' own mutationKey, same
+// pattern as AdminTab's own isMutatingCount.
+const isMutatingCount = vi.hoisted(() => ({ value: 0 }));
+vi.mock("@tanstack/react-query", () => ({
+  useIsMutating: () => isMutatingCount.value,
+}));
 
 vi.mock("@features/my/api/usePendingSalaryAccounts", () => ({
   usePendingSalaryAccounts: () => ({
     data: { bankAccounts: accounts.data, count: accounts.data.length },
-    isLoading: false,
-    isError: false,
+    isPending: accounts.isPending,
+    isError: accounts.isError,
+    error: accounts.error,
+    refetch: accounts.refetch,
   }),
 }));
 vi.mock("@features/my/api/useApproveAccount", () => ({ useApproveAccount: () => approveAccount }));
@@ -73,10 +87,15 @@ function bankAccount(overrides: Partial<BankAccount> = {}): BankAccount {
 
 beforeEach(() => {
   accounts.data = [];
+  accounts.isPending = false;
+  accounts.isError = false;
+  accounts.error = null;
+  accounts.refetch.mockReset();
   approveAccount.mutate.mockReset();
   approveAccount.mutateAsync.mockReset().mockResolvedValue(undefined);
   rejectAccount.mutate.mockReset();
   rejectAccount.mutateAsync.mockReset().mockResolvedValue(undefined);
+  isMutatingCount.value = 0;
 });
 
 describe("ChangeRequestsTab list", () => {
@@ -93,6 +112,23 @@ describe("ChangeRequestsTab list", () => {
   it("shows a clear empty state when there are no pending requests", () => {
     render(<ChangeRequestsTab />);
     expect(screen.getByText(/no pending/i)).toBeInTheDocument();
+  });
+
+  it("shows a loading state instead of the empty message while the query is still pending", () => {
+    accounts.isPending = true;
+    render(<ChangeRequestsTab />);
+    expect(screen.queryByText(/no pending/i)).not.toBeInTheDocument();
+  });
+
+  it("shows a retryable error instead of the empty message when the query fails", async () => {
+    const user = userEvent.setup();
+    accounts.isError = true;
+    accounts.error = new Error("boom");
+    render(<ChangeRequestsTab />);
+    expect(screen.queryByText(/no pending/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/couldn.?t load pending/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    expect(accounts.refetch).toHaveBeenCalledTimes(1);
   });
 
   it("filters the list by employee email", async () => {
@@ -162,5 +198,37 @@ describe("ChangeRequestsTab actions", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText(/NS-42/)).toBeInTheDocument();
     expect(within(dialog).getByText(/123456789/)).toBeInTheDocument();
+  });
+
+  it("disables Approve and Reject on other requests while one is already in flight", () => {
+    accounts.data = [bankAccount({ accountId: 7, employeeEmail: "jane@wso2.com" })];
+    isMutatingCount.value = 1;
+    render(<ChangeRequestsTab />);
+    expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled();
+    // Info is read-only, not a submission — no reason to block it.
+    expect(screen.getByRole("button", { name: "Info" })).toBeEnabled();
+  });
+
+  it("shows an error instead of swallowing a failed approve", async () => {
+    const user = userEvent.setup();
+    approveAccount.mutateAsync.mockReset().mockRejectedValue(new Error("Account already active"));
+    accounts.data = [bankAccount({ accountId: 7 })];
+    render(<ChangeRequestsTab />);
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm" }));
+    expect(await screen.findByText(/failed to approve.*account already active/i)).toBeInTheDocument();
+  });
+
+  it("shows an error instead of swallowing a failed reject", async () => {
+    const user = userEvent.setup();
+    rejectAccount.mutateAsync.mockReset().mockRejectedValue(new Error("Backend timeout"));
+    accounts.data = [bankAccount({ accountId: 7 })];
+    render(<ChangeRequestsTab />);
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    const dialog = screen.getByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Reason for Rejection"), "Invalid account details");
+    await user.click(within(dialog).getByRole("button", { name: "Reject" }));
+    expect(await screen.findByText(/failed to reject.*backend timeout/i)).toBeInTheDocument();
   });
 });

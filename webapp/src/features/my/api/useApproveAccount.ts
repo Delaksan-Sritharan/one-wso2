@@ -26,6 +26,10 @@ export function useApproveAccount() {
   const getAccessToken = useAccessToken();
   const qc = useQueryClient();
   return useMutation<{ message: string } | null, Error, number>({
+    // Shared, not tied to one component instance — lets ChangeRequestsTab
+    // tell whether an approval is still in flight even after the
+    // ConfirmationDialog that started it has already closed.
+    mutationKey: ["approve-account"],
     mutationFn: async (accountId) =>
       authedPost<{ message: string }>(
         bankingServiceUrls.accountAction(accountId, "approve"),

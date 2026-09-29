@@ -25,6 +25,9 @@ const banks = vi.hoisted(() => ({
 const privileges = vi.hoisted(() => ({
   value: { isPeopleOperationsAdmin: false, isFinanceAdmin: false },
 }));
+const config = vi.hoisted(() => ({
+  value: { salaryThreshold: 18, consultancyThreshold: 20, allCountries: ["Sri Lanka", "United States"] },
+}));
 const createBank = vi.hoisted(() => ({
   mutate: vi.fn(),
   mutateAsync: vi.fn().mockResolvedValue(undefined),
@@ -35,16 +38,20 @@ const updateThreshold = vi.hoisted(() => ({
   mutateAsync: vi.fn().mockResolvedValue(undefined),
   isPending: false,
 }));
+// AdminTab reads this directly (not through useCreateBank/useUpdateThreshold,
+// which are fully mocked below) to tell whether either action is still in
+// flight — see those mutations' own mutationKey, same pattern as
+// MyAccountsTab's own isMutatingCount in BankingPage.test.tsx.
+const isMutatingCount = vi.hoisted(() => ({ value: 0 }));
+vi.mock("@tanstack/react-query", () => ({
+  useIsMutating: () => isMutatingCount.value,
+}));
 
 vi.mock("@features/my/api/useBanks", () => ({
   useBanks: () => ({ data: { banks: banks.data, count: banks.data.length }, isLoading: false, isError: false }),
 }));
 vi.mock("@features/my/api/useBankingConfig", () => ({
-  useBankingConfig: () => ({
-    data: { salaryThreshold: 18, consultancyThreshold: 20, allCountries: ["Sri Lanka", "United States"] },
-    isLoading: false,
-    isError: false,
-  }),
+  useBankingConfig: () => ({ data: config.value, isLoading: false, isError: false }),
 }));
 vi.mock("@features/my/api/useBankingPrivileges", () => ({
   useBankingPrivileges: () => ({ data: privileges.value, isLoading: false, isError: false }),
@@ -61,10 +68,12 @@ function bank(overrides: Partial<Bank> = {}): Bank {
 beforeEach(() => {
   banks.data = [];
   privileges.value = { isPeopleOperationsAdmin: false, isFinanceAdmin: false };
+  config.value = { salaryThreshold: 18, consultancyThreshold: 20, allCountries: ["Sri Lanka", "United States"] };
   createBank.mutate.mockReset();
   createBank.mutateAsync.mockReset().mockResolvedValue(undefined);
   updateThreshold.mutate.mockReset();
   updateThreshold.mutateAsync.mockReset().mockResolvedValue(undefined);
+  isMutatingCount.value = 0;
 });
 
 describe("AdminTab thresholds", () => {
@@ -109,6 +118,28 @@ describe("AdminTab thresholds", () => {
     await user.click(screen.getByRole("button", { name: "Update Salary Threshold" }));
     await user.click(await screen.findByRole("button", { name: "Confirm" }));
     expect(updateThreshold.mutateAsync).toHaveBeenCalledWith({ key: "SALARY_THRESHOLD", value: 25 });
+  });
+
+  it("keeps tracking the server value again once a refetch catches up with the typed draft", async () => {
+    const user = userEvent.setup();
+    privileges.value = { isPeopleOperationsAdmin: true, isFinanceAdmin: false };
+    const { rerender } = render(<AdminTab />);
+    const input = screen.getByLabelText("Salary Threshold Day (1-31)");
+    await user.clear(input);
+    await user.type(input, "25");
+
+    // A refetch (this admin's own successful update, or someone else's)
+    // brings the server value in line with what was typed.
+    config.value = { ...config.value, salaryThreshold: 25 };
+    rerender(<AdminTab />);
+
+    // A later refetch moves the server value again. If the draft never
+    // reset when it first matched, it would still be pinned at 25 here
+    // instead of following the new server value.
+    config.value = { ...config.value, salaryThreshold: 30 };
+    rerender(<AdminTab />);
+
+    expect(screen.getByLabelText("Salary Threshold Day (1-31)")).toHaveValue(30);
   });
 });
 
@@ -194,5 +225,46 @@ describe("AdminTab bank list", () => {
 
     expect(createBank.mutateAsync).toHaveBeenCalledTimes(1);
     finish();
+  });
+});
+
+describe("AdminTab one submission at a time", () => {
+  it("disables Add Bank and both Update buttons while another banking-admin mutation is in flight", () => {
+    privileges.value = { isPeopleOperationsAdmin: true, isFinanceAdmin: true };
+    isMutatingCount.value = 1;
+    render(<AdminTab />);
+    expect(screen.getByRole("button", { name: "Add Bank" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Update Salary Threshold" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Update Consultancy Threshold" })).toBeDisabled();
+  });
+
+  it("shows an error instead of swallowing a failed threshold update", async () => {
+    const user = userEvent.setup();
+    updateThreshold.mutateAsync.mockReset().mockRejectedValue(new Error("Backend rejected the update"));
+    privileges.value = { isPeopleOperationsAdmin: true, isFinanceAdmin: false };
+    render(<AdminTab />);
+    const input = screen.getByLabelText("Salary Threshold Day (1-31)");
+    await user.clear(input);
+    await user.type(input, "25");
+    await user.click(screen.getByRole("button", { name: "Update Salary Threshold" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm" }));
+    expect(await screen.findByText(/failed to update.*backend rejected the update/i)).toBeInTheDocument();
+  });
+
+  it("shows an error instead of swallowing a failed create-bank request", async () => {
+    const user = userEvent.setup();
+    createBank.mutateAsync.mockReset().mockRejectedValue(new Error("Duplicate SWIFT code"));
+    banks.data = [bank({ bankCode: "COM001", swiftCode: "COMBLK" })];
+    render(<AdminTab />);
+    await user.click(screen.getByRole("button", { name: "Add Bank" }));
+    const dialog = screen.getByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Bank Name"), "Sampath Bank");
+    await user.type(within(dialog).getByLabelText("Bank Code"), "SAM001");
+    await user.type(within(dialog).getByLabelText("SWIFT Code"), "SAMPLK");
+    await user.click(within(dialog).getByLabelText("Location"));
+    await user.click(await screen.findByText("Sri Lanka"));
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm" }));
+    expect(await screen.findByText(/failed to add the bank.*duplicate swift code/i)).toBeInTheDocument();
   });
 });

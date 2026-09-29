@@ -29,6 +29,10 @@ export function useCreateBank() {
   const getAccessToken = useAccessToken();
   const qc = useQueryClient();
   return useMutation<Bank | null, Error, Bank>({
+    // Shared, not tied to one component instance — lets AdminTab tell
+    // whether a create-bank request is still in flight even after the
+    // ConfirmationDialog that started it has already closed.
+    mutationKey: ["create-bank"],
     mutationFn: async (payload) =>
       authedPost<Bank>(bankingServiceUrls.createBank, await getAccessToken(), payload),
     onSuccess: async () => {

@@ -15,9 +15,22 @@
 // under the License.
 
 import { useState } from "react";
-import { Autocomplete, Box, Button, Divider, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from "@wso2/oxygen-ui";
+import { useIsMutating } from "@tanstack/react-query";
+import {
+  Autocomplete,
+  Box,
+  Button,
+  Divider,
+  Menu,
+  MenuItem,
+  Snackbar,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@wso2/oxygen-ui";
+import { describeError } from "@api/errors";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
-import { useSingleFlight } from "@components/confirmation-dialog/useSingleFlight";
 import { useBankAccounts } from "@features/my/api/useBankAccounts";
 import { useBankingConfig } from "@features/my/api/useBankingConfig";
 import { useBankingEmployees } from "@features/my/api/useBankingEmployees";
@@ -50,14 +63,18 @@ export default function EmployeeOperationsTab() {
   const accountsQuery = useBankAccounts(selectedEmployee?.workEmail);
   const deactivateAccount = useDeactivateAccount();
 
-  // Shared by Deactivate and Resign: only one ConfirmationDialog is ever
-  // open at a time, and it closes synchronously on click without awaiting
-  // anything.
-  const run = useSingleFlight();
+  // Shared by Deactivate and Resign: ConfirmationDialog closes synchronously
+  // on click without awaiting anything, so nothing else stops a second press
+  // from firing a second deactivate request (on a different account) while
+  // the first — or the Resign loop's own sequence of them — is still in
+  // flight. Gate on the mutation itself — see AdminTab's own use of the
+  // same pattern.
+  const submitting = useIsMutating({ mutationKey: ["deactivate-account"] }) > 0;
 
   const [confirmation, setConfirmation] = useState<ConfirmationContent | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [addAccountType, setAddAccountType] = useState<AccountType | null>(null);
+  const [snack, setSnack] = useState<{ open: boolean; message: string }>({ open: false, message: "" });
 
   const employees = employeesQuery.data ?? [];
   const accounts = accountsQuery.data?.bankAccounts ?? [];
@@ -67,14 +84,14 @@ export default function EmployeeOperationsTab() {
     setConfirmation({
       title: "Confirm Deactivation",
       text: "Are you sure you want to deactivate these account?",
-      confirmAction: () =>
-        run(async () => {
-          if (!selectedEmployee) return;
-          await deactivateAccount.mutateAsync({
-            accountId: account.accountId,
-            employeeEmail: selectedEmployee.workEmail,
-          });
-        }),
+      confirmAction: () => {
+        if (!selectedEmployee) return;
+        deactivateAccount
+          .mutateAsync({ accountId: account.accountId, employeeEmail: selectedEmployee.workEmail })
+          .catch((error: unknown) =>
+            setSnack({ open: true, message: `Failed to deactivate the account. ${describeError(error)}` }),
+          );
+      },
     });
   }
 
@@ -82,9 +99,9 @@ export default function EmployeeOperationsTab() {
     setConfirmation({
       title: "Confirm Resignation",
       text: "Are you sure you want to resign this employee? This will deactivate employee's all active bank accounts !",
-      confirmAction: () =>
-        run(async () => {
-          if (!selectedEmployee) return;
+      confirmAction: () => {
+        if (!selectedEmployee) return;
+        void (async () => {
           // Matches the source app's own Resign action: no dedicated resign
           // endpoint, just every currently-Active account deactivated in
           // turn, behind this one confirmation. Each account is its own
@@ -104,7 +121,8 @@ export default function EmployeeOperationsTab() {
               }
             }
           }
-        }),
+        })();
+      },
     });
   }
 
@@ -125,7 +143,7 @@ export default function EmployeeOperationsTab() {
             <Button
               size="small"
               color="error"
-              disabled={a.accountStatus === "INACTIVE"}
+              disabled={a.accountStatus === "INACTIVE" || submitting}
               onClick={() => requestDeactivate(a)}
             >
               Deactivate
@@ -169,7 +187,7 @@ export default function EmployeeOperationsTab() {
             <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
               Employee Details
             </Typography>
-            <Button variant="contained" color="error" onClick={requestResign}>
+            <Button variant="contained" color="error" disabled={submitting} onClick={requestResign}>
               Resign Employee
             </Button>
           </Stack>
@@ -246,6 +264,13 @@ export default function EmployeeOperationsTab() {
           }}
         />
       )}
+
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={6000}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        message={snack.message}
+      />
     </Box>
   );
 }

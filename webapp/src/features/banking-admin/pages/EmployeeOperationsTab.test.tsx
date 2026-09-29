@@ -36,6 +36,14 @@ const deactivateAccount = vi.hoisted(() => ({
   mutateAsync: vi.fn().mockResolvedValue(undefined),
   isPending: false,
 }));
+// EmployeeOperationsTab reads this directly (not through useDeactivateAccount,
+// which is fully mocked below) to tell whether a Deactivate/Resign is still
+// in flight — see that mutation's own mutationKey, same pattern as
+// AdminTab's own isMutatingCount.
+const isMutatingCount = vi.hoisted(() => ({ value: 0 }));
+vi.mock("@tanstack/react-query", () => ({
+  useIsMutating: () => isMutatingCount.value,
+}));
 
 vi.mock("@features/my/api/useBankingEmployees", () => ({
   useBankingEmployees: () => ({ data: employees.data, isLoading: false, isError: false }),
@@ -129,6 +137,7 @@ beforeEach(() => {
   bankAccountsSpy.mockReset();
   deactivateAccount.mutate.mockReset();
   deactivateAccount.mutateAsync.mockReset().mockResolvedValue(undefined);
+  isMutatingCount.value = 0;
 });
 
 describe("EmployeeOperationsTab", () => {
@@ -192,6 +201,27 @@ describe("EmployeeOperationsTab", () => {
     expect(deactivateAccount.mutateAsync).toHaveBeenCalledTimes(2);
     expect(deactivateAccount.mutateAsync).toHaveBeenCalledWith({ accountId: 1, employeeEmail: "jane@wso2.com" });
     expect(deactivateAccount.mutateAsync).toHaveBeenCalledWith({ accountId: 2, employeeEmail: "jane@wso2.com" });
+  });
+
+  it("disables Deactivate and Resign Employee while a deactivate mutation is already in flight", async () => {
+    const user = userEvent.setup();
+    accounts.data = [bankAccount({ accountId: 1, accountStatus: "ACTIVE" })];
+    isMutatingCount.value = 1;
+    render(<EmployeeOperationsTab />);
+    await selectEmployee(user);
+    expect(screen.getByRole("button", { name: "Deactivate" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Resign Employee" })).toBeDisabled();
+  });
+
+  it("shows an error instead of swallowing a failed single-account Deactivate", async () => {
+    const user = userEvent.setup();
+    deactivateAccount.mutateAsync.mockReset().mockRejectedValue(new Error("HTTP 500"));
+    accounts.data = [bankAccount({ accountId: 1, accountStatus: "ACTIVE" })];
+    render(<EmployeeOperationsTab />);
+    await selectEmployee(user);
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm" }));
+    expect(await screen.findByText(/failed to deactivate.*http 500/i)).toBeInTheDocument();
   });
 
   it("disables the Reimbursement option for an ineligible location", async () => {

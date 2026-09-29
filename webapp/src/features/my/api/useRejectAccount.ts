@@ -31,6 +31,10 @@ export function useRejectAccount() {
   const getAccessToken = useAccessToken();
   const qc = useQueryClient();
   return useMutation<{ message: string } | null, Error, RejectAccountPayload>({
+    // Shared, not tied to one component instance — see useApproveAccount's
+    // own mutationKey comment; ChangeRequestsTab reads both to know whether
+    // any action in this tab is currently in flight.
+    mutationKey: ["reject-account"],
     mutationFn: async ({ accountId, rejectionReason }) =>
       authedPost<{ message: string }>(
         bankingServiceUrls.accountAction(accountId, "reject"),
