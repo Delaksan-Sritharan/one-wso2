@@ -34,10 +34,11 @@ import type {
  *
  * The source spreads this across `setInitialData`, `isAllFieldsFilled`,
  * `areDataEqual` and `getUpdatedData`, each re-deriving which tab it is on
- * through a chain of type guards. Here the per-tab knowledge is declared once
- * in FIELD_RULES and the four operations read it, because the rules are the
- * part that must stay faithful and they are much easier to check against the
- * source when they sit together in a table.
+ * through a chain of type guards. Here the per-tab knowledge is declared once,
+ * in `OPTIONAL_FIELDS` and `EITHER_OR_GROUPS` below, and the four operations
+ * read it, because the rules are the part that must stay faithful and they
+ * are much easier to check against the source when they sit together in a
+ * table instead of threaded through four functions.
  */
 
 /** Fields that may be left blank — `constants.ts:112-121`. */
