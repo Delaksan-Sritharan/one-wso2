@@ -26,7 +26,6 @@ import {
   DialogTitle,
   Pagination,
   Skeleton,
-  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -35,6 +34,8 @@ import { describeError } from "@api/errors";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { dialogPaperSx } from "@components/confirmation-dialog/dialogPaperSx";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
+import ErrorSnackbar from "@components/error-snackbar/ErrorSnackbar";
+import { useErrorSnackbar } from "@components/error-snackbar/useErrorSnackbar";
 import { useApproveAccount } from "@features/my/api/useApproveAccount";
 import { usePendingSalaryAccounts } from "@features/my/api/usePendingSalaryAccounts";
 import { useRejectAccount } from "@features/my/api/useRejectAccount";
@@ -58,16 +59,16 @@ export default function ChangeRequestsTab() {
   // approve/reject request while the first is still in flight. Gate on the
   // mutation itself so this holds across BOTH actions sharing this tab —
   // see AdminTab's own use of the same pattern.
-  const approving = useIsMutating({ mutationKey: ["approve-account"] });
-  const rejecting = useIsMutating({ mutationKey: ["reject-account"] });
-  const submitting = approving > 0 || rejecting > 0;
+  const approvingCount = useIsMutating({ mutationKey: ["approve-account"] });
+  const rejectingCount = useIsMutating({ mutationKey: ["reject-account"] });
+  const submitting = approvingCount > 0 || rejectingCount > 0;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [confirmation, setConfirmation] = useState<ConfirmationContent | null>(null);
   const [rejectTarget, setRejectTarget] = useState<BankAccount | null>(null);
   const [infoTarget, setInfoTarget] = useState<BankAccount | null>(null);
-  const [snack, setSnack] = useState<{ open: boolean; message: string }>({ open: false, message: "" });
+  const { snack, showError, close: closeSnack } = useErrorSnackbar();
 
   const requests = accountsQuery.data?.bankAccounts ?? [];
   const filtered = requests.filter((r) => r.employeeEmail.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -82,7 +83,7 @@ export default function ChangeRequestsTab() {
       confirmAction: () => {
         approveAccount
           .mutateAsync(request.accountId)
-          .catch((error: unknown) => setSnack({ open: true, message: `Failed to approve the request. ${describeError(error)}` }));
+          .catch((error: unknown) => showError(`Failed to approve the request. ${describeError(error)}`));
       },
     });
   }
@@ -92,7 +93,7 @@ export default function ChangeRequestsTab() {
     rejectAccount
       .mutateAsync({ accountId: rejectTarget.accountId, rejectionReason: reason })
       .then(() => setRejectTarget(null))
-      .catch((error: unknown) => setSnack({ open: true, message: `Failed to reject the request. ${describeError(error)}` }));
+      .catch((error: unknown) => showError(`Failed to reject the request. ${describeError(error)}`));
   }
 
   return (
@@ -151,12 +152,7 @@ export default function ChangeRequestsTab() {
 
       {infoTarget && <AccountDetailsDialog request={infoTarget} onClose={() => setInfoTarget(null)} />}
 
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={6000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        message={snack.message}
-      />
+      <ErrorSnackbar snack={snack} onClose={closeSnack} />
     </Box>
   );
 }

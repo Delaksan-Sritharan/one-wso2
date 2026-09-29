@@ -25,7 +25,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -33,6 +32,8 @@ import {
 import { describeError } from "@api/errors";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { dialogPaperSx } from "@components/confirmation-dialog/dialogPaperSx";
+import ErrorSnackbar from "@components/error-snackbar/ErrorSnackbar";
+import { useErrorSnackbar } from "@components/error-snackbar/useErrorSnackbar";
 import { useBanks } from "@features/my/api/useBanks";
 import { useBankingConfig } from "@features/my/api/useBankingConfig";
 import { useCreateBank } from "@features/my/api/useCreateBank";
@@ -61,15 +62,15 @@ export default function AdminTab() {
   // at a time" guarantee the source app's own global submitState gives —
   // just read back from React Query's mutation cache instead of a Redux
   // slice (see MyAccountsTab's own use of the same pattern).
-  const creatingBank = useIsMutating({ mutationKey: ["create-bank"] });
-  const updatingThreshold = useIsMutating({ mutationKey: ["update-threshold"] });
-  const submitting = creatingBank > 0 || updatingThreshold > 0;
+  const creatingBankCount = useIsMutating({ mutationKey: ["create-bank"] });
+  const updatingThresholdCount = useIsMutating({ mutationKey: ["update-threshold"] });
+  const submitting = creatingBankCount > 0 || updatingThresholdCount > 0;
 
   const [confirmation, setConfirmation] = useState<ConfirmationContent | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [addBankOpen, setAddBankOpen] = useState(false);
   const [newBank, setNewBank] = useState(BLANK_BANK);
-  const [snack, setSnack] = useState<{ open: boolean; message: string }>({ open: false, message: "" });
+  const { snack, showError, close: closeSnack } = useErrorSnackbar();
 
   const banks = banksQuery.data?.banks ?? [];
   const config = configQuery.data;
@@ -104,7 +105,7 @@ export default function AdminTab() {
         createBank
           .mutateAsync(payload)
           .then(closeAddBank)
-          .catch((error: unknown) => setSnack({ open: true, message: `Failed to add the bank. ${describeError(error)}` }));
+          .catch((error: unknown) => showError(`Failed to add the bank. ${describeError(error)}`));
       },
     });
   }
@@ -116,7 +117,7 @@ export default function AdminTab() {
       confirmAction: () => {
         updateThreshold
           .mutateAsync({ key, value })
-          .catch((error: unknown) => setSnack({ open: true, message: `Failed to update the ${label}. ${describeError(error)}` }));
+          .catch((error: unknown) => showError(`Failed to update the ${label}. ${describeError(error)}`));
       },
     });
   }
@@ -224,12 +225,7 @@ export default function AdminTab() {
 
       <ConfirmationDialog content={confirmation} onClose={() => setConfirmation(null)} />
 
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={6000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        message={snack.message}
-      />
+      <ErrorSnackbar snack={snack} onClose={closeSnack} />
     </Box>
   );
 }

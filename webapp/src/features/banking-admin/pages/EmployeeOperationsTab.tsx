@@ -23,7 +23,6 @@ import {
   Divider,
   Menu,
   MenuItem,
-  Snackbar,
   Stack,
   TextField,
   Tooltip,
@@ -31,6 +30,8 @@ import {
 } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
+import ErrorSnackbar from "@components/error-snackbar/ErrorSnackbar";
+import { useErrorSnackbar } from "@components/error-snackbar/useErrorSnackbar";
 import { useBankAccounts } from "@features/my/api/useBankAccounts";
 import { useBankingConfig } from "@features/my/api/useBankingConfig";
 import { useBankingEmployees } from "@features/my/api/useBankingEmployees";
@@ -74,7 +75,7 @@ export default function EmployeeOperationsTab() {
   const [confirmation, setConfirmation] = useState<ConfirmationContent | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [addAccountType, setAddAccountType] = useState<AccountType | null>(null);
-  const [snack, setSnack] = useState<{ open: boolean; message: string }>({ open: false, message: "" });
+  const { snack, showError, close: closeSnack } = useErrorSnackbar();
 
   const employees = employeesQuery.data ?? [];
   const accounts = accountsQuery.data?.bankAccounts ?? [];
@@ -88,9 +89,7 @@ export default function EmployeeOperationsTab() {
         if (!selectedEmployee) return;
         deactivateAccount
           .mutateAsync({ accountId: account.accountId, employeeEmail: selectedEmployee.workEmail })
-          .catch((error: unknown) =>
-            setSnack({ open: true, message: `Failed to deactivate the account. ${describeError(error)}` }),
-          );
+          .catch((error: unknown) => showError(`Failed to deactivate the account. ${describeError(error)}`));
       },
     });
   }
@@ -265,12 +264,7 @@ export default function EmployeeOperationsTab() {
         />
       )}
 
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={6000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        message={snack.message}
-      />
+      <ErrorSnackbar snack={snack} onClose={closeSnack} />
     </Box>
   );
 }
