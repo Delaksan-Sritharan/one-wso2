@@ -23,6 +23,7 @@ import { useState } from "react";
 import { Box, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
 import { ChevronDownIcon, InboxIcon, RefreshCwIcon, TriangleAlertIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
+import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests } from "../api/usePromotionRequests";
 import { basePromotionRequestColumns } from "../components/promotionRequestColumns";
 import PromotionEmptyState from "../components/PromotionEmptyState";
@@ -36,7 +37,14 @@ const STRIPE_SX = {
 };
 
 export default function PBApprovedListTab() {
-  const requests = usePromotionRequests({ statusArray: ["APPROVED"] });
+  // Source always scopes this to the open cycle (cycleId=<id>) — without it,
+  // the backend's query joins across every past cycle, including older rows
+  // with a null businessUnit/department/team that 500 on the strict mapping.
+  const cycle = useActivePromotionCycle();
+  const requests = usePromotionRequests(
+    { statusArray: ["APPROVED"], cycleId: cycle.cycle?.id },
+    !cycle.isPending && Boolean(cycle.cycle),
+  );
   const [viewingRequest, setViewingRequest] = useState<PromotionRequestFull | null>(null);
 
   const rows = requests.data?.promotionRequests ?? [];
@@ -72,8 +80,14 @@ export default function PBApprovedListTab() {
         </Tooltip>
       </Box>
 
-      {requests.isPending ? (
+      {cycle.isPending || (Boolean(cycle.cycle) && requests.isPending) ? (
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
+      ) : cycle.isError ? (
+        <PromotionEmptyState
+          icon={<TriangleAlertIcon size={28} />}
+          tone="error"
+          message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
+        />
       ) : requests.isError ? (
         <PromotionEmptyState
           icon={<TriangleAlertIcon size={28} />}
