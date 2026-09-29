@@ -26,7 +26,7 @@ import EngineeringOverviewPage from "./EngineeringOverviewPage";
 const auth = vi.hoisted(() => {
   window.config = {
     ...(window.config ?? {}),
-    ONE_WSO2_AUTH_BASE_URL: "https://api.asgardeo.io/t/test",
+    ONE_WSO2_AUTH_BASE_URL: "https://auth.example.com/t/test",
     ONE_WSO2_AUTH_CLIENT_ID: "test-client",
     ONE_WSO2_AUTH_SIGN_IN_REDIRECT_URL: "http://localhost:3000",
     ONE_WSO2_AUTH_SIGN_OUT_REDIRECT_URL: "http://localhost:3000",
@@ -291,6 +291,22 @@ describe("Engineering Overview", () => {
 
     expect(await screen.findByText(/loading release downloads/i)).toBeInTheDocument();
     expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/^http:\/\/localhost:8080\//);
+  });
+
+  it("allows an http address on IPv6 loopback", async () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { engineering: true },
+      ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "http://[::1]:8080",
+    } as Window["config"];
+    const fetchMock = vi.fn<(url: string) => Promise<Response>>();
+    fetchMock.mockImplementation(() => new Promise(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderOverview();
+
+    expect(await screen.findByText(/loading release downloads/i)).toBeInTheDocument();
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/^http:\/\/\[::1\]:8080\//);
   });
 
   it("says Product Download Stats is not connected when the API address is missing", () => {

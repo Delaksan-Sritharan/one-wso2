@@ -34,7 +34,9 @@ export function isProductDownloadStatsConfigured(): boolean {
 // The access token goes on every Product Download Stats request. An http
 // address would put that token on the wire in the clear. Localhost is the
 // only http host allowed, for a developer running the API on their machine.
-const LOCAL_HTTP_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+// `new URL("http://[::1]").hostname` keeps the brackets. The bare form is
+// included in case a host reports it without them.
+const LOCAL_HTTP_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 
 export function isCredentialedProductDownloadStatsUrl(url: string): boolean {
   let parsed: URL;

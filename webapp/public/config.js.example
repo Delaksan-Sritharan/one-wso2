@@ -126,9 +126,9 @@ window.config = {
 
   // Product Download Stats API (engineering-tools gh-product-stats-backend).
   // Optional — when absent, Engineering Overview says it isn't connected and
-  // makes no requests. Production should use the same gateway URL as
-  // downloadstats.apps.wso2.com.
-  // ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "https://<gateway>/gh-product-stats-backend/v1.0",
+  // makes no requests. Use the same gateway URL the existing Download Stats
+  // app uses. The version segment is part of the URL.
+  // ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "<product-download-stats-backend-url>",
 
   // Pardot UI base URL — for deep-linking to an email template after Email
   // Workbench pushes it. A link target, not an API. Defaults to
