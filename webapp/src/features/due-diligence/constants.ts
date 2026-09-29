@@ -142,6 +142,14 @@ export const LEGAL_OPINION_CATEGORY_ID = "3";
 export const LEGAL_COMMENT_QUESTION_ID = 80;
 export const LEGAL_APPROVAL_QUESTION_ID = 45;
 export const FILE_UPLOAD_LIMIT = 5;
+// Matches the "PDF, JPEG, PNG, JPG" hint shown next to every upload zone in
+// this feature — the source app shows the same hint but never actually
+// enforces it (no accept attribute, no validation before upload), which let
+// through anything up to and including a .zip or .html file. Checked in
+// useUploadPartnerFile itself (not just the input's `accept` attribute,
+// which is a picker hint only and drag-and-drop bypasses it entirely), so
+// every caller of that hook is covered without duplicating the check.
+export const ALLOWED_FILE_EXTENSIONS = new Set(["pdf", "jpg", "jpeg", "png"]);
 export const LEGAL_CHOOSE_FILE_SUBQUESTION_ID = 104;
 export const FINANCE_CHOOSE_FILE_SUBQUESTION_ID = 100;
 export const CREATOR_COMMENT_QUESTION_ID = 42;

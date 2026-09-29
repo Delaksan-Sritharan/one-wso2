@@ -222,7 +222,7 @@ export default function LegalCommentInputs({
                       Attach file
                     </Button>
                   )}
-                  <input ref={editFileInput} type="file" multiple hidden onChange={(e) => void uploadFiles(e.target.files, editNewFiles, setEditNewFiles)} />
+                  <input ref={editFileInput} type="file" multiple hidden accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => void uploadFiles(e.target.files, editNewFiles, setEditNewFiles)} />
                   <FileList files={commentFiles} savedFiles={savedCommentFiles} onOpen={openFile} onRemove={(f) => removeFile(f, editNewFiles, setEditNewFiles)} />
                   <Stack direction="row" spacing={1}>
                     <Button variant="contained" size="small" onClick={() => saveEditedComment(item.commentId)} disabled={editComment.isPending}>
@@ -268,7 +268,7 @@ export default function LegalCommentInputs({
                 Attach file
               </Button>
             )}
-            <input ref={newFileInput} type="file" multiple hidden onChange={(e) => void uploadFiles(e.target.files, newFiles, setNewFiles)} />
+            <input ref={newFileInput} type="file" multiple hidden accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => void uploadFiles(e.target.files, newFiles, setNewFiles)} />
             <FileList files={newFiles} savedFiles={[]} onOpen={openFile} onRemove={(f) => removeFile(f, newFiles, setNewFiles)} />
             <Stack direction="row" spacing={1}>
               <Button variant="contained" size="small" onClick={saveNewComment} disabled={currentComment.trim() === "" || addComment.isPending}>

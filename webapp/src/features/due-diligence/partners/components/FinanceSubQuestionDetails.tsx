@@ -282,7 +282,7 @@ export default function FinanceSubQuestionDetails({
               </Box>
             )}
             {subQuestion.subQuestionId === FINANCE_CHOOSE_FILE_SUBQUESTION_ID && (
-              <input ref={inputRef} type="file" multiple hidden onChange={(e) => void handleFileSelect(e.target.files)} disabled={fileLimitReached} />
+              <input ref={inputRef} type="file" multiple hidden accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => void handleFileSelect(e.target.files)} disabled={fileLimitReached} />
             )}
             {pendingFiles.length > 0 && (
               <Stack direction="row" spacing={1}>
