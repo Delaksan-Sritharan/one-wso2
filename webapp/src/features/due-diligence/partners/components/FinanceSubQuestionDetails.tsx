@@ -42,6 +42,7 @@ export default function FinanceSubQuestionDetails({
   approvalEmailSent,
   applicantEmail,
   fieldDisabled,
+  canUploadFiles,
   onAnswered,
 }: {
   companyId: string;
@@ -53,6 +54,15 @@ export default function FinanceSubQuestionDetails({
   approvalEmailSent: boolean;
   applicantEmail: string;
   fieldDisabled: boolean;
+  // Separate from fieldDisabled on purpose — see the note where this is
+  // computed in FinanceQuestionDetails.tsx. fieldDisabled is false only for
+  // the narrow set of questions/roles that may approve a decision, which
+  // left this permanently true (and file uploads permanently gated out) for
+  // the attach-files question specifically, for every caller regardless of
+  // role. canUploadFiles is the actual permission check for the upload
+  // trigger below; it must stay true only for roles that can legitimately
+  // reach this tab, not be removed outright.
+  canUploadFiles: boolean;
   onAnswered: (subQuestionId: number, booleanAnswer: boolean | "", descriptionAnswer: string, isValid: boolean) => void;
 }) {
   const uploadFile = useUploadPartnerFile();
@@ -89,7 +99,7 @@ export default function FinanceSubQuestionDetails({
   };
 
   const handleFileSelect = async (fileList: FileList | null) => {
-    if (!fileList || fileList.length === 0) return;
+    if (!fileList || fileList.length === 0 || !canUploadFiles) return;
     const total = savedFiles.length + pendingFiles.length + fileList.length;
     if (total > FILE_UPLOAD_LIMIT) {
       setSnack(`Cannot upload more than ${FILE_UPLOAD_LIMIT} files`);
@@ -111,6 +121,7 @@ export default function FinanceSubQuestionDetails({
   };
 
   const saveNewFiles = () => {
+    if (!canUploadFiles) return;
     saveMetadata.mutate(
       {
         email: applicantEmail,
@@ -134,7 +145,7 @@ export default function FinanceSubQuestionDetails({
 
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault();
-    if (!fileLimitReached) setIsDragging(true);
+    if (!fileLimitReached && !uploadFile.isPending) setIsDragging(true);
   };
   const handleDragOver = (e: DragEvent) => e.preventDefault();
   const handleDragLeave = (e: DragEvent) => {
@@ -144,7 +155,12 @@ export default function FinanceSubQuestionDetails({
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (!fileLimitReached) void handleFileSelect(e.dataTransfer.files);
+    // uploadFile.isPending too, not just fileLimitReached: fileLimitReached
+    // is derived from savedFiles/pendingFiles, neither of which accounts for
+    // a file that's mid-upload but not yet in either list — without this, a
+    // drop during an in-flight upload could kick off another one and push
+    // past FILE_UPLOAD_LIMIT.
+    if (!fileLimitReached && !uploadFile.isPending) void handleFileSelect(e.dataTransfer.files);
   };
 
   const openFile = (fileName: string) => {
@@ -243,7 +259,9 @@ export default function FinanceSubQuestionDetails({
             // above. One upload control at the bottom instead of one
             // repeated per file avoids the same action appearing three
             // times in a row for what's really one attach-a-document step.
-            subQuestion.subQuestionId === FINANCE_CHOOSE_FILE_SUBQUESTION_ID && (
+            // canUploadFiles gates it, not fieldDisabled — see the prop's
+            // own doc comment for why those two aren't interchangeable here.
+            subQuestion.subQuestionId === FINANCE_CHOOSE_FILE_SUBQUESTION_ID && canUploadFiles && (
               <Box
                 onDragEnter={handleDragEnter}
                 onDragOver={handleDragOver}
@@ -292,7 +310,7 @@ export default function FinanceSubQuestionDetails({
                 )}
               </Box>
             )}
-            {subQuestion.subQuestionId === FINANCE_CHOOSE_FILE_SUBQUESTION_ID && (
+            {subQuestion.subQuestionId === FINANCE_CHOOSE_FILE_SUBQUESTION_ID && canUploadFiles && (
               <input ref={inputRef} type="file" multiple hidden accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => void handleFileSelect(e.target.files)} disabled={fileLimitReached} />
             )}
             {pendingFiles.length > 0 && (
