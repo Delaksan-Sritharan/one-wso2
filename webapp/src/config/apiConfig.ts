@@ -1380,8 +1380,7 @@ export const promotionServiceUrls = {
 
 // ---------------------------------------------------------------------------
 // Menu (cafeteria) backend. Daily menu, lunch feedback, and dinner-on-demand
-// orders. The service is reused unchanged from the standalone app; see
-// docs/ported-apps/menu-app.md for the contract and the behaviour it defines.
+// orders. The service is reused unchanged from the standalone app.
 //
 // Every path is fixed — no builder takes an argument, because the caller is
 // always identified by the token rather than by a path segment.
@@ -1409,7 +1408,6 @@ export const menuServiceUrls = {
 // Subscription backend (digiops-hr subscription-app). The two paid staff
 // services an employee opts in and out of — PickMe Commute and LaaS (lunch as
 // a service) — plus the admin screens that manage them on someone's behalf.
-// See docs/ported-apps/subscription-app.md for the contract.
 //
 // Unlike every builder above, the subject's email is a PATH SEGMENT rather
 // than something the token alone decides. The service reads it and compares it
@@ -1428,8 +1426,7 @@ export function isSubscriptionBackendConfigured(): boolean {
 // Email Group Manager backend (digiops-infra/apps/email-group-manager). Lets
 // an employee browse the company's Google Groups mailing lists, subscribe or
 // unsubscribe themselves, and — client-side only, no backend of its own —
-// build an email signature. See docs/ported-apps/email-group-manager.md for
-// the contract.
+// build an email signature.
 //
 // The source app's own GET /user-info is NOT reused here: this webapp already
 // has an identical call (people-app's, via @api/useUserInfo) for the
@@ -1496,7 +1493,7 @@ export const subscriptionServiceUrls = {
 // token's `aud`, and each Asgardeo application mints its own. It used to accept
 // a single AUTH_AUDIENCE — the GRC webapp's client id — so every request from
 // here 401'd with `token has invalid audience`. That backend now takes a
-// comma-separated set (grc-tools #82, merged and deployed), and AUTH_AUDIENCE
+// comma-separated set, and AUTH_AUDIENCE
 // names this app's client id too.
 //
 // Left here because the failure is otherwise unrecognisable: a 401 on EVERY
@@ -1549,7 +1546,7 @@ export function isEvidencePortalBackendConfigured(): boolean {
 // reused unchanged. The naming difference is deliberate and worth knowing: the
 // config key and everything in this app say "sales" because that is what a
 // user opens, while the contract, the roles and the error messages all belong
-// to meet-app. See docs/ported-apps/sales-meetings.md.
+// to meet-app.
 //
 // The config key keeps its original name, ONE_WSO2_REVOPS_BACKEND_URL, on purpose: it is set in
 // every environment's config.js, and renaming it would need each deployment changed in step.

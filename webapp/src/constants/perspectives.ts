@@ -119,8 +119,7 @@ function appsToSections(apps: readonly MenuApp[]): PerspectiveSection[] {
 // Org Chart is the one section here WITHOUT `requires: ["admin"]` — same
 // people-app backend as everything else here, but a different endpoint
 // (/employees/basic-info) with its own access model: any employee in that
-// endpoint's configured group, not a people-app admin privilege. See
-// docs/ported-apps/org-chart.md.
+// endpoint's configured group, not a people-app admin privilege.
 export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   {
     id: "people-org-chart",
@@ -190,8 +189,8 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   },
   // promotion-app's Lead Portal ("Time Based Promotions") — reviewing and
   // deciding on other people's promotions is People-Ops-team work, the same
-  // split PAR's own Lead/Admin portals above already apply. See
-  // docs/ported-apps/promotion-app.md. Gated via PROMOTION_LEAD_PORTAL_ITEM_ID
+  // split PAR's own Lead/Admin portals above already apply. Gated via
+  // PROMOTION_LEAD_PORTAL_ITEM_ID
   // below, not `requires` — promotion-app's own Role.LEAD (read back from its
   // GET /employee-privileges) bears no fixed relationship to people-app's
   // generic "lead" capability `requires` would otherwise gate on.
@@ -433,9 +432,9 @@ const ME_SECTIONS: PerspectiveSection[] = [
   },
   ...appsToSections(ME_APPS),
   ...appsToSections(ME_FINANCE_APPS),
-  // par-app's employee portal — see docs/ported-apps/par-app.md.
+  // par-app's employee portal.
   ...appsToSections(ME_PAR_APPS),
-  // promotion-app's employee portal — see docs/ported-apps/promotion-app.md.
+  // promotion-app's employee portal.
   // Held behind a preview flag until the whole app (this item plus the
   // "Promotion" group under People Ops) is ready for production — see
   // isPreviewEnabled's own call in PEOPLE_OPS_SECTIONS below and in App.tsx.
