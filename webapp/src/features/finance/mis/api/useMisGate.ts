@@ -25,7 +25,7 @@ import { MIS_PRIVILEGE, misHasPrivilege } from "./misTypes";
 // (Config.js:56), so this is a set rather than useMarketingOpsGate's per-item
 // ITEM_CAPABILITY map: a map whose every value is the same number says nothing.
 //
-// Named rather than read off MIS_APPS, and that is the point (spec §10.13): an
+// Named rather than read off MIS_APPS, and that is the point: an
 // entry joining the registry without a line here is HIDDEN, not opened to 987.
 // Everything else fails closed too — MIS has no unrestricted screen, so unlike
 // the sibling gates there is no open default for an unknown id to fall into.

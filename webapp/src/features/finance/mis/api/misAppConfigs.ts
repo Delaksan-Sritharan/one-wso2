@@ -25,7 +25,7 @@
 // Ported from the assembly in digiops-finance `arrDashboard/ArrDashboard.js:44-70`
 // and the comparator in `arrDashboard/utils/filterOptions.js`. Two of the source's
 // decisions there are reproduced deliberately rather than corrected; both are
-// marked below, and both are the parity rule's call (spec §8), not this module's.
+// marked below, and both are the parity rule's call, not this module's.
 
 /**
  * The `AppConfig` record, verbatim from the ARR backend
@@ -68,7 +68,7 @@ export interface MisFilterOptions {
    *
    * Both exist because the two screens filter on different fields. The Build's
    * Billing Country control sends `billingCountries` and is fed
-   * `shippingCountries` — the source's substitution, reproduced for parity (spec §8)
+   * `shippingCountries` — the source's substitution, reproduced for parity
    * and described below. ARR Analysis's Country control also sends
    * `billingCountries`, and is fed THIS, which is the list that actually
    * answers it.
@@ -144,7 +144,7 @@ const ownerNames = (owners: MisAppConfigs["accountOwners"]): string[] =>
  * Reproduced for parity: the two apps run side by side, and a Billing
  * Country menu that offered a country the other app did not would make the same
  * filter mean two different things depending on which app you opened. Worth
- * raising with Finance, not worth fixing unilaterally — spec §8.
+ * raising with Finance, not worth fixing unilaterally.
  *
  * `billingCountries` is nonetheless SHAPED here, because ARR Analysis does read
  * it — see the field's own note. The Build's substitution stands; the list it

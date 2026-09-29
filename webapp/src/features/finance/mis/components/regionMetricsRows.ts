@@ -225,7 +225,7 @@ export interface RegionMetricsSubColumn extends BuildSubColumn {
  * "Reduction", "Loss", "First Sale" and "Closing ARR". That inconsistency is the
  * source's, between two of its own screens, and it is reproduced rather than
  * harmonised: finance reconciles the port against the live app column by column
- * for a full reporting cycle (spec §1), and a renamed column is a disagreement
+ * for a full reporting cycle, and a renamed column is a disagreement
  * somebody has to investigate before the figures can be trusted.
  *
  * Two of the five are words this port does not otherwise use — its terms are

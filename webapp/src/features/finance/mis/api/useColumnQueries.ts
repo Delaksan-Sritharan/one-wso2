@@ -37,7 +37,7 @@ import { isMisArrConfigured } from "@config/apiConfig";
 //     per-column catch inside the loop.
 //   + React Query owns the races, so the request-id ref is not ported.
 //   − Columns are fetched in parallel rather than in sequence. Recorded as a
-//     deviation in spec §7; if the gateway objects to six concurrent reads,
+//     deviation; if the gateway objects to six concurrent reads,
 //     this is the one place to change it for every table at once.
 //
 // Sub-scoped like every other identity-sensitive query in this app. The figures
@@ -107,7 +107,7 @@ export function useColumnQueries<TBody, TData>({
   const results = useQueries({
     queries: bodies.map((body) => ({
       // The body IS the key. A POST that is a read has no URL to key on, and
-      // the URL is the same for all of a table's columns — see spec §6.
+      // the URL is the same for all of a table's columns.
       queryKey: ["mis", name, userSub, body] as const,
       enabled: ready,
       queryFn: async () => parse(await authedPost<unknown>(url, await getAccessToken(), body)),

@@ -124,7 +124,7 @@ export function arrSummaryRequests(
  *
  * Monthly's asymmetry is worth naming: every other range in this port is two
  * BALANCE dates, and that one is a balance date paired with a first-of-month.
- * Reproduced for parity (spec §8) — it decides which figure the leftmost y/y row
+ * Reproduced for parity — it decides which figure the leftmost y/y row
  * compares against, so changing it would move a number on screen.
  */
 function firstColumnComparison(
@@ -147,7 +147,7 @@ function firstColumnComparison(
  * The day of the month is kept, and one the earlier month is too short for
  * rolls into the month after — so 31 December less three months is "31
  * September", which is 1 October. Wrong-looking, and reproduced for parity:
- * it is the opening the old app asks for in Colombo (spec §8).
+ * it is the opening the old app asks for in Colombo.
  */
 function monthsEarlier(wireDate: string, months: number): string {
   const [year, month, day] = wireDate.split("-").map(Number);

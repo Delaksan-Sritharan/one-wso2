@@ -43,7 +43,7 @@
 //
 // `endDate` is required: the backend answers 400 without one
 // (`arr-backend/service.bal:103-112`). So a dismissed As Of Date has to resolve
-// to today, and in MIS "today" means Pacific Time (spec §3) rather than the
+// to today, and in MIS "today" means Pacific Time rather than the
 // viewer's zone, which is what the source uses. Passing it in keeps this module
 // free of clocks and lets the fallback be tested on a named day.
 

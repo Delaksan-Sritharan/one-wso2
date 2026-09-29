@@ -28,7 +28,7 @@ export { isMisArrConfigured };
 // GET /user-info — the one identity + authorization call for the whole of
 // Finance MIS. It lives on the ARR service, and one array carries both of MIS's
 // numbers — 987 and/or 789 (arr-backend service.bal:55-69). Only 987 is read
-// here: 789 is the Flash Dashboard's, which stays in the MIS app (spec §1).
+// here: 789 is the Flash Dashboard's, which stays in the MIS app.
 //
 // Fetched once and shared: React Query dedupes concurrent callers on the key
 // below, so the rail and each MIS page asking independently still make one

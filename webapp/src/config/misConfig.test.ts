@@ -83,7 +83,7 @@ describe("the Finance MIS backend", () => {
     );
   });
 
-  // The Flash Dashboard stays in the MIS app (spec §1). A deployment still
+  // The Flash Dashboard stays in the MIS app. A deployment still
   // carrying the Flash and Admin keys configures nothing from them: no
   // `isMis…Configured()` check and no service map is built for either.
   it("reads no Flash or Admin URL, even where a config still carries them", async () => {

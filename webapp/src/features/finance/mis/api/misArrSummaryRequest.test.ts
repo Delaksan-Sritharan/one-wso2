@@ -79,7 +79,7 @@ describe("the column a request is compared against", () => {
     // "Three months before" 31 December is 1 OCTOBER, not 30 September: the
     // source's `setMonth` keeps the day of the month, and a 31 September rolls
     // over. Wrong-looking, and reproduced for parity — it is the opening the
-    // old app asks for in Colombo, where the Build is reconciled (spec §8). The
+    // old app asks for in Colombo, where the Build is reconciled. The
     // leftmost Quarterly column always opens on 31 December, so this is the
     // only case it meets.
     const quarters = getQuarterlyPeriods({ yearsBack: 1, asOf: { year: 2026, month: 9, day: 12 } });
@@ -192,7 +192,7 @@ describe("which Applied filters the backend is told about", () => {
 
   it("finds a Forecasted type on its own Period's key, not on whichever is set", () => {
     // On Quarterly and Monthly the summary tables MIRROR the Period's type into
-    // `arrType` (spec §3), so a filter set legitimately carries both keys.
+    // `arrType`, so a filter set legitimately carries both keys.
     // Reading "whichever is set first" would find the mirror, decide it is not
     // a forecast, and silently drop the confidence level off a Forecasted QRR.
     expect(

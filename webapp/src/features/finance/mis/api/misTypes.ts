@@ -27,14 +27,14 @@
 //        leave-app (leaveTypes.ts LEAVE_PRIVILEGE.PEOPLE_OPS_TEAM): a People
 //        Ops team member.
 //
-// Only 987 is read here. The Flash Dashboard stays in the MIS app (spec §1),
+// Only 987 is read here. The Flash Dashboard stays in the MIS app,
 // so 789 arrives in the same array and opens nothing in One WSO2 — which is why
 // it has no constant below: a name for it would be one step from a check.
 //
 // Reading MIS access off the shared capability set would therefore hand
 // company-wide revenue reporting to every employee in the company. The numbers
 // are only meaningful next to the endpoint that issued them, which is why MIS
-// has a gate of its own; its backends are left as they are (spec §1).
+// has a gate of its own; its backends are left as they are.
 export const MIS_PRIVILEGE = {
   ARR_DASHBOARD: 987,
 } as const;

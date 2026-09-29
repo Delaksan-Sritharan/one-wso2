@@ -38,8 +38,8 @@
 // wire values, and ticket 05's `misValueTypeForRow` looks a row up BY LABEL to
 // decide whether Scale may touch it — defaulting to currency on a miss.
 // Retyping them here would mean one character of drift silently scales a
-// headcount by a thousand, which is the one rule spec §3 exists for. The five
-// SECTION labels are this module's own words and are written out.
+// headcount by a thousand, which is the rule that a count is never scaled.
+// The five SECTION labels are this module's own words and are written out.
 
 import { MIS_ROW_LABELS } from "../util/misMoney";
 import { isOnePartnerBook, type MisChannelDirect } from "../util/misViewVocabulary";

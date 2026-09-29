@@ -20,12 +20,12 @@
 // `ttmPeriods.js`. The rules are the source's; what changed is that every one of
 // them is now arithmetic on a Pacific calendar date rather than on a `Date`
 // built from local fields, so the answer no longer depends on where the reader
-// is sitting — spec §10.8. See `misPacificTime.ts` for why that mattered.
+// is sitting. See `misPacificTime.ts` for why that mattered.
 //
 // This is the module that plugs into the `columnRangesFor` seam the URL
 // contract leaves open (`hydrateAppliedFilters`, `applyWindow`): Pacific Time is
 // handed in rather than imported there, so the contract stays testable without a
-// timezone in it — spec §7.
+// timezone in it.
 
 import {
   addYears,
@@ -107,7 +107,7 @@ function annualEnd(
     // state, not from a link — `parseViewState` validates `endingMonth` against
     // `ENDING_MONTH_VALUES` first. Closing the year is what the source does
     // with it, and it is the same degrade-to-default the URL contract makes
-    // everywhere else (spec §4).
+    // everywhere else.
     const month = monthNumber(endingMonth);
     return month == null ? endOfYear(year) : endOfMonth(year, month);
   }
@@ -179,7 +179,7 @@ export function getTtmPeriods({
  * Note the fallback differs from `annualEnd`'s: an Ending Month that is not a
  * month ends a TTM column at today, where it ends a Calendar year on 31
  * December. That asymmetry is the source's, between `ttmPeriods.js` and
- * `annualPeriods.js`, and it is reproduced rather than reconciled (spec §8).
+ * `annualPeriods.js`, and it is reproduced rather than reconciled.
  * Neither branch is reachable from a link.
  */
 const ttmEnd = (today: MisCivilDate, endingMonth?: string): MisCivilDate => {
@@ -444,8 +444,8 @@ export const asOfColumnLabel = (range: MisDateRange): string =>
   range.header ?? `As of ${range.periodKey ?? range.end}`;
 
 /**
- * The Annually column ranges, ready to hand to `useMisViewState` — which is the
- * `columnRangesFor` seam spec §7 leaves open, filled in Pacific Time.
+ * The Annually column ranges, ready to hand to `useMisViewState` — the
+ * `columnRangesFor` seam, filled in Pacific Time.
  *
  * A module-level constant rather than something a screen builds, because the
  * URL contract rebuilds the whole Applied set whenever this changes identity: a
@@ -489,7 +489,7 @@ export const pacificColumnRanges: ColumnRangesFor = (period, viewWindow, filters
  *                        (tableUtils.js, `case 'subscription'`)
  *
  * So on a Calendar Window these tables draw the LAST `yearsBack` of the ranges
- * and the oldest is never shown — see spec §9. Kept as a slice of the Applied
+ * and the oldest is never shown. Kept as a slice of the Applied
  * set rather than a second computation, so the columns are literally drawn from
  * the ranges the filters carry and the two cannot drift.
  *

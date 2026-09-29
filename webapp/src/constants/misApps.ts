@@ -95,7 +95,7 @@ export const MIS_APPS: readonly MenuApp[] = [
     // Stay a group: an ARR reader has three or four rows depending on the ARR
     // Analysis flag, and a group that collapsed to a leaf for one of them would
     // teach a shape that changes under them. The case appMenu.ts names for this
-    // flag. The Flash Dashboard is not here — it stays in the MIS app (spec §1).
+    // flag. The Flash Dashboard is not here — it stays in the MIS app.
     alwaysGroup: true,
     items: [
       {

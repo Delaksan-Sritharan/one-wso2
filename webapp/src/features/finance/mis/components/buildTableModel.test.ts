@@ -204,7 +204,7 @@ describe("the header wiring a screen reader follows", () => {
 describe("which rows are worth rendering", () => {
   // The arithmetic behind windowing, with no DOM in it. A Build of several
   // thousand customer lines cannot put every row in the document — windowing
-  // was required scope (spec §1) once the port chose a hand-rolled table over a
+  // was required scope once the port chose a hand-rolled table over a
   // grid — so the table renders a slice and pads the space the rest would have
   // taken. Getting the padding wrong is the failure that matters: the rows look
   // right and the scrollbar lies about how much table there is.

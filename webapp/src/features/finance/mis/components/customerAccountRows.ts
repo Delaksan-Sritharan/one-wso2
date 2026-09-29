@@ -27,7 +27,7 @@
 // a named metric line and the figures arrive as COLUMNS. Here the rows ARE the
 // data — one per account in the customer book, hundreds per business unit — and
 // the metric breakdown is what arrives as columns. So this is the table the
-// row windowing (spec §1) was actually written for, and the first one where the
+// row windowing was actually written for, and the first one where the
 // row count is a question about the data rather than about the code.
 //
 // ---- the port does NOT keep the source's flattened field names -------------
@@ -232,7 +232,7 @@ const buFieldsTotal = (account: AccountsResponse): number =>
  *
  * The source renders THREE header rows: the Period, then a Software/Cloud
  * grouping spanning 4 and 7 columns, then the product. `BuildTable` renders
- * two, and its measured two-row header (spec §1) is the mechanism with
+ * two, and its measured two-row header is the mechanism with
  * no MUI precedent — a third row generalises that measurement and was taken as
  * its own decision rather than folded in here.
  *
@@ -460,8 +460,8 @@ export function customerFigure(
   // `arrGrandTotal || arrSoftwareTotal + arrCloudTotal || 0`. That `||` means a
   // grand total of ZERO falls through to the two halves rather than being
   // reported as zero — which is the behaviour worth having, because the case it
-  // fires on is a backend that sent the breakdown and no total. Kept for parity
-  // (spec §8): it is the source's arithmetic, and a customer with revenue whose
+  // fires on is a backend that sent the breakdown and no total. Kept for parity.
+  // It is the source's arithmetic, and a customer with revenue whose
   // Total column reads 0 is the failure this avoids. The cost is that a
   // genuine zero total beside non-zero halves cannot be told apart from an
   // absent one — a state that would mean the backend disagreed with itself.

@@ -41,7 +41,7 @@ import { figureIn } from "./useAnalysisAccounts";
 // under a page-level error banner. Six industries silently worth nothing
 // because one request fell over is the same false claim this screen is built to
 // refuse, one level up. Here the other five keep their figures and the one that
-// failed says so. Recorded in spec §7.
+// failed says so.
 //
 // ---- what these hooks return, and what they deliberately do not ------------
 //

@@ -57,19 +57,19 @@ export interface OpportunityResponse {
   partnerType?: string;
   subscriptionStartDate?: string;
   subscriptionEndDate?: string;
-  apimArr?: number;
-  iamArr?: number;
-  integrationArr?: number;
-  apimCloudArr?: number;
-  iamCloudArr?: number;
-  integrationCloudArr?: number;
-  choreoArr?: number;
-  agentPlatformArr?: number;
-  moesifArr?: number;
+  apimArr?: number | string | null;
+  iamArr?: number | string | null;
+  integrationArr?: number | string | null;
+  apimCloudArr?: number | string | null;
+  iamCloudArr?: number | string | null;
+  integrationCloudArr?: number | string | null;
+  choreoArr?: number | string | null;
+  agentPlatformArr?: number | string | null;
+  moesifArr?: number | string | null;
   /** The backend's SOFTWARE aggregate. Read only when positive — see below. */
-  arr?: number;
+  arr?: number | string | null;
   /** The backend's CLOUD aggregate. Same rule. */
-  cloudArr?: number;
+  cloudArr?: number | string | null;
 }
 
 /** The account a dialog was opened for. The response does not carry it. */
@@ -178,9 +178,9 @@ export interface OpportunityColumn extends BuildLeadColumn {
  * The cloud headers carry their product tails — `API Platform Private Cloud +
  * Bjira` — because those name the books Finance reconciles against
  * (`tableConstants.js`, `CLOUD_BUSINESS_UNITS`). `Source` heads the partner
- * type for the same reason: it is the word on the running app's screen, and
- * §8's carve-out for the Region Summary's `Loss` and `First Sale` is the same
- * argument.
+ * type for the same reason: it is the word on the running app's screen. The
+ * Region Summary keeps the source's `Loss` and `First Sale` headers for the
+ * same reason.
  */
 export const OPPORTUNITY_COLUMNS: readonly OpportunityColumn[] = [
   { key: "accountId", label: "Account ID", width: 150, read: (row) => row.accountId },
@@ -232,7 +232,7 @@ function figureColumn(
 }
 
 /** A figure, however it arrived. Zero for anything unreadable, never `NaN`. */
-const figure = (value: number | undefined): number => {
+const figure = (value: number | string | null | undefined): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 };

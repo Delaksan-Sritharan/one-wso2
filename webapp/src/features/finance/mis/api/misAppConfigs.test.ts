@@ -81,7 +81,7 @@ describe("the option lists a response carries", () => {
   });
 
   it("offers the SHIPPING countries under both country filters", () => {
-    // Bug-for-bug (spec §8). The backend answers with `billingCountries` too and
+    // Bug-for-bug. The backend answers with `billingCountries` too and
     // the source app never reads it: `ArrDashboard.js:52` puts `shippingCountries`
     // into one `countries` list and both controls take their options from it.
     const options = misFilterOptions(response);

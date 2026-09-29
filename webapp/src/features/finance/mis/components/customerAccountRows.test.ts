@@ -40,7 +40,7 @@ import {
 // lines and the figures arrive as columns, so the grid is 34 rows whatever the
 // data says. Here the ROWS are the data: one per account in the customer book,
 // hundreds per business unit. This is the table the Build's row windowing was
-// written for (spec §1).
+// written for.
 
 /** One account as `/accounts` returns it, with only what the table reads. */
 const account = (id: string, name: string, over: Partial<AccountsResponse> = {}): AccountsResponse => ({
@@ -294,7 +294,7 @@ describe("the account behind a row, for the identity columns", () => {
 describe("the identity columns, left of the first figure", () => {
   // Eighteen of them in the source, before a single number. This is the table
   // that made `BuildTable` take a LIST of identity columns rather than one
-  // pinned label — the hand-rolled frozen pane (spec §1), widened.
+  // pinned label — the hand-rolled frozen pane, widened.
 
   it("names them the way the source's header does", () => {
     expect(customerLeadColumns("Total ARR").map((column) => column.label)).toEqual([
@@ -644,7 +644,7 @@ describe("the Total row's own reading of the BU-only Total", () => {
 });
 
 
-// The figures spec §11.8 cites, pinned at their source.
+// These widths, pinned at their source.
 //
 // The narrow-viewport decision (ticket 08) rests on this table being thousands
 // of pixels wide before its first figure — that is what makes the prototype's
