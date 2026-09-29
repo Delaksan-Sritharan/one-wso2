@@ -15,8 +15,7 @@
 // under the License.
 
 // Registry of the Finance MIS screens, surfaced inside the Finance
-// perspective. Ported from digiops-finance/apps/mis; see
-// docs/ported-apps/mis.md for the behaviour each screen owes.
+// perspective. Ported from digiops-finance/apps/mis.
 //
 // ---- why its own file, and not financeApps.ts -----------------------------
 //
@@ -52,7 +51,7 @@ export const MIS_PATH = "/finance/mis";
 // app lived at /finance-mis/*, which cannot be kept: findPerspectiveByPath
 // matches with a bare `pathname.startsWith`, so "/finance-mis" resolves to the
 // `finance` perspective and would render the wrong rail around every MIS
-// screen. See docs/ported-apps/mis.md §7.
+// screen.
 export const misPaths = {
   arrBuild: `${MIS_PATH}/arr-build`,
   qrrBuild: `${MIS_PATH}/qrr-build`,

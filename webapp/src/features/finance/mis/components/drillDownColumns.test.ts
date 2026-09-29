@@ -128,7 +128,7 @@ describe("what a cell says when the backend said nothing", () => {
   // tidying it, for parity. Seven columns fall back to the literal "N/A";
   // four render an empty cell. The four are exactly the fields the backend
   // declares non-nullable — except Amount, which is also non-nullable and DOES
-  // get the placeholder. Recorded in mis.md §8.
+  // get the placeholder.
 
   it("writes N/A in the columns the source writes it in", () => {
     const bare = customer({ amount: undefined as unknown as number });

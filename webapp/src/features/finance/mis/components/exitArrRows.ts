@@ -133,7 +133,7 @@ export interface RegionExitTable {
  * a region that appears only in a later one is pushed in BELOW the total that
  * counts it. The arithmetic is unaffected — the total is recomputed over every
  * region row on every column — but a region under its own total reads as a
- * broken table. The total is last here. Recorded in `docs/ported-apps/mis.md` §7.
+ * broken table. The total is last here.
  */
 export function regionExitTable(columns: readonly RegionExitColumn[]): RegionExitTable {
   const labelById = new Map<string, string>();
@@ -210,7 +210,6 @@ function regionFigures(split: BuFigures | undefined): BuFigures {
  * arithmetic, finance reconciles the port against the source for a full
  * reporting cycle (spec §1), and "the port's total differs from the live
  * app's" is the one disagreement that would stop the port being trusted.
- * Recorded in `docs/ported-apps/mis.md` §8.
  */
 function totalOf(regions: Iterable<BuFigures>): BuFigures {
   let apim = 0;

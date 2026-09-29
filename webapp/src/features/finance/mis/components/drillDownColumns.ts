@@ -55,8 +55,7 @@ export interface DrillDownCustomer {
  * What the source writes where a value is missing.
  *
  * Only in SOME columns — see `blank` below. The inconsistency is the source's
- * and is reproduced for parity rather than tidied; recorded in
- * `docs/ported-apps/mis.md` §8.
+ * and is reproduced for parity rather than tidied.
  */
 export const DRILL_DOWN_NOT_AVAILABLE = "N/A";
 
@@ -135,8 +134,7 @@ const LOST: readonly DrillDownColumn[] = [
   // matches it, so a variable-height row would break the scroll extent. So the
   // column keeps the source's generous width and the full text is carried on
   // the cell's `title` instead of being silently clipped to a fragment — a free
-  // -text lost reason is the whole point of the two Lost columns. Deviation in
-  // mis.md §7.
+  // -text lost reason is the whole point of the two Lost columns.
   { key: "lostReason", label: "Lost Reason", width: 320, value: withPlaceholder((c) => c.lostReason) },
 ];
 

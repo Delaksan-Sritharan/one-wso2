@@ -25,6 +25,7 @@ import {
 } from "../util/misViewVocabulary";
 import type { ArrSummaryResponse } from "../components/arrBuildRows";
 import { arrSummaryRequests } from "./misArrSummaryRequest";
+import { recordIn } from "./misResponseArray";
 import { useColumnQueries } from "./useColumnQueries";
 
 // `POST /arr-summary` — the figures behind a Build, one call per column.
@@ -85,8 +86,10 @@ export function useArrSummary(
     labels,
     // An empty object rather than undefined: a column that answered with
     // nothing is a column that answered, and every field lookup on it should
-    // read as absent rather than as a column still loading.
-    parse: (payload) => (payload as ArrSummaryResponse | null) ?? {},
+    // read as absent rather than as a column still loading. `recordIn` also
+    // refuses an array or a string, which a bare cast would hand to the table
+    // as if it were a summary.
+    parse: recordIn<ArrSummaryResponse>,
     enabled,
   });
 

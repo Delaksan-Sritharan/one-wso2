@@ -49,9 +49,9 @@ export function arrayIn<T>(payload: unknown): T[] {
  * nothing — different from one still in flight, and different from one that
  * failed.
  *
- * One caller: the two Exit ARR summaries and the Region Summary's movement
- * view (`useExitArr`). (The Flash reads that also used it were removed with the
- * Flash Dashboard, which stays in the MIS app — spec §1.)
+ * Callers: the ARR summary, and the two Exit ARR summaries plus the Region
+ * Summary's movement view (`useExitArr`). (The Flash reads that also used it
+ * were removed with the Flash Dashboard, which stays in the MIS app.)
  */
 export function recordIn<T>(payload: unknown): T {
   const isRecord = typeof payload === "object" && payload !== null && !Array.isArray(payload);

@@ -122,7 +122,7 @@ declare global {
       // production build. The version segment is part of the URL and differs by
       // environment: /v1 in production, /v1.0 in staging. MIS's Flash and Admin
       // services have no key here: they serve only the Flash Dashboard, which
-      // stays in the MIS app. See docs/ported-apps/mis.md §1 and §6.
+      // stays in the MIS app.
       ONE_WSO2_MIS_ARR_BACKEND_URL?: string;
       // Base URL of the leave-app frontend itself (not its backend) —
       // used to deep-link into flows this webapp doesn't replicate, like

@@ -75,7 +75,7 @@ describe("what the rows of a Region Summary are", () => {
   it("keeps the total last even when a later column brings a new region", () => {
     // The source appends the Total Exit ARR row on the FIRST column and pushes
     // later columns' new regions after it, so a region can land BELOW the total
-    // it is counted in. Deviation, recorded in mis.md §7.
+    // it is counted in.
     const table = regionExitTable(
       columnsOf([AS_OF_2025, { NA: split() }], [AS_OF_2026, { Africa: split() }]),
     );
@@ -121,7 +121,7 @@ describe("how a region is named", () => {
 
   it("capitalises a lower-case name without shouting its short words", () => {
     // The source uppercases EVERY word of two to four letters, so its own
-    // documented "Middle East" renders "Middle EAST". Deviation, mis.md §7.
+    // documented "Middle East" renders "Middle EAST".
     expect(labelOf("middle east")).toBe("Middle East");
     expect(labelOf("rest_of_europe")).toBe("Rest Of Europe");
   });
@@ -210,7 +210,7 @@ describe("the Total Exit ARR row", () => {
     // Reproduced from `useExitArrByRegion.js`, which sums the five units for
     // the total row while taking each region's own total from `all`. The two
     // can therefore disagree by Moesif, and finance reconciles against the
-    // source during the parallel period — see mis.md §8.
+    // source during the parallel period.
     const table = regionExitTable(
       columnsOf([AS_OF_2026, { NA: split({ apim: 10, moesif: 4, all: 14 }) }]),
     );

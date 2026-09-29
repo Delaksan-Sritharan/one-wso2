@@ -108,7 +108,7 @@ const EVERY_UNIT = ["ALL_BU"] as const;
  * `isSalesRegionSummary` is a parameter rather than a filter because it is not
  * one: the source keeps the Region Type toggle in the Region Summary's own
  * component state (`RegionSummaryTabs.js`), so it never reaches the Applied set
- * and never reaches a link. See `docs/ported-apps/mis.md` §11.
+ * and never reaches a link.
  */
 export function regionExitRequests(
   ranges: readonly MisDateRange[],

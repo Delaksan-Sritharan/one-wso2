@@ -1622,12 +1622,11 @@ export function buildMeetingsUrl(params: {
 }
 
 // Finance MIS backend (digiops-finance/apps/mis) — the ARR service. The port
-// replaces the MIS frontend only; the Ballerina services are untouched. See
-// docs/ported-apps/mis.md §1.
+// replaces the MIS frontend only; the Ballerina services are untouched.
 //
 // MIS has two more services, Flash and Admin, and neither is configured here:
 // they serve only the Flash Dashboard (its P&L, forecasts and comments), which
-// stays in the MIS app — docs/ported-apps/mis.md §1.
+// stays in the MIS app.
 //
 // Three things differ from every sibling above, all of them load-bearing:
 //
@@ -1637,7 +1636,7 @@ export function buildMeetingsUrl(params: {
 //
 //  2. The version segment belongs to the configured URL, not to the builders,
 //     because it differs by environment: production ends /v1, staging ends
-//     /v1.0. mis.md §11.2.
+//     /v1.0.
 //
 //  3. Trailing slashes are stripped, as they are for marketing-ops. The
 //     configured value ends in a path-like version segment, which is exactly
@@ -1647,7 +1646,7 @@ export function buildMeetingsUrl(params: {
 // A *.choreoapis.dev URL here is a DEFECT, not an alternative. Choreo
 // advertises one for every endpoint beside the vanity URL, and the CSP in
 // vite.config.ts allows only *.wso2.com and *.asgardeo.io — so a production
-// build fails those calls with nothing in the console. mis.md §11.2.
+// build fails those calls with nothing in the console.
 export const misArrBackendUrl: string = stripTrailingSlashes(
   window.config?.ONE_WSO2_MIS_ARR_BACKEND_URL ?? "",
 );

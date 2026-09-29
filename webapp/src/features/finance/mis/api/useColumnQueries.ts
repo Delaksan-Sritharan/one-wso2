@@ -148,12 +148,20 @@ export function useColumnQueries<TBody, TData>({
   const firstError = results.find((result) => result.isError)?.error;
   return {
     columns,
-    // `!ready` counts as loading, and has to. Until the subject resolves every
-    // query is `enabled: false`, which React Query reports as pending-but-idle
-    // — so a "some query is actually fetching" test is false, while `columns`
-    // is already populated from the bodies. The table would paint in full with
-    // every cell blank, which reads as "nothing" rather than as "not yet".
-    isLoading: !ready || results.some((r) => r.isPending && r.fetchStatus !== "idle"),
+    // The pending-subject window counts as loading, and has to. Until the
+    // subject resolves every query is `enabled: false`, which React Query
+    // reports as pending-but-idle — so a "some query is actually fetching"
+    // test is false, while `columns` is already populated from the bodies.
+    // The table would paint in full with every cell blank, which reads as
+    // "nothing" rather than as "not yet".
+    //
+    // That window is the only not-ready case that is still going to become
+    // ready. A caller who passed `enabled: false`, a signed-out session, and
+    // an unconfigured backend will never fetch, and reporting them as loading
+    // would leave the table spinning.
+    isLoading:
+      (enabled && isSignedIn && isMisArrConfigured() && !userSub) ||
+      (ready && results.some((r) => r.isPending && r.fetchStatus !== "idle")),
     // Only when nothing at all came back. A table missing one year is still
     // worth reading, and replacing it with an error page would throw away the
     // columns that arrived perfectly well.

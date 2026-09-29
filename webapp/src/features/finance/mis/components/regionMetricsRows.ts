@@ -104,8 +104,7 @@ export interface RegionMetricsTable {
  * in a newer column lands under the total that counts it. The arithmetic is
  * unaffected — the total is recomputed over every region on every column — but
  * a region under its own total reads as a broken table. The total is last here,
- * which is the same deviation `regionExitTable` takes. `docs/ported-apps/mis.md`
- * §7 records it for both views, and names the two source mechanisms it covers.
+ * which is the same deviation `regionExitTable` takes.
  */
 export function regionMetricsTable(
   columns: readonly RegionMetricsColumn[],
@@ -232,7 +231,7 @@ export interface RegionMetricsSubColumn extends BuildSubColumn {
  * Two of the five are words this port does not otherwise use — its terms are
  * **Lost** and **New** — so "Loss" and "First Sale" here are headers this repo's
  * own vocabulary would otherwise forbid. They are the source's labels, kept for
- * parity (`docs/ported-apps/mis.md` §8); harmonising the two screens is a
+ * parity; harmonising the two screens is a
  * decision for after the parallel period rather than a rename in one file.
  *
  * Widths are the source's `minWidth`s, which is what these columns settle at

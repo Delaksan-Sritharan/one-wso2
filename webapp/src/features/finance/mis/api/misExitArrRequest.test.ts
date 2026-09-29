@@ -189,8 +189,7 @@ describe("which geography a Region Summary is cut by", () => {
 // pill row of its own.
 //
 // Here it narrows through the unit tabs already above the grid, so the body
-// carries whatever the reader selected in the address bar. See
-// `docs/ported-apps/mis.md` §7.
+// carries whatever the reader selected in the address bar.
 
 describe("All ARR Metrics, which is the one summary a unit selection reaches", () => {
   it("sends every unit while the reader is looking at every unit", () => {

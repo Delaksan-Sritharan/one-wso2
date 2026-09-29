@@ -498,8 +498,8 @@ export const pacificColumnRanges: ColumnRangesFor = (period, viewWindow, filters
  * year more than Subscription — while its column definition
  * (`tableUtils.js:1091`) is `-(yearsBack - 1)`, identical to Subscription's. So
  * the source asks the backend for a year it then never renders. This port
- * renders what the source renders and does not make the wasted call; recorded
- * in `docs/ported-apps/mis.md` §7. Ticket 10 shipped the fetch list by mistake
+ * renders what the source renders and does not make the wasted call.
+ * Ticket 10 shipped the fetch list by mistake
  * and showed six Periods where the source shows five.
  *
  * A TTM Window has no such split: there the columns ARE `columnDateRanges`.

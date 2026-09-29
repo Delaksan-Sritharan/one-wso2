@@ -44,8 +44,7 @@ import { useColumnQueries } from "./useColumnQueries";
 // `error` at all, so the dialog has no error prop and no error state. A failed
 // drill-down there renders an EMPTY GRID, indistinguishable from "no customers
 // matched" — on a screen whose whole purpose is to explain a figure. The
-// backend does send a usable message. This surfaces it. Recorded as a
-// deliberate divergence in `docs/ported-apps/mis.md` §7.
+// backend does send a usable message. This surfaces it.
 
 export interface DrillDownState {
   customers: DrillDownCustomer[];

@@ -102,6 +102,13 @@ describe("partnerModelSlices", () => {
     const slices = partnerModelSlices({ direct: 700, asked: new Set(["Direct"]) });
     expect(slices).toEqual([expect.objectContaining({ label: "Direct", share: 100 })]);
   });
+
+  // A leftover figure for the model the reader did not ask about is not a
+  // second slice. The view was narrowed to Direct; Channel's number is not in it.
+  it("ignores a figure for a model that was never asked about", () => {
+    const slices = partnerModelSlices({ channel: 300, direct: 700, asked: new Set(["Direct"]) });
+    expect(slices).toEqual([expect.objectContaining({ label: "Direct", share: 100, amount: 700 })]);
+  });
 });
 
 describe("industrySeries", () => {
@@ -200,6 +207,7 @@ describe("industrySeries", () => {
       totalArr: 1000,
     });
     expect(rows.some((row) => row.industry === "Other")).toBe(false);
+    expect(rows.every((row) => row.share === undefined)).toBe(true);
   });
 
   // Ticket 13's rule, one chart along: a figure that never arrived is not zero.
@@ -246,6 +254,7 @@ describe("industrySeries", () => {
       totalArr: 1000,
     });
     expect(rows.some((row) => row.industry === "Other")).toBe(false);
+    expect(rows.every((row) => row.share === undefined)).toBe(true);
   });
 
   it("has no shares rather than dividing by a total of zero", () => {

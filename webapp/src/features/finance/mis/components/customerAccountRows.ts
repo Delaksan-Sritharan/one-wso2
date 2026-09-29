@@ -241,7 +241,7 @@ const buFieldsTotal = (account: AccountsResponse): number =>
  * says which total each one is; here they are "Software Total", "Cloud Total"
  * and "Total". Everything else keeps the source's wording, which already
  * carries its own half of the book ("API Platform Private Cloud + Bjira" is
- * unmistakably the cloud one). Recorded as a deviation in mis.md §7.
+ * unmistakably the cloud one).
  *
  * The wire names and the headers disagree almost everywhere — `apimCloudTotal`
  * is headed "API Platform Private Cloud + Bjira" — so this is the one place a
@@ -302,7 +302,7 @@ export const CUSTOMER_SUB_COLUMN_BY_KEY: ReadonlyMap<string, CustomerSubColumn> 
  * on anything not strictly positive, where the Software/Cloud view's Total reads
  * the same field and falls back to the two BOOKS on anything falsy. Two rules,
  * two sums, two conditions, one field — which is why `customerFigure` decides on
- * the column's key. Recorded in `docs/ported-apps/mis.md` §8.
+ * the column's key.
  */
 export const CUSTOMER_BU_SUB_COLUMNS: readonly CustomerSubColumn[] = [
   { key: "bu-apim", label: "API Platform BU", field: "apimBuTotal" },
@@ -376,7 +376,7 @@ export function customerAccountRows(
   // Omitted over an empty book, where the source shows a lone Total row of
   // zeroes (`shouldAddTotalRow` is the literal `true`). A row of zeroes reads as
   // a company that earned nothing; the screen's own empty state says the book is
-  // empty, which is what happened. Recorded in `docs/ported-apps/mis.md` §7.
+  // empty, which is what happened.
   if (rows.length) {
     rows.unshift({ id: CUSTOMER_TOTAL_ROW_ID, label: CUSTOMER_TOTAL_ROW_LABEL, emphasis: true });
   }

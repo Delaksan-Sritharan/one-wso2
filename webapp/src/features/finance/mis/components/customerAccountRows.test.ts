@@ -161,7 +161,7 @@ describe("the columns a customer's revenue is broken down by", () => {
   // Software/Cloud, then the product — and this port renders two header rows.
   // So the grouping has to survive in the labels or it does not survive at all,
   // and the three columns the source can afford to label plainly "Total" cannot
-  // be labelled that here. Recorded as a deviation in mis.md §7.
+  // be labelled that here.
   it("names every column so it reads without a grouping row above it", () => {
     expect(CUSTOMER_SUB_COLUMNS.map((column) => column.label)).toEqual([
       "API Platform",

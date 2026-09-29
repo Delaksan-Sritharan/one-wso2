@@ -138,7 +138,12 @@ export function partnerModelSlices({
     share: 0,
     slot: 2,
   };
-  const models = [channelSlice, directSlice].filter((model) => model.amount > 0);
+  // An amount for a model nobody asked about is not part of this view. A
+  // narrowed Direct read must not grow a Channel slice because a leftover
+  // figure is still sitting on `channel`.
+  const models = [channelSlice, directSlice].filter(
+    (model) => asked.has(model.label) && model.amount > 0,
+  );
 
   const total = models.reduce((sum, model) => sum + model.amount, 0);
   return models.map((model) => ({ ...model, share: (model.amount / total) * 100 }));
@@ -226,9 +231,11 @@ export function industrySeries({
         ]
       : named;
 
-  // No total, no whole — so no share. A percentage of the industries that
-  // happened to answer would be a different statistic wearing the same label.
-  if (totalArr == null || totalArr <= 0) return rows;
+  // No total, or not every named industry answered — so no share. A percentage
+  // of the industries that happened to answer would be a different statistic
+  // wearing the same label: one industry of 400 against a book of 1000 would
+  // read as 100%.
+  if (!allAnswered || totalArr == null || totalArr <= 0) return rows;
 
   // The denominator is what the CHART SHOWS, not the Headline. The two
   // are the same number whenever the six fit inside the total — Other is

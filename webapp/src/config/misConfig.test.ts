@@ -18,7 +18,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Finance MIS's ARR service — the one MIS backend One WSO2 is configured for.
 // MIS has two more, Flash and Admin, which serve only the Flash Dashboard; it
-// stays in the MIS app (docs/ported-apps/mis.md §1), so
+// stays in the MIS app, so
 // nothing here reads their URLs.
 //
 // Every URL in apiConfig is read at MODULE LOAD, so window.config has to be in
@@ -60,7 +60,7 @@ describe("the Finance MIS backend", () => {
   });
 
   // The version segment belongs to the configured URL and differs by
-  // environment — /v1 in production, /v1.0 in staging (mis.md §11.2) — so an
+  // environment — /v1 in production, /v1.0 in staging — so an
   // operator is pasting a path-like tail, which is exactly the value someone
   // ends with a slash. Unstripped it produces `//user-info`, and whether that
   // 404s is up to the gateway. Same reasoning as marketingOpsBackendUrl.
