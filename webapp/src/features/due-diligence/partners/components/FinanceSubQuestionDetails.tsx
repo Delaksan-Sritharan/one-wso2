@@ -134,7 +134,7 @@ export default function FinanceSubQuestionDetails({
 
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault();
-    if (!fieldDisabled && !fileLimitReached) setIsDragging(true);
+    if (!fileLimitReached) setIsDragging(true);
   };
   const handleDragOver = (e: DragEvent) => e.preventDefault();
   const handleDragLeave = (e: DragEvent) => {
@@ -144,7 +144,7 @@ export default function FinanceSubQuestionDetails({
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (!fieldDisabled && !fileLimitReached) void handleFileSelect(e.dataTransfer.files);
+    if (!fileLimitReached) void handleFileSelect(e.dataTransfer.files);
   };
 
   const openFile = (fileName: string) => {
@@ -236,7 +236,14 @@ export default function FinanceSubQuestionDetails({
                 <XIcon size={14} style={{ cursor: "pointer" }} onClick={() => removePendingFile(f.fileName)} />
               </Stack>
             ))}
-            {!fieldDisabled &&
+            {
+              // Not gated on fieldDisabled: unlike the radio/description
+              // answers above, the source never checks fieldDisabled inside
+              // its own file-upload block at all — attaching a supporting
+              // document is available regardless of whether this question is
+              // in edit mode. Gating it here hid the whole "Attach files"
+              // zone (and the plain button, for every other file question)
+              // any time the question wasn't actively being edited.
               (subQuestion.subQuestionId === FINANCE_CHOOSE_FILE_SUBQUESTION_ID ? (
                 <Box
                   onDragEnter={handleDragEnter}
