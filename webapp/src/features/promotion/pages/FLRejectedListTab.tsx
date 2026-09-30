@@ -22,6 +22,7 @@ import { useState } from "react";
 import { Box, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
 import { ChevronDownIcon, InboxIcon, RefreshCwIcon, TriangleAlertIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
+import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests } from "../api/usePromotionRequests";
 import { basePromotionRequestColumns } from "../components/promotionRequestColumns";
 import PromotionEmptyState from "../components/PromotionEmptyState";
@@ -35,7 +36,11 @@ const STRIPE_SX = {
 };
 
 export default function FLRejectedListTab() {
-  const requests = usePromotionRequests({ statusArray: ["FL_REJECTED"], enableBuFilter: true });
+  const cycle = useActivePromotionCycle();
+  const requests = usePromotionRequests(
+    { statusArray: ["FL_REJECTED"], enableBuFilter: true, cycleId: cycle.cycle?.id },
+    !cycle.isPending && Boolean(cycle.cycle),
+  );
   const [viewingRequest, setViewingRequest] = useState<PromotionRequestFull | null>(null);
 
   const rows = requests.data?.promotionRequests ?? [];
@@ -71,8 +76,14 @@ export default function FLRejectedListTab() {
         </Tooltip>
       </Box>
 
-      {requests.isPending ? (
+      {cycle.isPending || (Boolean(cycle.cycle) && requests.isPending) ? (
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
+      ) : cycle.isError ? (
+        <PromotionEmptyState
+          icon={<TriangleAlertIcon size={28} />}
+          tone="error"
+          message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
+        />
       ) : requests.isError ? (
         <PromotionEmptyState
           icon={<TriangleAlertIcon size={28} />}

@@ -56,8 +56,8 @@ export default function FLActiveRequestsTab() {
   const cycle = useActivePromotionCycle();
   const deadlinePast = isPromotionDeadlinePast(cycle.cycle?.functionalLeadDeadline);
   const requests = usePromotionRequests(
-    { statusArray: ["SUBMITTED"], enableBuFilter: true },
-    !cycle.isPending && Boolean(workEmail),
+    { statusArray: ["SUBMITTED"], enableBuFilter: true, cycleId: cycle.cycle?.id },
+    !cycle.isPending && Boolean(workEmail) && Boolean(cycle.cycle),
   );
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -195,7 +195,7 @@ export default function FLActiveRequestsTab() {
         </Tooltip>
       </Box>
 
-      {cycle.isPending || requests.isPending ? (
+      {cycle.isPending || (Boolean(cycle.cycle) && requests.isPending) ? (
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : cycle.isError ? (
         <PromotionEmptyState

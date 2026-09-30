@@ -37,9 +37,6 @@ const STRIPE_SX = {
 };
 
 export default function PBApprovedListTab() {
-  // Source always scopes this to the open cycle (cycleId=<id>) — without it,
-  // the backend's query joins across every past cycle, including older rows
-  // with a null businessUnit/department/team that 500 on the strict mapping.
   const cycle = useActivePromotionCycle();
   const requests = usePromotionRequests(
     { statusArray: ["APPROVED"], cycleId: cycle.cycle?.id },

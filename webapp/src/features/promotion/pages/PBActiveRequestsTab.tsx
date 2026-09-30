@@ -54,7 +54,10 @@ const STRIPE_SX = {
 export default function PBActiveRequestsTab() {
   const cycle = useActivePromotionCycle();
   const deadlinePast = isPromotionDeadlinePast(cycle.cycle?.promotionBoardDeadline);
-  const requests = usePromotionRequests({ statusArray: ["FL_APPROVED"] }, !cycle.isPending);
+  const requests = usePromotionRequests(
+    { statusArray: ["FL_APPROVED"], cycleId: cycle.cycle?.id },
+    !cycle.isPending && Boolean(cycle.cycle),
+  );
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [editingRequest, setEditingRequest] = useState<PromotionRequestFull | null>(null);
@@ -191,7 +194,7 @@ export default function PBActiveRequestsTab() {
         </Tooltip>
       </Box>
 
-      {cycle.isPending || requests.isPending ? (
+      {cycle.isPending || (Boolean(cycle.cycle) && requests.isPending) ? (
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : cycle.isError ? (
         <PromotionEmptyState
