@@ -47,6 +47,7 @@ const originalConfig = window.config;
 afterEach(() => {
   window.config = originalConfig;
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 function renderDownloads(path = "/engineering/downloads") {
@@ -65,6 +66,8 @@ function renderDownloads(path = "/engineering/downloads") {
 
 describe("Downloads", () => {
   it("opens on the last 30 days and lists the API's daily release downloads", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-30T12:00:00.000Z"));
     window.config = {
       ...(window.config ?? {}),
       ONE_WSO2_PREVIEW_FEATURES: { engineering: true },
@@ -108,10 +111,8 @@ describe("Downloads", () => {
     expect(requested.searchParams.get("interval")).toBe("day");
     const from = requested.searchParams.get("from") ?? "";
     const to = requested.searchParams.get("to") ?? "";
-    const span =
-      (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
-    expect(span).toBe(30);
-    expect(to).toBe(new Date().toISOString().slice(0, 10));
+    expect(from).toBe("2026-08-31");
+    expect(to).toBe("2026-09-30");
   });
 
   it("keeps a changed date range in the address", async () => {
@@ -129,6 +130,66 @@ describe("Downloads", () => {
     const where = await screen.findByTestId("where");
     expect(where).toHaveTextContent("from=2026-01-01");
     expect(where).toHaveTextContent(`to=${displayedTo}`);
+  });
+
+  it("keeps the current date when the field is cleared", async () => {
+    window.config = configured();
+    vi.stubGlobal("fetch", vi.fn(async () => json({ series: [], repositories: [] })));
+    renderDownloads("/engineering/downloads?from=2026-01-01&to=2026-01-15");
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "" } });
+    expect(screen.getByTestId("where")).toHaveTextContent("from=2026-01-01");
+    expect((screen.getByLabelText("From") as HTMLInputElement).value).toBe("2026-01-01");
+  });
+
+  it("does not request downloads when From is after To", async () => {
+    window.config = configured();
+    const fetchMock = vi.fn(async (url: string) =>
+      url.includes("/stats/") ? json({ message: "no" }, 500) : json({ repositories: [] }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderDownloads("/engineering/downloads?from=2026-09-10&to=2026-09-01");
+    expect(await screen.findByText("From is after To.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("/stats/"))).toBe(false);
+  });
+
+  it("says Engineering is not available when the preview is off", () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { engineering: false },
+      ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "https://stats.example",
+    } as Window["config"];
+    renderDownloads();
+    expect(screen.getByText(/engineering isn't available yet/i)).toBeInTheDocument();
+  });
+
+  it("says Downloads is not connected and makes no request", () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { engineering: true },
+    } as Window["config"];
+    delete window.config?.ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL;
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    renderDownloads();
+    expect(screen.getByText(/isn't connected yet/i)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("limits the request to the products in the address", async () => {
+    window.config = configured();
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/repositories")) {
+        return json({
+          repositories: [{ id: 1, repoName: "product-apim", productName: "API Manager", isActive: true }],
+        });
+      }
+      return json({ series: [] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderDownloads("/engineering/downloads?repos=1");
+    expect(await screen.findByText("No data for the selected range")).toBeInTheDocument();
+    const dailyCall = fetchMock.mock.calls.find((call) => String(call[0]).includes("/stats/daily"));
+    expect(new URL(String(dailyCall?.[0])).searchParams.get("repos")).toBe("1");
   });
 
   it("asks for monthly bars when the address says month", async () => {

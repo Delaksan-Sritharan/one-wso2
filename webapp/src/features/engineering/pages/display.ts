@@ -23,3 +23,20 @@ export function formatCount(value: number): string {
 export function productLabel(productName: string | null, repoName: string): string {
   return productName && productName.trim() !== "" ? productName : repoName;
 }
+
+const activityDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+export function activityDate(value: string | null | undefined): string | undefined {
+  return value && activityDatePattern.test(value) ? value : undefined;
+}
+
+export function isIsolatedPoint(
+  data: readonly Record<string, string | number | null>[],
+  dataKey: string,
+  index: number,
+): boolean {
+  const value = data[index]?.[dataKey];
+  const prev = index > 0 ? data[index - 1]?.[dataKey] : null;
+  const next = index + 1 < data.length ? data[index + 1]?.[dataKey] : null;
+  return typeof value === "number" && typeof prev !== "number" && typeof next !== "number";
+}

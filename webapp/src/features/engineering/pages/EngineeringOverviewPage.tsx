@@ -40,7 +40,7 @@ import {
   type DailySeries,
 } from "@features/engineering/api/productDownloadStats";
 import { dailyChartModel } from "./dailyChartModel";
-import { formatCount, productLabel } from "./display";
+import { activityDate, formatCount, productLabel } from "./display";
 
 export default function EngineeringOverviewPage(): JSX.Element {
   const preview = isPreviewEnabled("engineering");
@@ -135,11 +135,7 @@ export default function EngineeringOverviewPage(): JSX.Element {
           label="Yesterday's Downloads"
           value={formatCount(totals.todayDownloads)}
           trend={totals.todayDeltaPct}
-          to={
-            totals.asOfDate
-              ? `/engineering/downloads?interval=day&from=${totals.asOfDate}&to=${totals.asOfDate}`
-              : undefined
-          }
+          to={dayDownloadsPath(totals.asOfDate)}
         />
         <Figure
           label="This Month's Downloads"
@@ -209,9 +205,14 @@ export default function EngineeringOverviewPage(): JSX.Element {
   );
 }
 
+function dayDownloadsPath(asOfDate: string | null | undefined): string | undefined {
+  const day = activityDate(asOfDate);
+  if (!day) return undefined;
+  return `/engineering/downloads?interval=day&from=${day}&to=${day}`;
+}
+
 function monthDownloadsPath(asOfDate: string | null | undefined): string {
-  const to =
-    asOfDate && /^\d{4}-\d{2}-\d{2}$/.test(asOfDate) ? asOfDate : new Date().toISOString().slice(0, 10);
+  const to = activityDate(asOfDate) ?? new Date().toISOString().slice(0, 10);
   const from = `${to.slice(0, 7)}-01`;
   return `/engineering/downloads?interval=month&from=${from}&to=${to}`;
 }

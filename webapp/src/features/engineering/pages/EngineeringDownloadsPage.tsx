@@ -43,7 +43,7 @@ import {
   type ReleaseDownloadGrain,
 } from "@features/engineering/api/productDownloadStats";
 import { dailyChartModel } from "./dailyChartModel";
-import { formatCount, productLabel } from "./display";
+import { formatCount, isIsolatedPoint, productLabel } from "./display";
 
 function readGrain(value: string | null): ReleaseDownloadGrain {
   if (value === "month" || value === "cumulative") return value;
@@ -72,9 +72,10 @@ export default function EngineeringDownloadsPage(): JSX.Element {
     enabled,
     queryFn: async () => getRepositories(await getToken()),
   });
+  const rangeInverted = from > to;
   const downloads = useQuery({
     queryKey: ["product-download-stats", "downloads", base, from, to, interval, repos.join(",")],
-    enabled,
+    enabled: enabled && !rangeInverted,
     queryFn: async () => getReleaseDownloads(await getToken(), { from, to, interval, repos }),
   });
 
@@ -104,6 +105,7 @@ export default function EngineeringDownloadsPage(): JSX.Element {
     if (!params.get("from")) next.set("from", from);
     if (!params.get("to")) next.set("to", to);
     for (const [key, value] of Object.entries(updates)) {
+      if ((key === "from" || key === "to") && (value == null || value === "")) continue;
       if (value == null || value === "") next.delete(key);
       else next.set(key, value);
     }
@@ -179,7 +181,9 @@ export default function EngineeringDownloadsPage(): JSX.Element {
         )}
       </Stack>
 
-      {downloads.isPending ? (
+      {rangeInverted ? (
+        <Typography>From is after To.</Typography>
+      ) : downloads.isPending ? (
         <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
           <CircularProgress size={16} />
           <Typography>Loading release downloads…</Typography>
@@ -242,9 +246,7 @@ function isolatedDot(
   return (props: { cx?: number; cy?: number; index?: number }) => {
     const index = props.index ?? -1;
     const value = data[index]?.[dataKey];
-    const prev = index > 0 ? data[index - 1]?.[dataKey] : null;
-    const next = index + 1 < data.length ? data[index + 1]?.[dataKey] : null;
-    if (typeof value !== "number" || typeof prev === "number" || typeof next === "number") return null;
+    if (!isIsolatedPoint(data, dataKey, index) || typeof value !== "number") return null;
     if (props.cx == null || props.cy == null) return null;
     return <circle cx={props.cx} cy={props.cy} r={3} fill={stroke} />;
   };
