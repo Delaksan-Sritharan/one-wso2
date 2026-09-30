@@ -20,17 +20,14 @@ import { isCreditCardNumberValid } from "./masterDataForm";
 import type { LabelledId } from "./masterDataTypes";
 
 /**
- * The form controls the four master-data dialogs are built from, ported from
- * the source's `components/form-fields/*`.
+ * The form controls the four master-data dialogs are built from.
  *
- * The source's shared behaviour, kept: a required field only turns red once
- * it has been touched and left empty (`CustomTextField.tsx:39-43`), never
- * while it is still being filled in for the first time. Written here as a
- * `touched` flag set on blur, which is the same rule stated directly.
+ * Shared rule across all of them: a required field only turns red once it
+ * has been touched and left empty, never while it is still being filled in
+ * for the first time. Written here as a `touched` flag set on blur.
  *
- * MUI's `TextField`/`Autocomplete` come through Oxygen UI, so these pick up
- * the portal's field sizing, focus ring and dark-mode tokens rather than the
- * source app's hardcoded `textFieldTheme`.
+ * `TextField`/`Autocomplete` come through Oxygen UI, so these pick up the
+ * portal's field sizing, focus ring and dark-mode tokens automatically.
  */
 
 const FIELD_PROPS = {
@@ -43,10 +40,9 @@ const FIELD_PROPS = {
 /**
  * A single-line text or number field.
  *
- * `type="number"` reports its value as a number and treats a blank box as 0,
- * matching `CustomTextField.tsx:22-30` — 0 is how "nothing entered" is
- * spelled for the numeric ids on this backend, and `isFormComplete` reads it
- * back the same way.
+ * `type="number"` reports its value as a number and treats a blank box as 0
+ * — how "nothing entered" is spelled for the numeric ids on this backend,
+ * and `isFormComplete` reads it back the same way.
  */
 export function TextInput({
   id,
@@ -100,9 +96,9 @@ export function TextInput({
 /**
  * Pick one of a fixed list.
  *
- * `freeSolo` lets a value be typed that is not on the list — the source turns
- * it on for Expense Type, where the list is the types that already exist and
- * the point of the form is often to add one that does not.
+ * `freeSolo` lets a value be typed that is not on the list — turned on for
+ * Expense Type, where the list is the types that already exist and the
+ * point of the form is often to add one that does not.
  */
 export function SelectInput({
   id,

@@ -29,19 +29,15 @@ import type {
 } from "./masterDataTypes";
 
 /**
- * Everything the Submit button's enabled state depends on, ported from the
- * source's `utils/utils.ts`.
+ * Everything the Submit button's enabled state depends on.
  *
- * The source spreads this across `setInitialData`, `isAllFieldsFilled`,
- * `areDataEqual` and `getUpdatedData`, each re-deriving which tab it is on
- * through a chain of type guards. Here the per-tab knowledge is declared once,
- * in `OPTIONAL_FIELDS` and `EITHER_OR_GROUPS` below, and the four operations
- * read it, because the rules are the part that must stay faithful and they
- * are much easier to check against the source when they sit together in a
- * table instead of threaded through four functions.
+ * The per-tab rules are declared once, in `OPTIONAL_FIELDS` and
+ * `EITHER_OR_GROUPS` below, and the operations that follow just read them —
+ * a table both tabs can be checked against side by side, rather than the
+ * same knowledge threaded separately through each function.
  */
 
-/** Fields that may be left blank — `constants.ts:112-121`. */
+/** Fields that may be left blank. */
 const OPTIONAL_FIELDS: Record<MasterDataTab, readonly string[]> = {
   subsidiaries: [],
   departments: [],
@@ -51,7 +47,7 @@ const OPTIONAL_FIELDS: Record<MasterDataTab, readonly string[]> = {
 
 /**
  * Field groups where at least one member must be filled, rather than each
- * one — `constants.ts:123-133`.
+ * one.
  *
  * Expense types are the only tab with one: an expense type is scoped by
  * engagement codes, by engagement-code suffixes, or by both, and the form
@@ -65,7 +61,7 @@ const EITHER_OR_GROUPS: Record<MasterDataTab, readonly (readonly string[])[]> = 
   creditCards: [],
 };
 
-/** Which column each tab sorts by on first paint — `constants.ts:135-144`. */
+/** Which column each tab sorts by on first paint. */
 export const INITIAL_SORT_FIELD: Record<MasterDataTab, string> = {
   subsidiaries: "legalName",
   departments: "employeeDepartment",
@@ -74,12 +70,11 @@ export const INITIAL_SORT_FIELD: Record<MasterDataTab, string> = {
 };
 
 /**
- * A blank payload, or an existing row flattened into one — `utils.ts:26-72`.
+ * A blank payload, or an existing row flattened into one.
  *
- * A number field starts at 0 and a nullable string at "", which is also how
- * "empty" is spelled in `isAllFieldsFilled`. That coupling is deliberate in
- * the source and kept here: 0 is not a selectable GL code or tax id, so it
- * doubles as "nothing chosen yet".
+ * A number field starts at 0 and a nullable string at "" — the same values
+ * `isFormComplete` below reads as "empty". That coupling is deliberate: 0 is
+ * not a selectable GL code or tax id, so it doubles as "nothing chosen yet".
  */
 export function initialFormData(tab: MasterDataTab, row?: MasterDataRow): MasterDataPayload {
   switch (tab) {
@@ -125,15 +120,13 @@ export function initialFormData(tab: MasterDataTab, row?: MasterDataRow): Master
 }
 
 /**
- * Whether a card number matches the shape its provider issues —
- * `utils.ts:74-85`.
+ * Whether a card number matches the shape its provider issues.
  *
- * Returns false for an unrecognised provider where the source throws. The
- * throw is reachable from `isAllFieldsFilled`, which runs on every keystroke
- * inside a `useEffect`, so a provider outside the pair would take the dialog
- * down rather than just refusing to enable Submit. Both providers come from
- * a fixed two-item list, so in practice this only changes what happens on a
- * path that should not exist.
+ * Returns false, rather than throwing, for a provider outside the pair.
+ * This runs on every keystroke while the form is open, so a bad provider
+ * value would take the dialog down instead of just refusing to enable
+ * Submit. Both providers come from a fixed two-item list, so in practice
+ * this only changes what happens on a path that should not exist.
  */
 export function isCreditCardNumberValid(providerCode: string, ccNumber: string): boolean {
   if (providerCode === "AMEX") return /^\d{3}-\d{5}$/.test(ccNumber);
@@ -149,7 +142,7 @@ function isBlank(value: unknown): boolean {
 }
 
 /**
- * Whether Submit may be enabled — `utils.ts:87-140`.
+ * Whether Submit may be enabled.
  *
  * Required means filled; an either-or group means at least one member filled;
  * and on the card tab the number must also match its provider's format.
@@ -173,8 +166,8 @@ export function isFormComplete(tab: MasterDataTab, form: MasterDataPayload): boo
     if (isBlank(value)) return false;
   }
 
-  // utils.ts:127-135 — a well-formed card number is part of "filled in", not
-  // a separate check the reader discovers only after pressing Submit.
+  // A well-formed card number is part of "filled in", not a separate check
+  // the reader discovers only after pressing Submit.
   if (tab === "creditCards") {
     const { ccProviderCode, ccNumber } = form as CreditCardPayload;
     if (ccProviderCode.length > 0 && !isCreditCardNumberValid(ccProviderCode, ccNumber)) return false;
@@ -184,8 +177,7 @@ export function isFormComplete(tab: MasterDataTab, form: MasterDataPayload): boo
 }
 
 /**
- * Whether the form still matches the row it was opened on —
- * `utils.ts:151-190`.
+ * Whether the form still matches the row it was opened on.
  *
  * Only the payload's own keys are compared; a row carries resolved display
  * columns (glCode, glAccountName, …) that the form never edits. A null on the
@@ -193,7 +185,7 @@ export function isFormComplete(tab: MasterDataTab, form: MasterDataPayload): boo
  */
 export function isUnchanged(row: MasterDataRow, form: MasterDataPayload): boolean {
   return Object.entries(form).every(([key, formValue]) => {
-    const rowValue = (row as Record<string, unknown>)[key] ?? "";
+    const rowValue = (row as unknown as Record<string, unknown>)[key] ?? "";
     if (Array.isArray(formValue)) {
       const before = [...((rowValue as string[]) ?? [])].sort();
       const after = [...formValue].sort();
@@ -204,7 +196,7 @@ export function isUnchanged(row: MasterDataRow, form: MasterDataPayload): boolea
 }
 
 /**
- * The changed fields only — `utils.ts:192-231`.
+ * The changed fields only.
  *
  * PATCH bodies are partial on this backend, and sending the untouched fields
  * back would make every edit look like a change to every column in whatever
@@ -213,7 +205,7 @@ export function isUnchanged(row: MasterDataRow, form: MasterDataPayload): boolea
 export function changedFields(row: MasterDataRow, form: MasterDataPayload): Partial<MasterDataPayload> {
   const patch: Record<string, unknown> = {};
   for (const [key, formValue] of Object.entries(form)) {
-    const rowValue = (row as Record<string, unknown>)[key] ?? "";
+    const rowValue = (row as unknown as Record<string, unknown>)[key] ?? "";
     const same = Array.isArray(formValue)
       ? JSON.stringify([...((rowValue as string[]) ?? [])].sort()) === JSON.stringify([...formValue].sort())
       : rowValue === formValue;

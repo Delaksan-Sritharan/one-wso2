@@ -17,8 +17,7 @@
 import type { MasterDataTab } from "./masterDataTypes";
 
 /**
- * Every user-facing string the master-data screens say, kept verbatim from
- * the source app so the port reads identically to the thing it replaces.
+ * Every user-facing string the master-data screens say.
  *
  * Collected in one file rather than inlined at each call site: the same
  * sentences are said by four tabs, and a snackbar that drifts on one tab and
@@ -27,32 +26,26 @@ import type { MasterDataTab } from "./masterDataTypes";
  */
 export const MASTER_DATA_SNACK = {
   success: {
-    // FormDialog.tsx:118 — the source's own wording, missing "d" and all.
-    // Not corrected here: the point of the port is that nothing changes.
+    // Typo and all, kept exactly as written rather than corrected — a copy
+    // fix like this is easy to slip into a change that was supposed to be
+    // about something else, and this file is not the place to do it quietly.
     updated: "Data update successfully",
     added: "Data added successfully",
-    // DeleteConfirmationDialog.tsx:34
     deleted: "Data deleted successfully",
   },
   error: {
-    // FormDialog.tsx:120-122, :127-129
     updating: "Error updating data. Please try again. If the issue persists, contact Internal Apps Team",
     adding: "Error adding data. Please try again. If the issue persists, contact Internal Apps Team",
-    // DeleteConfirmationDialog.tsx:44-46
     deleting: "Error deleting data. Please try again. If the issue persists, contact Internal Apps Team",
-    // DeleteConfirmationDialog.tsx:38-41 — the 409 the backend returns when
-    // the record is still referenced. Distinct from a generic delete failure
-    // because it tells the reader what to do about it.
+    // The 409 the backend returns when the record is still referenced.
+    // Distinct from a generic delete failure because it tells the reader
+    // what to do about it.
     deleteConflict:
       "Cannot proceed with this operation due to linked data. Delete other active connections to continue",
-    // CustomTable.tsx:76-78
     loading: "Error retrieving data. Please try again. If the issue persists, contact Internal Apps Team",
-    // CustomTable.tsx:54-59
     autoComplete:
       "Error retrieving auto complete data. Please try again. If the issue persists, contact Internal Apps Team",
-    // DepartmentFormContent.tsx:34-39
     glCodes: "Error retrieving Gl Code data. Please try again. If the issue persists, contact Internal Apps Team",
-    // CreditCardFormContent.tsx:34-39
     employeeEmails:
       "Error retrieving employee emails. Please try again. If the issue persists, contact Internal Apps Team",
   },
@@ -61,11 +54,9 @@ export const MASTER_DATA_SNACK = {
 /**
  * The "Add New X" button on each page, and the dialog titles.
  *
- * The source's `isEditForm` prop is inverted — `FormDialog.tsx:36` sets it to
- * `!initialData`, so it is true when ADDING. Its form contents then read
- * `isEditForm ? "Add New …" : "Update Existing …"`, which lands on the right
- * words through two wrongs. Ported as `isCreate`, which is what it has always
- * meant, so the next reader does not have to re-derive that.
+ * `isCreate` names what it has always meant — the dialog is either creating a
+ * new record or editing an existing one, and every caller reads it as plain
+ * boolean logic rather than something that needs re-deriving each time.
  */
 export const MASTER_DATA_FORM_COPY: Record<
   MasterDataTab,
@@ -93,7 +84,7 @@ export const MASTER_DATA_FORM_COPY: Record<
   },
 };
 
-/** DeleteConfirmationDialog.tsx:70-76 — title, body, and the two buttons. */
+/** The delete-confirmation dialog's title, body, and the two buttons. */
 export const MASTER_DATA_DELETE_COPY = {
   title: "Delete Confirmation",
   text: "Are you sure you want to delete this record?",
@@ -104,10 +95,8 @@ export const MASTER_DATA_DELETE_COPY = {
 /**
  * Subtitles for the page frame.
  *
- * New writing — the source app has no subtitle, because each tab is a panel
- * inside one app whose name is in the title bar. Here each tab is a route of
- * its own inside a portal of ~20 apps, so a line saying what the table is for
- * is worth more than the fidelity of leaving it out.
+ * Each tab is a route of its own inside a portal of ~20 apps, so a line
+ * saying what the table is for earns its place under the title.
  */
 export const MASTER_DATA_SUBTITLES: Record<MasterDataTab, string> = {
   subsidiaries: "WSO2 legal entities and the tax codes claims are booked against.",

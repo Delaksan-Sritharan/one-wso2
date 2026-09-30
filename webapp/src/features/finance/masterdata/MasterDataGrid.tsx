@@ -28,18 +28,15 @@ import { INITIAL_SORT_FIELD } from "./masterDataForm";
 import type { Department, ExpenseType, MasterDataRow, MasterDataTab } from "./masterDataTypes";
 
 /**
- * The one table all four master-data screens are drawn with, ported from the
- * source's `components/data-table/CustomTable.tsx`.
+ * The one table all four master-data screens are drawn with.
  *
- * The source builds its columns at render time inside the table component and
- * switches on `params.field` in a single shared `renderCell` — so every tab
- * pays for every other tab's special cases. Here the per-tab column list is a
- * plain declaration below and the shared cell behaviour is three named
- * renderers, because "which columns does Subsidiaries have" is the question a
- * reader actually arrives with.
+ * The per-tab column list is a plain declaration below, and the cell
+ * behaviour shared across tabs is three named renderers, because "which
+ * columns does Subsidiaries have" is the question a reader actually
+ * arrives with.
  */
 
-/** Empty cells read as a dash, not as blank — `CustomTable.tsx:148-155`. */
+/** Empty cells read as a dash, not as blank. */
 const EMPTY = "-";
 
 /** Lists render as chips; `valueFormatter` keeps CSV export readable. */
@@ -110,7 +107,7 @@ function InfoCell({ text, details }: { text: string; details: [string, string][]
   );
 }
 
-/** Plain text cell — dash when empty, matching `CustomTable.tsx:148-155`. */
+/** Plain text cell — dash when empty. */
 const text = (): Partial<DataGrid.GridColDef> => ({
   renderCell: (p) => (p.value === null || p.value === undefined || p.value === "" || p.value === 0
     ? EMPTY
@@ -123,10 +120,7 @@ const chips = (): Partial<DataGrid.GridColDef> => ({
   valueFormatter: (value) => ((value as string[])?.length ? (value as string[]).join(", ") : EMPTY),
 });
 
-/**
- * Per-tab columns — headers and widths exactly as `constants.ts:58-97` sets
- * them, in the same order.
- */
+/** Per-tab columns, headers and widths, in the order they're read left to right. */
 const MASTER_DATA_COLUMNS: Record<MasterDataTab, DataGrid.GridColDef[]> = {
   subsidiaries: [
     { field: "legalName", headerName: "Subsidiary Legal Name", flex: 4, minWidth: 220, ...text() },
@@ -228,13 +222,11 @@ const MASTER_DATA_COLUMNS: Record<MasterDataTab, DataGrid.GridColDef[]> = {
 /**
  * Columns, Column Search, Export and an always-visible search box.
  *
- * The source's toolbar, feature for feature (`CustomTable.tsx:263-275`): it
- * turns MUI's Filters button into "Column Search" through `localeText` and
- * hides the density and column selectors. The relabel is kept — on a
- * reference table you filter a column to find a record, and "Column Search"
- * says that where "Filters" does not — but the columns button is left in,
- * because these tables are wide and hiding a column you do not need is worth
- * more here than matching a source that switched it off.
+ * "Column Search" rather than "Filters": on a reference table you filter a
+ * column to find a record, and that label says so directly. The columns
+ * button stays visible, unlike density and the column selector — these
+ * tables are wide, and hiding a column you do not need is worth the extra
+ * button.
  */
 function MasterDataToolbar() {
   return (
@@ -261,8 +253,7 @@ function MasterDataToolbar() {
         </DataGrid.ExportCsv>
         <Box sx={{ flex: 1 }} />
         {/* `expanded`, so the field is on screen rather than behind a
-            magnifier the reader has to click first — as the source's
-            always-visible quick filter is. */}
+            magnifier the reader has to click first. */}
         <DataGrid.QuickFilter expanded>
           <DataGrid.QuickFilterControl
             render={(props) => (
@@ -287,9 +278,9 @@ function MasterDataToolbar() {
 /**
  * One tab's table, with an Actions column of Edit and Delete.
  *
- * Rows auto-size their height (`getRowHeight: () => "auto"`, as the source
- * does) because an expense type can carry a dozen engagement-code chips and a
- * fixed row would clip all but the first line.
+ * Rows auto-size their height (`getRowHeight: () => "auto"`) because an
+ * expense type can carry a dozen engagement-code chips and a fixed row
+ * would clip all but the first line.
  */
 export default function MasterDataGrid({
   tab,
@@ -350,7 +341,6 @@ export default function MasterDataGrid({
         disableRowSelectionOnClick
         disableColumnMenu
         slots={{ toolbar: MasterDataToolbar }}
-        // CustomTable.tsx:277-279 — the source renames only this one entry.
         localeText={{ toolbarFilters: "Column Search" }}
         initialState={{
           sorting: { sortModel: [{ field: INITIAL_SORT_FIELD[tab], sort: "asc" }] },

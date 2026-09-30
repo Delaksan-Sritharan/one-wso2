@@ -45,7 +45,7 @@ function useInvalidateTab(tab: MasterDataTab) {
     ]);
 }
 
-/** POST /{collection} — `apiService.ts:111-116`. */
+/** POST /{collection} — creates a new record on the given tab. */
 export function useCreateMasterData(tab: MasterDataTab) {
   const getAccessToken = useAccessToken();
   const invalidate = useInvalidateTab(tab);
@@ -62,7 +62,7 @@ export function useCreateMasterData(tab: MasterDataTab) {
 }
 
 /**
- * PATCH /{collection}/{id} — `apiService.ts:122-128`.
+ * PATCH /{collection}/{id}.
  *
  * The body is only the fields that changed; see `changedFields`.
  */
@@ -81,7 +81,7 @@ export function useUpdateMasterData(tab: MasterDataTab) {
   });
 }
 
-/** DELETE /{collection}/{id} — `apiService.ts:118-120`. */
+/** DELETE /{collection}/{id}. */
 export function useDeleteMasterData(tab: MasterDataTab) {
   const getAccessToken = useAccessToken();
   const invalidate = useInvalidateTab(tab);
@@ -101,8 +101,7 @@ export function useDeleteMasterData(tab: MasterDataTab) {
  *
  * The backend answers 409 when the record is still referenced by another
  * table, and that is the one delete failure the reader can actually do
- * something about — so it gets its own wording naming the cause, exactly as
- * `DeleteConfirmationDialog.tsx:37-47` does.
+ * something about — so it gets its own wording naming the cause.
  */
 export function describeDeleteError(error: unknown): string {
   if (error instanceof HttpError && error.status === 409) {

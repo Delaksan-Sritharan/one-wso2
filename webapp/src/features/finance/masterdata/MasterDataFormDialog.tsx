@@ -50,16 +50,15 @@ import {
 } from "./masterDataTypes";
 
 /**
- * Add / edit, for all four tabs — ported from `components/dialogs/FormDialog.tsx`
- * and the four `form-content/*` components it switches between.
+ * Add / edit, for all four tabs.
  *
  * One dialog rather than four: the submit path, the enable rule and the
  * snackbars are identical across tabs, and only the field list differs. The
  * field list is the `switch` at the bottom.
  *
  * Submit is enabled only when the form is complete AND — when editing —
- * something has actually changed (`FormDialog.tsx:137-155`). Pressing it on
- * an unchanged record would PATCH an empty body.
+ * something has actually changed. Pressing it on an unchanged record would
+ * PATCH an empty body.
  */
 export default function MasterDataFormDialog({
   tab,
@@ -100,10 +99,10 @@ export default function MasterDataFormDialog({
 
   const set = (key: string, value: string | number | string[]) =>
     setForm((prev) => {
-      // CCNumberValidateTextField.tsx:24-37 — switching provider empties the
-      // number. AMEX and SVB have different formats, so a number typed for
-      // one is invalid for the other, and leaving it in place would show a
-      // filled field that silently fails validation.
+      // Switching provider empties the number. AMEX and SVB have different
+      // formats, so a number typed for one is invalid for the other, and
+      // leaving it in place would show a filled field that silently fails
+      // validation.
       if (key === "ccProviderCode" && value !== (prev as CreditCardPayload).ccProviderCode) {
         return { ...prev, ccProviderCode: value as string, ccNumber: "" };
       }
@@ -189,7 +188,6 @@ function Fields({
   employeeEmails?: string[];
 }) {
   switch (tab) {
-    // SubsidiaryFormContent.tsx:26-62
     case "subsidiaries": {
       const f = form as SubsidiaryPayload;
       return (
@@ -215,8 +213,8 @@ function Fields({
       );
     }
 
-    // DepartmentFormContent.tsx:55-84. The GL Code dropdown shows the code
-    // and reports its row id, which is what the payload carries.
+    // The GL Code dropdown shows the code and reports its row id, which is
+    // what the payload carries.
     case "departments": {
       const f = form as DepartmentPayload;
       const options = (glCodes ?? []).map((g) => ({ id: g.id, label: g.glCode }));
@@ -248,7 +246,6 @@ function Fields({
       );
     }
 
-    // ExpenseTypeFormContent.tsx:56-133
     case "expenseTypes": {
       const f = form as ExpenseTypePayload;
       return (
@@ -286,9 +283,8 @@ function Fields({
             multiline
             onChange={set}
           />
-          {/* :107-132 — the source boxes these two together under a warning
-              line, because the rule binding them is not visible from either
-              field on its own. */}
+          {/* Boxed together under a warning line, because the rule binding
+              these two fields is not visible from either one on its own. */}
           <Alert severity="warning" variant="outlined" sx={{ mt: 2, mb: 1 }}>
             Please fill in at least one of the following fields
           </Alert>
@@ -314,7 +310,6 @@ function Fields({
       );
     }
 
-    // CreditCardFormContent.tsx:57-105
     case "creditCards": {
       const f = form as CreditCardPayload;
       const emails = employeeEmails ?? [];

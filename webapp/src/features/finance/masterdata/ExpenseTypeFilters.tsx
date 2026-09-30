@@ -18,7 +18,7 @@ import { Autocomplete, Box, Button, Chip, Stack, TextField } from "@wso2/oxygen-
 import type { ExpenseTypeAutoComplete, ExpenseTypeFilter, LabelledId } from "./masterDataTypes";
 
 /**
- * The six filters above the expense-type table — `data-table/FilterFields.tsx`.
+ * The six filters above the expense-type table.
  *
  * Expense types are the one collection fetched through a POST filter rather
  * than a plain GET, so unlike the other three tabs this bar is not a
@@ -26,7 +26,7 @@ import type { ExpenseTypeAutoComplete, ExpenseTypeFilter, LabelledId } from "./m
  * all. Apply is what issues the request.
  */
 
-/** The two states the source offers — `FilterFields.tsx:105`. */
+/** The two statuses a row can carry. */
 const STATUS_OPTIONS = ["active", "inactive"] as const;
 
 const FIELD_SX = { minWidth: 200, flex: 1 } as const;
@@ -112,10 +112,10 @@ export default function ExpenseTypeFilters({
   onApply: () => void;
   onClear: () => void;
 }) {
-  // A key set to an empty array is dropped rather than sent as `[]`, which
-  // the source does on Apply (`FilterFields.tsx:39-45`). Doing it as the
-  // value changes keeps the object that reaches the query key clean, so two
-  // ways of expressing "no category filter" don't produce two cache entries.
+  // A key set to an empty array is dropped rather than sent as `[]`. Doing
+  // it as the value changes keeps the object that reaches the query key
+  // clean, so two ways of expressing "no category filter" don't produce two
+  // cache entries.
   const set = <K extends keyof ExpenseTypeFilter>(key: K, value: ExpenseTypeFilter[K]) => {
     const next = { ...draft };
     if (!value || (value as unknown[]).length === 0) delete next[key];

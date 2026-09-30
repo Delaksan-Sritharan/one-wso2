@@ -14,16 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// The finance-master-data wire types, transcribed from the source app's
-// `utils/types.ts` field for field. The backend is unchanged by this port, so
-// these names are the contract — a rename here is a broken request, not a
-// tidy-up.
+// The finance-master-data wire types, field for field. The backend decides
+// these names — a rename here is a broken request, not a tidy-up.
 
-/** The four collections, in the order the source's sidebar lists them. */
+/** The four collections, in the order the rail lists them. */
 export type MasterDataTab = "subsidiaries" | "departments" | "expenseTypes" | "creditCards";
 
 /**
- * Path segment per tab — `constants.ts:47-52`.
+ * Path segment per tab.
  *
  * The camelCase tab key and the kebab-case endpoint differ for two of the
  * four, so this map is what turns one into the other. Both spellings are load
@@ -36,7 +34,7 @@ export const MASTER_DATA_ENDPOINTS: Record<MasterDataTab, string> = {
   creditCards: "credit-cards",
 };
 
-/** Page/tab titles — `constants.ts:14-19`. */
+/** Page/tab titles. */
 export const MASTER_DATA_LABELS: Record<MasterDataTab, string> = {
   subsidiaries: "Subsidiaries",
   departments: "Departments",
@@ -162,7 +160,7 @@ export interface CreditCardPayload {
   leadEmails: string[];
 }
 
-/** The two providers the source offers — `constants.ts:26-29`. */
+/** The two card providers this backend supports. */
 export const CREDIT_CARD_PROVIDERS = ["AMEX", "SVB"] as const;
 export type CreditCardProvider = (typeof CREDIT_CARD_PROVIDERS)[number];
 

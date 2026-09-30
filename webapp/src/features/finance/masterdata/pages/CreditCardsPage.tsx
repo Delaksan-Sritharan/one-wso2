@@ -31,9 +31,8 @@ export default function CreditCardsPage() {
   const emails = useEmployeeEmails();
   const { showError } = useNotifications();
 
-  // CreditCardFormContent.tsx:34-40 — the source closes the dialog when this
-  // fails, because without emails neither picker can be used. Said once here
-  // for the same reason the department page does.
+  // Without emails, neither the employee nor the lead picker can be used.
+  // Said once here, when the fetch fails, rather than on every dialog open.
   useEffect(() => {
     if (emails.isError) showError(MASTER_DATA_SNACK.error.employeeEmails);
   }, [emails.isError, showError]);

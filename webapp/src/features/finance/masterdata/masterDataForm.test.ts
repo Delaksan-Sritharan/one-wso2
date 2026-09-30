@@ -30,12 +30,12 @@ import type {
   SubsidiaryPayload,
 } from "./masterDataTypes";
 
-// This file is the one the port's own doc comments say must stay faithful to
-// the source — either-or field groups, PATCH diffing with sorted-array
-// comparison, and the two provider-specific card-number formats. All four
-// functions are pure, so every case here is a plain input/output assertion.
+// This file covers the trickiest logic in the master-data forms — either-or
+// field groups, PATCH diffing with sorted-array comparison, and the two
+// provider-specific card-number formats. All four functions are pure, so
+// every case here is a plain input/output assertion.
 
-describe("isCreditCardNumberValid — the two formats utils.ts:74-85 enforces", () => {
+describe("isCreditCardNumberValid — the two formats it enforces", () => {
   it("accepts an AMEX number in 123-12345 shape", () => {
     expect(isCreditCardNumberValid("AMEX", "123-12345")).toBe(true);
   });
@@ -288,6 +288,7 @@ describe("initialFormData — seeding the payload from an existing row, or blank
       leadEmails: [],
       status: "active",
     };
-    expect(initialFormData("creditCards", row).comment).toBe("");
+    const form = initialFormData("creditCards", row) as CreditCardPayload;
+    expect(form.comment).toBe("");
   });
 });

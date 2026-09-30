@@ -51,9 +51,9 @@ const REFERENCE_STALE_TIME = 5 * 60 * 1000;
  * One tab's rows.
  *
  * Three of the four are a plain GET. Expense types go through a POST filter
- * instead (`CustomTable.tsx:69-71`), because the table is large enough that
- * the source makes you narrow it before it will show you anything — see
- * `useExpenseTypes` below, which is the hook that screen actually uses.
+ * instead, because the table is large enough that the screen asks the reader
+ * to narrow it before showing anything — see `useExpenseTypes` below, which
+ * is the hook that screen actually uses.
  */
 export function useMasterDataList<T extends Exclude<MasterDataTab, "expenseTypes">>(tab: T) {
   const { isSignedIn } = useAsgardeo();
@@ -76,10 +76,10 @@ export function useMasterDataList<T extends Exclude<MasterDataTab, "expenseTypes
 /**
  * Expense types matching a filter — POST `search-expense-types`.
  *
- * `enabled` is the caller's, not derived: the source shows an empty
- * "Please select filters" state until Apply Filters is pressed for the first
- * time, and fires nothing before that. Passing `false` is how the page holds
- * that state without this hook needing to know about it.
+ * `enabled` is the caller's, not derived: the page shows an empty
+ * "Please select filters" state until Apply Filters is pressed for the
+ * first time, and fires nothing before that. Passing `false` is how the
+ * page holds that state without this hook needing to know about it.
  */
 export function useExpenseTypes(filters: ExpenseTypeFilter, enabled: boolean) {
   const { isSignedIn } = useAsgardeo();
@@ -154,10 +154,8 @@ export function useEmployeeEmails(enabled = true) {
 /**
  * The option lists behind the expense-type filters AND that tab's form.
  *
- * One request serving both is the source's arrangement too — `CustomTable`
- * fetches it and puts it on a context the form reads (`tab-context.ts`), so
- * the category and GL-code pickers inside the dialog are populated from the
- * same payload that fills the filter bar.
+ * One request serves both, so the category and GL-code pickers inside the
+ * dialog are populated from the same payload that fills the filter bar.
  */
 export function useExpenseTypeAutoComplete(enabled = true) {
   const { isSignedIn } = useAsgardeo();
