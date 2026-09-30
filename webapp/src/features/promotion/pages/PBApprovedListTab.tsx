@@ -74,7 +74,7 @@ export default function PBApprovedListTab() {
           <IconButton
             size="small"
             onClick={() => {
-              if (cycle.cycle) void requests.refetch();
+              if (!cycle.isError && cycle.cycle) void requests.refetch();
               else void cycle.refetch();
             }}
           >

@@ -192,7 +192,7 @@ export default function FLActiveRequestsTab() {
           <IconButton
             size="small"
             onClick={() => {
-              if (cycle.cycle && workEmail) void requests.refetch();
+              if (!cycle.isError && cycle.cycle && workEmail) void requests.refetch();
               else void cycle.refetch();
             }}
           >

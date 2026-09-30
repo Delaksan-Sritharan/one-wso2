@@ -76,7 +76,7 @@ export default function PBFLRejectedListTab() {
           <IconButton
             size="small"
             onClick={() => {
-              if (cycle.cycle) void requests.refetch();
+              if (!cycle.isError && cycle.cycle) void requests.refetch();
               else void cycle.refetch();
             }}
           >
