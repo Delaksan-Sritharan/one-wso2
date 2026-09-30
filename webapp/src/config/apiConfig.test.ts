@@ -17,12 +17,9 @@
 import { describe, expect, it } from "vitest";
 import { promotionServiceUrls } from "@config/apiConfig";
 
-// The promotion backend binds `statusArray` as an array query parameter
-// that splits on a literal "," in the raw query string, before decoding —
-// a percent-encoded "%2C" (what URLSearchParams would produce) never
-// splits, so a multi-status call would 500. These pin the exact query
-// string produced for a multi-value statusArray, so a future edit that
-// reintroduces URLSearchParams for it fails loudly instead of silently.
+// statusArray's comma must stay unencoded, or the backend won't split it.
+// These pin the exact query string so a switch back to URLSearchParams
+// fails loudly instead of silently.
 describe("promotionServiceUrls: statusArray must stay comma-joined, not percent-encoded", () => {
   it("promotionRequests keeps a raw comma between multiple statuses", () => {
     const url = promotionServiceUrls.promotionRequests({ statusArray: ["WITHDRAW", "REMOVED"] });
