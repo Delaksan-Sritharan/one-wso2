@@ -15,10 +15,16 @@
 // under the License.
 
 import { useAsgardeo } from "@asgardeo/react";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { Box, CircularProgress } from "@wso2/oxygen-ui";
 import { getRenewalInFlightSnapshot, subscribeRenewal } from "@api/authBridge";
+import ErrorNotice from "@components/error-notice/ErrorNotice";
+import {
+  forgetSignInRedirect,
+  rememberSignInRedirect,
+  signInRedirectIsRecent,
+} from "@layouts/signInLoopGuard";
 
 import {
   forgetPostLoginTarget,
@@ -40,6 +46,11 @@ export default function AuthGuard() {
   // the page. Reset only when the SDK reports the user as signed in.
   const startedSignInRef = useRef(false);
   const renewing = useSyncExternalStore(subscribeRenewal, getRenewalInFlightSnapshot);
+  // Whether this page load is the return from a sign-in this tab started moments
+  // ago. Read once, before this page can record a redirect of its own.
+  const [returnedFromRecentSignIn] = useState(signInRedirectIsRecent);
+  const reportedLoopRef = useRef(false);
+  const signInLooped = returnedFromRecentSignIn && !isLoading && !isSignedIn;
 
   const currentHref = location.pathname + location.search + location.hash;
 
@@ -62,10 +73,20 @@ export default function AuthGuard() {
 
     if (!isSignedIn) {
       if (startedSignInRef.current) return;
+      // Back from a sign-in and still signed out: redirecting again would only
+      // loop. The render below offers a retry instead — see signInLoopGuard.
+      if (signInLooped) {
+        if (!reportedLoopRef.current) {
+          reportedLoopRef.current = true;
+          console.warn("[auth] Returned from sign-in still signed out, so not redirecting again.");
+        }
+        return;
+      }
       startedSignInRef.current = true;
       if (isRestorableTarget(location.pathname, location.search)) {
         rememberPostLoginTarget(currentHref);
       }
+      rememberSignInRedirect();
       signIn();
       return;
     }
@@ -73,13 +94,26 @@ export default function AuthGuard() {
     // Signed in: consume any stashed redirect and let React Router own the
     // history stack so useNavigate()/Back behave predictably.
     startedSignInRef.current = false;
+    forgetSignInRedirect();
     const restored = readPostLoginTarget();
     if (!restored) return;
     forgetPostLoginTarget();
     if (restored !== currentHref) {
       navigate(restored, { replace: true });
     }
-  }, [isLoading, isSignedIn, location, currentHref, signIn, navigate]);
+  }, [isLoading, isSignedIn, location, currentHref, signIn, navigate, signInLooped]);
+
+  if (signInLooped) {
+    const retrySignIn = () => {
+      rememberSignInRedirect();
+      signIn();
+    };
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", px: 2 }}>
+        <ErrorNotice onRetry={retrySignIn}>We couldn&apos;t sign you in.</ErrorNotice>
+      </Box>
+    );
+  }
 
   // Hold the children back while a stashed redirect is still pending. Without
   // this the child route tree mounts first, its own redirects fire from child
