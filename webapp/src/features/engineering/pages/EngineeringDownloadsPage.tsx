@@ -38,6 +38,7 @@ import {
   dailyRange,
   getReleaseDownloads,
   getRepositories,
+  isCredentialedProductDownloadStatsUrl,
   isProductDownloadStatsConfigured,
   productDownloadStatsBackendUrl,
   type ReleaseDownloadGrain,
@@ -56,6 +57,7 @@ export default function EngineeringDownloadsPage(): JSX.Element {
   const [params, setParams] = useSearchParams();
   const getToken = useAccessToken();
   const base = productDownloadStatsBackendUrl();
+  const allowed = isCredentialedProductDownloadStatsUrl(base);
   const defaults = dailyRange();
   const from = params.get("from") || defaults.from;
   const to = params.get("to") || defaults.to;
@@ -65,7 +67,7 @@ export default function EngineeringDownloadsPage(): JSX.Element {
     .map((part) => Number(part))
     .filter((id) => Number.isInteger(id) && id > 0);
   const chart = params.get("chart") === "bar" ? "bar" : "line";
-  const enabled = preview && configured;
+  const enabled = preview && configured && allowed;
 
   const repositories = useQuery({
     queryKey: ["product-download-stats", "repositories", base],
@@ -87,6 +89,14 @@ export default function EngineeringDownloadsPage(): JSX.Element {
       <Typography>
         Product Download Stats isn't connected yet. Set{" "}
         <code>ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL</code> in config.js.
+      </Typography>
+    );
+  }
+  if (!allowed) {
+    return (
+      <Typography>
+        Product Download Stats needs an https address. An http address is only accepted for
+        localhost.
       </Typography>
     );
   }

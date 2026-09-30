@@ -162,6 +162,19 @@ describe("Downloads", () => {
     expect(screen.getByText(/engineering isn't available yet/i)).toBeInTheDocument();
   });
 
+  it("does not send the access token to an http address", () => {
+    window.config = {
+      ...(window.config ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { engineering: true },
+      ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "http://stats.example",
+    } as Window["config"];
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    renderDownloads();
+    expect(screen.getByText(/needs an https address/i)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("says Downloads is not connected and makes no request", () => {
     window.config = {
       ...(window.config ?? {}),
