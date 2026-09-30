@@ -19,15 +19,11 @@ import {
   Box,
   Card,
   CircularProgress,
+  ListingTable,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Typography,
 } from "@wso2/oxygen-ui";
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { JSX } from "react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { isPreviewEnabled } from "@config/previewFeatures";
@@ -179,22 +175,30 @@ export default function EngineeringOverviewPage(): JSX.Element {
         <Typography component="h2" variant="h6" sx={{ mb: 1 }}>
           Top Products (Downloads)
         </Typography>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Product</TableCell>
-              <TableCell align="right">Total</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {totals.topProducts.map((product) => (
-              <TableRow key={product.repoId}>
-                <TableCell>{productLabel(product.productName, product.repoName)}</TableCell>
-                <TableCell align="right">{formatCount(product.totalDownloads)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <ListingTable.Provider>
+          <ListingTable.Container>
+            <ListingTable bordered>
+              <ListingTable.Head>
+                <ListingTable.Row>
+                  <ListingTable.Cell>Product</ListingTable.Cell>
+                  <ListingTable.Cell align="right">Total</ListingTable.Cell>
+                </ListingTable.Row>
+              </ListingTable.Head>
+              <ListingTable.Body>
+                {totals.topProducts.map((product) => (
+                  <ListingTable.Row key={product.repoId}>
+                    <ListingTable.Cell>
+                      {productLabel(product.productName, product.repoName)}
+                    </ListingTable.Cell>
+                    <ListingTable.Cell align="right">
+                      {formatCount(product.totalDownloads)}
+                    </ListingTable.Cell>
+                  </ListingTable.Row>
+                ))}
+              </ListingTable.Body>
+            </ListingTable>
+          </ListingTable.Container>
+        </ListingTable.Provider>
       </Card>
     </Box>
   );
@@ -214,12 +218,17 @@ function Figure({
       <Typography variant="body2" color="text.secondary">
         {label}
       </Typography>
-      {trend != null && !Number.isNaN(trend) && (
-        <Typography sx={{ fontWeight: 700, color: trend >= 0 ? "success.main" : "error.main" }}>
-          {trend.toFixed(1)}%
-        </Typography>
-      )}
-      <Typography variant="h4">{value}</Typography>
+      <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
+        <Typography variant="h4">{value}</Typography>
+        {trend != null && !Number.isNaN(trend) && (
+          <Typography
+            component="span"
+            sx={{ fontWeight: 700, color: trend >= 0 ? "success.main" : "error.main" }}
+          >
+            {trend.toFixed(1)}%
+          </Typography>
+        )}
+      </Box>
     </Card>
   );
 }
@@ -240,12 +249,14 @@ function DailyChart({
           <XAxis dataKey="date" />
           <YAxis />
           <Tooltip />
+          <Legend />
           {lines.map((line) => (
             <Line
               key={line.repoId}
               name={line.name}
               type="monotone"
               dataKey={line.dataKey}
+              stroke={line.stroke}
               dot={false}
               connectNulls={false}
             />

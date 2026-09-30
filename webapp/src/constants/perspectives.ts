@@ -671,12 +671,12 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     path: "/sales",
     sections: SALES_SECTIONS,
   },
-  // Product Download Stats is the first engineering tool. Its own perspective,
-  // not a row under Infra Portal: Infra is GitHub administration, and this is
-  // release downloads, package downloads, and repository stats. Held behind
-  // the engineering preview flag until the port is ready to show. The route
-  // itself stays registered either way, so a direct visit while the flag is
-  // off is told Engineering is not available. See ADR 0001.
+  // Product Download Stats is the first engineering tool. It is not under
+  // Infra Portal: Infra is GitHub administration, and this is release
+  // downloads, package downloads, and repository stats. The perspective stays
+  // hidden until the preview flag is on. The route stays registered either
+  // way, so a direct visit while the flag is off says Engineering is not
+  // available.
   ...(isPreviewEnabled("engineering")
     ? [
         {

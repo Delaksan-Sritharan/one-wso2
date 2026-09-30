@@ -55,5 +55,6 @@ describe("the daily chart", () => {
     expect(last["repo-2"]).toBe(7);
     expect(model.lines.map((line) => line.name)).toEqual(["API Manager", "API Manager"]);
     expect(new Set(model.lines.map((line) => line.dataKey)).size).toBe(2);
+    expect(model.lines[0].stroke).not.toBe(model.lines[1].stroke);
   });
 });

@@ -105,7 +105,7 @@ export function getSummary(accessToken: string): Promise<Summary> {
   return authedGet(`${credentialedBase()}/api/v1/stats/summary`, accessToken);
 }
 
-// Last 30 days through today, UTC, matching the existing Overview chart.
+// Last 30 days through today, UTC.
 // The API already labels each point; this only chooses the window.
 export function dailyRange(now = new Date()): { from: string; to: string } {
   const to = now.toISOString().slice(0, 10);
