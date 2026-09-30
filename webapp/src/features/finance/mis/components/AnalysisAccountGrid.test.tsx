@@ -141,7 +141,7 @@ describe("the account table", () => {
   });
 });
 
-// §10.18, for this screen's export.
+// The CSV carries the raw figure, not the scaled amount on screen.
 describe("the CSV", () => {
   it("carries the figure in units when the screen is reading thousands", () => {
     const { csv } = showGrid([account()], MIS_SCALES.THOUSANDS);
