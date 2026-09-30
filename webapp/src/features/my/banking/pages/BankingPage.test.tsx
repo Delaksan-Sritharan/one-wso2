@@ -749,9 +749,9 @@ describe("Edit/Add popup", () => {
     expect(mutateAsyncMock).toHaveBeenCalledWith(
       expect.objectContaining({ accountHoldersCountry: "Sri Lanka" }),
     );
-    // The source's own success text, naming the account type in lower case —
-    // now routed through the app-wide notification banner rather than a
-    // local Snackbar, so it's asserted via the mocked showSuccess call.
+    // The success message names the account type in lower case, routed
+    // through the app-wide notification banner rather than a local
+    // Snackbar, so it's asserted via the mocked showSuccess call.
     await waitFor(() =>
       expect(showSuccessMock).toHaveBeenCalledWith("Successfully requested the salary bank account change!"),
     );
