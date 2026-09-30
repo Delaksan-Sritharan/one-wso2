@@ -1269,20 +1269,22 @@ export const promotionServiceUrls = {
   promotionCycles: (status: "OPEN" | "END") =>
     `${promotionBackendUrl}/promotion/cycles?statusArray=${status}`,
   // GET /promotion/recommendations — leadEmail/statusArray/promotionCycleId
-  // are all optional query params; statusArray is comma-joined (backend
-  // splits on ","). Shared by the Lead Portal's Pending Requests tab
-  // (statusArray=REQUESTED, scoped to the open cycle) and History tab
-  // (statusArray=SUBMITTED,DECLINED,EXPIRED, every cycle).
+  // are all optional query params. Shared by the Lead Portal's Pending
+  // Requests tab (statusArray=REQUESTED, scoped to the open cycle) and
+  // History tab (statusArray=SUBMITTED,DECLINED,EXPIRED, every cycle).
+  //
+  // Built by hand, not URLSearchParams: statusArray's comma must stay
+  // unencoded, or the backend won't split it into individual statuses.
   promotionRecommendations: (params: {
     leadEmail?: string;
     statusArray?: ("REQUESTED" | "SUBMITTED" | "DECLINED" | "EXPIRED")[];
     promotionCycleId?: number;
   }) => {
-    const qs = new URLSearchParams();
-    if (params.leadEmail) qs.set("leadEmail", params.leadEmail);
-    if (params.statusArray?.length) qs.set("statusArray", params.statusArray.join(","));
-    if (params.promotionCycleId !== undefined) qs.set("promotionCycleId", String(params.promotionCycleId));
-    return `${promotionBackendUrl}/promotion/recommendations?${qs.toString()}`;
+    const parts: string[] = [];
+    if (params.leadEmail) parts.push(`leadEmail=${encodeURIComponent(params.leadEmail)}`);
+    if (params.statusArray?.length) parts.push(`statusArray=${params.statusArray.join(",")}`);
+    if (params.promotionCycleId !== undefined) parts.push(`promotionCycleId=${params.promotionCycleId}`);
+    return `${promotionBackendUrl}/promotion/recommendations?${parts.join("&")}`;
   },
   // PATCH /promotion/recommendations — body is RecommendationUpdateData
   // (id/statement/comment/leadEmail); statement/comment are base64, matching
@@ -1316,6 +1318,9 @@ export const promotionServiceUrls = {
   // enableBuFilter=true scopes results to the caller's own
   // functionalLeadAccessLevels (business unit/department/team/sub-team) —
   // the backend 403s if the caller holds no such scope at all.
+  //
+  // Built by hand, not URLSearchParams — same reason as promotionRecommendations
+  // above: statusArray's comma must stay unencoded.
   promotionRequests: (params: {
     statusArray?: string[];
     enableBuFilter?: boolean;
@@ -1323,13 +1328,13 @@ export const promotionServiceUrls = {
     cycleId?: number;
     employeeEmail?: string;
   }) => {
-    const qs = new URLSearchParams();
-    if (params.statusArray?.length) qs.set("statusArray", params.statusArray.join(","));
-    if (params.enableBuFilter !== undefined) qs.set("enableBuFilter", String(params.enableBuFilter));
-    if (params.type) qs.set("type", params.type);
-    if (params.cycleId !== undefined) qs.set("cycleId", String(params.cycleId));
-    if (params.employeeEmail) qs.set("employeeEmail", params.employeeEmail);
-    return `${promotionBackendUrl}/promotion/requests?${qs.toString()}`;
+    const parts: string[] = [];
+    if (params.statusArray?.length) parts.push(`statusArray=${params.statusArray.join(",")}`);
+    if (params.enableBuFilter !== undefined) parts.push(`enableBuFilter=${params.enableBuFilter}`);
+    if (params.type) parts.push(`type=${encodeURIComponent(params.type)}`);
+    if (params.cycleId !== undefined) parts.push(`cycleId=${params.cycleId}`);
+    if (params.employeeEmail) parts.push(`employeeEmail=${encodeURIComponent(params.employeeEmail)}`);
+    return `${promotionBackendUrl}/promotion/requests?${parts.join("&")}`;
   },
   // GET .../requests/{id}/approve|reject?from=functional_lead|promotion_board
   // — shared by the Functional Lead and (not yet ported) Promotion Board
