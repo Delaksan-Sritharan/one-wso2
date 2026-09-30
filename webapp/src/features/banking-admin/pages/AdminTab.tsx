@@ -32,8 +32,7 @@ import {
 import { describeError } from "@api/errors";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { dialogPaperSx } from "@components/confirmation-dialog/dialogPaperSx";
-import ErrorSnackbar from "@components/error-snackbar/ErrorSnackbar";
-import { useErrorSnackbar } from "@components/error-snackbar/useErrorSnackbar";
+import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useBanks } from "@features/my/api/useBanks";
 import { useBankingConfig } from "@features/my/api/useBankingConfig";
 import { useCreateBank } from "@features/my/api/useCreateBank";
@@ -69,7 +68,7 @@ export default function AdminTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [addBankOpen, setAddBankOpen] = useState(false);
   const [newBank, setNewBank] = useState(BLANK_BANK);
-  const { snack, showError, close: closeSnack } = useErrorSnackbar();
+  const { showSuccess, showError } = useNotifications();
 
   const banks = banksQuery.data?.banks ?? [];
   const config = configQuery.data;
@@ -103,7 +102,10 @@ export default function AdminTab() {
       confirmAction: () => {
         createBank
           .mutateAsync(payload)
-          .then(closeAddBank)
+          .then(() => {
+            showSuccess(`Added ${payload.bankName} to the bank list.`);
+            closeAddBank();
+          })
           .catch((error: unknown) => showError(`Failed to add the bank. ${describeError(error)}`));
       },
     });
@@ -116,6 +118,7 @@ export default function AdminTab() {
       confirmAction: () => {
         updateThreshold
           .mutateAsync({ key, value })
+          .then(() => showSuccess(`${label} updated to ${value}.`))
           .catch((error: unknown) => showError(`Failed to update the ${label}. ${describeError(error)}`));
       },
     });
@@ -152,7 +155,7 @@ export default function AdminTab() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Button variant="contained" disabled={submitting} onClick={() => setAddBankOpen(true)}>
+            <Button variant="contained" disabled={submitting} loading={submitting} onClick={() => setAddBankOpen(true)}>
               Add Bank
             </Button>
           </Box>
@@ -216,15 +219,18 @@ export default function AdminTab() {
         </DialogContent>
         <DialogActions>
           <Button onClick={closeAddBank}>Cancel</Button>
-          <Button variant="contained" disabled={!isNewBankValid || submitting} onClick={submitNewBank}>
+          <Button
+            variant="contained"
+            disabled={!isNewBankValid || submitting}
+            loading={submitting}
+            onClick={submitNewBank}
+          >
             Submit
           </Button>
         </DialogActions>
       </Dialog>
 
       <ConfirmationDialog content={confirmation} onClose={() => setConfirmation(null)} />
-
-      <ErrorSnackbar snack={snack} onClose={closeSnack} />
     </Box>
   );
 }
@@ -281,6 +287,7 @@ function ThresholdField({
         variant="contained"
         aria-label={buttonLabel}
         disabled={value === "" || isUnchanged || !canEdit || disabled}
+        loading={disabled}
         onClick={() => value !== "" && onUpdate(value)}
       >
         Update

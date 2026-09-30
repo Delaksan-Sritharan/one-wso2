@@ -34,8 +34,7 @@ import { describeError } from "@api/errors";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { dialogPaperSx } from "@components/confirmation-dialog/dialogPaperSx";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
-import ErrorSnackbar from "@components/error-snackbar/ErrorSnackbar";
-import { useErrorSnackbar } from "@components/error-snackbar/useErrorSnackbar";
+import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useApproveAccount } from "@features/my/api/useApproveAccount";
 import { usePendingSalaryAccounts } from "@features/my/api/usePendingSalaryAccounts";
 import { useRejectAccount } from "@features/my/api/useRejectAccount";
@@ -66,7 +65,7 @@ export default function ChangeRequestsTab() {
   const [confirmation, setConfirmation] = useState<ConfirmationContent | null>(null);
   const [rejectTarget, setRejectTarget] = useState<BankAccount | null>(null);
   const [infoTarget, setInfoTarget] = useState<BankAccount | null>(null);
-  const { snack, showError, close: closeSnack } = useErrorSnackbar();
+  const { showSuccess, showError } = useNotifications();
 
   const requests = accountsQuery.data?.bankAccounts ?? [];
   const filtered = requests.filter((r) => r.employeeEmail.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -81,6 +80,7 @@ export default function ChangeRequestsTab() {
       confirmAction: () => {
         approveAccount
           .mutateAsync(request.accountId)
+          .then(() => showSuccess(`Approved ${request.employeeEmail}'s Salary change.`))
           .catch((error: unknown) => showError(`Failed to approve the request. ${describeError(error)}`));
       },
     });
@@ -88,9 +88,13 @@ export default function ChangeRequestsTab() {
 
   function submitReject(reason: string) {
     if (!rejectTarget) return;
+    const target = rejectTarget;
     rejectAccount
-      .mutateAsync({ accountId: rejectTarget.accountId, rejectionReason: reason })
-      .then(() => setRejectTarget(null))
+      .mutateAsync({ accountId: target.accountId, rejectionReason: reason })
+      .then(() => {
+        showSuccess(`Rejected ${target.employeeEmail}'s Salary change.`);
+        setRejectTarget(null);
+      })
       .catch((error: unknown) => showError(`Failed to reject the request. ${describeError(error)}`));
   }
 
@@ -149,8 +153,6 @@ export default function ChangeRequestsTab() {
       )}
 
       {infoTarget && <AccountDetailsDialog request={infoTarget} onClose={() => setInfoTarget(null)} />}
-
-      <ErrorSnackbar snack={snack} onClose={closeSnack} />
     </Box>
   );
 }
@@ -192,10 +194,10 @@ function RequestCard({
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button size="small" disabled={disabled} onClick={onApprove}>
+          <Button size="small" disabled={disabled} loading={disabled} onClick={onApprove}>
             Approve
           </Button>
-          <Button size="small" color="error" disabled={disabled} onClick={onReject}>
+          <Button size="small" color="error" disabled={disabled} loading={disabled} onClick={onReject}>
             Reject
           </Button>
           <Button size="small" onClick={onInfo}>
@@ -238,6 +240,7 @@ function RejectDialog({
           variant="contained"
           color="error"
           disabled={reason.trim() === "" || isSubmitting}
+          loading={isSubmitting}
           onClick={() => onSubmit(reason)}
         >
           Reject
