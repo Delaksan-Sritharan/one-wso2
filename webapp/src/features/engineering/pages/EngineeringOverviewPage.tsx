@@ -144,7 +144,7 @@ export default function EngineeringOverviewPage(): JSX.Element {
         <Figure
           label="This Month's Downloads"
           value={formatCount(totals.monthDownloads)}
-          to="/engineering/downloads?interval=month"
+          to={monthDownloadsPath(totals.asOfDate)}
         />
         <Figure
           label="Total Downloads"
@@ -207,6 +207,13 @@ export default function EngineeringOverviewPage(): JSX.Element {
       </Card>
     </Box>
   );
+}
+
+function monthDownloadsPath(asOfDate: string | null | undefined): string {
+  const to =
+    asOfDate && /^\d{4}-\d{2}-\d{2}$/.test(asOfDate) ? asOfDate : new Date().toISOString().slice(0, 10);
+  const from = `${to.slice(0, 7)}-01`;
+  return `/engineering/downloads?interval=month&from=${from}&to=${to}`;
 }
 
 function Figure({

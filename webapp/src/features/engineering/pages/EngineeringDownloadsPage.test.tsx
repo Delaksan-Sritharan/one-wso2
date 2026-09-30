@@ -124,8 +124,11 @@ describe("Downloads", () => {
       }),
     );
     renderDownloads();
+    const displayedTo = (screen.getByLabelText("To") as HTMLInputElement).value;
     fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-01-01" } });
-    expect(await screen.findByTestId("where")).toHaveTextContent("from=2026-01-01");
+    const where = await screen.findByTestId("where");
+    expect(where).toHaveTextContent("from=2026-01-01");
+    expect(where).toHaveTextContent(`to=${displayedTo}`);
   });
 
   it("asks for monthly bars when the address says month", async () => {
@@ -226,7 +229,7 @@ describe("Downloads", () => {
     );
     expect(await screen.findByRole("link", { name: /this month's downloads/i })).toHaveAttribute(
       "href",
-      "/engineering/downloads?interval=month",
+      "/engineering/downloads?interval=month&from=2026-09-01&to=2026-09-28",
     );
     expect(screen.getByRole("link", { name: /total downloads/i })).toHaveAttribute(
       "href",

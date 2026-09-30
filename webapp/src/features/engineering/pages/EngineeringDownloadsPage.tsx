@@ -99,6 +99,10 @@ export default function EngineeringDownloadsPage(): JSX.Element {
 
   const replace = (updates: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
+    // The screen shows a default range before those dates are in the address.
+    // Write them on the first change so a shared link does not drift to another day.
+    if (!params.get("from")) next.set("from", from);
+    if (!params.get("to")) next.set("to", to);
     for (const [key, value] of Object.entries(updates)) {
       if (value == null || value === "") next.delete(key);
       else next.set(key, value);
@@ -130,7 +134,7 @@ export default function EngineeringDownloadsPage(): JSX.Element {
         />
         <Select
           size="small"
-          aria-label="Grain"
+          inputProps={{ "aria-label": "Grain" }}
           value={interval}
           onChange={(event) => replace({ interval: event.target.value })}
         >
@@ -142,7 +146,7 @@ export default function EngineeringDownloadsPage(): JSX.Element {
           size="small"
           multiple
           displayEmpty
-          aria-label="Products"
+          inputProps={{ "aria-label": "Products" }}
           value={repos.map(String)}
           onChange={(event) => {
             const value = event.target.value;
@@ -230,6 +234,22 @@ export default function EngineeringDownloadsPage(): JSX.Element {
   );
 }
 
+function isolatedDot(
+  data: Record<string, string | number | null>[],
+  dataKey: string,
+  stroke: string,
+) {
+  return (props: { cx?: number; cy?: number; index?: number }) => {
+    const index = props.index ?? -1;
+    const value = data[index]?.[dataKey];
+    const prev = index > 0 ? data[index - 1]?.[dataKey] : null;
+    const next = index + 1 < data.length ? data[index + 1]?.[dataKey] : null;
+    if (typeof value !== "number" || typeof prev === "number" || typeof next === "number") return null;
+    if (props.cx == null || props.cy == null) return null;
+    return <circle cx={props.cx} cy={props.cy} r={3} fill={stroke} />;
+  };
+}
+
 function DownloadChart({
   series,
   names,
@@ -276,7 +296,7 @@ function DownloadChart({
                 type="monotone"
                 dataKey={line.dataKey}
                 stroke={line.stroke}
-                dot={false}
+                dot={isolatedDot(data, line.dataKey, line.stroke)}
                 connectNulls={false}
               />
             ))}
