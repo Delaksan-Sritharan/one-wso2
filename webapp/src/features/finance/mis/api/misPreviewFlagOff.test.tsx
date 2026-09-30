@@ -24,11 +24,10 @@ import { HouseIcon } from "@wso2/oxygen-ui-icons-react";
 import { PERSPECTIVES } from "@constants/perspectives";
 
 // The `mis` preview flag holds MIS back AS A WHOLE (previewFeatures.ts), and
-// that has to include its backend. config.js.example allows the ARR URL to be
-// set with the flag off, and on stage that is not hypothetical: /user-info
-// answers 500 after about 40s. A gate still
-// asking would hold every Finance landing on a screen nobody can see, then tell
-// claim approvers "Couldn't work out what you can open in Finance".
+// that has to include its backend. ONE_WSO2_MIS_ARR_BACKEND_URL may be set
+// while the flag is off. A gate that still asked would hold every Finance
+// landing on a slow or failing /user-info for screens nobody can see, then
+// tell claim approvers "Couldn't work out what you can open in Finance".
 //
 // So this file leaves the flag OFF, which is the default (nothing here sets
 // ONE_WSO2_PREVIEW_FEATURES), and asks the hook the rail and the landing both

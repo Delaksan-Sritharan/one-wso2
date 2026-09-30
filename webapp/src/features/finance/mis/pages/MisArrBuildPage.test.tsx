@@ -838,11 +838,11 @@ describe("choosing which of the Build's tables to read", () => {
   });
 
   it("shows the table the address names, and not the Build under its heading", () => {
-    // `region-summary` is a RECOGNISED Table — 02 parses it and the filter
-    // rules key off it — so falling through to the Subscription Build would
-    // show the reader a different report than the one they asked for. An
-    // unrecognised value is the other case and still degrades to the Build,
-    // which 02 pinned and the test above covers.
+    // `region-summary` is a RECOGNISED Table — `parseViewState` accepts it and
+    // the filter rules key off it — so falling through to the Subscription
+    // Build would show the reader a different report than the one they asked
+    // for. An unrecognised value is the other case and still degrades to the
+    // Build, which the test above covers.
     renderPage("?table=region-summary");
     expect(screen.getByRole("table", { name: /Region Summary/ })).toBeInTheDocument();
   });

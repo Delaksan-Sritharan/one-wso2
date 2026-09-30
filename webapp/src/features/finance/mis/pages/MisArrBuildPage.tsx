@@ -210,7 +210,7 @@ function ArrBuild({ period }: { period: MisPeriod }) {
  * Whichever of the four tables the address names.
  *
  * Subscription is the fall-through and has to be: an UNRECOGNISED `?table=`
- * degrades to it, which is 02's contract and its test. That works because
+ * degrades to it, which `parseViewState` guarantees and tests. That works because
  * `parseViewState` has already validated the parameter by the time it is read
  * here, so nothing unrecognised survives as anything but Subscription.
  *
