@@ -18,6 +18,7 @@ import type { Capability } from "@constants/appMenu";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import { DUE_DILIGENCE_ITEM_IDS } from "@constants/dueDiligenceApps";
 import { FINANCE_ITEM_IDS } from "@constants/financeApps";
+import { MIS_ITEM_IDS } from "@constants/misApps";
 import { INFRA_ITEM_IDS } from "@constants/infraApps";
 import { BANKING_ITEM_IDS, LEAVE_ITEM_IDS } from "@constants/meApps";
 import { PAR_EMPLOYEE_ITEM_ID } from "@constants/parApps";
@@ -64,6 +65,7 @@ export type AdapterName =
   | "marketing"
   | "due-diligence"
   | "finance"
+  | "mis"
   | "leave"
   | "banking"
   | "banking-admin"
@@ -79,6 +81,7 @@ const ADAPTER_NAMES: readonly AdapterName[] = [
   "marketing",
   "due-diligence",
   "finance",
+  "mis",
   "leave",
   "banking",
   "banking-admin",
@@ -149,6 +152,8 @@ export function claimOf(name: AdapterName): SectionClaim {
       return { kind: "sections", ids: DUE_DILIGENCE_ITEM_IDS };
     case "finance":
       return { kind: "sections", ids: FINANCE_ITEM_IDS };
+    case "mis":
+      return { kind: "sections", ids: MIS_ITEM_IDS };
     case "leave":
       return { kind: "sections", ids: LEAVE_ITEM_IDS };
     case "banking":
@@ -188,6 +193,10 @@ export function claimsForPerspective(perspectiveKey: string): AdapterName[] {
   if (perspectiveKey === "marketing") names.push("marketing");
   if (perspectiveKey === "finance" || perspectiveKey === "legal") names.push("due-diligence");
   if (perspectiveKey === "finance" || perspectiveKey === "me") names.push("finance");
+  // The MIS sections exist only while the preview flag is on. Asking for
+  // /user-info when they are absent holds the Finance landing on a backend
+  // that has nothing to show.
+  if (perspectiveKey === "finance" && isPreviewEnabled("mis")) names.push("mis");
   if (perspectiveKey === "me") names.push("leave", "banking");
   if (perspectiveKey === "people" || perspectiveKey === "finance") names.push("banking-admin");
   if (perspectiveKey === "infra") names.push("infra");
