@@ -215,7 +215,7 @@ function AllEmployeesTable({
 
 // Lead Portal → Employee History: par-app's EmployeeHistoryView.tsx
 // (lead-facing side only). Defaults to the most recent cycle (merged real
-// closed and legacy pre-migration options, latest first) and shows every
+// closed and legacy options, latest first) and shows every
 // in-scope report's rating in a table; picking one employee drills into
 // their full record.
 export default function ParLeadEmployeeHistoryTab() {
