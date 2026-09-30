@@ -19,10 +19,6 @@ window.config = {
   // UI
   ONE_WSO2_THEME: "wso2",
 
-  // Dev server only: render every route without calling Asgardeo, for UI work
-  // before an Asgardeo app registration exists. Ignored in production builds.
-  // ONE_WSO2_DEV_BYPASS_AUTH: false,
-
   // People backend base URL. Powers the Me profile, My Team, Org Chart and the
   // People Ops reports.
   ONE_WSO2_PEOPLE_BACKEND_URL: "<your-people-backend-url>",
@@ -129,6 +125,11 @@ window.config = {
   // (987 employee / 762 approver / 123 admin), not from the People backend.
   // ONE_WSO2_INFRA_BACKEND_URL: "<your-infra-portal-backend-url>",
 
+  // Base URL of the Product Download Stats API, including the version segment.
+  // Optional — when absent, Engineering Overview says it isn't connected and
+  // makes no requests.
+  // ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "<product-download-stats-backend-url>",
+
   // Pardot UI base URL — for deep-linking to an email template after Email
   // Workbench pushes it. A link target, not an API. Defaults to
   // https://pi.pardot.com.
@@ -157,4 +158,5 @@ window.config = {
   // stops describing anything.
   //
   // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, "finance-master-data": false },
+  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, engineering: false },
 };

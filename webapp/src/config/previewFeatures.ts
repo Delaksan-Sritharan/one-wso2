@@ -88,7 +88,15 @@ export type PreviewFeature =
    * also checks — until both are true, real users should not see it even
    * where this flag is on.
    */
-  | "finance-master-data";
+  | "finance-master-data"
+  /**
+   * The whole Engineering perspective — waffle tile, rail, favourites,
+   * landing choices, and the Product Download Stats screens. The perspective
+   * stays hidden until this is on. A direct visit while it is off says
+   * Engineering is not available.
+   */
+  | "engineering";
+
 
 /**
  * Whether a preview feature should be shown.

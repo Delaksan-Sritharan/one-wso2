@@ -21,7 +21,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // file.
 type Perspectives = typeof import("./perspectives");
 
-async function load(preview: { umt?: boolean; infra?: boolean } = {}): Promise<Perspectives> {
+async function load(
+  preview: { umt?: boolean; infra?: boolean; engineering?: boolean } = {},
+): Promise<Perspectives> {
   vi.resetModules();
   window.config = {
     ...(window.config ?? {}),
@@ -174,6 +176,38 @@ describe("perspectives whose landing forwards to the first rail item", () => {
       expect(keys(PERSPECTIVES)).toContain("infra");
       expect(keys(reachablePerspectives())).toContain("infra");
       expect(findPerspectiveByPath("/infra")?.key).toBe("infra");
+    });
+  });
+
+  // Engineering is the home of Product Download Stats. Same preview contract
+  // as Infra: absent means off, so the waffle, favourites, and landing choices
+  // — all of which read this registry — cannot offer it early.
+  describe("the Engineering perspective", () => {
+    it("is absent from the registry when the preview flag is off", async () => {
+      const { PERSPECTIVES, reachablePerspectives } = await load({ engineering: false });
+      expect(keys(PERSPECTIVES)).not.toContain("engineering");
+      expect(keys(reachablePerspectives())).not.toContain("engineering");
+    });
+
+    it("is absent on an absent flag, not only on an explicit false", async () => {
+      const { PERSPECTIVES } = await load();
+      expect(keys(PERSPECTIVES)).not.toContain("engineering");
+    });
+
+    it("lands on Product Download Stats Overview when the preview flag is on", async () => {
+      const { PERSPECTIVES, reachablePerspectives, findPerspectiveByPath } = await load({
+        engineering: true,
+      });
+      expect(keys(PERSPECTIVES)).toContain("engineering");
+      expect(keys(reachablePerspectives())).toContain("engineering");
+      const engineering = findPerspectiveByPath("/engineering");
+      expect(engineering?.label).toBe("Engineering");
+      const labels = (engineering?.sections ?? []).flatMap((section) => [
+        section.label,
+        ...(section.children ?? []).map((child) => child.label),
+      ]);
+      expect(labels).toContain("Product Download Stats");
+      expect(labels).toContain("Overview");
     });
   });
 });
