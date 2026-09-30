@@ -95,12 +95,26 @@ window.config = {
   // is GET <base-url>/update/user-info.
   // ONE_WSO2_UMT_BACKEND_URL: "<your-updates-manager-backend-url>",
 
-  // Finance MIS ARR backend. Optional — when absent, MIS makes no requests.
-  // Take the *.wso2.com gateway URL, not the *.choreoapis.dev one Choreo
-  // advertises beside it: the production CSP allows only *.wso2.com and
-  // *.asgardeo.io, so the other host fails every call with nothing in the
-  // console. The version segment is part of the URL and differs by
-  // environment: production ends /v1, staging ends /v1.0.
+  // Finance MIS — the ARR service at ONE_WSO2_MIS_ARR_BACKEND_URL. Optional —
+  // when absent, MIS makes no requests.
+  //
+  // Two things to get right, each of which fails silently if you don't:
+  //
+  //  1. Take the *.wso2.com gateway URL, NOT the *.choreoapis.dev one Choreo
+  //     advertises next to it. The production CSP allows only *.wso2.com and
+  //     *.asgardeo.io, so a choreoapis.dev URL fails every call in a
+  //     production build with nothing in the console. It is a defect here,
+  //     not an alternative.
+  //  2. The version segment is part of the URL and differs by environment —
+  //     production ends /v1, staging ends /v1.0. Don't normalise them.
+  //
+  // Only ONE_WSO2_MIS_ARR_BACKEND_URL is configured. This app does not call
+  // any other MIS service, so there is no key for one.
+  //
+  // Configuring the URL is not enough to show MIS: every MIS screen is also
+  // behind the `mis` preview flag (ONE_WSO2_PREVIEW_FEATURES, below) until
+  // Finance has verified its figures.
+  //
   // ONE_WSO2_MIS_ARR_BACKEND_URL: "<mis-arr-backend-url>",
 
   // Marketing Ops backend. Its routes live under /api/*, and the gateway
@@ -157,6 +171,6 @@ window.config = {
   // Each entry is deleted when its feature ships — a list that only grows
   // stops describing anything.
   //
-  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, "finance-master-data": false },
-  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, engineering: false },
+  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, "finance-master-data": false, engineering: false, mis: false },
+
 };

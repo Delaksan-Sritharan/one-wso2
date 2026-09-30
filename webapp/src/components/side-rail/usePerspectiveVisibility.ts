@@ -23,6 +23,7 @@ import { useActivePerspective } from "@context/perspective/PerspectiveContext";
 import { useUserInfo } from "@api/useUserInfo";
 import { useMeProfile } from "@features/my/api/useMeProfile";
 import { financeVisibility, useFinanceGate } from "@features/finance/api/useFinanceGate";
+import { misVisibility, useMisGate } from "@features/finance/mis/api/useMisGate";
 import { leaveVisibility, useLeaveGate } from "@features/leave/api/useLeaveGate";
 import { bankingVisibility, useBankingAccess } from "@features/my/api/useBankingAccess";
 import { bankingAdminVisibility, useBankingAdminAccess } from "@features/my/api/useBankingAdminAccess";
@@ -90,9 +91,9 @@ export interface PerspectiveVisibility {
    * are different sentences, and only one of them is worth a Retry button.
    *
    * Partial, and deliberately so. Marketing Ops, Due Diligence, Sales,
-   * Subscriptions, and Infra report a failed read here. Finance, Leave,
-   * Security, and the others fold a failed read into "not allowed", so an
-   * entry that could not be checked stays hidden. So this means "something
+   * Subscriptions, Infra, and Finance MIS report a failed read here. Finance,
+   * Leave, Security, and the others fold a failed read into "not allowed", so
+   * an entry that could not be checked stays hidden. So this means "something
    * we needed definitely failed", never "everything else succeeded".
    */
   isError: boolean;
@@ -120,6 +121,22 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // `caps` for the master-data items, which have no finance backend role of
   // their own — see useFinanceGate's own note.
   const financeGate = useFinanceGate(active.key === "me" || active.key === "finance", caps);
+
+  // Finance MIS, also under Finance, but a different backend again — the MIS
+  // ARR service's own /user-info. It cannot share the finance gate above: that
+  // one answers for the three claim apps and would fall through to its open
+  // default for every MIS id.
+  //
+  // It especially cannot fall through to `sectionAllowed`. MIS privilege 987
+  // and this app's PRIVILEGE.EMPLOYEE 987 are the same number meaning opposite
+  // things, so a MIS id reaching the capability check would show company-wide
+  // revenue reporting to every signed-in employee.
+  //
+  // And only while the `mis` preview flag is on. The flag holds MIS back as a
+  // whole, backend included: with the ARR URL set and the flag off, a gate that
+  // still asked would hold every Finance landing on /user-info, and report its
+  // failure as Finance's, for screens nobody can open.
+  const misGate = useMisGate(active.key === "finance" && isPreviewEnabled("mis"));
 
   // Leave is the same problem again: its backend numbers LEAD 879 /
   // PEOPLE_OPS_TEAM 789, unrelated to people-app's 993 / 999. Reading
@@ -274,6 +291,8 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
         return umtVisibility(umtGate);
       case "subscriptions":
         return subscriptionVisibility(subscriptionGate);
+      case "mis":
+        return misVisibility(misGate);
       default: {
         const neverName: never = name;
         return neverName;
