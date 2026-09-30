@@ -42,10 +42,9 @@ export default function NotificationHubPanel({
   requests,
   loading,
 }: {
-  /** The active cycle this panel's `requests` were scoped to. Re-checked
-   * before rendering the tabs, since a caller can already be sitting on
-   * this drill-in when the cycle it was showing ends underneath them.
-   * `undefined` = still loading; `null` = confirmed no active cycle. */
+  /** The active cycle this panel's `requests` were scoped to. `null` means
+   * no cycle is open, in which case the tabs aren't rendered at all.
+   * `undefined` = still loading. */
   cycle: PromotionCycle | null | undefined;
   requests: PromotionRequestFull[];
   loading: boolean;
@@ -62,14 +61,6 @@ export default function NotificationHubPanel({
 
   if (cycle === null) {
     return <PromotionEmptyState icon={<InboxIcon size={28} />} message="No promotion cycle found" />;
-  }
-  if (cycle && cycle.status !== "OPEN") {
-    return (
-      <PromotionEmptyState
-        icon={<InboxIcon size={28} />}
-        message="The Notification Hub is only available while a promotion cycle is open."
-      />
-    );
   }
 
   return (

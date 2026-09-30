@@ -18,8 +18,7 @@ import { useState } from "react";
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField } from "@wso2/oxygen-ui";
 
 // A Google Sheet URL. Anchored (`^`/`$`) so the whole input must be a URL,
-// not just contain one somewhere — a deliberate tightening; a previously
-// accepted, more loosely-formed link could now be rejected.
+// not just contain one somewhere.
 const URL_PATTERN = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})[/\w .\-?=&%]*\/?$/i;
 
 // Shared by two Admin Portal sync flows: User Management's "Import users

@@ -1216,10 +1216,8 @@ export const promotionServiceUrls = {
   // Requests tab (statusArray=REQUESTED, scoped to the open cycle) and
   // History tab (statusArray=SUBMITTED,DECLINED,EXPIRED, every cycle).
   //
-  // Built by hand, not URLSearchParams: statusArray binds backend-side to a
-  // native Ballerina array that splits on a raw "," before URL-decoding, so
-  // a percent-encoded "%2C" never splits and 500s ("Invalid promotion
-  // recommendation status provided!").
+  // Built by hand, not URLSearchParams: statusArray's comma must stay
+  // unencoded, or the backend won't split it into individual statuses.
   promotionRecommendations: (params: {
     leadEmail?: string;
     statusArray?: ("REQUESTED" | "SUBMITTED" | "DECLINED" | "EXPIRED")[];
@@ -1265,8 +1263,7 @@ export const promotionServiceUrls = {
   // the backend 403s if the caller holds no such scope at all.
   //
   // Built by hand, not URLSearchParams — same reason as promotionRecommendations
-  // above: statusArray's comma must stay raw/unencoded or the backend's
-  // array binding never splits it.
+  // above: statusArray's comma must stay unencoded.
   promotionRequests: (params: {
     statusArray?: string[];
     enableBuFilter?: boolean;
@@ -1277,7 +1274,7 @@ export const promotionServiceUrls = {
     const parts: string[] = [];
     if (params.statusArray?.length) parts.push(`statusArray=${params.statusArray.join(",")}`);
     if (params.enableBuFilter !== undefined) parts.push(`enableBuFilter=${params.enableBuFilter}`);
-    if (params.type) parts.push(`type=${params.type}`);
+    if (params.type) parts.push(`type=${encodeURIComponent(params.type)}`);
     if (params.cycleId !== undefined) parts.push(`cycleId=${params.cycleId}`);
     if (params.employeeEmail) parts.push(`employeeEmail=${encodeURIComponent(params.employeeEmail)}`);
     return `${promotionBackendUrl}/promotion/requests?${parts.join("&")}`;

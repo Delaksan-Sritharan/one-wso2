@@ -96,7 +96,9 @@ export default function AdminUserManagementTab() {
         title="Google Sheet User Data Synchronization"
         onClose={() => setSyncDialogOpen(false)}
         onSubmit={(url) => {
-          syncUsers.mutate(url);
+          syncUsers.mutate(url, {
+            onError: (error) => notifyError(`Unable to start the sync. ${humanizeHttpError(error)}`),
+          });
           setSyncDialogOpen(false);
         }}
       />
