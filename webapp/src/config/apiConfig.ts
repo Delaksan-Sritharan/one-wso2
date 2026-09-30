@@ -568,6 +568,35 @@ export const expenseServiceUrls = {
     `${expenseBackendUrl}/claims/transactions/receipts/file/${encodeURIComponent(fileName)}`,
 };
 
+// Finance master data — ONE_WSO2_FINANCE_MASTER_DATA_BACKEND_URL.
+//
+// Reference data the other finance apps are keyed against: subsidiaries,
+// departments, expense types and corporate credit cards. Every screen is a
+// CRUD table, so the four collections below each take GET (list) / POST
+// (create) / PATCH /{id} / DELETE /{id}.
+export const financeMasterDataBackendUrl: string =
+  window.config?.ONE_WSO2_FINANCE_MASTER_DATA_BACKEND_URL ?? "";
+
+export function isFinanceMasterDataBackendConfigured(): boolean {
+  return Boolean(financeMasterDataBackendUrl);
+}
+
+export const financeMasterDataServiceUrls = {
+  userInfo: `${financeMasterDataBackendUrl}/user-info`,
+  // The four collections, keyed by path segment, so the item helpers below
+  // can serve all four tabs off one shared builder.
+  collection: (name: string) => `${financeMasterDataBackendUrl}/${name}`,
+  item: (name: string, id: number) =>
+    `${financeMasterDataBackendUrl}/${name}/${encodeURIComponent(String(id))}`,
+  // Expense types are the one table fetched through a POST filter rather than
+  // a plain GET.
+  searchExpenseTypes: `${financeMasterDataBackendUrl}/search-expense-types`,
+  // Dropdown/autocomplete sources for the forms and the expense-type filters.
+  glCodes: `${financeMasterDataBackendUrl}/gl-codes`,
+  employeeEmails: `${financeMasterDataBackendUrl}/employees/email`,
+  expenseTypeAutocomplete: `${financeMasterDataBackendUrl}/expense-types/autocomplete-values`,
+};
+
 // ---- Updates Manager backend ---------------------------------------------
 //
 // Reuses the standalone Updates Manager service without changing its route

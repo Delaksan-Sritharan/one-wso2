@@ -118,7 +118,9 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // Both perspectives: the claim apps' own screens are under Me, and Claim
   // approval is under Finance. One gate answers for both, so it has to be
   // asked in either place.
-  const financeGate = useFinanceGate(active.key === "me" || active.key === "finance");
+  // `caps` for the master-data items, which have no finance backend role of
+  // their own — see useFinanceGate's own note.
+  const financeGate = useFinanceGate(active.key === "me" || active.key === "finance", caps);
 
   // Finance MIS, also under Finance, but a different backend again — the MIS
   // ARR service's own /user-info. It cannot share the finance gate above: that

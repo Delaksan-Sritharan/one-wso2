@@ -115,6 +115,7 @@ import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import PerspectiveLanding from "@components/perspective-landing/PerspectiveLanding";
 import SriLankaRoute from "@components/route-guards/SriLankaRoute";
+import MasterDataRoute from "@components/route-guards/MasterDataRoute";
 import AdCampaignsAnalyticsPage from "@features/marketing-ops/ad-campaigns/pages/AdCampaignsAnalyticsPage";
 import CampaignTrackerPage from "@features/marketing-ops/ad-campaigns/pages/CampaignTrackerPage";
 import UtmGeneratorPage from "@features/marketing-ops/utilities/pages/UtmGeneratorPage";
@@ -176,6 +177,10 @@ import CcPendingPage from "@features/finance/cc/pages/CcPendingPage";
 import CcApprovePage from "@features/finance/cc/pages/CcApprovePage";
 import CcHistoryPage from "@features/finance/cc/pages/CcHistoryPage";
 import CcSettingsPage from "@features/finance/cc/pages/CcSettingsPage";
+import SubsidiariesPage from "@features/finance/masterdata/pages/SubsidiariesPage";
+import DepartmentsPage from "@features/finance/masterdata/pages/DepartmentsPage";
+import ExpenseTypesPage from "@features/finance/masterdata/pages/ExpenseTypesPage";
+import CreditCardsPage from "@features/finance/masterdata/pages/CreditCardsPage";
 import ExpenseNewClaimPage from "@features/finance/expense/pages/ExpenseNewClaimPage";
 import MisArrBuildPage from "@features/finance/mis/pages/MisArrBuildPage";
 import MisSession from "@features/finance/mis/components/MisSession";
@@ -406,6 +411,28 @@ export default function App() {
           <Route path="finance/cc/history" element={<CcHistoryPage />} />
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
           <Route path="finance/opd/dashboard" element={<OpdDashboardScreen />} />
+          {/* Finance → Master Data: the four reference tables the other
+              finance apps are keyed against, each its own route.
+              MasterDataRoute-guarded: this backend has no role scheme of its
+              own, so the frontend's admin + preview-flag check is the only
+              access control in front of it — it has to hold at the route,
+              not just hide the rail item. */}
+          <Route
+            path="finance/master-data/subsidiaries"
+            element={<MasterDataRoute><SubsidiariesPage /></MasterDataRoute>}
+          />
+          <Route
+            path="finance/master-data/departments"
+            element={<MasterDataRoute><DepartmentsPage /></MasterDataRoute>}
+          />
+          <Route
+            path="finance/master-data/expense-types"
+            element={<MasterDataRoute><ExpenseTypesPage /></MasterDataRoute>}
+          />
+          <Route
+            path="finance/master-data/credit-cards"
+            element={<MasterDataRoute><CreditCardsPage /></MasterDataRoute>}
+          />
           {/* Finance MIS. Nested under /finance/ rather than /finance-mis/,
               because findPerspectiveByPath matches with a bare
               pathname.startsWith — "/finance-mis" resolves to the finance
