@@ -18,7 +18,7 @@
 
 import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router";
-import { Alert, Box, Skeleton, Typography } from "@wso2/oxygen-ui";
+import { Alert, Box, Typography } from "@wso2/oxygen-ui";
 import RoutedTabs from "@components/routed-tabs/RoutedTabs";
 import { useFinanceGate } from "../api/useFinanceGate";
 import {
@@ -66,9 +66,13 @@ export default function ClaimApprovalPage() {
         up your own stay under Me.
       </Typography>
 
-      {gate.isResolving ? (
-        <Skeleton variant="rectangular" height={420} sx={{ borderRadius: 1.5 }} />
-      ) : visible.length === 0 ? (
+      {/* Nothing rendered while resolving — not even a skeleton. The rail
+          already shows no row for this entry until its gate settles, so the
+          content pane matches it: a placeholder here would be the one thing
+          left to blink on the way to a final answer, and this screen's
+          answer flips between "tabs" and "nothing here" rather than filling
+          a fixed shape. */}
+      {gate.isResolving ? null : visible.length === 0 ? (
         <Alert severity="info">You don&apos;t approve claims, so there is nothing here.</Alert>
       ) : (
         <Box sx={fillColumn}>

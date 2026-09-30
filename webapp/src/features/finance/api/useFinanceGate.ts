@@ -17,7 +17,6 @@
 import type { VisibilityAnswer } from "@components/side-rail/visibilityFold";
 import { FINANCE_APPS } from "@constants/financeApps";
 import type { Capability } from "@constants/appMenu";
-import { isPreviewEnabled } from "@config/previewFeatures";
 import { useCcUserInfo } from "../cc/useCc";
 import { ccHasAccess } from "../cc/ccTypes";
 import { useOpdUserInfo } from "../opd/useOpd";
@@ -44,14 +43,13 @@ const RESTRICTED_IDS = new Set(
  * master-data case's own comment), so a route guard built on the full
  * `useFinanceGate` was blocking on THEIR `isLoading` — a slow or erroring
  * CC/OPD/Expense backend in some environment held the page on a blank
- * screen for a reader who was always going to be let in, once the two
- * things that actually decide this (identity + the preview flag) resolve.
- * Exported so both the switch case and the route call the same check —
- * two independent copies of `isPreviewEnabled(...) && caps.has("admin")`
- * is how one of them quietly drifts from the other.
+ * screen for a reader who was always going to be let in, once identity
+ * resolves. Exported so both the switch case and the route call the same
+ * check — two independent copies of `caps.has("admin")` is how one of them
+ * quietly drifts from the other.
  */
 export function canSeeMasterData(caps: ReadonlySet<Capability> | undefined): boolean {
-  return isPreviewEnabled("finance-master-data") && (caps?.has("admin") ?? false);
+  return caps?.has("admin") ?? false;
 }
 
 // Role-gates the Finance menu items (surfaced under Me) against each app's
