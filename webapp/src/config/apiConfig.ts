@@ -573,7 +573,7 @@ export const expenseServiceUrls = {
     `${expenseBackendUrl}/claims/transactions/receipts/file/${encodeURIComponent(fileName)}`,
 };
 
-// Finance master data — finance-master-data/backend.
+// Finance master data — ONE_WSO2_FINANCE_MASTER_DATA_BACKEND_URL.
 //
 // Reference data the other finance apps are keyed against: subsidiaries,
 // departments, expense types and corporate credit cards. Every screen is a
@@ -588,14 +588,13 @@ export function isFinanceMasterDataBackendConfigured(): boolean {
 
 export const financeMasterDataServiceUrls = {
   userInfo: `${financeMasterDataBackendUrl}/user-info`,
-  // The four collections. `collection` is the same path segment the source
-  // keys its `endpoints` map with (constants.ts:47-52), so the item helpers
-  // below can serve all four tabs.
+  // The four collections, keyed by path segment, so the item helpers below
+  // can serve all four tabs off one shared builder.
   collection: (name: string) => `${financeMasterDataBackendUrl}/${name}`,
   item: (name: string, id: number) =>
     `${financeMasterDataBackendUrl}/${name}/${encodeURIComponent(String(id))}`,
   // Expense types are the one table fetched through a POST filter rather than
-  // a plain GET — constants.ts:54-56.
+  // a plain GET.
   searchExpenseTypes: `${financeMasterDataBackendUrl}/search-expense-types`,
   // Dropdown/autocomplete sources for the forms and the expense-type filters.
   glCodes: `${financeMasterDataBackendUrl}/gl-codes`,

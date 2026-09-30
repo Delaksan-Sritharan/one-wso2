@@ -403,8 +403,7 @@ export default function App() {
           <Route path="finance/cc/settings" element={<CcSettingsPage />} />
           <Route path="finance/opd/dashboard" element={<OpdDashboardScreen />} />
           {/* Finance → Master Data: the four reference tables the other
-              finance apps are keyed against. One route per table, matching
-              the source app's own tab urls (constants.ts:40-45).
+              finance apps are keyed against, each its own route.
               MasterDataRoute-guarded: this backend has no role scheme of its
               own, so the frontend's admin + preview-flag check is the only
               access control in front of it — it has to hold at the route,
