@@ -87,11 +87,11 @@ function buildHeaders(extraHeaders?: Record<string, string>, withJsonBody?: bool
   };
 }
 
-// The access_token eventually expires and getAccessToken() never checks
-// that itself (it's a plain storage read), so any long-lived tab
-// eventually attaches a dead token and every backend starts 401ing at
-// once. On a 401 specifically — never other statuses — try one silent
-// re-auth (dedup'd across concurrent callers in @api/authBridge).
+// getAccessToken() renews an access_token the SDK sees as expired before
+// handing it over, but a request can still carry a dead one: a token read
+// moments before it lapsed, or one the IdP revoked early. On a 401
+// specifically — never other statuses — try one renewal (dedup'd across
+// concurrent callers in @api/authBridge).
 //
 // Only GET is safe to replay ourselves. A 401 doesn't prove a POST/PATCH/
 // DELETE never reached business logic — each backend has its own
@@ -103,7 +103,7 @@ function buildHeaders(extraHeaders?: Record<string, string>, withJsonBody?: bool
 // original 401 rather than replaying it.
 //
 // If there's no way to refresh (accessors not registered yet, or the
-// silent re-auth itself fails — e.g. no live Asgardeo session at all),
+// renewal itself fails — e.g. no live Asgardeo session at all),
 // fall back to the original 401 response so the caller's normal
 // HttpError/error-banner path handles it, rather than surfacing a
 // different failure mode for this one case.
@@ -156,14 +156,16 @@ export async function fetchWithReauth(url: string, init: RequestInit, accessToke
   const isReplaySafe = (init.method ?? "GET").toUpperCase() === "GET";
   let freshToken: string;
   try {
-    freshToken = await refreshAccessToken();
+    // The rejected token goes along so the bridge cannot count it as renewed:
+    // a token revoked before its `exp` still reads as live.
+    freshToken = await refreshAccessToken(accessToken);
   } catch (error: unknown) {
     // Returning the original 401 is right — the caller's normal error handling
     // takes over. But silently is not: from outside, a request that 401s
     // because the session died looks exactly like one that 401s because the
     // caller lacks the privilege, and only this line tells them apart.
     console.warn(
-      `[auth] 401 on ${url} and silent re-auth failed, so the 401 stands.`,
+      `[auth] 401 on ${url} and re-auth failed, so the 401 stands.`,
       error instanceof Error ? error.message : "unknown error",
     );
     return first;

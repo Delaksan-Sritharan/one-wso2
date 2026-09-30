@@ -15,9 +15,10 @@
 // under the License.
 
 import { useAsgardeo } from "@asgardeo/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { Box, CircularProgress } from "@wso2/oxygen-ui";
+import { getRenewalInFlightSnapshot, subscribeRenewal } from "@api/authBridge";
 
 import {
   forgetPostLoginTarget,
@@ -38,6 +39,7 @@ export default function AuthGuard() {
   // or on any incidental re-run of this effect before the browser has left
   // the page. Reset only when the SDK reports the user as signed in.
   const startedSignInRef = useRef(false);
+  const renewing = useSyncExternalStore(subscribeRenewal, getRenewalInFlightSnapshot);
 
   const currentHref = location.pathname + location.search + location.hash;
 
@@ -83,7 +85,11 @@ export default function AuthGuard() {
   // this the child route tree mounts first, its own redirects fire from child
   // effects, and this guard's effect then overrides them — the race described
   // on isRestorableTarget above.
-  if (isLoading || !isSignedIn || hasPendingRedirect) {
+  //
+  // The SDK also reports loading while a silent sign-in renews a session the
+  // page already has. Holding the children back then would unmount the page,
+  // and anything typed into it, for the whole attempt.
+  if ((isLoading && !renewing) || !isSignedIn || hasPendingRedirect) {
     return (
       <Box
         sx={{
