@@ -191,7 +191,7 @@ export default function TopBar({
         role="button"
         tabIndex={0}
         onClick={onOpenAsk}
-        aria-label="Ask Novera or search"
+        aria-label="Ask Novera"
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -225,7 +225,7 @@ export default function TopBar({
             the palette states plainly that the assistant is still coming rather
             than implying it already answers. */}
         <Typography variant="body2" noWrap sx={{ display: { xs: "none", sm: "block" } }}>
-          Ask Novera or search…
+          Ask Novera
         </Typography>
         <Box
           sx={{
