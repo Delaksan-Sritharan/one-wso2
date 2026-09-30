@@ -22,14 +22,13 @@ export interface PromotionFeedbackState {
   message: string;
 }
 
-// Source dispatches a Redux enqueueSnackbarMessage on success/failure for
-// every Admin Portal mutation (create/end cycle, sheet import, declined-
-// reason edits, user sync) — several of those were ported with no
-// equivalent feedback at all, so a failure looked identical to success.
-// Pairs with components/PromotionFeedbackSnackbar.tsx, matching this app's
-// own existing local Snackbar+Alert convention (e.g.
+// Several Admin Portal mutations (create/end cycle, sheet import, declined-
+// reason edits, user sync) had no success/error feedback at all, so a
+// failure looked identical to success. Pairs with
+// components/PromotionFeedbackSnackbar.tsx, matching this app's own
+// existing local Snackbar+Alert convention (e.g.
 // features/my/banking/pages/MyAccountsTab.tsx) rather than introducing a
-// global toast provider for this fix.
+// global toast provider.
 export function usePromotionFeedback() {
   const [feedback, setFeedback] = useState<PromotionFeedbackState>({ open: false, severity: "success", message: "" });
   return {

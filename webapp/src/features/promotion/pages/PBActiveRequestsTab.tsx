@@ -188,7 +188,13 @@ export default function PBActiveRequestsTab() {
           </Button>
         </Stack>
         <Tooltip title="Refresh">
-          <IconButton size="small" onClick={() => void requests.refetch()}>
+          <IconButton
+            size="small"
+            onClick={() => {
+              if (cycle.cycle) void requests.refetch();
+              else void cycle.refetch();
+            }}
+          >
             <RefreshCwIcon size={16} />
           </IconButton>
         </Tooltip>

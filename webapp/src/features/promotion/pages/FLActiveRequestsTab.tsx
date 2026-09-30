@@ -189,7 +189,13 @@ export default function FLActiveRequestsTab() {
           </Button>
         </Stack>
         <Tooltip title="Refresh">
-          <IconButton size="small" onClick={() => void requests.refetch()}>
+          <IconButton
+            size="small"
+            onClick={() => {
+              if (cycle.cycle && workEmail) void requests.refetch();
+              else void cycle.refetch();
+            }}
+          >
             <RefreshCwIcon size={16} />
           </IconButton>
         </Tooltip>

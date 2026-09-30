@@ -27,7 +27,7 @@ import { BellIcon, RefreshCwIcon, TriangleAlertIcon, XCircleIcon } from "@wso2/o
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
-import { useEndPromotionCycle } from "../api/useAdminPromotionCycle";
+import { useCreatePromotionCycle, useEndPromotionCycle } from "../api/useAdminPromotionCycle";
 import { usePromotionRequests } from "../api/usePromotionRequests";
 import PromotionCycleCreateForm from "../components/PromotionCycleCreateForm";
 import PromotionCycleStatsPanel from "../components/PromotionCycleStatsPanel";
@@ -40,6 +40,7 @@ import { formatDate } from "../util/promotionHistory";
 export default function AdminPromotionCycleTab() {
   const cycle = useActivePromotionCycle();
   const requests = usePromotionRequests({ cycleId: cycle.cycle?.id }, Boolean(cycle.cycle));
+  const createCycle = useCreatePromotionCycle();
   const endCycle = useEndPromotionCycle();
   const [view, setView] = useState<"home" | "notifications">("home");
   const [confirmEnd, setConfirmEnd] = useState<ConfirmationContent | null>(null);
@@ -91,7 +92,15 @@ export default function AdminPromotionCycleTab() {
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, py: 4 }}>
           <Typography variant="h5">Active promotion cycle not found</Typography>
           <Box sx={{ width: "100%", maxWidth: 640 }}>
-            <PromotionCycleCreateForm />
+            <PromotionCycleCreateForm
+              creating={createCycle.isPending}
+              onCreate={(payload) =>
+                createCycle.mutate(payload, {
+                  onSuccess: () => notifySuccess("Promotion cycle created."),
+                  onError: (error) => notifyError(`Unable to create the promotion cycle. ${humanizeHttpError(error)}`),
+                })
+              }
+            />
           </Box>
         </Box>
       ) : (

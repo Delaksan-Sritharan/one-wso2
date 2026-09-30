@@ -57,11 +57,10 @@ export default function AdminUserManagementTab() {
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const { feedback, notifySuccess, notifyError, close } = usePromotionFeedback();
 
-  // Once a running sync settles to SUCCESS, refetch the list — source's own
-  // getAllUsers re-dispatch on the same transition. Source also snackbars
-  // both outcomes (userManagement.tsx's own effect) — ported here off a
-  // ref-tracked "just transitioned" edge, not the raw level, so this fires
-  // once per sync rather than on every re-render while settled.
+  // Once a running sync settles, refetch the list on SUCCESS and notify on
+  // either outcome. Ref-tracked off a "just transitioned" edge, not the raw
+  // level, so this fires once per sync rather than on every re-render while
+  // settled.
   const lastSyncState = useRef(sync.state);
   useEffect(() => {
     if (lastSyncState.current === sync.state) return;

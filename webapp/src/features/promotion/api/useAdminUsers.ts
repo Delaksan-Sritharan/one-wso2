@@ -116,9 +116,8 @@ export function useSyncUsers() {
 }
 
 // GET /employees?filterLeads=true|false — the employee-picker behind both
-// "Add a new user" and Transfer Access. Both are leads-only, matching
-// source's own userInsertForm.tsx/userManagement.tsx (`isLeadsOnly={true}`
-// on both) — a promotion-app system user is always a lead first.
+// "Add a new user" and Transfer Access. Both pickers list leads only,
+// because a promotion system user is always a lead first.
 // Enabled lazily (only once a picker is actually opened), matching source's
 // own Autocomplete-on-open loading.
 export function useAdminEmployeeDirectory(filterLeads: boolean, enabled: boolean) {

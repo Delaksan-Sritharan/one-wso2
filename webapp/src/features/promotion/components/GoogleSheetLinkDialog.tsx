@@ -17,14 +17,9 @@
 import { useState } from "react";
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField } from "@wso2/oxygen-ui";
 
-// A Google Sheet URL. Source's own validation for this exact regex lives
-// only in userManagement.tsx's urlPatternValidation — and it's UNANCHORED
-// (`regex.test(url)` with no `^`/`$`), so it really just checks "does this
-// string contain something dotted-looking anywhere", far more permissive
-// than it looks. timeBasedPromotion.tsx's own dialog has no JS validation
-// at all (only a native `type="url"` + `required` field). Anchoring the
-// pattern here is a deliberate tightening, not a reproduction of either —
-// worth knowing if a previously-accepted sheet link ever gets rejected.
+// A Google Sheet URL. Anchored (`^`/`$`) so the whole input must be a URL,
+// not just contain one somewhere — a deliberate tightening; a previously
+// accepted, more loosely-formed link could now be rejected.
 const URL_PATTERN = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})[/\w .\-?=&%]*\/?$/i;
 
 // Shared by two Admin Portal sync flows: User Management's "Import users
@@ -40,9 +35,8 @@ export default function GoogleSheetLinkDialog({
 }: {
   open: boolean;
   title: string;
-  /** Only Time Based Promotions' own bootstrap dialog has explanatory copy
-   * in source (`timeBasedPromotion.tsx`) — User Management's own sheet-sync
-   * dialog has none, so this is opt-in per call site rather than always-on. */
+  /** Optional explanatory text shown above the URL field. Omit it when no
+   * explanation is needed. */
   description?: string;
   onClose: () => void;
   onSubmit: (url: string) => void;

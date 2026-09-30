@@ -83,8 +83,7 @@ export default function AdminTimeBasedPromotionsTab() {
   const [editingRecommendation, setEditingRecommendation] = useState<PromotionRecommendation | null>(null);
   const { feedback, notifySuccess, notifyError, close } = usePromotionFeedback();
 
-  // Once a running sync settles to SUCCESS, refetch the list — source's own
-  // getTimeBasedPromotion re-dispatch on the same transition. Ref-tracked so
+  // Refetch the list once a running sync settles to SUCCESS. Ref-tracked so
   // this fires once per settle, not on every re-render while already settled.
   const lastSyncState = useRef(sync.state);
   useEffect(() => {

@@ -42,11 +42,10 @@ export default function NotificationHubPanel({
   requests,
   loading,
 }: {
-  /** The active cycle this panel's `requests` were scoped to — source's own
-   * notificationHub.tsx re-checks the cycle's own status before rendering
-   * its tabs, since a caller can already be sitting on this drill-in when
-   * the cycle it was showing ends underneath them. `undefined` = still
-   * loading; `null` = confirmed no active cycle. */
+  /** The active cycle this panel's `requests` were scoped to. Re-checked
+   * before rendering the tabs, since a caller can already be sitting on
+   * this drill-in when the cycle it was showing ends underneath them.
+   * `undefined` = still loading; `null` = confirmed no active cycle. */
   cycle: PromotionCycle | null | undefined;
   requests: PromotionRequestFull[];
   loading: boolean;

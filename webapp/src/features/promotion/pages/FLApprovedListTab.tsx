@@ -94,7 +94,13 @@ export default function FLApprovedListTab() {
 
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
         <Tooltip title="Refresh">
-          <IconButton size="small" onClick={() => void requests.refetch()}>
+          <IconButton
+            size="small"
+            onClick={() => {
+              if (cycle.cycle) void requests.refetch();
+              else void cycle.refetch();
+            }}
+          >
             <RefreshCwIcon size={16} />
           </IconButton>
         </Tooltip>

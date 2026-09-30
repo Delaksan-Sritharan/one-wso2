@@ -24,14 +24,11 @@ import { usePromotionHistory } from "../api/usePromotionHistory";
 import PromotionRichTextContent from "./PromotionRichTextContent";
 import PromotionTimeline from "./PromotionTimeline";
 
-// Ports source's own component/tables/row.tsx expand panel — an employee
-// avatar, a rejection-reason alert (only for a REJECTED/FL_REJECTED
-// request), every lead recommendation on the request (statement +
-// additional comment, decoded/sanitized — see PromotionRichTextContent's
-// own comment on why source's read-side sanitization gap isn't reproduced),
-// and (source's own second column) that employee's full promotion history —
-// the same PromotionTimeline PromotionEmployeeHistoryDialog.tsx already
-// renders elsewhere, fed by the same two hooks.
+// Request detail panel: an employee avatar, a rejection-reason alert (only
+// for a REJECTED/FL_REJECTED request), every lead recommendation on the
+// request (statement + additional comment, decoded and sanitized), and the
+// employee's full promotion history, rendered with the same PromotionTimeline
+// that PromotionEmployeeHistoryDialog.tsx uses, fed by the same two hooks.
 export default function PromotionRequestDetailPanel({ request }: { request: PromotionRequestFull }) {
   const isRejected = request.status === "REJECTED" || request.status === "FL_REJECTED";
   const info = usePromotionEmployeeInfo(request.employeeEmail);
@@ -62,10 +59,9 @@ export default function PromotionRequestDetailPanel({ request }: { request: Prom
               <Box key={rec.recommendationID} sx={{ borderTop: 1, borderColor: "divider", pt: 1.5 }}>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
                   <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{rec.leadEmail}</Typography>
-                  {/* Raw status, not recommendationStatusLabel's SUBMITTED→"APPROVED"
-                      remap — that remap is specific to the Lead Portal's own History
-                      tab (source's historyLine.tsx); this panel ports source's own
-                      row.tsx, which shows a recommendation's raw status here. */}
+                  {/* Show the raw status, not recommendationStatusLabel's
+                      SUBMITTED→"APPROVED" remap. That remap applies only to the
+                      Lead Portal History tab. */}
                   <Chip
                     label={rec.recommendationStatus}
                     size="small"
