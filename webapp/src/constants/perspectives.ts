@@ -671,6 +671,39 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     path: "/sales",
     sections: SALES_SECTIONS,
   },
+  // Product Download Stats is the first engineering tool. It is not under
+  // Infra Portal: Infra is GitHub administration, and this is release
+  // downloads, package downloads, and repository stats. The perspective stays
+  // hidden until the preview flag is on. The route stays registered either
+  // way, so a direct visit while the flag is off says Engineering is not
+  // available.
+  ...(isPreviewEnabled("engineering")
+    ? [
+        {
+          key: "engineering",
+          label: "Engineering",
+          icon: BarChart3,
+          access: true,
+          path: "/engineering",
+          forwardsToFirstItem: true,
+          sections: [
+            {
+              id: "engineering-product-download-stats",
+              label: "Product Download Stats",
+              icon: BarChart3,
+              alwaysGroup: true,
+              children: [
+                {
+                  id: "engineering-download-stats-overview",
+                  label: "Overview",
+                  path: "/engineering",
+                },
+              ],
+            },
+          ],
+        },
+      ]
+    : []),
   // Held behind a preview flag, whole perspective and all, until it's ready
   // for production. With the flag off the entry does not exist, so the waffle,
   // landing options, and favourites stay clean. Same shape as UMT above.

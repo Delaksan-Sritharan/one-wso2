@@ -124,6 +124,11 @@ window.config = {
   // (987 employee / 762 approver / 123 admin), not from the People backend.
   // ONE_WSO2_INFRA_BACKEND_URL: "<your-infra-portal-backend-url>",
 
+  // Base URL of the Product Download Stats API, including the version segment.
+  // Optional — when absent, Engineering Overview says it isn't connected and
+  // makes no requests.
+  // ONE_WSO2_PRODUCT_DOWNLOAD_STATS_BACKEND_URL: "<product-download-stats-backend-url>",
+
   // Pardot UI base URL — for deep-linking to an email template after Email
   // Workbench pushes it. A link target, not an API. Defaults to
   // https://pi.pardot.com.
@@ -151,5 +156,5 @@ window.config = {
   // Each entry is deleted when its feature ships — a list that only grows
   // stops describing anything.
   //
-  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false },
+  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, engineering: false },
 };
