@@ -19,7 +19,6 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
-  Autocomplete,
   Avatar,
   Box,
   Button,
@@ -28,15 +27,9 @@ import {
   ComplexSelect,
   Divider,
   Grid,
+  ListingTable,
   Skeleton,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
   Typography,
 } from "@wso2/oxygen-ui";
 import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon } from "@wso2/oxygen-ui-icons-react";
@@ -107,6 +100,7 @@ function AllEmployeesTable({
   ratingByEmail,
   isRatingLoadingByEmail,
   isRatingErrorByEmail,
+  onRetryRating,
   onSelect,
 }: {
   employees: ParEmployee[];
@@ -117,22 +111,23 @@ function AllEmployeesTable({
   ratingByEmail: ParRatingByEmail;
   isRatingLoadingByEmail: Record<string, boolean>;
   isRatingErrorByEmail: Record<string, boolean>;
+  onRetryRating: (workEmail: string) => void;
   onSelect: (employee: ParEmployee) => void;
 }) {
   if (employees.length === 0) {
     return <ParEmptyState text="None of your reports have a record for this cycle." />;
   }
   return (
-    <TableContainer>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell sx={{ fontWeight: 700 }}>Employee</TableCell>
-            <TableCell sx={{ fontWeight: 700 }}>Rating</TableCell>
-            <TableCell />
-          </TableRow>
-        </TableHead>
-        <TableBody>
+    <ListingTable.Container>
+      <ListingTable density="compact">
+        <ListingTable.Head>
+          <ListingTable.Row>
+            <ListingTable.Cell sx={{ fontWeight: 700 }}>Employee</ListingTable.Cell>
+            <ListingTable.Cell sx={{ fontWeight: 700 }}>Rating</ListingTable.Cell>
+            <ListingTable.Cell />
+          </ListingTable.Row>
+        </ListingTable.Head>
+        <ListingTable.Body>
           {employees.map((employee) => {
             const { rating, special, hasRecord, isLoading, isError } = resolveEmployeeCycleRating(
               employee,
@@ -144,13 +139,13 @@ function AllEmployeesTable({
               isRatingErrorByEmail,
             );
             return (
-              <TableRow
+              <ListingTable.Row
                 key={employee.workEmail}
+                clickable
                 hover
                 tabIndex={0}
                 role="button"
                 aria-label={`View ${employee.employeeName}'s PAR history`}
-                sx={{ cursor: "pointer" }}
                 onClick={() => onSelect(employee)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -159,7 +154,7 @@ function AllEmployeesTable({
                   }
                 }}
               >
-                <TableCell>
+                <ListingTable.Cell>
                   <Box display="flex" alignItems="center" gap={1.5}>
                     <Avatar
                       src={thumbnailByEmail.get(employee.workEmail) || undefined}
@@ -175,14 +170,25 @@ function AllEmployeesTable({
                       </Typography>
                     </Box>
                   </Box>
-                </TableCell>
-                <TableCell>
+                </ListingTable.Cell>
+                <ListingTable.Cell>
                   {isLoading ? (
                     <Skeleton variant="text" width={80} />
                   ) : isError ? (
-                    <Typography variant="body2" color="error.main">
-                      Couldn't load
-                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Typography variant="body2" color="error.main">
+                        Couldn't load
+                      </Typography>
+                      <Button
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRetryRating(employee.workEmail);
+                        }}
+                      >
+                        Retry
+                      </Button>
+                    </Stack>
                   ) : (
                     <Stack direction="row" spacing={0.75} flexWrap="wrap" alignItems="center">
                       {special && <ParStatusChip content={special} />}
@@ -194,23 +200,24 @@ function AllEmployeesTable({
                       )}
                     </Stack>
                   )}
-                </TableCell>
-                <TableCell align="right">
+                </ListingTable.Cell>
+                <ListingTable.Cell align="right">
                   <ChevronRightIcon size={16} />
-                </TableCell>
-              </TableRow>
+                </ListingTable.Cell>
+              </ListingTable.Row>
             );
           })}
-        </TableBody>
-      </Table>
-    </TableContainer>
+        </ListingTable.Body>
+      </ListingTable>
+    </ListingTable.Container>
   );
 }
 
 // Lead Portal → Employee History: par-app's EmployeeHistoryView.tsx
-// (lead-facing side only). A cycle is picked first — merged real (closed)
-// and legacy (pre-migration) options, latest first — then an employee among
-// the lead's own direct reports who has a record for it.
+// (lead-facing side only). Defaults to the most recent cycle (merged real
+// closed and legacy pre-migration options, latest first) and shows every
+// in-scope report's rating in a table; picking one employee drills into
+// their full record.
 export default function ParLeadEmployeeHistoryTab() {
   const profile = useMeProfile();
   const workEmail = profile.data?.userInfo.workEmail;
@@ -362,8 +369,12 @@ export default function ParLeadEmployeeHistoryTab() {
 
   return (
     <Stack spacing={2}>
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 6 }}>
+      {/* Plain flexbox with flex: 1 on both sides — not MUI Grid's own
+          size={{xs,sm}} split, which wasn't holding the two at an equal
+          width here. flex: 1 + minWidth: 0 guarantees an even split
+          regardless of either field's own content. */}
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <ComplexSelect
             fullWidth
             disabled={employees.isLoading || realCycles.isLoading || cycleOptions.length === 0}
@@ -382,73 +393,50 @@ export default function ParLeadEmployeeHistoryTab() {
               </ComplexSelect.MenuItem>
             ))}
           </ComplexSelect>
-        </Grid>
+        </Box>
 
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Autocomplete
-            size="small"
-            options={[ALL_EMPLOYEES_OPTION, ...filteredEmployees]}
-            getOptionLabel={(option) =>
-              option.workEmail === ALL_EMPLOYEES_OPTION.workEmail
-                ? option.employeeName
-                : `${option.employeeName} (${option.workEmail})`
-            }
-            loading={employees.isLoading}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <ComplexSelect
+            fullWidth
             disabled={employees.isLoading || cycleSelection.kind === "none"}
-            value={selectedEmployee ?? ALL_EMPLOYEES_OPTION}
-            inputValue={inputValue}
-            onInputChange={(_, value) => setInputValue(value)}
-            onChange={(_, value) => {
-              if (!value || value.workEmail === ALL_EMPLOYEES_OPTION.workEmail) {
+            value={selectedEmployee?.workEmail ?? ALL_EMPLOYEES_OPTION.workEmail}
+            onChange={(e) => {
+              const value = e.target.value as string;
+              if (value === ALL_EMPLOYEES_OPTION.workEmail) {
                 setSelectedEmployee(null);
                 setInputValue(ALL_EMPLOYEES_OPTION.employeeName);
                 setSelectedFromTable(false);
                 return;
               }
-              setSelectedEmployee(value);
-              setSelectedFromTable(false);
-              setInputValue(`${value.employeeName} (${value.workEmail})`);
+              const picked = filteredEmployees.find((employee) => employee.workEmail === value);
+              if (picked) {
+                setSelectedEmployee(picked);
+                setInputValue(`${picked.employeeName} (${picked.workEmail})`);
+                setSelectedFromTable(false);
+              }
             }}
-            renderInput={(params) => (
-              // Click-to-choose, not type-to-search, same as the PAR
-              // Cycle picker beside it — readOnly blocks typing but the
-              // field still opens on click.
-              <TextField
-                {...params}
-                fullWidth
-                slotProps={{ htmlInput: { ...params.inputProps, readOnly: true } }}
-                sx={{ "& .MuiInputBase-input": { caretColor: "transparent", cursor: "pointer" } }}
-              />
-            )}
-            slotProps={{ listbox: { style: { maxHeight: "400px" } } }}
-            renderOption={(props, option) =>
-              option.workEmail === ALL_EMPLOYEES_OPTION.workEmail ? (
-                <Box component="li" {...props} key={option.workEmail}>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {option.employeeName}
-                  </Typography>
-                </Box>
-              ) : (
-                <Box component="li" {...props} key={option.workEmail}>
-                  <Box display="flex" alignItems="center" gap={2} width="100%">
-                    <Avatar
-                      src={thumbnailByEmail.get(option.workEmail) || undefined}
-                      alt={option.employeeName}
-                      sx={{ height: "2.2rem", width: "2.2rem" }}
-                    />
-                    <Box>
-                      <Typography variant="body1">{option.employeeName}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {option.workEmail}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              )
-            }
-          />
-        </Grid>
-      </Grid>
+            renderValue={(value) => {
+              if (value === ALL_EMPLOYEES_OPTION.workEmail) return ALL_EMPLOYEES_OPTION.employeeName;
+              const picked = filteredEmployees.find((employee) => employee.workEmail === value) ?? selectedEmployee;
+              return picked ? `${picked.employeeName} (${picked.workEmail})` : "";
+            }}
+            MenuProps={{ slotProps: { paper: { style: { maxHeight: 400 } } } }}
+          >
+            <ComplexSelect.MenuItem value={ALL_EMPLOYEES_OPTION.workEmail}>
+              <ComplexSelect.MenuItem.Text primary={ALL_EMPLOYEES_OPTION.employeeName} />
+            </ComplexSelect.MenuItem>
+            {filteredEmployees.map((employee) => (
+              <ComplexSelect.MenuItem key={employee.workEmail} value={employee.workEmail}>
+                <ComplexSelect.MenuItem.Avatar
+                  src={thumbnailByEmail.get(employee.workEmail) || undefined}
+                  alt={employee.employeeName}
+                />
+                <ComplexSelect.MenuItem.Text primary={employee.employeeName} secondary={employee.workEmail} />
+              </ComplexSelect.MenuItem>
+            ))}
+          </ComplexSelect>
+        </Box>
+      </Stack>
 
       {/* Not yet cycleDataReady reads as "none" too — a skeleton, not a
           "choose a cycle" prompt implying the lead needs to act. */}
@@ -470,6 +458,7 @@ export default function ParLeadEmployeeHistoryTab() {
           ratingByEmail={ratingFanOut.byEmail}
           isRatingLoadingByEmail={ratingFanOut.isLoadingByEmail}
           isRatingErrorByEmail={ratingFanOut.isErrorByEmail}
+          onRetryRating={(workEmail) => ratingFanOut.refetchByEmail[workEmail]?.()}
           onSelect={(employee) => {
             setSelectedEmployee(employee);
             setInputValue(`${employee.employeeName} (${employee.workEmail})`);

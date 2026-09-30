@@ -161,6 +161,7 @@ export function useParRatingFanOut(parCycleId: number | undefined, emails: strin
   byEmail: ParRatingByEmail;
   isLoadingByEmail: Record<string, boolean>;
   isErrorByEmail: Record<string, boolean>;
+  refetchByEmail: Record<string, () => void>;
 } {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
@@ -180,7 +181,7 @@ export function useParRatingFanOut(parCycleId: number | undefined, emails: strin
           throw e;
         }
       },
-      staleTime: 60 * 1000,
+      staleTime: 5 * 60 * 1000,
       retry: defaultQueryRetry,
     })),
   });
@@ -188,10 +189,12 @@ export function useParRatingFanOut(parCycleId: number | undefined, emails: strin
   const byEmail: ParRatingByEmail = {};
   const isLoadingByEmail: Record<string, boolean> = {};
   const isErrorByEmail: Record<string, boolean> = {};
+  const refetchByEmail: Record<string, () => void> = {};
   results.forEach((result, index) => {
     byEmail[emails[index]] = result.data;
     isLoadingByEmail[emails[index]] = result.isLoading;
     isErrorByEmail[emails[index]] = result.isError;
+    refetchByEmail[emails[index]] = () => void result.refetch();
   });
-  return { byEmail, isLoadingByEmail, isErrorByEmail };
+  return { byEmail, isLoadingByEmail, isErrorByEmail, refetchByEmail };
 }
