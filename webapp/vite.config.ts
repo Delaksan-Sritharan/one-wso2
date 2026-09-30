@@ -34,11 +34,11 @@ import path from "path";
 // token exchange + Drive API calls they make, and frame-src for the
 // Picker's own iframe (hosted on docs.google.com, not inline).
 //
-// Sales plays meeting recordings in a <video> whose src is meet-app-backend's
-// `playbackBaseUrl`. That host differs per environment, so media-src takes wildcards:
-// *.choreoapis.dev for a Choreo default URL, and *.wso2.com for the gateway's wso2.com
-// domain, where echo-backend's Public playback endpoint is served in production (the
-// same *.wso2.com connect-src already trusts for API calls).
+// Sales plays meeting recordings in a <video> whose src is the signed URL returned by
+// the Sales backend's playback endpoint (ONE_WSO2_REVOPS_BACKEND_URL, then
+// /meetings/{id}/playback). That URL's host differs per environment, so media-src takes
+// wildcards: *.choreoapis.dev for a Choreo default URL, and *.wso2.com for the API
+// gateway's wso2.com domain (the same *.wso2.com connect-src already trusts).
 const CSP = [
   "default-src 'self'",
   "script-src 'self' https://accounts.google.com https://apis.google.com",
