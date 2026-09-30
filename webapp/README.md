@@ -66,7 +66,6 @@ env vars use the `ONE_WSO2_` prefix (`vite.config.ts`).
 | `ONE_WSO2_THEME` | `wso2` (default), `acrylicOrange`, `acrylicPurple`, `classic`, `highContrast`, `paleIndigo`, `paleGray` | `wso2` |
 | `ONE_WSO2_IDLE_AUTO_SIGN_OUT` | optional; `true` signs out 30 minutes after inactivity instead of waiting at the idle prompt | `false` |
 | `ONE_WSO2_PREVIEW_FEATURES` | features built but not released; absent or `false` hides them | `{ umt: false }` |
-| `ONE_WSO2_DEV_BYPASS_AUTH` | dev server only — render every route without calling Asgardeo; ignored in production builds | `false` |
 
 ### Feature backends
 
@@ -177,10 +176,6 @@ The access token is attached as `Authorization: Bearer <accessToken>` on API cal
 (`@api/http`, `@hooks/useAccessToken`); the API gateway forwards it to the backend as
 `x-jwt-assertion`. The id_token is used for identity — backends check its `email` and `groups`
 claims.
-
-For local UI work before an Asgardeo app registration exists, set `ONE_WSO2_DEV_BYPASS_AUTH: true` in
-`public/config.js`. The guard then renders every route without calling Asgardeo. It only works on the
-dev server.
 
 ## Auth debug panel
 
