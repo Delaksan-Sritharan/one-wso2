@@ -110,7 +110,8 @@ export function useSalesRailGate(enabled: boolean): SalesRailGate {
 }
 
 export function salesVisibility(gate: SalesRailGate): VisibilityAnswer {
+  const canSee = (id: string) => gate.canSee(id);
   return gate.isError
-    ? { canSee: () => gate.canSee(), resolving: gate.isResolving, error: gate.errorMessage, retry: gate.retry }
-    : { canSee: () => gate.canSee(), resolving: gate.isResolving, retry: () => undefined };
+    ? { canSee, resolving: gate.isResolving, error: gate.errorMessage, retry: gate.retry }
+    : { canSee, resolving: gate.isResolving, retry: () => undefined };
 }

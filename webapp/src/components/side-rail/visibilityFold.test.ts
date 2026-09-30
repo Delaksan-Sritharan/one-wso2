@@ -275,6 +275,57 @@ describe("claimsForPerspective", () => {
     }
   });
 
+  it("covers infra, umt, and promotion when those preview flags are on", async () => {
+    const previous = window.config;
+    vi.resetModules();
+    window.config = {
+      ...(previous ?? {}),
+      ONE_WSO2_PREVIEW_FEATURES: { infra: true, umt: true, promotion: true },
+    } as Window["config"];
+    const { PERSPECTIVES: flagged } = await import("@constants/perspectives");
+    const fold = await import("./visibilityFold");
+    const keys = flagged.map((perspective) => perspective.key);
+    expect(keys).toEqual(expect.arrayContaining(["infra", "umt"]));
+    const people = flagged.find((perspective) => perspective.key === "people");
+    expect(fold.sectionIdsIn(people?.sections ?? []).has("promotion-lead-portal")).toBe(true);
+    expect(fold.claimsForPerspective("people")).toContain("promotion");
+
+    const names = [
+      "par",
+      "marketing",
+      "due-diligence",
+      "finance",
+      "leave",
+      "banking",
+      "banking-admin",
+      "infra",
+      "sales",
+      "promotion",
+      "security",
+      "umt",
+      "subscriptions",
+    ] as const;
+    for (const perspective of flagged) {
+      const sectionIds = fold.sectionIdsIn(perspective.sections ?? []);
+      const inPlay = new Set(fold.claimsForPerspective(perspective.key));
+      for (const id of sectionIds) {
+        for (const name of names) {
+          const claim = fold.claimOf(name);
+          const covers =
+            claim.kind === "sections"
+              ? claim.ids.has(id)
+              : claim.key === perspective.key && sectionIds.has(id);
+          if (covers) expect(inPlay.has(name), `${perspective.key} ${id} claimed by ${name}`).toBe(true);
+        }
+      }
+      const adapters = fold.claimsForPerspective(perspective.key).map((name) => adapter({ name }));
+      expect(fold.claimConflicts(adapters, shell({ perspectiveKey: perspective.key, sectionIds })), perspective.key).toEqual(
+        [],
+      );
+    }
+    window.config = previous;
+  });
+
   it("gives every real perspective a single owner per section", () => {
     const keys = new Set<string>([
       ...PERSPECTIVES.map((perspective) => perspective.key),
