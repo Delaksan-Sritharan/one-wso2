@@ -16,10 +16,6 @@ window.config = {
   // for myaccount. (Asgardeo Cloud convention).
   // ONE_WSO2_ASGARDEO_MYACCOUNT_URL: "https://myaccount.asgardeo.io/t/<your-org>",
 
-  // Dev server only: render every route without calling Asgardeo, for UI work
-  // before an Asgardeo app registration exists. Ignored in production builds.
-  // ONE_WSO2_DEV_BYPASS_AUTH: false,
-
   // UI
   ONE_WSO2_THEME: "wso2",
 
