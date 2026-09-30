@@ -275,11 +275,8 @@ function ArrAnalysis() {
  * The two figures above the table: total ARR, and how many accounts are behind
  * it.
  *
- * The logo count is the number of rows on screen rather than a figure from the
- * backend. The summary endpoint's `logoCount` is hard-coded to 0, so the row
- * count is the only true one available. Counting the rows also makes the pair
- * legible together:
- * the count is of exactly the accounts listed below it.
+ * The logo count is the number of rows on screen, so it always matches the
+ * table beneath it.
  */
 function SummaryCards({
   asOf,
@@ -317,6 +314,10 @@ function SummaryCards({
         maxWidth: 640,
       }}
     >
+      {/* Not Oxygen's StatCard. The ARR tile replaces its figure with an
+          error that offers a retry, or with a skeleton, and StatCard only
+          takes a label and a value. The Accounts tile beside it stays in the
+          same shape. */}
       <Card variant="outlined" sx={{ p: 2 }}>
         <Typography variant="overline" color="text.secondary">
           ARR as of {label}

@@ -149,7 +149,8 @@ const { default: MisArrAnalysisPage } = await import("./MisArrAnalysisPage");
 const { misPaths } = await import("@constants/misApps");
 
 const ARR = 987;
-const FLASH = 789;
+// 789 arrives beside 987 from the ARR service and opens nothing here.
+const NOT_ARR = 789;
 
 /** The route under its real path, with somewhere for a redirect to land. */
 function show() {
@@ -184,7 +185,7 @@ describe("with the flag on", () => {
   // a bookmarked link that silently lands somewhere else reads as the app being
   // broken.
   it("refuses someone without the ARR privilege, and says so where they are", () => {
-    state.privileges = [FLASH];
+    state.privileges = [NOT_ARR];
     show();
     expect(screen.queryByText("the ARR Build")).not.toBeInTheDocument();
     expect(screen.queryByRole("grid")).not.toBeInTheDocument();

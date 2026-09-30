@@ -107,29 +107,28 @@ import {
 import type { MisWorkbookSpec } from "../export/misWorkbook";
 import { misExportFilename, misFilenameWord } from "../export/misExportFilename";
 
-// ARR Build — the annual recurring-revenue Build, on live figures.
+// ARR Build — annual recurring revenue, on live figures.
 //
-// This is the slice that proves the fetch-to-render path end to end, so that
-// the tables after it are variation rather than invention. Everything on screen
-// is assembled from parts that were built and tested on their own:
+// Everything on screen is assembled from parts that were built and tested on
+// their own:
 //
-//   the view      `useMisViewState` (02) reads the Period from the route and
+//   the view      `useMisViewState` reads the Period from the route and
 //                 everything else from the query string
-//   the columns   `pacificColumnRanges` (05) cuts them in Pacific Time
+//   the columns   `pacificColumnRanges` cuts them in Pacific Time
 //   the rows      `arrBuildRows` names them and says which field each reads
 //   the figures   `useArrSummary` fetches one column per query
-//   the money     `formatMisValue` (05) decides what Scale may touch
-//   the table     `BuildTable` (03) renders it
-//   the filters   `MisFilterBar` (09) writes every one of them through the
+//   the money     `formatMisValue` decides what Scale may touch
+//   the table     `BuildTable` renders it
+//   the filters   `MisFilterBar` writes every one of them through the
 //                 SAME `useMisViewState` instance, so there is one view and not
 //                 a bar's copy of it beside the grid's
 //
 //   the drill-down `useDrillDownCustomers` fetches the customers behind one
-//                 figure and `MisCustomerDrillDown` shows them (10)
+//                 figure and `MisCustomerDrillDown` shows them
 //   the summaries `useExitArrByRegion` and `useExitArrByBU` read Exit ARR as at
-//                 one date, and `exitArrRows` says what their rows are (10)
+//                 one date, and `exitArrRows` says what their rows are
 //
-// Windowing is `BuildTable`'s (07).
+// Windowing is `BuildTable`'s.
 
 /**
  * What each Build screen calls itself, and which rail entry gates it.
@@ -408,7 +407,7 @@ function ArrBuildGrid({ view, scale }: { view: MisViewState; scale: MisScale }) 
  * — over a table that is the Build's opposite shape. There the rows are the
  * fixed metric lines and the figures arrive as columns; here every row is a
  * customer and there are hundreds of them, which is why this is the first
- * screen where `BuildTable`'s row windowing (07) actually runs.
+ * screen where `BuildTable`'s row windowing actually runs.
  *
  * Its columns are `buildColumnRanges`, the same slice the Subscription Build
  * takes. The fetch asks for one year more than those columns render

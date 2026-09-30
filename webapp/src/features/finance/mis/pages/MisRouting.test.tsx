@@ -30,9 +30,8 @@ vi.setConfig({ testTimeout: 20_000 });
 
 // What a person actually sees at a MIS URL they are and are not entitled to.
 //
-// Two populations: the ARR privilege, and not. (A Flash-only holder is the
-// second — the Flash Dashboard is not part of One WSO2, and the gate suite
-// pins that its privilege opens nothing here.) The gate suite proves the
+// Two populations: the ARR privilege, and not. (789 arrives beside 987 and
+// opens nothing here; the gate suite pins that.) The gate suite proves the
 // decision; this proves the decision reaches the screen.
 //
 // Typing a URL you cannot use gives a locked panel, NOT a redirect. A redirect

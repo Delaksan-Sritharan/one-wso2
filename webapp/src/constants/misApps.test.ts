@@ -60,10 +60,14 @@ describe("the Finance MIS registry", () => {
     ]);
   });
 
-  // The Flash Dashboard is not part of One WSO2, so it is not a screen of this
-  // registry — not a pathless row, not a row its privilege would open.
-  it("leaves the Flash Dashboard out", () => {
-    expect(items.map((item) => item.id)).not.toContain("mis-flash");
+  // These four are the registry. An extra id, with or without a path, fails here.
+  it("lists exactly the four screens", () => {
+    expect(items.map((item) => item.id).sort()).toEqual([
+      "mis-analysis",
+      "mis-arr-build",
+      "mis-mrr-build",
+      "mis-qrr-build",
+    ]);
   });
 
   // ARR Analysis is in the registry unconditionally, and has to be: the

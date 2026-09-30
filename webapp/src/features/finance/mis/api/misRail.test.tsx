@@ -190,19 +190,17 @@ beforeEach(() => {
 });
 
 describe("the Finance rail", () => {
-  it("offers the ARR screens to someone holding the ARR privilege, and no Flash Dashboard", () => {
+  it("offers the ARR screens to someone holding the ARR privilege", () => {
     privileges.value = [987];
     showRail();
     expect(screen.getByText("ARR Build")).toBeInTheDocument();
-    expect(screen.queryByText("Flash Dashboard")).not.toBeInTheDocument();
   });
 
-  // The Flash Dashboard is not part of One WSO2, so its privilege has nothing
-  // to open here — not a Flash row, and not an empty MIS group either.
-  it("offers no MIS entry at all to someone holding only the Flash privilege", () => {
+  // 789 arrives beside 987 from the ARR service and opens nothing here — not
+  // an ARR row, and not an empty MIS group either.
+  it("offers no MIS entry at all to someone holding only 789", () => {
     privileges.value = [789];
     showRail();
-    expect(screen.queryByText("Flash Dashboard")).not.toBeInTheDocument();
     expect(screen.queryByText("ARR Build")).not.toBeInTheDocument();
     expect(screen.queryByText("MIS")).not.toBeInTheDocument();
   });
