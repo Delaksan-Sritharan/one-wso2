@@ -151,7 +151,10 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
     purpose: "Maintain the subsidiaries, departments, expense types and cards the finance apps refer to.",
     // `requires: ["admin"]` on all four: this is finance-maintained reference
     // data, same gate as cc Settings. It only forces useFinanceGate to answer
-    // for the id — see its master-data case.
+    // for the id — see its master-data case, which also checks the
+    // "finance-master-data" preview flag (previewFeatures.ts) before `admin`,
+    // so this stays hidden in an environment until that flag is turned on
+    // there.
     items: [
       { id: "master-data-subsidiaries", label: "Subsidiaries", desc: "WSO2 legal entities and their tax codes.", requires: ["admin"], path: masterDataPaths.subsidiaries },
       { id: "master-data-departments", label: "Departments", desc: "Departments, engagement codes and their GL codes.", requires: ["admin"], path: masterDataPaths.departments },

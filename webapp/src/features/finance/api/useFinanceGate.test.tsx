@@ -16,8 +16,9 @@
  * under the License.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
+import type { Capability } from "@constants/appMenu";
 
 // Three backends, three vocabularies, none of them the people-app roles the
 // rail normally reads. These are the rules the standalone apps enforce, so they
@@ -49,7 +50,7 @@ vi.mock("../expense/useExpense", () => ({
   }),
 }));
 
-const { useFinanceGate } = await import("./useFinanceGate");
+const { useFinanceGate, canSeeMasterData } = await import("./useFinanceGate");
 const { FINANCE_ITEM_IDS } = await import("@constants/financeApps");
 
 const gate = () => renderHook(() => useFinanceGate()).result.current;
@@ -197,6 +198,51 @@ describe("Credit Card Expenses' submitter-facing items", () => {
     expect(gate().canSee("cc-new")).toBe(true);
     expect(gate().canSee("cc-pending")).toBe(true);
     expect(gate().canSee("cc-history")).toBe(true);
+  });
+});
+
+// Master Data is gated on TWO things that answer two different questions, and
+// both have to say yes: the preview flag ("does this environment have the
+// feature yet") and `admin` ("may this reader use it"). Neither alone is
+// enough, which is the whole point — turning the flag on in an environment
+// must not hand finance's reference tables to every employee in it, and
+// holding `admin` must not surface a feature the environment has not enabled.
+describe("the Master Data tables", () => {
+  const admin = new Set<Capability>(["employee", "admin"]);
+  const employee = new Set<Capability>(["employee"]);
+
+  function previewFlag(on: boolean): void {
+    window.config = {
+      ...window.config,
+      ONE_WSO2_PREVIEW_FEATURES: { "finance-master-data": on },
+    };
+  }
+
+  afterEach(() => {
+    delete window.config?.ONE_WSO2_PREVIEW_FEATURES;
+  });
+
+  it("opens for an admin in an environment that has the feature", () => {
+    previewFlag(true);
+    expect(canSeeMasterData(admin)).toBe(true);
+  });
+
+  // The flag is the reason production is safe while this sits in `main`.
+  it("stays shut for an admin where the flag is off", () => {
+    previewFlag(false);
+    expect(canSeeMasterData(admin)).toBe(false);
+  });
+
+  // Absent means off — prod is safe because nobody touched its config, not
+  // because somebody remembered to write `false`.
+  it("stays shut where no flag was ever set", () => {
+    expect(canSeeMasterData(admin)).toBe(false);
+  });
+
+  it("stays shut for a non-admin even where the flag is on", () => {
+    previewFlag(true);
+    expect(canSeeMasterData(employee)).toBe(false);
+    expect(canSeeMasterData(undefined)).toBe(false);
   });
 });
 
