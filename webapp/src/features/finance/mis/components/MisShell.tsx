@@ -57,9 +57,8 @@ import { ScalePreferenceProvider } from "../util/ScalePreferenceContext";
 // That shell asks one question — are you authorized for this perspective — and
 // every screen behind it follows. This one takes a `gateId` and asks per screen,
 // because one screen has a condition of its own: ARR Analysis exists only while
-// its `productsUsageEnabled` flag is on. (It asked per screen for a second
-// reason while the Flash Dashboard was being ported, which MIS grants on a
-// privilege of its own; that screen stays in the MIS app.)
+// its `productsUsageEnabled` flag is on. The Builds share the ARR privilege;
+// Analysis is the screen with a condition of its own.
 //
 // ---- and why it checks the ARR key specifically ---------------------------
 //
@@ -115,8 +114,9 @@ export default function MisShell({
     // Every MIS screen renders its own shell, so a provider here is remounted on
     // every navigation between them — which Scale survives only because it reads
     // its value back out of `localStorage`. A value held in memory alone would
-    // not, so `YearsBackSessionProvider` sits on the MIS routes themselves, in
-    // `App.tsx`, where it outlives the screen.
+    // not, so `YearsBackSessionProvider` lives in `MisSession`, the layout
+    // route that outlives each screen. Mounting that route is a later change;
+    // nothing in this one is reachable from `App` yet.
     <ScalePreferenceProvider>
       <Box>
         <Stack
@@ -135,7 +135,7 @@ export default function MisShell({
             variant="outlined"
             size="small"
           />
-          {/* Permanent, on every rung — ticket 05 says the word.
+          {/* Permanent, on every rung.
               Unconditional beats "only where there are figures": the reader who
               most needs to know which clock MIS runs on is the one who has just
               arrived, and a chip that comes and goes is one more thing on the

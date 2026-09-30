@@ -64,7 +64,7 @@ function renderDialog(over: Partial<Parameters<typeof MisCustomerDrillDown>[0]> 
 
 describe("what the dialog says it is showing", () => {
   it("names the figure that was opened — the row and the Period", () => {
-    // The source's title is `${rowLabel} · ${periodColumn}` with a middle dot.
+    // The title is `${rowLabel} · ${periodColumn}` with a middle dot.
     // It is the only thing on screen tying the list back to the cell the reader
     // clicked, and a customer list with no such tie is unreadable.
     renderDialog();
@@ -74,8 +74,8 @@ describe("what the dialog says it is showing", () => {
   it("shows the filters the figure was computed under, and lets nobody change them", () => {
     // Read-only on purpose: these are the Build's Applied filters, and a filter
     // changed from inside the dialog would leave the list describing a
-    // different figure from the one it was opened from. The port's chip strip
-    // becomes undismissable by omitting onRemove.
+    // different figure from the one it was opened from. The chip strip becomes
+    // undismissable by omitting onRemove.
     renderDialog({
       chips: [{ key: "salesRegion", label: "Region: EMEA", removable: true }],
     });
@@ -88,7 +88,7 @@ describe("what the dialog says it is showing", () => {
 });
 
 describe("the customers themselves", () => {
-  it("lists one row per customer, under the source's column headings", () => {
+  it("lists one row per customer, under the column headings", () => {
     renderDialog();
     const table = screen.getByRole("table");
     expect(within(table).getByText("0018000001abcXYZ")).toBeInTheDocument();
@@ -128,10 +128,9 @@ describe("when there is nothing to show", () => {
   });
 
   it("says the request FAILED rather than showing an empty list", () => {
-    // The divergence worth having. In the source the error is discarded three
-    // times over and a failed drill-down renders an empty grid — on a screen
-    // whose entire purpose is to explain a figure, that reads as "this number
-    // is made of nobody".
+    // A failed drill-down must not render an empty grid. On a screen whose
+    // entire purpose is to explain a figure, that reads as "this number is
+    // made of nobody".
     const retry = vi.fn();
     renderDialog({
       state: { customers: [], isLoading: false, isError: true, errorMessage: "Gateway said no.", retry },
@@ -160,10 +159,8 @@ describe("closing it", () => {
   });
 });
 
-// The source's dialog has an Export CSV button (`ArrSummaryCustomersDialog.js`
-// :191-216). Ticket 10 deliberately did not port it — a bespoke CSV here would
-// have been the second export path ticket 11 exists to prevent — and carried it
-// to ticket 11 instead. This is it, on the shared builders.
+// The export is an .xlsx from the shared builders. A bespoke CSV here would
+// be a second export path, and a column of text cannot be summed.
 describe("taking the customers out of the browser", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -184,16 +181,14 @@ describe("taking the customers out of the browser", () => {
     // list is exported to be summed against the Build figure it was opened
     // from, and a column of strings cannot be.
     //
-    // This is also all §10.18 has to say here: the dialog takes no Scale at
-    // all. `drillDownColumns`' amount hard-codes MIS_SCALES.UNITS, and the
-    // source's own test asserts the thousands rendering never appears — so
-    // there is no setting under which this figure could arrive scaled, and the
-    // assertion that it is the raw one is the whole guarantee.
+    // The dialog takes no Scale at all. `drillDownColumns`' amount hard-codes
+    // units, so there is no setting under which this figure could arrive
+    // scaled, and the assertion that it is the raw one is the whole
+    // guarantee.
     expect(sheet.getRow(4).getCell(3).value).toBe(1_234_567.5);
 
-    // The source's own name, with its two different clean-up rules: the row
-    // label loses its punctuation, the Period column keeps its hyphen. The date
-    // is Pacific rather than the source's UTC.
+    // Two clean-up rules: the row label loses its punctuation, the Period
+    // column keeps its hyphen. The date is Pacific, not UTC.
     expect(filenames[0]).toMatch(
       /^customer_details_new_20241231_-_20251231_\d{4}-\d{2}-\d{2}\.xlsx$/,
     );

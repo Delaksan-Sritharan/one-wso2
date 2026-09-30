@@ -31,9 +31,9 @@ import type { PartnerModelBreakdown } from "../api/useAnalysisBreakdowns";
 // DataGrid-heavy suites, for the same reason.
 vi.setConfig({ testTimeout: 20_000 });
 
-// ARR by partner model. A proportion BAR where the source draws a two-slice
-// pie — see the component for why, and note that no figure moves: the amounts
-// are in the companion table to the cent, which is what parity protects.
+// ARR by partner model. A proportion bar rather than a two-slice pie — see
+// the component for why, and note that no figure moves: the amounts are in
+// the companion table to the cent.
 
 /** Both models asked about — the ordinary case. */
 const BOTH = new Set(["Channel", "Direct"]);
@@ -93,7 +93,7 @@ describe("the bar", () => {
   });
 });
 
-// The case the source cannot express, and the one that matters most: BOTH
+// The case that matters most: BOTH
 // models were asked and one did not answer. `isError` is false — the other read
 // succeeded — so nothing upstream flags it, and the obvious rendering is the
 // survivor at 100%, which states something about a book half of which never
@@ -144,7 +144,7 @@ describe("the companion table", () => {
     expect(tableRows()[0]?.[1]).toBe("1.00");
   });
 
-  // Spec §3 — Scale reaches currency and nothing else.
+  // Scale reaches currency and nothing else.
   it("leaves a share alone at either Scale", () => {
     showChart({}, MIS_SCALES.THOUSANDS);
     expect(tableRows()[0]?.[2]).toBe("30.00%");
@@ -160,8 +160,8 @@ describe("the states that are not a split", () => {
   });
 
   // A share needs both halves, so half a split is not a smaller split — it is a
-  // wrong one. This is the case the source cannot express: it reports an
-  // un-asked model as `0`, which draws the other at 100%.
+  // wrong one. Reporting an un-asked model as `0` would draw the other at
+  // 100%.
   it("draws nothing when a read failed, rather than a confident 100%", () => {
     // Figures cleared alongside `isError`, because the hook cannot report both.
     // `useColumnQueries.isError` is true only when EVERY column failed, so

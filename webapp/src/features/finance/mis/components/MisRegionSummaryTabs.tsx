@@ -18,9 +18,7 @@ import MisSegmentedControl from "./MisSegmentedControl";
 
 // Which of the Region Summary's two views is on screen.
 //
-// From the `Region Summary view` segmented control in `RegionSummaryTabs.js`,
-// whose two options this keeps verbatim. Exit ARR is the source's default and
-// is the default here.
+// Exit ARR and All ARR Metrics. Exit ARR is the default.
 //
 // The two are one Table asked two ways: Exit ARR is each region's BALANCE at
 // the column's date, split by business unit, and All ARR Metrics is each
@@ -29,9 +27,9 @@ import MisSegmentedControl from "./MisSegmentedControl";
 // both take from the response.
 //
 // Component state rather than the address bar, like the Region Type control
-// beside it and for the same reason: the source keeps it in the table's own
-// state, so it reaches no link anyone holds, and moving it into the URL extends
-// the contract ticket 02 pinned. The same question stands for both controls.
+// beside it and for the same reason: it is table state, so it reaches no
+// link anyone holds, and moving it into the URL would extend that contract.
+// The same question stands for both controls.
 
 /** The two views, and the word each is known by. */
 export const MIS_REGION_SUMMARY_VIEWS = {

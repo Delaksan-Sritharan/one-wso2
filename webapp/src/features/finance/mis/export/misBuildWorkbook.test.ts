@@ -69,7 +69,7 @@ const at = (sheet: ReturnType<typeof misBuildSheet>, row: number, column: number
 
 describe("a Build, as a sheet", () => {
   it("says what its figures are in, before any of them", () => {
-    // Spec §10.18's answer, taken BOTH ways: the figures below are unscaled AND
+    // Taken BOTH ways: the figures below are unscaled AND
     // the file says so. The caption is `amountUnitCaption`'s own words rather
     // than a retyped copy — the screen's caption and the sheet's must not be
     // able to drift, because between them they are the only two places a
@@ -85,9 +85,8 @@ describe("a Build, as a sheet", () => {
   });
 
   it("writes a figure as a NUMBER, at units, whatever the screen is showing", () => {
-    // The foot-gun this test exists for, and the one the source's own Flash
-    // export has: `generateAnnualSheet.js` writes `formatNumber(value)` — a
-    // STRING — into every figure cell, so a column of them cannot be summed.
+    // The foot-gun this test exists for: writing `formatNumber(value)` — a
+    // STRING — into every figure cell means a column of them cannot be summed.
     //
     // `misBuildSheet` takes no Scale at all. That is the enforcement: there is
     // no parameter a caller could pass the reader's thousands setting through,
@@ -99,7 +98,7 @@ describe("a Build, as a sheet", () => {
   });
 
   it("formats a headcount and a ratio by what the row IS, not by what it looks like", () => {
-    // Spec §3, on the sheet as on the screen: Scale never scales counts, and
+    // On the sheet as on the screen: Scale never scales counts, and
     // the number format is how a spreadsheet says the same thing. Read through
     // `misValueTypeForRow`, so the sheet and the screen cannot disagree.
     const sheet = misBuildSheet(INPUT);
@@ -124,7 +123,7 @@ describe("a Build, as a sheet", () => {
     expect(at(sheet, 5, 1).value).toBe("ARR movement");
     expect(sheet.rows[4].outlineLevel).toBe(0);
     expect(sheet.rows[4].bold).toBe(true);
-    // Two spaces per level, the source's own indent — and an outline level, so
+    // Two spaces per level, and an outline level, so
     // a reader can collapse a section in Excel the way they collapse it on
     // screen. Every row is written whatever is open on screen: a spreadsheet
     // that silently omitted the sections the reader had closed would be a

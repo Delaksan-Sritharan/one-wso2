@@ -19,7 +19,7 @@ import { MIS_TABLE_LABELS, MIS_TABLE_ORDER, type MisTable } from "../util/misVie
 
 // Which of the Build's four tables is on screen.
 //
-// From `TableNavigation.js`, and it COMMITS ON CLICK for the same reason the
+// It COMMITS ON CLICK for the same reason the
 // unit tabs do: a different Table is a different report, not a narrowing of
 // this one, so it goes straight into the address rather than waiting for Apply.
 // That is also what makes the view shareable — the Table is in the link.

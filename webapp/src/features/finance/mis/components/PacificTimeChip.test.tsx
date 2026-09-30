@@ -19,7 +19,7 @@ import { render, screen } from "@testing-library/react";
 import { inZone } from "@/test/timeZone";
 import PacificTimeChip from "@features/finance/mis/components/PacificTimeChip";
 
-// Spec §10.9. The suite is pinned to America/Los_Angeles, where a Pacific-versus
+// The suite is pinned to America/Los_Angeles, where a Pacific-versus
 // -local confusion is invisible, so this renders from somewhere else.
 
 afterEach(() => {

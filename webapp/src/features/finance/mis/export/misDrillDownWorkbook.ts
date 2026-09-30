@@ -16,11 +16,8 @@
 
 // The customers behind one figure, as a sheet.
 //
-// Ticket 10 carried this here. The source's dialog has an Export CSV button
-// (`ArrSummaryCustomersDialog.js:191-216`) that ticket deliberately did not
-// port: a bespoke CSV in the dialog would have been exactly the second export
-// path this ticket exists to prevent. So the dialog is a consumer of the same
-// builders as the Build.
+// The dialog is a consumer of the same builders as the Build. A bespoke CSV
+// here would be a second export path.
 //
 // It is a `misBuildSheet` with no Periods in it — the same degenerate case the
 // dialog already renders `BuildTable` in, hitting the same code rather than a

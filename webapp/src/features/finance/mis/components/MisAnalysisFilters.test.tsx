@@ -39,8 +39,8 @@ vi.setConfig({ testTimeout: 20_000 });
 
 // ARR Analysis's ten controls.
 //
-// Applied at once, with no Apply button — which is the source's behaviour and
-// is available here because these filters reach no address. The Build's bar
+// Applied at once, with no Apply button, because these filters reach no
+// address. The Build's bar
 // stages changes because applying one rewrites the query string, and a URL that
 // changed on every keystroke would fill the reader's history with views they
 // never asked for. Nothing here is in the history, so there is nothing to stage.
@@ -164,8 +164,8 @@ describe("the product counts that depend on the Business Units", () => {
 });
 
 // Typing in a number field sets state on every keystroke, and each change here
-// is two network reads. The source absorbs that with a 250ms debounce over
-// every filter; committing on blur instead means a deliberate change costs one
+// is two network reads. Debouncing every filter would delay a deliberate
+// click; committing on blur instead means a deliberate change costs one
 // read and an in-progress one costs none.
 describe("the ARR range", () => {
   it("does not narrow anything until the field is left", async () => {

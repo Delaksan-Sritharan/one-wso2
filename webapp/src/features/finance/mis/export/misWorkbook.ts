@@ -19,9 +19,8 @@
 //
 // ---- why a spec, rather than a function that builds a workbook -------------
 //
-// The source's export is a single function that opens ExcelJS, walks the grid
-// and writes cells in the same breath (`arrDashboard/utils/excelExport.js`).
-// Nothing in it can be tested: asserting on the workbook means running ExcelJS,
+// A function that opens ExcelJS, walks the grid and writes cells in the same
+// breath cannot be tested: asserting on the workbook means running ExcelJS,
 // and running ExcelJS means having a real grid to walk. So its formatting has
 // never been checked by anything but a reader opening the file.
 //
@@ -31,9 +30,6 @@
 // their output directly. `writeMisWorkbook` is the only code that knows ExcelJS
 // exists, it is the same nine lines whatever is being exported, and a test
 // pins it by loading its bytes back.
-//
-// (The source's Flash workbook, where its ExcelJS work began, is not ported:
-// the Flash Dashboard stays in the MIS app.)
 
 import { saveBlob } from "@utils/saveFile";
 
@@ -69,11 +65,10 @@ export const MIS_NUMBER_FORMATS = {
    * nothing else does). The reader sees "98.25%", and a formula that multiplies
    * by the cell gets the right answer.
    *
-   * Ticket 11 wrote these as a bare "98.25" under money's format instead, on
-   * the reasoning that the screen shows them bare. Ticket 18 reversed that: a
-   * percentage sitting in a column of money under money's format is a figure a
-   * reader has to be told the kind of. The screen can lean on its row label; a
-   * cell pasted out of the file cannot.
+   * A bare "98.25" under money's format would look like money. A percentage
+   * sitting in a column of money under money's format is a figure a reader
+   * has to be told the kind of. The screen can lean on its row label; a cell
+   * pasted out of the file cannot.
    */
   PERCENTAGE: "0.00%",
 } as const;
@@ -92,9 +87,7 @@ export interface MisWorkbookRow {
    * Depth in the tree the row came from, as Excel's own outline level — so a
    * reader folds a section in the spreadsheet the way they fold it on screen.
    *
-   * The source's Flash sheet already does this for its one nested level
-   * (`generateAnnualSheet.js`: `subRow.outlineLevel = 1`); here it is whatever
-   * the tree says, because a per-customer Build nests deeper than one.
+   * Whatever the tree says, because a per-customer Build nests deeper than one.
    */
   outlineLevel?: number;
 }
@@ -114,7 +107,7 @@ export interface MisWorkbookSpec {
 /**
  * The spec, as the bytes of an .xlsx file.
  *
- * ExcelJS is imported here and nowhere else in the MIS port, and dynamically:
+ * ExcelJS is imported here and nowhere else in Finance MIS, and dynamically:
  * it is a large dependency that only an export needs, which is the pattern
  * `events/rules/workbook.ts` and `BulkImportPanel.tsx` already set.
  */

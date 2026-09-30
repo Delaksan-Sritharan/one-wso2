@@ -53,30 +53,27 @@ import type { AnalysisMenus } from "../util/misAnalysisMenus";
 // ARR Analysis's filter panel: ten controls, the tags for whatever they have
 // narrowed, and a way back to none of it.
 //
-// Ported from the filter section of digiops-finance
-// `arrAnalysis/ArrAnalysisDashboard.js:1265-1705`.
-//
 // ---- no Apply, where the Build's bar has one -------------------------------
 //
 // `MisFilterBar` stages every change and commits on Apply, because applying one
 // rewrites the query string — a URL that changed per keystroke would fill the
 // reader's history with views they never asked for. Nothing here reaches the
 // address (see `misAnalysisFilters.ts`), so there is nothing to stage and a
-// change applies as it is made, exactly as in the source.
+// change applies as it is made.
 //
 // The one place that is not true is the ARR Range, and for the same underlying
 // reason turned inside out: a number field sets state per keystroke, and each
-// change here is two network reads. The source absorbs that with a 250ms
-// debounce over EVERY filter, which delays every deliberate click to smooth
-// over two text boxes. Those two commit on blur or Enter instead, so a
+// change here is two network reads. Debouncing every filter would delay
+// every deliberate click to smooth over two text boxes. Those two commit on
+// blur or Enter instead, so a
 // deliberate change costs one read and an in-progress one costs none — and no
 // other control needs a debounce at all.
 //
 // ---- and no field named `products` -----------------------------------------
 //
-// The source calls its Business Units state `products` while labelling the
-// control "Business Units" and the count beside it "# Products In Use", which
-// makes two different things share a word in the code and not on the screen.
+// A Business Unit is not a product. The control is labelled "Business Units"
+// and the count beside it is "# Products In Use", which are two different
+// things, so the state is not named `products`.
 // Here a Business Unit is called a Business Unit, never `products`; see
 // `misAnalysisFilters.ts`.
 
@@ -130,15 +127,12 @@ export default function MisAnalysisFilters({
           <ListFilterIcon size={16} />
           <Typography variant="subtitle2">Filters</Typography>
           {/* The count IS the number of narrowings, so an absent chip means an
-              unnarrowed view. The source's is never below two — see
-              `analysisFilterTags`.
+              unnarrowed view. See `analysisFilterTags`.
 
-              It reads "3 filters" where the source reads "3 active", and the
-              difference is vocabulary rather than taste. The port never uses
-              "active filter" as a synonym for **Applied filter** — and
-              "Applied" is no better here, because it is defined as a filter
-              serialised into the query string and nothing on this screen is.
-              Neither contested word is right, so the chip just counts. */}
+              It reads "3 filters". "Active filter" is not used as a synonym
+              for **Applied filter** — and "Applied" is no better here, because
+              it is defined as a filter serialised into the query string and
+              nothing on this screen is. The chip just counts. */}
           {tags.length > 0 && (
             <Chip
               size="small"
@@ -371,9 +365,8 @@ export default function MisAnalysisFilters({
         onClose={() => setRefusal("")}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        {/* An Alert rather than the source's Chip: this is a refusal the reader
-            has to be able to read at leisure, and `role="alert"` is what
-            announces it. */}
+        {/* An Alert: this is a refusal the reader has to be able to read at
+            leisure, and `role="alert"` is what announces it. */}
         <Alert severity="warning" onClose={() => setRefusal("")}>
           {refusal}
         </Alert>

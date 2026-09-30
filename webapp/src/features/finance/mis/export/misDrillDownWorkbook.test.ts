@@ -19,11 +19,8 @@ import type { DrillDownCustomer } from "../components/drillDownColumns";
 import { MIS_NUMBER_FORMATS } from "./misWorkbook";
 import { misDrillDownSheet } from "./misDrillDownWorkbook";
 
-// Ticket 10 carried this here: the source's dialog has an Export CSV button
-// (`ArrSummaryCustomersDialog.js:191-216`) that was deliberately not ported,
-// because a bespoke CSV in the dialog would have been the second export path
-// this ticket exists to prevent. So the dialog is a consumer of these builders
-// alongside the Build.
+// The dialog is a consumer of these builders alongside the Build. A bespoke
+// CSV in the dialog would be a second export path.
 
 const CUSTOMERS: readonly DrillDownCustomer[] = [
   {
@@ -70,7 +67,7 @@ describe("the customers behind a figure, as a sheet", () => {
   });
 
   it("keeps the words the dialog shows where a value is missing", () => {
-    // "N/A" in the columns the source guards, blank in the four it does not —
+    // "N/A" in the columns that guard a missing value, blank in the four that do not —
     // reproduced for parity rather than tidied. The sheet
     // shows the reader what the dialog showed them.
     const cells = misDrillDownSheet(INPUT).rows[4].cells;

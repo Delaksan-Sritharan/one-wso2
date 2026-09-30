@@ -29,7 +29,7 @@ import { YearsBackSessionProvider } from "../util/YearsBackSessionContext";
 // three years on the Build would be back to five after a look at ARR Analysis.
 //
 // Only what actually needs the longer life belongs here. `Scale` stays in
-// `MisShell`, where ticket 05 put it, because the shell is the honest scope for
+// `MisShell`, because the shell is the honest scope for
 // anything that survives on its own.
 
 export default function MisSession(): JSX.Element {

@@ -19,21 +19,19 @@ import MisSegmentedControl from "./MisSegmentedControl";
 // How Software/Cloud Customers breaks a customer's revenue down: by business
 // unit, or by product across Software and Cloud.
 //
-// From the `BU only` checkbox in `DataGrid.js:1063-1105`. **BU only is the
-// source's default** (`useState(true)`), so it is the default here — the
+// **BU only is the default** — the
 // twelve-column Software/Cloud breakdown is what the other option gets you.
 // Both views read the same `POST /accounts` response, so switching costs no
 // request; see `CUSTOMER_BU_SUB_COLUMNS`.
 //
-// A segmented control rather than the source's checkbox, because there are two
-// named breakdowns and a checkbox only names one of them — "BU only" unticked
-// says what the view is NOT. The source's own word is kept for the option it
-// labels, so a reader who knows the checkbox finds it.
+// A segmented control rather than a checkbox, because there are two named
+// breakdowns and a checkbox only names one of them — "BU only" unticked says
+// what the view is NOT. The option keeps the words "BU only".
 //
 // Component state, and not in the address bar, for the same reason as
-// `MisRegionTypeTabs`: the source keeps it in the table's own state, so it is
-// in no link anyone holds, and moving it into the URL is an extension of the
-// contract ticket 02 pinned rather than a side effect of building this.
+// `MisRegionTypeTabs`: it is not in the Applied set, so it is in no link
+// anyone holds, and moving it into the URL would extend that contract rather
+// than follow from building this control.
 
 const BREAKDOWN_OPTIONS = [
   { value: "bu", label: "BU only" },

@@ -27,7 +27,7 @@
 //
 // ---- why any of this is hand-rolled at all --------------------------------
 //
-// Spec §1: the community `@mui/x-data-grid` this app ships cannot express a
+// The community `@mui/x-data-grid` this app ships cannot express a
 // Build — no column pinning, no row grouping, `pageSize` throws above 100. So
 // the table is a plain `<Table>`, and these are the pieces MUI then declines to
 // provide.

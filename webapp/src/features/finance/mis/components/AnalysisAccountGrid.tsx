@@ -39,7 +39,7 @@ import type { AnalysisAccountRow } from "./analysisAccountRows";
 //
 // ---- the CSV, and the foot-gun it would otherwise walk into ----------------
 //
-// Spec §10.18. The grid's CSV exporter takes each cell's `formattedValue`,
+// The grid's CSV exporter takes each cell's `formattedValue`,
 // which is `valueFormatter`'s output when a column defines one
 // (`csvSerializer.js:24-44`). So formatting a money column through
 // `valueFormatter` — the obvious way — would export the reader's Scale, giving
@@ -81,7 +81,7 @@ import type { AnalysisAccountRow } from "./analysisAccountRows";
 
 export interface AnalysisAccountGridProps {
   rows: AnalysisAccountRow[];
-  /** Currency columns only — counts and years are never scaled. Spec §3. */
+  /** Currency columns only — counts and years are never scaled. */
   scale: MisScale;
   isLoading: boolean;
   /** For the suite, which reads the CSV the toolbar's own button would write. */
@@ -118,8 +118,7 @@ export default function AnalysisAccountGrid({
         // The Filters panel above the table chooses which accounts are here;
         // this toolbar only narrows the rows already listed. Two controls that
         // both say "filter" and mean different things is the confusion worth
-        // spending a few strings on — the source relabels these for the same
-        // reason.
+        // spending a few strings on.
         localeText={{
           toolbarFilters: "Filter these rows",
           toolbarFiltersLabel: "Filter these rows",
@@ -170,8 +169,7 @@ function AnalysisGridToolbar() {
 }
 
 /**
- * The eleven columns, in the source's order and with its widths
- * (`ArrAnalysisDashboard.js:1105-1236`).
+ * The eleven columns, in this order and with these widths.
  *
  * Built per Scale rather than at module scope, because the money cells read it
  * — and memoised by the caller, since a fresh array on every render resets the
@@ -239,8 +237,7 @@ export function analysisAccountColumns(scale: MisScale): DataGrid.GridColDef<Ana
       field: "lifetimeYears",
       headerName: "Lifetime",
       minWidth: 110,
-      // `number`, where the source leaves it a string and therefore sorts
-      // "10 yrs" above "2 yrs". Spec §7.
+      // `number`, so "10 yrs" does not sort above "2 yrs".
       type: "number",
       valueFormatter: RAW_NUMBER,
       renderCell: (params) => (

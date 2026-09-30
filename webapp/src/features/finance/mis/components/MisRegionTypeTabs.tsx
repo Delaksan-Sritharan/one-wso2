@@ -18,7 +18,7 @@ import MisSegmentedControl from "./MisSegmentedControl";
 
 // Which geography Exit ARR by Region cuts its rows by.
 //
-// From the `Region Type` segmented control in `RegionSummaryTabs.js`. It
+// Sales Region or Sub Region. It
 // commits on click, like the Table and unit tabs above it, because it is not a
 // narrowing of the report — it is a different cut of it, and the backend
 // computes it (`isSalesRegionSummary` in the request body).
@@ -26,13 +26,12 @@ import MisSegmentedControl from "./MisSegmentedControl";
 // ---- why this is not in the address bar ------------------------------------
 //
 // Every other control on this screen is in the URL; this one is not, and the
-// asymmetry is deliberate rather than an omission. In the source it is
-// component state that dies with the table, so it is not in the Applied set, it
-// is not serialised, and no link anyone holds carries it. Putting it in the
-// query string would be the port promising something the source never did, and
-// it would have to be added to the URL contract ticket 02 pinned — including
-// what an unrecognised value degrades to and what a stale link means. Worth its
-// own decision rather than a side effect of building the table.
+// asymmetry is deliberate rather than an omission. It is component state that
+// dies with the table, so it is not in the Applied set, it is not serialised,
+// and no link anyone holds carries it. Putting it in the query string would
+// promise a shared view this screen does not have, including what an
+// unrecognised value degrades to and what a stale link means. Worth its own
+// decision rather than a side effect of building the table.
 //
 // The consequence, stated plainly so nobody has to discover it: a reader who
 // shares a Sub Region view sends a Sales Region one.

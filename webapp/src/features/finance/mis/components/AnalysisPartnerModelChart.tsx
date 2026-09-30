@@ -43,19 +43,16 @@ import type { PartnerModelBreakdown } from "../api/useAnalysisBreakdowns";
 // ARR by partner model — how much of the book is sold through Channel and how
 // much Direct.
 //
-// ---- this is a PROPORTION BAR where the source draws a pie -----------------
+// ---- this is a PROPORTION BAR, not a two-slice pie -------------------------
 //
-// Deliberate, and it is the one form decision on this screen. The source's
-// `PieChart` has exactly two slices, which the `dataviz` skill names outright as
-// something not to draw ("Bad: a one-bar bar chart, or a 2-slice pie"), and its
-// form table routes part-to-whole to a stacked bar, going horizontal for long
-// names. Two segments in a circle make the reader compare angles to answer a
-// question a single bar answers by length.
+// Deliberate, and it is the one form decision on this screen. A pie of exactly
+// two slices is something the `dataviz` skill names outright as not to draw
+// ("Bad: a one-bar bar chart, or a 2-slice pie"), and its form table routes
+// part-to-whole to a stacked bar. Two segments in a circle make the reader
+// compare angles to answer a question a single bar answers by length.
 //
-// It is also what the source ITSELF falls back to. When one model holds all the
-// ARR its pie is replaced by hand with a single labelled bar
-// (`ArrAnalysisDashboard.js:1901-1929`) — so the bar is already the shape this
-// screen degrades to, and this generalises it rather than inventing one.
+// When one model holds all the ARR the bar is already the right shape, so the
+// same form covers both the split and the single-model case.
 //
 // No figure moves. Parity protects the numbers Finance reconciles column by
 // column, and those are in the companion table below, to the cent.
@@ -236,7 +233,7 @@ export default function AnalysisPartnerModelChart({
                 </TableCell>
                 <TableCell align="right" sx={CELL_SX}>
                   {/* A PERCENTAGE, so Scale never touches it — the formatter's
-                      job rather than this cell's. Spec §3. */}
+                      job rather than this cell's. */}
                   {formatMisValue(slice.share, MIS_VALUE_TYPES.PERCENTAGE, { scale })}%
                 </TableCell>
               </TableRow>

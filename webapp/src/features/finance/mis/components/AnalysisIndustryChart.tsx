@@ -52,14 +52,11 @@ import type { IndustryBreakdown } from "../api/useAnalysisBreakdowns";
 //
 // ---- horizontal bars, one hue ----------------------------------------------
 //
-// Two form decisions, both from the `dataviz` skill and both departures from the
-// source's vertical `BarChart`.
+// Two form decisions, both from the `dataviz` skill.
 //
 // **Horizontal**, because the categories have long names. "Health Care and
-// Social Assistance" does not fit under a vertical bar, which is why the source
-// wraps its axis labels at sixteen characters with a hand-rolled `wrapAxisLabel`
-// — a workaround for the axis being the wrong one. Turned sideways the names are
-// simply read left to right.
+// Social Assistance" does not fit under a vertical bar. Turned sideways the
+// names are simply read left to right.
 //
 // **One hue for every bar**, because these are NOMINAL categories and the
 // measure is magnitude. Colouring each bar by its own value would double-encode
@@ -70,9 +67,8 @@ import type { IndustryBreakdown } from "../api/useAnalysisBreakdowns";
 // ---- and the thing this chart will NOT claim -------------------------------
 //
 // An industry the backend did not offer is never asked about, and gets no bar
-// at all rather than a zero one. The source reports it as `revenue: 0`
-// (`arrAnalysisApi.js:266-299`) and draws a zero bar, which states "this
-// industry holds no ARR" on the strength of a question nobody put.
+// at all rather than a zero one. A zero bar would state "this industry holds
+// no ARR" on the strength of a question nobody put.
 // `analysisBreakdowns.ts` keeps the two apart; this renders the distinction.
 
 export interface AnalysisIndustryChartProps {

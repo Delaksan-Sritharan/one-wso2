@@ -32,9 +32,7 @@ import MisFilterBar from "./MisFilterBar";
 // pointer-event sequence re-rendered through the Oxygen theme — and the whole
 // suite runs 119 files in parallel. The default 5s is enough alone and not
 // under that load, which is how a passing file becomes an intermittent red.
-// The source's own filter-bar suite raised its timeout for the same reason
-// ("Forty rendered tests over a 1700-line component with MUI Autocompletes:
-// give each room under load").
+// Give each test room under load.
 vi.setConfig({ testTimeout: 20_000 });
 
 // The filter bar as a reader uses it.
@@ -246,9 +244,9 @@ describe("controls that decide whether other controls exist", () => {
   });
 });
 
-describe("the rules the ticket names", () => {
-  // Spec §3, and the ticket's own checklist. Each of these is implemented in a
-  // module with its own tests; these pin them where a reader meets them.
+describe("Scale, Years Back, and what Apply writes", () => {
+  // Each of these is implemented in a module with its own tests; these pin
+  // them where a reader meets them.
   it("offers Years Back over the whole 1-10 range", async () => {
     renderBar();
     await expandMore();
@@ -322,7 +320,7 @@ describe("the Period control", () => {
       .toEqual(["ARR", "Only Closed Won ARR", "Only Delayed ARR"]);
   });
 
-  it("carries a Delayed trailing window in the address, where the source dropped it", async () => {
+  it("carries a Delayed trailing window in the address", async () => {
     renderBar("?window=ttm");
     await pick("ARR Type", "Only Delayed ARR");
     await userEvent.click(applyButton());
@@ -425,7 +423,7 @@ describe("when the option lists could not be fetched", () => {
 });
 
 describe("a Table that does not offer every filter", () => {
-  // The source greys these out rather than dropping them, so that nothing
+  // These stay on screen, greyed out, rather than disappearing, so that nothing
   // disappears silently between Tables. The tooltip goes on a wrapping span,
   // because a disabled input fires no pointer events and would show none.
 
@@ -575,7 +573,7 @@ describe("what the bar says about a switch that dropped filters", () => {
 });
 
 describe("a Customers type that drags Years Back with it", () => {
-  // Spec §8.3. The URL contract already drops a Customers + Delayed view to one
+  // The URL contract already drops a Customers + Delayed view to one
   // year; the control has to reach the same value, or the bar and the address
   // disagree about what is on screen.
 
@@ -644,9 +642,9 @@ describe("coming back to a Build mid-session", () => {
   };
 
   it("opens on the Years Back the reader was working in, not the Table's default", async () => {
-    // The source applies the session value to the grid on mount when the link
-    // carried no view (`FilterBar.js:296-305`). Here that means putting it in
-    // the address, which is where this app keeps what is on screen.
+    // The session value goes on the grid when the link carried no view. Here
+    // that means putting it in the address, which is where this app keeps what
+    // is on screen.
     renderMisRoutes("?years=3");
     await leaveAndReturn();
     await waitFor(() => expect(address()).toBe("?years=3"));
@@ -655,10 +653,10 @@ describe("coming back to a Build mid-session", () => {
   });
 
   it("lets a link carrying any view answer for itself, session or no session", async () => {
-    // Not "no `years` in the address" but "no view in it at all": the source
-    // branches on `initialFilters`, which any Table, filter or TTM window sets
-    // (`useViewStateUrl.js:37`). So a bookmark to a Table opens on that Table's
-    // own Years Back even mid-session, and only the session keeps the reader's.
+    // Not "no `years` in the address" but "no view in it at all": any Table,
+    // filter or TTM window is a view. So a bookmark to a Table opens on that
+    // Table's own Years Back even mid-session, and only the session keeps the
+    // reader's.
     renderMisRoutes("?years=3");
     await userEvent.click(screen.getByRole("link", { name: "to ARR Analysis" }));
     await userEvent.click(screen.getByRole("link", { name: "back to Customers" }));

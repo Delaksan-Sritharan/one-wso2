@@ -41,20 +41,16 @@ import type { OpportunitiesState } from "../api/useOpportunities";
 
 // The opportunities behind one account on the Software/Cloud Customers table.
 //
-// Ported from digiops-finance `arrDashboard/components/OpportunitiesDialog.js`,
-// and built on the same `BuildTable` the customer drill-down beside it uses —
-// twenty lead columns, no Period groups. See `opportunityRows.ts` for why the
-// source's `Software` / `Cloud` group headers do not survive the port.
+// Built on the same `BuildTable` the customer drill-down beside it uses —
+// twenty lead columns, no Period groups. The Software and Cloud figures are
+// columns, not group headers; see `opportunityRows.ts`.
 //
 // ---- what opens it, and what does not --------------------------------------
 //
-// The source opens this on ANY cell click anywhere in the table, identity
-// columns included (`DataGrid.js:604-626` — `onCellClicked` with no column
-// test). So clicking an account's NAME opens a dialog whose date came from the
-// name column, which has no date; that is one of the two paths its header-text
-// scraping exists to rescue. Here only a FIGURE cell opens it, because only a
-// figure cell belongs to a Period and therefore has a date to ask about — and
-// the Total row opens nothing at all, having no account behind it.
+// Only a FIGURE cell opens it, because only a figure cell belongs to a Period
+// and therefore has a date to ask about. Clicking an account's name has no
+// date behind it. The Total row opens nothing at all, having no account
+// behind it.
 
 export interface MisOpportunitiesProps {
   open: boolean;

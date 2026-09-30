@@ -29,9 +29,8 @@ import { CUSTOM_UNIT } from "../util/misViewVocabulary";
 
 // Which slice of the business the Build below is a Build of.
 //
-// Not part of the filter bar, and not by accident: in the source these tabs live
-// in `TableNavigation.js` and the filter bar says so where its own control used
-// to be. The difference that matters is that these COMMIT ON CLICK — there is no
+// Not part of the filter bar, and not by accident. The difference that
+// matters is that these COMMIT ON CLICK — there is no
 // pending state and no APPLY. Choosing a different business unit is choosing a
 // different report, not narrowing this one, so it goes straight into the address.
 //
@@ -74,7 +73,7 @@ export default function MisUnitTabs({
 
   // Business units and product units are mutually exclusive: a Build is cut one
   // way or the other, never both, so picking from one list empties the other.
-  // The source does the same, in `handleCustomBusinessUnitToggle`.
+  // Picking from one list empties the other.
   const toggleCustom = (which: "customBusinessUnits" | "customProductUnits", code: string) => {
     const current = selection[which];
     const next = current.includes(code)
@@ -157,9 +156,8 @@ function CustomUnits({
         direction="row"
         sx={{ alignItems: "center", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}
       >
-        {/* The source's words (`TableNavigation.js:356`), and so its "Product
-            Units": a second list beside the Business Units, the source's label
-            kept for parity. */}
+        {/* "Product Units" sits beside Business Units. The label is the one
+            Finance reconciles against. */}
         <Typography variant="body2" color="text.secondary">
           Select a combination of either a set of Business Units or Product Units.
         </Typography>

@@ -38,29 +38,25 @@ import { misExportFilename, misFilenameRange, misFilenameWord } from "../export/
 
 // Who is inside this number.
 //
-// Ported from digiops-finance
-// `arrDashboard/components/ArrSummaryCustomersDialog.js`. Opened by clicking a
-// figure in the Build; the row and the Period decide both the question asked of
-// the backend and the columns shown back.
+// Opened by clicking a figure in the Build; the row and the Period decide both
+// the question asked of the backend and the columns shown back.
 //
 // ---- it renders through BuildTable, with no Periods at all ------------------
 //
 // A flat list of eleven or thirteen columns. That looks like a job for a plain
 // table until the volume is considered: `/arr-summary/customers` takes no
 // limit and no offset, so a Closing drill-down on every business unit returns
-// the entire customer book in one payload. The source gets row virtualisation
-// free from ag-grid. Here it comes from `BuildTable`, which already windows —
+// the entire customer book in one payload. `BuildTable` windows the rows —
 // along with the frozen first column, the sticky header and horizontal scroll
 // at thirteen columns. It is handed no `columnGroups`, which is why that table
 // now renders a single header row when there are no figure columns.
 //
 // ---- the export, on the shared builders ------------------------------------
 //
-// The source has an Export CSV button here. Ticket 10 did not port it: a
-// bespoke CSV in this dialog would have been exactly the second export path
-// ticket 11 exists to prevent. Ticket 11 built the shared builders, and this
-// dialog is a consumer of them alongside the Build — an .xlsx rather than a
-// CSV, from `misDrillDownSheet`, under the source's own filename.
+// The export is an .xlsx from `misDrillDownSheet`, the same builders the
+// Build uses. A bespoke CSV in this dialog would be a second export path,
+// and a column of text cannot be summed against the figure it was opened
+// from.
 
 export interface MisCustomerDrillDownProps {
   open: boolean;
@@ -96,14 +92,14 @@ export default function MisCustomerDrillDown({
     [rows, state.customers],
   );
 
-  // The source's title exactly: the row, a middle dot, the column. It is the
+  // The title is the row, a middle dot, the column. It is the
   // only thing tying the list back to the cell the reader clicked.
   const title = `${rowLabel} · ${periodColumn}`;
 
-  // The source's filename, rule for rule: a fixed prefix, the row with its
+  // The filename, rule for rule: a fixed prefix, the row with its
   // punctuation stripped, the Period column with its hyphen KEPT so a range
-  // survives as one, and the date. Pacific rather than the source's UTC —
-  // `misExportFilename` says why.
+  // survives as one, and the date. Pacific, not UTC — `misExportFilename`
+  // says why.
   const filename = () =>
     misExportFilename([
       "customer_details",
@@ -171,7 +167,7 @@ function DrillDownBody({
 }) {
   if (state.isLoading) {
     // A fixed height in every branch, so the dialog does not jump when the
-    // answer lands — the source holds 520px the same way.
+    // answer lands.
     return (
       <Box sx={{ height: 420, display: "grid", placeItems: "center", gap: 1 }}>
         <CircularProgress size={32} />
@@ -179,10 +175,9 @@ function DrillDownBody({
     );
   }
 
-  // The source cannot reach this state — its error is discarded three times
-  // over, so a failed drill-down renders an empty grid there. On a screen whose
-  // purpose is to explain a figure, that reads as "this number is made of
-  // nobody". Deviation recorded in mis.md §7.
+  // A failed drill-down must not render an empty grid. On a screen whose
+  // purpose is to explain a figure, an empty list reads as "this number is
+  // made of nobody".
   if (state.isError) {
     return (
       <ErrorNotice onRetry={state.retry} sx={{ my: 2 }}>

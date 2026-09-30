@@ -29,19 +29,15 @@
 // exactly that is: "a finance export that is silently 1000x wrong is
 // worse than no export at all, because it is believed."
 //
-// Both halves are real, and the second is not hypothetical either — the
-// source's own Flash workbook has it. `generateAnnualSheet.js` writes
-// `formatNumber(item.iam)` into every figure cell, which is a STRING, so a
-// column of figures in the file Finance opens today cannot be summed.
+// Both halves are real. Writing `formatNumber(value)` — a STRING — into every
+// figure cell means a column of them cannot be summed.
 //
 // So this builder reads the RAW figures and never the table's text, and it
 // takes no Scale parameter at all. There is no argument a caller could pass the
 // reader's thousands setting through, which makes the rule structural rather
 // than documentary — the same shape `formatMisValue` uses for the same rule.
 //
-// (Ticket 18 extended this for the Flash's workbook; ticket 18's Flash work
-// was removed when the Flash Dashboard was kept in the MIS app,
-// and only its percentage rule, below, stayed.)
+// A percentage is the one figure that changes on the way in, below.
 
 import type { BuildColumnGroup, BuildRow } from "../components/buildTableModel";
 import {
@@ -174,8 +170,8 @@ const NUMBER_FORMAT_BY_VALUE_TYPE: Readonly<Record<MisValueType, string>> = {
  *
  * A percentage is the one figure that changes on the way in: the ARR backend
  * sends per cent (98.25 for 98.25%), and Excel's percent format shows the
- * FRACTION, so it is written divided by a hundred. The only such division in
- * the port, as `formatMisValue`'s is the only division by a thousand — and like
+ * FRACTION, so it is written divided by a hundred. The only such division
+ * here, as `formatMisValue`'s is the only division by a thousand — and like
  * that one, it is keyed on the kind of number rather than left to a caller.
  */
 function figureCell(raw: MisRawValue, valueType: MisValueType): MisWorkbookCell {
@@ -252,8 +248,7 @@ export function misBuildSheet<L extends MisLeadColumn = MisLeadColumn>(
       bold: Boolean(row.emphasis) || (row.children?.length ?? 0) > 0,
       outlineLevel: depth,
       cells: [
-        // The indent is the source's own — two spaces a level
-        // (`generateAnnualSheet.js`). Text, not an Excel indent, so it survives
+        // Two spaces a level. Text, not an Excel indent, so it survives
         // a copy-paste out of the sheet, which is how these figures travel.
         { value: `${"  ".repeat(depth)}${row.label}` },
         ...(leadColumns?.length
@@ -273,7 +268,7 @@ export function misBuildSheet<L extends MisLeadColumn = MisLeadColumn>(
       ...columnGroups.flatMap(() => subColumns.map((sub) => ({ width: excelWidth(sub.width) }))),
     ],
     rows: [
-      // Spec §10.18, answered both ways at once: the figures below are at
+      // Answered both ways at once: the figures below are at
       // units, and this says so. `amountUnitCaption` rather than a retyped
       // string, so the sheet cannot drift from the caption above the grid —
       // between them they are the only two places a reader is ever told.

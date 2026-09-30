@@ -105,7 +105,7 @@ describe("the dialog", () => {
     expect(screen.getAllByText("1.00").length).toBeGreaterThan(0);
   });
 
-  // The source's own rule: prefer the backend's aggregate when positive, sum
+  // Prefer the backend's aggregate when positive, sum
   // the components otherwise. Asserted on screen because the total is the
   // figure Finance reconciles.
   it("totals software from the components when the backend sent no aggregate", () => {
@@ -116,7 +116,7 @@ describe("the dialog", () => {
 });
 
 describe("the states that are not a list", () => {
-  // The source shows "Select an account under a date range to view
+  // "Select an account under a date range to view
   // opportunities" for every failure, because reading `.message` off a string
   // is always undefined — a sentence that blames the reader for a timeout.
   it("surfaces the backend's message, with a retry", () => {

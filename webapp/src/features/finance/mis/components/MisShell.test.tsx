@@ -131,7 +131,7 @@ describe("the subtitle", () => {
   });
 });
 
-// Spec §3: every MIS screen carries the chip, so no screen has to remember it —
+// Every MIS screen carries the chip, so no screen has to remember it —
 // the same argument that puts the degraded states here.
 describe("the Pacific Time chip", () => {
   const chip = () => screen.queryByText(/^Pacific Time \((PST|PDT|PT)\)$/);

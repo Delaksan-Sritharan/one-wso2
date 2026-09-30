@@ -25,7 +25,7 @@ import {
   type BuildSubColumn,
 } from "./buildTableModel";
 
-// This port hand-rolls the table rather than use a data grid, and
+// This table is hand-rolled rather than a data grid, and
 // that obliges four mechanisms MUI declines to provide, which this repo now owns
 // forever. Each one is invisible when it works and each one breaks silently —
 // a header row that covers the labels it belongs to, a highlight that stops at
@@ -155,7 +155,7 @@ afterEach(() => {
 });
 
 describe("the shape of the table", () => {
-  // Spec §10.19. Five Annual Periods is the default view, twelve is the Monthly
+  // Five Annual Periods is the default view, twelve is the Monthly
   // Build — 24 numeric columns, which is where a layout that merely looks fine
   // at five stops being fine.
   it.each([5, 8, 12])("renders %i Periods without the layout collapsing", (periodCount) => {
@@ -190,7 +190,7 @@ describe("the shape of the table", () => {
 });
 
 describe("the row-label column, while the Periods scroll past it", () => {
-  // Spec §10.19, second half. "Readable when scrolled fully right" is two
+  // "Readable when scrolled fully right" is two
   // things: the column is pinned, and it is OPAQUE. A translucent pinned cell
   // lets the columns moving behind it show through, and the frozen pane reads
   // as a smear across the figures rather than as a pane.
@@ -230,7 +230,7 @@ describe("the row-label column, while the Periods scroll past it", () => {
 });
 
 describe("the second header row's offset", () => {
-  // Spec §10.20. MUI's stickyHeader pins EVERY header cell to top: 0 — verified
+  // MUI's stickyHeader pins EVERY header cell to top: 0 — verified
   // in @mui/material 7.3.4, TableCell.js:145-151 — so without a measured offset
   // the sub-header lands on top of the Period labels and covers the very thing
   // that says which Period a column belongs to.
@@ -273,7 +273,7 @@ describe("the second header row's offset", () => {
 });
 
 describe("the row under the pointer", () => {
-  // Spec §10.21. `<TableRow hover>` cannot do this: it tints the <tr>, which
+  // `<TableRow hover>` cannot do this: it tints the <tr>, which
   // sits BEHIND the pinned cell's own opaque background, so the highlight runs
   // across the scrolling figures and stops dead at the row label — the one cell
   // saying which row is highlighted. jsdom cannot match :hover, so the rule
@@ -503,7 +503,7 @@ describe("the figures themselves", () => {
     expect(asked.has("opening/fy2024/pct")).toBe(true);
   });
 
-  // Not asked for rows nobody can see: with no windowing yet (ticket 07), a
+  // Not asked for rows nobody can see: a
   // closed section must cost nothing rather than merely look as though it does.
   it("asks for nothing on a row a closed section is hiding", () => {
     const spy = vi.fn(cell);
@@ -645,7 +645,7 @@ describe("a Build with more rows than a document should hold", { timeout: 30_000
   });
 
   it("can be worked from the keyboard, at any size", async () => {
-    // The ticket asks for this by name. Windowing removes rows from the
+    // Windowing removes rows from the
     // document, so the risk is a table that can be read and not operated.
     const tree: BuildRow[] = [{ id: "new", label: "New", children: customers(2000) }];
     renderTable(5, tree);
@@ -697,7 +697,7 @@ describe("a Build with more rows than a document should hold", { timeout: 30_000
 
   it("keeps the pinned header and the pinned label column under windowing", () => {
     // The two mechanisms most likely to break when rows stop being continuously
-    // present — the ticket names both.
+    // present.
     renderTable(5, customers(3000));
     expect(headerRows()).toHaveLength(2);
     const label = cellsOf(bodyRows().find((row) => !row.hasAttribute("aria-hidden"))!)[0];
@@ -780,7 +780,7 @@ describe("a Build with more rows than a document should hold", { timeout: 30_000
 });
 
 describe("a table whose rows need more than a name to identify them", () => {
-  // Ticket 10. The Subscription Build identifies a row by one thing — the
+  // The Subscription Build identifies a row by one thing — the
   // movement's name — and the Software/Cloud Customers table needs eighteen
   // before the first figure: Account Name, Account ID, Owner, Source, both
   // countries, Industry, Sub Industry, Region, Sub Region, Activation and Churn
@@ -896,8 +896,8 @@ describe("a table whose rows need more than a name to identify them", () => {
   });
 
   it("still windows its rows, which is the case this table exists for", () => {
-    // The whole reason Software/Cloud Customers is the table ticket 07 was
-    // waiting on. Identity columns must not have cost the windowing.
+    // Identity columns must not have cost the windowing. A customers table
+    // is hundreds of rows, which is why windowing exists.
     const many: BuildRow[] = Array.from({ length: 3000 }, (_, i) => ({
       id: `c${i}`,
       label: `Customer ${i}`,
@@ -922,7 +922,7 @@ describe("a table whose rows need more than a name to identify them", () => {
 });
 
 describe("opening the figures that have something behind them", () => {
-  // Ticket 10's drill-down. Most of a Build is inert: a y/y growth, a retention
+  // Most of a Build is inert: a y/y growth, a retention
   // ratio and a percentage have no customer list behind them, so only SOME
   // figures may be opened. The decision is the caller's — it comes back on the
   // cell, beside the text — because this component knows nothing about
@@ -976,7 +976,7 @@ describe("opening the figures that have something behind them", () => {
   });
 
   it("never makes the row-label column openable", () => {
-    // The source's own guard: the label column has no date, so there is nothing
+    // The label column has no date, so there is nothing
     // to ask the backend about. Its only control stays the section toggle.
     renderOpenable();
     const label = cellsOf(rowLabelled("Opening ARR"))[0] as HTMLElement;
@@ -1004,7 +1004,7 @@ describe("opening the figures that have something behind them", () => {
 });
 
 describe("a table that is all identity and no Periods", () => {
-  // The drill-down dialog (ticket 10): a flat list of customers with eleven
+  // The drill-down dialog: a flat list of customers with eleven
   // columns and no Period axis at all. It wants everything this table already
   // owns — the frozen first column, the sticky header, horizontal scroll at a
   // dozen columns, and above all the row windowing, because the endpoint behind
@@ -1084,7 +1084,7 @@ describe("a table that is all identity and no Periods", () => {
 });
 
 
-// Spec §11.8, ticket 08. The notice lives HERE rather than on the page because
+// The notice lives HERE rather than on the page because
 // this is the only place the table's required width exists — `tableMinWidth`
 // computes it from the column model — and because a page that mounted it itself
 // would show it over a loading skeleton and an error too.

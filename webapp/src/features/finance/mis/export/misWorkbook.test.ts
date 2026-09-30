@@ -23,9 +23,9 @@ import {
   type MisWorkbookSpec,
 } from "./misWorkbook";
 
-// Spec §10.17: "The generated workbook loads back via `wb.xlsx.load` with the
-// expected sheet names, cell values and number formats. Nothing else in this
-// repo asserts workbook formatting; this test is the only guard."
+// The generated workbook loads back via `wb.xlsx.load` with the expected
+// sheet names, cell values and number formats. Nothing else in this repo
+// asserts workbook formatting; this test is the only guard.
 //
 // So the assertion is deliberately made on the FILE rather than on the spec
 // that produced it. A spec is this module's own vocabulary and a test over it
@@ -92,11 +92,9 @@ describe("the workbook that is written", () => {
   });
 
   it("writes a percentage in Excel's own percent format, which is not money's", () => {
-    // Ticket 11 wrote these as a bare "98.25" under money's format, and pinned
-    // it here with a note that whoever split the two would have to decide what
-    // the sheet says instead. Ticket 18 split them: a percentage sitting in a
-    // column of money under money's format is a figure the reader has to be
-    // told the kind of.
+    // A bare "98.25" under money's format looks like money. A percentage
+    // sitting in a column of money is a figure the reader has to be told the
+    // kind of.
     //
     // Excel's percent format multiplies by 100 on display, so the FIGURE is
     // what changes: `misBuildSheet` writes 98.25 as 0.9825, and the cell shows

@@ -50,8 +50,7 @@ export default function MisSegmentedControl<T extends string>({
   return (
     <Stack direction="row" sx={{ alignItems: "center", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
       {/* Hidden from assistive tech, because the group below carries the same
-          words as its accessible name — the source hides its own the same way
-          (`region-type-label`, `aria-hidden="true"`). */}
+          words as its accessible name. */}
       <Typography variant="body2" color="text.secondary" aria-hidden>
         {label}
       </Typography>

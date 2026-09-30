@@ -22,14 +22,11 @@ import type { MisFilterControl } from "../util/misViewVocabulary";
 //
 // A list rather than a row of buttons, because that is what it is: a reader on a
 // screen reader hears "Applied filters, list, six items" and can step through
-// what the figures above them have been narrowed by. The source built the same
-// thing (`AppliedFilterChips.js`) and this keeps its semantics.
+// what the figures above them have been narrowed by.
 //
-// The source also takes a `readOnly`, for a drill-down dialog that shows the
-// filters it inherited without letting anyone change them from inside it. Not
-// ported: that dialog is ticket 13's, and a flag with no caller is a guess about
-// what it will want. Omitting `onRemove` already renders a strip nothing can
-// dismiss, which may turn out to be all ticket 13 needs.
+// A drill-down shows the filters it inherited without letting anyone change
+// them from inside it. Omitting `onRemove` already renders a strip nothing
+// can dismiss, so there is no separate read-only flag.
 
 export default function MisAppliedFilterChips({
   chips,

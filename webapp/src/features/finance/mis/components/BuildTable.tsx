@@ -69,11 +69,11 @@ import {
 // See `useHeaderRowHeight` below.
 //
 // What this component does NOT do, deliberately: no formatting (injected, so
-// the Scale rule stays in one place — ticket 05) and no fetching.
+// the Scale rule stays in one place) and no fetching.
 //
 // It DOES window its rows above `ROW_WINDOW_THRESHOLD` (see `useRowWindow`), and
 // it DOES render a figure as an activatable control when the caller's `cell`
-// returns an `onActivate` — which is how ticket 10's drill-down opens. What
+// returns an `onActivate` — which is how the customer drill-down opens. What
 // stays out is any knowledge of WHICH figures have something behind them; that
 // is per-row and the caller's alone.
 
@@ -90,7 +90,7 @@ export interface BuildCell {
   /** A subordinate figure, such as the percentage beside its amount. */
   muted?: boolean;
   /**
-   * Opens whatever sits behind this figure — ticket 10's customer drill-down.
+   * Opens whatever sits behind this figure — the customer drill-down.
    *
    * Per CELL, and per cell deliberately. Most of a Build has nothing behind it:
    * a y/y growth, a retention ratio and a percentage are arithmetic over other
@@ -217,7 +217,7 @@ export default function BuildTable<L extends BuildLeadColumn = BuildLeadColumn>(
       {/* Above the table it describes, and only ever beside a real one — a page
           that mounted this itself would show it over a loading skeleton, an
           error and an empty state too, none of which is a table wider than the
-          screen. Spec §11.8, ticket 08. */}
+          screen. */}
       <WideTableNotice tableMinWidth={minWidth} sx={{ mb: 1.25 }} />
       <Box
         sx={{
@@ -587,8 +587,8 @@ function useMeasuredValue<T extends HTMLElement>(
  * `id`/`headers` wiring still resolves. What replaces the rows outside the
  * window is two empty rows carrying their height.
  *
- * `react-window` is a dependency here and cannot do this — see `rowWindow` for
- * the primary source. Ticket 07 asked for it to be tried first; it was.
+ * `react-window` is a dependency here and cannot do this — see `rowWindow`.
+ * It was tried first.
  *
  * Below `ROW_WINDOW_THRESHOLD` none of this runs and the table renders exactly
  * what it rendered before. The Subscription Build is 34 rows and takes that

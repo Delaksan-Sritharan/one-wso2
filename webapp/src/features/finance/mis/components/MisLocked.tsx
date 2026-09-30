@@ -25,12 +25,10 @@ import { Link as RouterLink } from "react-router";
 //
 // ---- why there is one message ----------------------------------------------
 //
-// There were two while the Flash Dashboard was being ported: MIS grants it on a
-// privilege of its own, so "you have MIS access, just not to this screen" was
-// an ordinary state. The Flash Dashboard stays in the MIS app, so the Builds
-// all open on the ARR privilege. ARR Analysis is the exception: the backend
-// can turn that one screen off while the reader still holds ARR access, and
-// that is not a missing permission.
+// The Builds all open on the ARR privilege, so someone locked out of one
+// Build is locked out of all of them. ARR Analysis is the exception: the
+// backend can turn that one screen off while the reader still holds ARR
+// access, and that is not a missing permission.
 //
 // ---- what it does not say -------------------------------------------------
 //

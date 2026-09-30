@@ -123,8 +123,7 @@ describe("the bars", () => {
     showChart();
     for (const industry of ANALYSIS_INDUSTRIES) {
       // Long names read left to right on a horizontal chart — which is the
-      // reason for turning it, and what the source works around by wrapping its
-      // axis labels at sixteen characters.
+      // reason for turning it.
       expect(screen.getAllByText(industry).length).toBeGreaterThan(0);
     }
   });
@@ -204,7 +203,7 @@ describe("the companion table", () => {
     expect(information?.[1]).toBe("1.00");
   });
 
-  // Spec §3. A share is a percentage, and Scale reaches currency alone.
+  // A share is a percentage, and Scale reaches currency alone.
   it("leaves a share alone at either Scale", () => {
     // Unmounted between the two, rather than reaching into the DOM to delete
     // the first table — a second `render` shares the container, so without this

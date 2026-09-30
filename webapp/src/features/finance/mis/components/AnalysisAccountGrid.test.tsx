@@ -36,22 +36,20 @@ vi.setConfig({ testTimeout: 20_000 });
 // The account table, and the one thing about it that is worth more than every
 // other assertion here: **what its CSV actually contains.**
 //
-// Spec §10.18. Ticket 11 closed that criterion for the Excel workbook, at the
-// sheet layer, where a builder with no Scale parameter makes an unscaled export
-// structural. The DataGrid's CSV has no such layer — it is the component's own,
+// The Excel workbook has no Scale parameter, so an unscaled export is
+// structural there. The DataGrid's CSV has no such layer — it is the component's own,
 // and it takes each cell's `formattedValue`, which is `valueFormatter`'s output
 // when a column has one. So a money column that formatted through
 // `valueFormatter` would export the READER'S SCALE: a file 1000x off, with
 // nothing in it saying so, on the screen whose whole output is a spreadsheet.
 //
-// The port formats in `renderCell` and pins `valueFormatter` to the identity,
+// These columns format in `renderCell` and pin `valueFormatter` to the identity,
 // so the cell's value reaches the CSV untouched. Pinning rather than omitting,
 // because a column typed `number` is fitted with `toLocaleString` whether or
 // not anyone asked — so "no formatter" is not a state this column can be in.
 //
-// None of that is enforced structurally, so it is asserted HERE, on the bytes,
-// exactly as §10.17 chose to assert the workbook on the file rather than on the
-// spec that produced it.
+// None of that is enforced structurally, so it is asserted HERE, on the bytes
+// the exporter writes, the same way the workbook test reads the file back.
 
 const account = (over: Partial<AnalysisAccountsResponse> = {}): AnalysisAccountsResponse => ({
   id: "001",
@@ -95,7 +93,7 @@ describe("the account table", () => {
   // wide is the difference between a fast test and a marginal one — and it
   // asserts the ORDER and the completeness too, which eleven `getByRole`s do
   // not. `LeaveReportsPage.test.tsx:159` does the same.
-  it("shows an account under the columns the source heads, in its order", () => {
+  it("shows an account under the column headings, in order", () => {
     showGrid([account()]);
     expect(screen.getByText("Northwind")).toBeInTheDocument();
     expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([

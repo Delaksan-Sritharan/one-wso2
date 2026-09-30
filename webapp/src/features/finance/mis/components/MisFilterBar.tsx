@@ -89,9 +89,9 @@ import MisUnitTabs, { type MisUnitSelection } from "./MisUnitTabs";
 //                   ask the backend five times to set one filter.
 //   the Scale       is neither: it changes how the figures are written, not
 //                   which figures they are, so it takes effect at once and is
-//                   remembered across screens (ticket 05).
+//                   remembered across screens.
 //
-// Everything here writes through `useMisViewState` (ticket 02). There is no
+// Everything here writes through `useMisViewState`. There is no
 // second copy of the view: what APPLY does is put a filter set in the address,
 // and what the bar shows next comes back out of it.
 
@@ -100,8 +100,8 @@ const OPTION_SOURCE: Partial<Record<MisFilterControl, keyof MisFilterOptions>> =
   salesRegion: "salesRegions",
   subRegion: "subRegions",
   // Both country controls read ONE list, which is `shippingCountries`. The
-  // backend sends `billingCountries` as well and the source never reads it —
-  // see `misAppConfigs.ts` for why that is reproduced rather than corrected.
+  // backend sends `billingCountries` as well and this bar does not read it —
+  // see `misAppConfigs.ts` for why that substitution stands.
   billingCountry: "countries",
   shippingCountry: "countries",
   industry: "industries",
@@ -265,8 +265,8 @@ export default function MisFilterBar({
   //                       back to a Build mid-session shows the years they were
   //                       working in rather than the Table's default.
   //
-  // The source does both in the same effect and branches the same way, on
-  // whether the link carried a view at all (`FilterBar.js:296-305`).
+  // Both happen on mount, and the branch is whether the link carried a view
+  // at all.
   useEffect(() => {
     if (view.hasViewState) {
       const adopted = yearsBackToRemember(filters.yearsBack, filterView);
@@ -301,8 +301,7 @@ export default function MisFilterBar({
           ))}
         </ToggleButtonGroup>
 
-        {/* The label the source uses, which ticket 05 deliberately left for
-            whoever built the control. */}
+        {/* "Values in '000" is the label Finance reconciles against. */}
         <FormControlLabel
           sx={{ m: 0 }}
           control={
