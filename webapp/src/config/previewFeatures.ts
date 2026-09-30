@@ -76,7 +76,7 @@ export type PreviewFeature =
    * alike. Unlike umt/infra this isn't a whole perspective; it's a set of
    * items nested inside Me and People Ops, gated the same way so the
    * feature can ship to `main` without going live in production before
-   * it's ready — see docs/ported-apps/promotion-app.md.
+   * it's ready.
    */
   | "promotion"
   /**

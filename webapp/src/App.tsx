@@ -104,6 +104,13 @@ import BankingRoute from "@features/my/banking/components/BankingRoute";
 import BankingPage, { BankingIndex } from "@features/my/banking/pages/BankingPage";
 import MyAccountsTab from "@features/my/banking/pages/MyAccountsTab";
 import SummaryTab from "@features/my/banking/pages/SummaryTab";
+import BankingAdminRoute from "@features/banking-admin/components/BankingAdminRoute";
+import BankingAdminTabRoute from "@features/banking-admin/components/BankingAdminTabRoute";
+import BankingAdminPage, { BankingAdminIndex } from "@features/banking-admin/pages/BankingAdminPage";
+import ChangeRequestsTab from "@features/banking-admin/pages/ChangeRequestsTab";
+import ReportTab from "@features/banking-admin/pages/ReportTab";
+import EmployeeOperationsTab from "@features/banking-admin/pages/EmployeeOperationsTab";
+import AdminTab from "@features/banking-admin/pages/AdminTab";
 import MyTeamPage from "@features/my/my-team/pages/MyTeamPage";
 import TeamMemberPage from "@features/my/my-team/pages/TeamMemberPage";
 import PerspectiveLanding from "@components/perspective-landing/PerspectiveLanding";
@@ -243,8 +250,7 @@ export default function App() {
           )}
           {/* My Team — placeholder for now; the real subordinates view is on
               hold this iteration (mirrors people-app's lead-only nav item). */}
-          {/* My Team — a lead's reporting chain, ported from people-app. The
-              spec and the deviation list are in docs/ported-apps/my-team.md. */}
+          {/* My Team — a lead's reporting chain, ported from people-app. */}
           <Route path="me/my-team" element={<MyTeamPage />} />
           <Route path="me/my-team/:employeeId" element={<TeamMemberPage />} />
           {/* Me → Leave: native screens ported from leave-app. Lives here
@@ -424,13 +430,11 @@ export default function App() {
               from the standalone org-chart app. Unlike every other People Ops
               screen, this is NOT admin-gated — it has its own access model.
               The UI is deliberately redesigned (outline instead of pan/zoom
-              canvas) — the functional spec and the deviation list live in
-              docs/ported-apps/org-chart.md. */}
+              canvas). */}
           <Route path="people-ops/org-chart" element={<OrgChartPage />} />
           {/* People Ops → Subscriptions: PickMe Commute and LaaS, ported from
               the digiops-hr subscription-app — until now a mobile microapp
-              with no web view at all. Spec and deviations in
-              docs/ported-apps/subscription-app.md.
+              with no web view at all.
 
               Neither route is guarded here, and the manage route's absence of
               a guard is deliberate rather than an oversight: the service's own
@@ -459,15 +463,13 @@ export default function App() {
           {/* Me → Promotion: promotion-app's own employee route ("Self
               Promotion History"). Behind the same preview flag as every
               other promotion-app route (People Ops → Promotion below) — the
-              whole app isn't released yet. See
-              docs/ported-apps/promotion-app.md. */}
+              whole app isn't released yet. */}
           {isPreviewEnabled("promotion") && <Route path="me/promotion" element={<PromotionHistoryPage />} />}
           {/* Me → PAR: the employee half of par-app, ported one screen at a
               time. Tab names match par-app's own OngoingCycleView tab bar
               (Employee Feedback / Request 360° Feedback / Provide 360°
-              Feedback / F2F) rather than invented ones. See
-              docs/ported-apps/par-app.md. Not gated beyond signing in —
-              every employee has their own PAR — except an intern, who
+              Feedback / F2F) rather than invented ones. Not gated beyond
+              signing in — every employee has their own PAR — except an intern, who
               never does, regardless of lead or active-cycle status;
               ParRequiresSomethingToShowRoute redirects them to /me. Same
               shape as ParRequiresAdminRoute below. See
@@ -548,7 +550,7 @@ export default function App() {
           {/* People Ops → PAR → Lead Portal: par-app's LeadPortal.tsx, ported
               one tab at a time — all five tabs are now live. Reviewing and
               rating your reports' PAR is People-Ops-team work, unlike the
-              employee half (now under Me — see docs/ported-apps/par-app.md).
+              employee half (now under Me).
               Gated on ParRequiresTeamLeadRoute (par-app's own Role.TEAM_LEAD
               gate on /lead-portal). */}
           <Route
@@ -645,8 +647,7 @@ export default function App() {
               "Promotion" group (perspectives.ts) — hiding only the
               rail/launcher entry would leave every route below reachable by
               URL. Each portal's own role guard (PromotionRequires*Route)
-              keeps working the same regardless of this flag — see
-              docs/ported-apps/promotion-app.md. */}
+              keeps working the same regardless of this flag. */}
           {isPreviewEnabled("promotion") && (
             <>
               {/* Lead Portal: promotion-app's own lead.tsx ("Time Based
@@ -873,7 +874,7 @@ export default function App() {
               meet-app backend refuses a caller in no authorised group on
               every endpoint, and SalesShell turns that 403 into an
               explanation, so someone reaching this URL gets an answer rather
-              than a blank page. See docs/ported-apps/sales-meetings.md. */}
+              than a blank page. */}
           <Route path="sales" element={<SalesMeetingsPage />} />
           {/* One meeting: the recording, and the call's details. A route rather than a
               dialog because a recording is something people send each other, and a dialog
@@ -882,8 +883,7 @@ export default function App() {
           <Route path="sales/meetings/:meetingId" element={<MeetingDetailPage />} />
           <Route path="settings" element={<SettingsPage />} />
           {/* Me → Menu: the cafeteria screen ported from the standalone
-              menu app. One page, as the original was. The functional spec and
-              the deviation list live in docs/ported-apps/menu-app.md. */}
+              menu app. One page, as the original was. */}
           <Route
             path="me/menu"
             element={
@@ -947,6 +947,56 @@ export default function App() {
           <Route path="due-diligence/preferences" element={<DueDiligencePreferencesPage />} />
           <Route path="due-diligence/view-pdf" element={<ViewPdfPage />} />
           <Route path="due-diligence/view-image" element={<ViewImagePage />} />
+          {/* Banking's admin/lead screens — Change Requests, Report,
+              Employee Operations, and Admin views. Route lives OUTSIDE both
+              the People Ops and
+              Finance path prefixes, same reason Due Diligence's own routes
+              do above: a screen reachable from two different rails can't
+              itself live under either one's own prefix. BankingAdminRoute
+              is the "any admin at all" gate; BankingAdminTabRoute is the
+              finer per-tab split (Change Requests is People-Ops-only). */}
+          <Route
+            path="banking/admin"
+            element={
+              <BankingAdminRoute>
+                <BankingAdminPage />
+              </BankingAdminRoute>
+            }
+          >
+            <Route index element={<BankingAdminIndex />} />
+            <Route
+              path="change-requests"
+              element={
+                <BankingAdminTabRoute gateId="people-ops-admin">
+                  <ChangeRequestsTab />
+                </BankingAdminTabRoute>
+              }
+            />
+            <Route
+              path="report"
+              element={
+                <BankingAdminTabRoute gateId="either-admin">
+                  <ReportTab />
+                </BankingAdminTabRoute>
+              }
+            />
+            <Route
+              path="employee-operations"
+              element={
+                <BankingAdminTabRoute gateId="either-admin">
+                  <EmployeeOperationsTab />
+                </BankingAdminTabRoute>
+              }
+            />
+            <Route
+              path="admin"
+              element={
+                <BankingAdminTabRoute gateId="either-admin">
+                  <AdminTab />
+                </BankingAdminTabRoute>
+              }
+            />
+          </Route>
           {/* Me → Email Groups: the mailing-list subscription manager ported
               from the standalone Email Group Manager app (the email-signature
               half of that app is not part of this port). Every employee sees

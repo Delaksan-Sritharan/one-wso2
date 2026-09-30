@@ -27,6 +27,7 @@ import {
   ClipboardCheckIcon,
   DatabaseIcon,
   HouseIcon,
+  LandmarkIcon,
   LifeBuoyIcon,
   LayoutDashboard,
   LucideLayoutGrid,
@@ -119,8 +120,28 @@ function appsToSections(apps: readonly MenuApp[]): PerspectiveSection[] {
 // Org Chart is the one section here WITHOUT `requires: ["admin"]` — same
 // people-app backend as everything else here, but a different endpoint
 // (/employees/basic-info) with its own access model: any employee in that
-// endpoint's configured group, not a people-app admin privilege. See
-// docs/ported-apps/org-chart.md.
+// endpoint's configured group, not a people-app admin privilege.
+
+// Banking's admin/lead screens (Change Requests, Report, Employee
+// Operations, Admin — see features/banking-admin/bankingAdminTabs.ts).
+// Reachable from BOTH People Ops and Finance, because the four tabs split
+// across both admin types. ONE object, included in both perspectives'
+// sections below, so the two rails can't drift apart — same pattern
+// DUE_DILIGENCE_APPS already uses for Finance+Legal. Gated on the banking
+// backend's own GET /employee-privileges, not `requires` — see
+// useBankingAdminAccess and this id's dispatch in usePerspectiveVisibility.
+// Its route lives OUTSIDE both perspectives, at a neutral top-level
+// /banking/admin (see App.tsx), the same reason Due Diligence's own routes
+// live outside Finance/Legal: a screen reached from two rails can't itself
+// live under either rail's own path prefix.
+export const BANKING_ADMIN_ITEM_ID = "banking-admin";
+const BANKING_ADMIN_SECTION: PerspectiveSection = {
+  id: BANKING_ADMIN_ITEM_ID,
+  label: "Banking",
+  icon: LandmarkIcon,
+  path: "/banking/admin",
+};
+
 export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   {
     id: "people-org-chart",
@@ -190,8 +211,8 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
   },
   // promotion-app's Lead Portal ("Time Based Promotions") — reviewing and
   // deciding on other people's promotions is People-Ops-team work, the same
-  // split PAR's own Lead/Admin portals above already apply. See
-  // docs/ported-apps/promotion-app.md. Gated via PROMOTION_LEAD_PORTAL_ITEM_ID
+  // split PAR's own Lead/Admin portals above already apply. Gated via
+  // PROMOTION_LEAD_PORTAL_ITEM_ID
   // below, not `requires` — promotion-app's own Role.LEAD (read back from its
   // GET /employee-privileges) bears no fixed relationship to people-app's
   // generic "lead" capability `requires` would otherwise gate on.
@@ -295,6 +316,7 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
       },
     ],
   },
+  BANKING_ADMIN_SECTION,
 ];
 
 /**
@@ -433,9 +455,9 @@ const ME_SECTIONS: PerspectiveSection[] = [
   },
   ...appsToSections(ME_APPS),
   ...appsToSections(ME_FINANCE_APPS),
-  // par-app's employee portal — see docs/ported-apps/par-app.md.
+  // par-app's employee portal.
   ...appsToSections(ME_PAR_APPS),
-  // promotion-app's employee portal — see docs/ported-apps/promotion-app.md.
+  // promotion-app's employee portal.
   // Held behind a preview flag until the whole app (this item plus the
   // "Promotion" group under People Ops) is ready for production — see
   // isPreviewEnabled's own call in PEOPLE_OPS_SECTIONS below and in App.tsx.
@@ -586,6 +608,10 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
       // roles, not the coarse capability model — see useDueDiligenceGate and
       // its dispatch in SideRail.
       ...appsToSections(DUE_DILIGENCE_APPS),
+      // Banking's admin/lead screens — also surfaced under People Ops (see
+      // BANKING_ADMIN_SECTION above). Same object, included in both places,
+      // so the two rails can't drift.
+      BANKING_ADMIN_SECTION,
     ],
   },
   // Legal. Currently just a second entry point into Due Diligence (see the
