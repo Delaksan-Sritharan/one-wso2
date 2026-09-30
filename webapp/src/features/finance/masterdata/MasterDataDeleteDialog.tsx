@@ -59,10 +59,12 @@ export default function MasterDataDeleteDialog({
         showSuccess(MASTER_DATA_SNACK.success.deleted);
         onClose();
       },
-      onError: (error) => {
-        showError(describeDeleteError(error));
-        onClose();
-      },
+      // Stay open on failure — including the 409 case the doc comment above
+      // is about. Closing here would return the reader to the table with
+      // only a snackbar saying why, and no way back into this dialog without
+      // starting the delete over; leaving it open lets them read the reason
+      // and immediately retry or back out themselves.
+      onError: (error) => showError(describeDeleteError(error)),
     });
 
   return (

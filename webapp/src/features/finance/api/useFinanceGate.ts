@@ -88,7 +88,7 @@ export interface FinanceGate {
  * @param caps The portal's coarse capabilities, for the finance items that
  *   have no backend role of their own — currently just master data. Passed
  *   in rather than read here: the rail has already derived it from the
- *   people-app `/user-info` this hook would otherwise call a second time.
+ *   existing identity query this hook would otherwise call a second time.
  */
 export function useFinanceGate(enabled = true, caps?: ReadonlySet<Capability>): FinanceGate {
   const cc = useCcUserInfo(enabled);
