@@ -96,13 +96,37 @@ export function useAsgardeoSub(): { state: SubState; retry: () => void } {
       return;
     }
     let cancelled = false;
-    setState({ status: "loading" });
+    // Announce "loading" only when there is nothing resolved to keep. This
+    // effect re-runs whenever `isSignedIn`, `getDecodedIdToken` or a manual
+    // retry changes, and it used to reset to `loading` unconditionally — so an
+    // identity this hook had ALREADY resolved was withdrawn for as long as the
+    // re-check took.
+    //
+    // Nothing downstream can absorb that. `foldIdentityError` below turns
+    // "identity loading + query still pending" into a synthetic `isLoading`,
+    // and a query that is DISABLED has `isPending` true forever (it never
+    // fetches, so it never resolves) — an OPD or Expense backend that isn't
+    // configured in this environment, or a queue gated behind a role the
+    // reader lacks, is exactly that. So every re-run flipped those hooks back
+    // to "loading", `useFinanceGate.isResolving` with them, and every screen
+    // keyed off it — Finance → Overview, Claim Approval, their rail rows —
+    // blanked and came back. That is the blinking.
+    //
+    // A re-check is still worth running (a token rotation does change nothing
+    // else about it), it just runs in the background now: the resolved `sub`
+    // stays on screen until a DIFFERENT one arrives. An error state is not
+    // kept — a retry from there is someone asking to see the loading state.
+    setState((prev) => (prev.status === "ready" ? prev : { status: "loading" }));
     getDecodedIdToken()
       .then((token) => {
         if (cancelled) return;
         const s = (token as { sub?: string } | null | undefined)?.sub;
         if (typeof s === "string" && s.length > 0) {
-          setState({ status: "ready", sub: s });
+          // Same sub, same object: a re-check that confirms what we already
+          // knew must not re-render every consumer of this hook.
+          setState((prev) =>
+            prev.status === "ready" && prev.sub === s ? prev : { status: "ready", sub: s },
+          );
         } else {
           setState({
             status: "error",

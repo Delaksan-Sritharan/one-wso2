@@ -47,20 +47,6 @@ function DashboardBody() {
   const userInfo = useOpdUserInfo();
   const summary = useOpdDashboardSummary();
 
-  // `routes.tsx:20-24` puts this screen behind View.FINANCE — it is every
-  // employee's spend, not your own, so the approver role is what opens it.
-  //
-  // `isError` is excluded deliberately: a failed lookup leaves `data`
-  // undefined, which reads as "no role", and telling a finance approver they
-  // lack access because a request failed is worse than showing them a retry.
-  if (!userInfo.isLoading && !userInfo.isError && !opdHasRole(userInfo.data, OPD_ROLE.FINANCE_APPROVER)) {
-    return (
-      <Alert severity="info">
-        OPD analytics is limited to the finance team who review these claims.
-      </Alert>
-    );
-  }
-
   if (userInfo.isLoading || summary.isLoading) {
     return (
       <Stack spacing={2}>
@@ -68,6 +54,31 @@ function DashboardBody() {
           <Skeleton key={i} variant="rounded" height={80} />
         ))}
       </Stack>
+    );
+  }
+
+  // `routes.tsx:20-24` puts this screen behind View.FINANCE — it is every
+  // employee's spend, not your own, so the approver role is what opens it.
+  //
+  // `isSuccess`, and below the loading branch rather than above it: both say
+  // the same thing, that this refusal is only ever made on an answer the
+  // backend actually gave. `!isLoading && !isError` was not that — it is also
+  // true of a query that has not run at all, which is what this one is
+  // whenever it is still waiting on identity, and `isLoading` is false in
+  // exactly that window too (React Query reports a query it has not started as
+  // idle, not loading). So arriving here — switching the Overview dropdown to
+  // OPD Claims mounts this whole body fresh — showed a finance approver "this
+  // is limited to the finance team", then the skeleton, then their dashboard.
+  //
+  // `isError` was already excluded for the same reason and still is: a failed
+  // lookup leaves `data` undefined, which reads as "no role", and telling a
+  // finance approver they lack access because a request failed is worse than
+  // showing them the retry below.
+  if (userInfo.isSuccess && !opdHasRole(userInfo.data, OPD_ROLE.FINANCE_APPROVER)) {
+    return (
+      <Alert severity="info">
+        OPD analytics is limited to the finance team who review these claims.
+      </Alert>
     );
   }
 

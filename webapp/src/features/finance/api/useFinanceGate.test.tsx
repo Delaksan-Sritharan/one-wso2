@@ -199,3 +199,57 @@ describe("Credit Card Expenses' submitter-facing items", () => {
     expect(gate().canSee("cc-history")).toBe(true);
   });
 });
+
+// `isResolving` is what every caller renders NOTHING on — FinanceOverviewPage
+// returns null, ClaimApprovalPage drops its tabs and its <Outlet />, the rail
+// hides the row. So it going back to true after a real answer is not a slower
+// answer: it is a screen that was there blanking and coming back, which is
+// what the Finance section flickering was.
+//
+// It can go back on its own, for reasons that say nothing about this reader: a
+// query disabled because its backend is not configured in an environment stays
+// `isPending` for good, so `foldIdentityError` reports it as loading again
+// every time identity re-checks. Hence a one-way latch, pinned here.
+describe("settling, and staying settled", () => {
+  function latching(enabled = true) {
+    const { result, rerender } = renderHook(({ on }) => useFinanceGate(on), {
+      initialProps: { on: enabled },
+    });
+    return { result, rerender };
+  }
+
+  it("reports resolving until the backends have answered", () => {
+    roles.loading = true;
+    expect(latching().result.current.isResolving).toBe(true);
+  });
+
+  // THE regression.
+  it("never reports resolving again once they have", () => {
+    roles.loading = true;
+    const { result, rerender } = latching();
+    expect(result.current.isResolving).toBe(true);
+
+    roles.loading = false;
+    rerender({ on: true });
+    expect(result.current.isResolving).toBe(false);
+
+    // A backend going back to loading — an identity re-check reaching a query
+    // that never ran, a refetch — must not un-settle the gate.
+    roles.loading = true;
+    rerender({ on: true });
+    expect(result.current.isResolving).toBe(false);
+  });
+
+  // A gate switched off has answered nothing, so its all-false reading is not
+  // a settled answer to latch. The rail's gate is off on every perspective but
+  // Me and Finance, and latching there would have it report "settled, no
+  // access" the moment someone switched to Finance.
+  it("does not count a switched-off gate as having answered", () => {
+    roles.loading = true;
+    const { result, rerender } = latching(false);
+    expect(result.current.isResolving).toBe(false);
+
+    rerender({ on: true });
+    expect(result.current.isResolving).toBe(true);
+  });
+});
