@@ -20,7 +20,7 @@ import { Navigate } from "react-router";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useUserInfo } from "@api/useUserInfo";
 import { capabilitiesFromPrivileges } from "@constants/appMenu";
-import { useFinanceGate } from "@features/finance/api/useFinanceGate";
+import { canSeeMasterData } from "@features/finance/api/useFinanceGate";
 
 /**
  * Closes the four Master Data screens to everyone else, at the route.
@@ -38,6 +38,15 @@ import { useFinanceGate } from "@features/finance/api/useFinanceGate";
  * convenience layered on top of a real one — so it has to hold at the route,
  * not just at the menu.
  *
+ * Deliberately NOT built on the full `useFinanceGate`. That hook's
+ * `isResolving` is `cc.isLoading || opd.isLoading || expense.isLoading` —
+ * three backends that have nothing to do with this answer (see
+ * `canSeeMasterData`'s own comment). A route guard calling it would hold
+ * this page on a blank screen until CC, OPD and Expense Claims ALL settled,
+ * so a slow or erroring one of those in some environment blocked a page
+ * whose access question only ever depended on identity and the preview
+ * flag. This waits on exactly those two things and nothing else.
+ *
  * Same shape as SriLankaRoute / ParRequiresTeamLeadRoute:
  *
  *  - Wait rather than refuse. Unresolved reads as "not yet known", and
@@ -49,13 +58,8 @@ import { useFinanceGate } from "@features/finance/api/useFinanceGate";
  */
 export default function MasterDataRoute({ children }: { children: ReactNode }): JSX.Element | null {
   const userInfo = useUserInfo();
-  const caps = capabilitiesFromPrivileges(userInfo.data?.privileges);
-  // `enabled` stays true unconditionally: the route is already committed to
-  // needing an answer, unlike the rail's use of this hook which only fires
-  // while the Finance/Me perspective is on screen.
-  const gate = useFinanceGate(true, caps);
 
-  if (userInfo.isLoading || gate.isResolving) return null;
+  if (userInfo.isLoading) return null;
 
   if (userInfo.isError) {
     return (
@@ -67,9 +71,8 @@ export default function MasterDataRoute({ children }: { children: ReactNode }): 
     );
   }
 
-  // Any of the four ids answers the same way — see useFinanceGate's
-  // master-data case, which does not distinguish between the four tabs.
-  if (!gate.canSee("master-data-subsidiaries")) return <Navigate to="/finance" replace />;
+  const caps = capabilitiesFromPrivileges(userInfo.data?.privileges);
+  if (!canSeeMasterData(caps)) return <Navigate to="/finance" replace />;
 
   return <>{children}</>;
 }

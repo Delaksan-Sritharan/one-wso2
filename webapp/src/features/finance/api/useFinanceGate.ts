@@ -34,6 +34,26 @@ const RESTRICTED_IDS = new Set(
     .map((it) => it.id),
 );
 
+/**
+ * Whether Master Data is open to this reader — pulled out of the `canSee`
+ * switch below so a caller can ask this ONE question without mounting the
+ * rest of this hook's cc/opd/expense queries to get an answer.
+ *
+ * `MasterDataRoute` is exactly that caller: those three backends have
+ * nothing to do with whether someone may open Master Data (see the
+ * master-data case's own comment), so a route guard built on the full
+ * `useFinanceGate` was blocking on THEIR `isLoading` — a slow or erroring
+ * CC/OPD/Expense backend in some environment held the page on a blank
+ * screen for a reader who was always going to be let in, once the two
+ * things that actually decide this (identity + the preview flag) resolve.
+ * Exported so both the switch case and the route call the same check —
+ * two independent copies of `isPreviewEnabled(...) && caps.has("admin")`
+ * is how one of them quietly drifts from the other.
+ */
+export function canSeeMasterData(caps: ReadonlySet<Capability> | undefined): boolean {
+  return isPreviewEnabled("finance-master-data") && (caps?.has("admin") ?? false);
+}
+
 // Role-gates the Finance menu items (surfaced under Me) against each app's
 // OWN backend roles — not the coarse One WSO2 capabilities derived from
 // people-app. The rail uses this so a menu item is only shown to someone
@@ -74,12 +94,6 @@ export function useFinanceGate(enabled = true, caps?: ReadonlySet<Capability>): 
   const cc = useCcUserInfo(enabled);
   const opd = useOpdUserInfo(enabled);
   const expense = useExpenseAppData(enabled);
-  // Master data is the one finance app with no role of its own to ask about:
-  // its backend's /user-info returns an email and an avatar, and access is
-  // decided upstream by Asgardeo group membership. So its items fall back to
-  // the portal's coarse capabilities — and to a no, not a yes, when the
-  // caller did not supply them.
-  const isAdmin = caps?.has("admin") ?? false;
 
   const ccLeadOrFinance = ccHasAccess(cc.data, "lead") || ccHasAccess(cc.data, "finance");
   const ccFinance = ccHasAccess(cc.data, "finance");
@@ -147,7 +161,7 @@ export function useFinanceGate(enabled = true, caps?: ReadonlySet<Capability>): 
       case "master-data-departments":
       case "master-data-expense-types":
       case "master-data-credit-cards":
-        return isPreviewEnabled("finance-master-data") && isAdmin;
+        return canSeeMasterData(caps);
       default:
         // Per-user views (New / Pending / History) are open; any other item
         // that declares `requires` but reaches here fails closed rather than
