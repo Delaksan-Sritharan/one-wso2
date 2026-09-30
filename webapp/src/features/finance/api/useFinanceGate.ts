@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import type { VisibilityAnswer } from "@components/side-rail/visibilityFold";
 import { FINANCE_APPS } from "@constants/financeApps";
 import { useCcUserInfo } from "../cc/useCc";
 import { ccHasAccess } from "../cc/ccTypes";
@@ -126,4 +127,13 @@ export function useFinanceGate(enabled = true): FinanceGate {
 
   const isResolving = enabled && (cc.isLoading || opd.isLoading || expense.isLoading);
   return { canSee, isResolving, ccHasOwnCard, opdFinance, opdErrored };
+}
+
+/** Rail and landing facts. Dashboard-tab fields stay on FinanceGate. */
+export function financeVisibility(gate: FinanceGate): VisibilityAnswer {
+  return {
+    canSee: (id) => gate.canSee(id),
+    resolving: gate.isResolving,
+    retry: () => undefined,
+  };
 }
