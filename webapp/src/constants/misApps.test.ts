@@ -33,10 +33,10 @@ vi.hoisted(() => {
 const items = MIS_APPS.flatMap((app) => app.items);
 
 describe("the Finance MIS registry", () => {
-  // Not /finance-mis/*, which is what the source app used. `findPerspectiveByPath`
-  // matches with a bare `pathname.startsWith`, so "/finance-mis" resolves to the
-  // `finance` perspective and renders its rail around a MIS screen. The prefix
-  // has to nest, not merely resemble. See docs/ported-apps/mis.md §7.
+  // Not /finance-mis/*. `findPerspectiveByPath` matches with a bare
+  // `pathname.startsWith`, so "/finance-mis" resolves to the `finance`
+  // perspective and renders its rail around a MIS screen. The prefix has to
+  // nest, not merely resemble.
   it("puts every routed screen under the Finance perspective's path", () => {
     const routed = items.filter((item) => item.path !== undefined);
     expect(routed.length, "no MIS screen is routed at all").toBeGreaterThan(0);
@@ -45,9 +45,9 @@ describe("the Finance MIS registry", () => {
     }
   });
 
-  // A rail entry that navigates nowhere is worse than one that isn't there. The
-  // screens still being ported carry no `path` until their own ticket adds the
-  // route in the same change — so this asserts the two are never out of step.
+  // A rail entry that navigates nowhere is worse than one that isn't there. A
+  // screen carries no `path` until the change that adds its route — so this
+  // asserts the two are never out of step.
   // Every screen in the registry is now routed; a future one joins this list
   // and `App.tsx` in the same change, never the registry alone.
   it("gives a path only to screens that have a route", () => {
@@ -60,8 +60,8 @@ describe("the Finance MIS registry", () => {
     ]);
   });
 
-  // Spec §1: the Flash Dashboard stays in the MIS app, so it is not a screen of
-  // this registry — not a pathless row, not a row its privilege would open.
+  // The Flash Dashboard is not part of One WSO2, so it is not a screen of this
+  // registry — not a pathless row, not a row its privilege would open.
   it("leaves the Flash Dashboard out", () => {
     expect(items.map((item) => item.id)).not.toContain("mis-flash");
   });

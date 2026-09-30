@@ -128,8 +128,8 @@ vi.mock("@features/finance/mis/api/useOpportunities", async () => {
   );
   return {
     // `opportunitiesRequest` stays REAL: the date it derives from the clicked
-    // column is the whole point of the port's version, so mocking it would
-    // leave these tests asserting against a stand-in.
+    // column is the whole point of this version, so mocking it would leave
+    // these tests asserting against a stand-in.
     ...actual,
     useOpportunities: (request: { accountId: string; endDate: string } | null) => {
       opportunities.asked = request;
@@ -207,9 +207,7 @@ const MisSession = (await import("@features/finance/mis/components/MisSession"))
 // pointer-event sequence re-rendered through the Oxygen theme — and the whole
 // suite runs 119 files in parallel. The default 5s is enough alone and not
 // under that load, which is how a passing file becomes an intermittent red.
-// The source's own filter-bar suite raised its timeout for the same reason
-// ("Forty rendered tests over a 1700-line component with MUI Autocompletes:
-// give each room under load").
+// Driving this many MUI Autocompletes needs the extra room.
 vi.setConfig({ testTimeout: 20_000 });
 
 /**
@@ -454,7 +452,7 @@ beforeEach(() => {
 });
 
 describe("opening the customers behind a figure", () => {
-  // Ticket 10's drill-down. Only fourteen rows of the Build have a customer
+  // Only fourteen rows of the Build have a customer
   // list behind them; the rest are arithmetic over other rows.
   //
   // The Period label is read off the rendered header rather than hard-coded.
@@ -473,7 +471,7 @@ describe("opening the customers behind a figure", () => {
   it("offers no way in on a row that is arithmetic over other rows", () => {
     renderPage();
     // `Net New` is Opening minus Closing — there is no set of customers that IS
-    // it, so the source leaves the cell inert and so does this.
+    // it, so the cell stays inert.
     const netNew = screen.getByText("Net New").closest("tr")!;
     expect(within(netNew).queryByRole("button")).not.toBeInTheDocument();
   });
@@ -518,9 +516,8 @@ describe("opening the customers behind a figure", () => {
 });
 
 describe("the Software/Cloud Customers table", () => {
-  // Ticket 10. `?table=customers` is the whole switch — the URL contract for it
-  // landed in 02 and the per-Table filter rules in 09, so what is new here is
-  // that a different table appears under the same bar.
+  // `?table=customers` is the whole switch. What is under test here is that a
+  // different table appears under the same bar.
 
   it("shows the customer book, one row per account", () => {
     renderPage("?table=customers");
@@ -530,8 +527,7 @@ describe("the Software/Cloud Customers table", () => {
 
   it("shows the Subscription Build when the link names no Table", () => {
     // Subscription is the default and is never written to the URL, so "no
-    // table" and "the Build" are the same state — 02 pinned that in the
-    // contract and this is the page honouring it.
+    // table" and "the Build" are the same state.
     renderPage();
     expect(screen.getByRole("table", { name: /Subscription/ })).toBeInTheDocument();
     expect(screen.queryByText("Northwind Bank")).not.toBeInTheDocument();
@@ -553,8 +549,7 @@ describe("the Software/Cloud Customers table", () => {
   });
 
   it("heads the figure columns so the three Totals can be told apart", async () => {
-    // The source separates them with a Software/Cloud grouping row; this port
-    // renders two header rows, so the labels have to carry it. Deviation, §7.
+    // Two header rows, so the labels have to carry which Total is which.
     // Reached through the breakdown control, because BU only is the default.
     renderPage("?table=customers");
     await userEvent.click(screen.getByRole("button", { name: "Software / Cloud" }));
@@ -582,12 +577,10 @@ describe("the Software/Cloud Customers table", () => {
 });
 
 describe("how the customer table breaks a customer's revenue down", () => {
-  // Two views of one response. The source's checkbox is `BU only`, it is
-  // CHECKED by default (`DataGrid.js:365`), and unticking it gives the twelve
-  // Software/Cloud columns. So the default here is the business-unit split, and
-  // the port's original twelve-column view is the second option.
+  // Two views of one response. The business-unit split is the default; the
+  // twelve Software/Cloud columns are the second option.
 
-  it("opens on the business-unit split, which is what the source opens on", () => {
+  it("opens on the business-unit split", () => {
     renderPage("?table=customers");
     expect(screen.getAllByText("API Platform BU").length).toBeGreaterThan(0);
     expect(screen.queryByText("Software Total")).not.toBeInTheDocument();
@@ -609,16 +602,15 @@ describe("how the customer table breaks a customer's revenue down", () => {
 
   it("reads a unit off its own field, not off the software and cloud halves", () => {
     // 400,000 is `apimBuTotal`. Software plus Cloud for this account is
-    // 750,000, so a port that reconstructed the unit would show that instead.
+    // 750,000, so reconstructing the unit from the halves would show that instead.
     renderPage("?table=customers");
     const row = screen.getByText("Northwind Bank").closest("tr")!;
     expect(within(row).getByText("400,000.00")).toBeInTheDocument();
   });
 
   it("keeps the control on screen when the whole book failed", () => {
-    // The source gates its checkbox on `!loading` alone
-    // (`DataGrid.js:1063-1105`), so an error keeps it — and an error is where
-    // a reader most wants the switch still there.
+    // The control is gated on `!loading` alone, so an error keeps it — and an
+    // error is where a reader most wants the switch still there.
     customers.value = {
       columns: [],
       isLoading: false,
@@ -637,7 +629,7 @@ describe("how the customer table breaks a customer's revenue down", () => {
     expect(screen.getByRole("group", { name: "Breakdown" })).toBeInTheDocument();
   });
 
-  it("holds the control back while the book is still loading, as the source does", () => {
+  it("holds the control back while the book is still loading", () => {
     customers.value = { ...customerBook([]), isLoading: true, columns: [] };
     renderPage("?table=customers");
     expect(screen.queryByRole("group", { name: "Breakdown" })).not.toBeInTheDocument();
@@ -655,8 +647,8 @@ describe("how the customer table breaks a customer's revenue down", () => {
 });
 
 describe("the customer table's Total row", () => {
-  // `useCustomerAccounts.js:443-508`. The only client-computed total in the ARR
-  // Build that runs down the CUSTOMERS rather than across named metric rows.
+  // The only client-computed total in the ARR Build that runs down the
+  // CUSTOMERS rather than across named metric rows.
 
   it("sits above the customers, so the column total is read first", () => {
     renderPage("?table=customers");
@@ -789,8 +781,7 @@ describe("the figures", () => {
   });
 
   it("leave a headcount alone at either Scale", () => {
-    // Spec §3, the rule the whole of ticket 05 exists for: 1,234 customers are
-    // 1,234 customers however the amounts are shown.
+    // 1,234 customers are 1,234 customers however the amounts are shown.
     summary.value = loaded({ openingSubscriptionCustomers: 1234 });
     renderPage("?scale=k");
     expect(screen.getByText("1,234")).toBeInTheDocument();
@@ -810,13 +801,10 @@ describe("the figures", () => {
 });
 
 describe("choosing which of the Build's tables to read", () => {
-  // Ticket 10. Until now `?table=` could only be reached by editing the address
-  // bar, which is not a feature. In the source these tabs live in
-  // `TableNavigation.js` and they COMMIT ON CLICK — a different table is a
-  // different report, not a narrowing of this one — which is the same rule the
-  // unit tabs already follow.
+  // The tabs commit on click: a different table is a different report, not a
+  // narrowing of this one, which is the same rule the unit tabs already follow.
 
-  it("offers the four tables the source offers", () => {
+  it("offers Subscription, Customers, Region Summary and BU Summary", () => {
     renderPage();
     const tabs = screen.getByRole("group", { name: /table/i });
     for (const name of ["Subscription", "Customers", "Region Summary", "BU Summary"]) {
@@ -869,7 +857,7 @@ describe("choosing which of the Build's tables to read", () => {
 });
 
 describe("Exit ARR by Region", () => {
-  // Ticket 10. A summary, not a Build: it reports what was on the books at one
+  // A summary, not a Build: it reports what was on the books at one
   // moment rather than the movement between two, so its columns are headed with
   // that moment alone and its rows are regions rather than metric lines.
 
@@ -959,7 +947,7 @@ describe("Exit ARR by Region", () => {
 });
 
 describe("Exit ARR by Business Unit", () => {
-  it("gives each business unit a row, in the source's order", () => {
+  it("gives each business unit a row, in BuType order", () => {
     // Seven, whatever the backend returned: this table's rows ARE the `BuType`
     // record, so they come from the code where the Region Summary's come from
     // the response.
@@ -1061,10 +1049,9 @@ describe("taking the Build out of the browser", () => {
   });
 
   it("exports the same figure at units while the screen is showing thousands", async () => {
-    // Spec §10.18, the whole reason this ticket has a test checklist entry of
-    // its own: the prototype found a DataGrid CSV that silently inherited the
-    // display formatter. The reader sets thousands, exports, and the file is
-    // 1000x off with nothing in it saying so.
+    // A CSV that inherited the display formatter would be 1000x off, with
+    // nothing in the file saying so. The reader sets thousands, exports, and
+    // the workbook must still hold the raw figure.
     renderPage("?scale=k");
     expect(screen.getByText("All amounts in USD '000")).toBeInTheDocument();
 
@@ -1074,8 +1061,9 @@ describe("taking the Build out of the browser", () => {
     expect(sheet.getRow(1).getCell(1).value).toBe("All amounts in USD");
   });
 
-  // Each of the other three tables builds its OWN raw-figure reader, so §10.18
-  // has to be asked of each of them rather than of the Build alone. The sheet
+  // Each of the other three tables builds its OWN raw-figure reader, so the
+  // raw-figure rule has to be asked of each of them rather than of the Build
+  // alone. The sheet
   // layer cannot scale — `misBuildSheet` has no Scale parameter — but nothing
   // stops a call site handing it an already-scaled figure, and these are the
   // tests that say it does not.
@@ -1094,8 +1082,8 @@ describe("taking the Build out of the browser", () => {
   });
 
   it("exports All ARR Metrics at units while the screen shows thousands", async () => {
-    // The fifth grid on this page, and the fifth call site §10.18 has to hold
-    // at: the sheet builder takes no Scale, but its `value` reader would carry
+    // The fifth grid on this page: the sheet builder takes no Scale, but its
+    // `value` reader would carry
     // a figure a caller had already divided.
     renderPage("?table=region-summary&scale=k");
     await userEvent.click(screen.getByRole("button", { name: "All ARR Metrics" }));
@@ -1132,8 +1120,8 @@ describe("taking the Build out of the browser", () => {
 });
 
 describe("what a Table switch does to the filters", () => {
-  // Ticket 10. A different Table is a different report: the source resets the
-  // filters and applies the new Table's defaults at once, and a Region Summary
+  // A different Table is a different report: the filters reset and the new
+  // Table's defaults apply at once, and a Region Summary
   // still carrying the Build's EMEA filter would be narrowed by something its
   // own bar cannot show or clear.
 
@@ -1167,9 +1155,8 @@ describe("what a Table switch does to the filters", () => {
     expect(address()).toBe("?table=region-summary");
   });
 
-  it("clears the unit selection on the way into Customers, as the source does", async () => {
-    // `FilterBar.js:606` — the one Table whose switch also clears the units.
-    // Reproduced for parity while both apps run side by side (spec §8).
+  it("clears the unit selection on the way into Customers", async () => {
+    // The one Table whose switch also clears the units.
     renderPage("?unit=custom&customBu=APIM_BU");
     await switchTable("Customers");
     expect(address()).toBe("?table=customers");
@@ -1216,7 +1203,7 @@ describe("a session Years Back that happens to equal the Table's own default", (
 });
 
 describe("the QRR and MRR Builds", () => {
-  // Ticket 12. The whole model layer is Period-generic already — the Applied
+  // The whole model layer is Period-generic already — the Applied
   // set holds one type and one cumulative flag whatever the Period, and
   // `TYPE_KEY_BY_PERIOD` decides which key each becomes — so what these pin is
   // that the SCREEN is wired to the Period its route carries, rather than
@@ -1267,8 +1254,8 @@ describe("the QRR and MRR Builds", () => {
   });
 
   it("carries a Cumulative control the annual Build does not have", async () => {
-    // Ticket 12 predicted this needs no new code: the Pending set holds one
-    // `cumulative` flag whatever the Period and `CUMULATIVE_KEY_BY_PERIOD`
+    // The Pending set holds one `cumulative` flag whatever the Period, and
+    // `CUMULATIVE_KEY_BY_PERIOD`
     // decides which Applied key it becomes. Confirmed rather than assumed.
     renderPage("", MIS_PERIODS.QUARTERLY);
     // Last of seventeen controls, and the bar shows seven collapsed, so it is
@@ -1280,9 +1267,9 @@ describe("the QRR and MRR Builds", () => {
   });
 
   it("makes Cumulative move the figures and not just the address", () => {
-    // The review found this control inert: it serialised and nothing read it.
-    // `computePrevDateFor` (`useArrTableSummary.js:159-181`) is where it lives —
-    // it moves where each column's OPENING balance is read, so every quarter of
+    // The control used to serialise and nothing read it. `computePrevDateFor`
+    // is where it lives — it moves where each column's OPENING balance is read,
+    // so every quarter of
     // a year opens at that year's previous 31 December and the figures
     // accumulate from 1 January instead of rolling forward one quarter.
     renderPage("", MIS_PERIODS.QUARTERLY);
@@ -1309,7 +1296,7 @@ describe("the QRR and MRR Builds", () => {
   });
 
   it("ignores a TTM window on a Period that has none", () => {
-    // Test §10.5. `window=ttm` is not an error off Annually, it is a parameter
+    // `window=ttm` is not an error off Annually, it is a parameter
     // that means nothing there — so the view is not TTM and the control does
     // not light a TTM button the screen has no Window for.
     renderPage("?window=ttm", MIS_PERIODS.MONTHLY);
@@ -1319,7 +1306,7 @@ describe("the QRR and MRR Builds", () => {
   });
 
   it("drops an ignored window from the address the moment it writes a view", async () => {
-    // The other half of §10.5, and the one worth being precise about: arriving
+    // Arriving
     // on a stale link does NOT scrub the address — nothing has written a view
     // yet, so the parameter sits there being ignored. It goes the first time
     // the app writes, because the serialiser only ever emits `window` on
@@ -1332,8 +1319,8 @@ describe("the QRR and MRR Builds", () => {
 
   it("asks for quarterly ranges on the Quarterly Build, not annual ones", () => {
     renderPage("", MIS_PERIODS.QUARTERLY);
-    // The shape comes from the source, not from recomputing what the code just
-    // did: on the Build every column names its quarter BARE — the Subscription
+    // The headers are what the page prints, not a recomputation of the ranges:
+    // on the Build every column names its quarter BARE — the Subscription
     // grid passes `includePrefix: false` — except the quarter still running,
     // which is named by its date. An annual Build asks for `{opening} - {end}`
     // instead, so this fails outright if the Period did not reach the builder.
@@ -1348,8 +1335,8 @@ describe("the QRR and MRR Builds", () => {
 
   it("asks for thirteen months on the Monthly Build at its default Years Back", () => {
     // Years Back defaults to 1 off Annually, and `generateMonths` walks
-    // `i <= yearsBack * 12` — so thirteen, which is the source's own
-    // off-by-one reproduced for parity rather than corrected. No Years
+    // `i <= yearsBack * 12` — so thirteen. The extra month is kept rather than
+    // corrected. No Years
     // Back slice applies here either: that is an Annually rule.
     renderPage("", MIS_PERIODS.MONTHLY);
     expect(summary.lastRanges).toHaveLength(13);
@@ -1365,8 +1352,8 @@ describe("the QRR and MRR Builds", () => {
   });
 
   it("narrows the customers table to a recent run plus today on a Delayed type", async () => {
-    // Carried here by ticket 10. Delayed QRR is two historic quarters plus the
-    // current day (`useCustomerAccounts.js:59`), not the seven quarters the
+    // Delayed QRR is two historic quarters plus the current day, not the seven
+    // quarters the
     // Build draws — a Delayed figure is revenue that has not landed, so a long
     // tail of closed quarters says nothing.
     renderPage("?table=customers&type=Delayed+QRR", MIS_PERIODS.QUARTERLY);
@@ -1382,9 +1369,9 @@ describe("the QRR and MRR Builds", () => {
   });
 
   it("says which defaults it landed on when a Period switch drops the filters", async () => {
-    // Ticket 12 predicted this came free: "the Period half of it needs no new
-    // code, only a Period that can actually move." It did not. A Period switch
-    // is a NAVIGATION, so the bar unmounts and its `seededFor` re-initialises
+    // A Period switch was expected to come free once the Period could move. It
+    // did not. A Period switch is a NAVIGATION, so the bar unmounts and its
+    // `seededFor` re-initialises
     // to the view it arrived on — the comparison that drives the notice can
     // never be true. A Table switch works only because it stays on one route.
     renderRouted(`${misPathFor(MIS_PERIODS.ANNUALLY)}?channel=Channel`);
@@ -1407,7 +1394,7 @@ describe("the QRR and MRR Builds", () => {
   });
 
   it("serialises a default view to an empty query string on each of the three Periods", () => {
-    // Test §10.1, which ticket 02 pinned on Annually alone. Years Back defaults
+    // Years Back defaults
     // to 1 off Annually and 5 on it, so this is also where a Period that kept
     // the annual default would show itself — as a `years=` nobody asked for.
     for (const period of [MIS_PERIODS.ANNUALLY, MIS_PERIODS.QUARTERLY, MIS_PERIODS.MONTHLY]) {
@@ -1419,7 +1406,7 @@ describe("the QRR and MRR Builds", () => {
 });
 
 describe("the Region Summary's two views", () => {
-  // `RegionSummaryTabs.js`. Exit ARR is each region's BALANCE at the column's
+  // Exit ARR is each region's BALANCE at the column's
   // date, split by business unit; All ARR Metrics is each region's MOVEMENT
   // over the column, narrowed to one business unit. Two questions, not two
   // arrangements of one answer.
@@ -1429,7 +1416,7 @@ describe("the Region Summary's two views", () => {
     await userEvent.click(screen.getByRole("button", { name: "All ARR Metrics" }));
   };
 
-  it("opens on Exit ARR, which is what the source opens on", () => {
+  it("opens on Exit ARR", () => {
     renderPage("?table=region-summary");
     expect(screen.getByRole("button", { name: "Exit ARR" })).toHaveAttribute(
       "aria-pressed",
@@ -1470,8 +1457,8 @@ describe("the Region Summary's two views", () => {
   });
 
   it("narrows the metrics by the unit the reader selected, which Exit ARR ignores", async () => {
-    // The deviation this view takes: the source gives it a pill row of its own,
-    // and here it binds to the unit tabs the screen already carries.
+    // This view binds to the unit tabs the screen already carries, rather than
+    // keeping a second unit control of its own.
     renderPage("?table=region-summary&unit=BU_APIM");
     await userEvent.click(screen.getByRole("button", { name: "All ARR Metrics" }));
     expect(regionMetrics.askedFilters.at(-1)).toMatchObject({ buProductSelection: "BU_APIM" });
@@ -1483,7 +1470,7 @@ describe("the Region Summary's two views", () => {
     expect(regionMetrics.askedBySalesRegion.at(-1)).toBe(false);
   });
 
-  it("returns to Sales Region when the view changes, as the source does", async () => {
+  it("returns to Sales Region when the view changes", async () => {
     renderPage("?table=region-summary");
     await userEvent.click(screen.getByRole("button", { name: "Sub Region" }));
     expect(regionExit.askedBySalesRegion.at(-1)).toBe(false);
@@ -1507,7 +1494,7 @@ describe("the Region Summary's two views", () => {
 
   it("says what to do when a custom selection has asked for no units", async () => {
     // `regionMetricsRequests` returns no bodies, so the hook returns no columns
-    // — the same state as no columns at all, and the source's own words for it.
+    // — the same state as no columns at all.
     regionMetrics.value = {
       columns: [],
       isLoading: false,
@@ -1527,8 +1514,7 @@ describe("the Region Summary's two views", () => {
 });
 
 
-// Ticket 10, reopened. `GET /opportunities` was on ticket 13's checklist and
-// belongs here: its only caller in the source is this table's row dialog.
+// `GET /opportunities` belongs here: this table's row dialog is its only caller.
 describe("opening the opportunities behind an account", () => {
   /** The first openable figure cell on Northwind's row. */
   const northwindFigure = () => {
@@ -1573,11 +1559,11 @@ describe("opening the opportunities behind an account", () => {
   const northwindFigureUnder = (periodLabel: string) =>
     within(northwindCellUnder(periodLabel)).getByRole("button");
 
-  // §10.22a. Two Periods on screen, and each clicked in turn, because with one
-  // column "that column's date" and "a column's date" are the same claim — a
-  // dialog that always asked as at the newest Period, or the first, would pass.
-  // The date is the column's own closing date: NOT recovered by running regexes
-  // over the column header the way the source does it.
+  // Two Periods on screen, and each clicked in turn, because with one column
+  // "that column's date" and "a column's date" are the same claim — a dialog
+  // that always asked as at the newest Period, or the first, would pass. The
+  // date is the column's own closing date, not a date scraped back out of the
+  // column header.
   it("opens on a figure cell, and asks for that account as at that column", async () => {
     const periods = customerColumns().slice(-2);
     customers.value = {
@@ -1625,11 +1611,10 @@ describe("opening the opportunities behind an account", () => {
     expect(within(total).queryAllByRole("button")).toHaveLength(0);
   });
 
-  // §10.22b, its other half. Only a figure cell belongs to a Period, so only a
-  // figure cell has a date to ask about. The source opens on ANY cell, identity
-  // columns included, then scrapes a date back out of the column header it
-  // printed (`DataGrid.js:604-626`) — so a click on an Account Owner asks about
-  // a date that was never in the cell. Every identity cell is CLICKED, rather
+  // Only a figure cell belongs to a Period, so only a figure cell has a date
+  // to ask about. Opening an identity cell and scraping a date out of the
+  // column header would ask about a date that was never in the cell. Every
+  // identity cell is CLICKED, rather
   // than searched for a button, so a handler hung on the row is caught as well
   // as one on the cell.
   it("does not open anything from an identity cell", async () => {
@@ -1662,7 +1647,7 @@ describe("opening the opportunities behind an account", () => {
 });
 
 
-// Ticket 08 / spec §11.8. The decision is that the notice appears and the table
+// The notice appears and the table
 // STILL RENDERS — it is a sentence above one, not a substitute for it. So what
 // this pins is both halves, on the real screen rather than on the component.
 //

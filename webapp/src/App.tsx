@@ -432,8 +432,8 @@ export default function App() {
             <>
               {/* A layout route for one reason: the session Years Back. A reader
                   who has set three years keeps three years across MIS screens, and
-                  it is held in memory alone (it dies with the tab, like the Redux
-                  slice it is ported from) — so its provider has to outlive any one
+                  it is held in memory alone (it dies with the tab) — so its provider
+                  has to outlive any one
                   screen. Inside MisShell it would be remounted on every navigation
                   between these two. See YearsBackSessionContext. */}
               {/* All three Builds INSIDE `MisSession`, not beside it. The session

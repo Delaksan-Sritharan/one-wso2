@@ -34,15 +34,15 @@ vi.hoisted(() => {
   } as Window["config"];
 });
 
-// The half of §10.10 / §10.11 / §10.12 that says "in the rail".
+// What a person sees in the Finance rail.
 //
 // The gate suite proves the decision and the routing suite proves the screens
-// honour it, but BETWEEN them sits a line of dispatch in SideRail —
-// `if (MIS_ITEM_IDS.has(s.id)) return misGate.canSee(s.id)` — that neither
-// touches. Delete that line and every other MIS test still passes, while the
-// rail silently falls through to `sectionAllowed(requires, caps)`, where
-// `requires: ["admin"]` means a people-app admin. So this renders the REAL rail
-// with the REAL gate and mocks only the HTTP answer underneath.
+// honour it. Between them the visibility fold claims the MIS sections and
+// answers them with `misVisibility`. Drop that claim and every other MIS test
+// still passes, while the rail falls through to `sectionAllowed(requires, caps)`,
+// where `requires: ["admin"]` is a One WSO2 admin and not ARR access. So this
+// renders the real rail with the real gate and mocks only the HTTP answer
+// underneath.
 
 const privileges = { value: [] as number[] };
 // `productsUsageEnabled` from GET /app-configs — whether ARR Analysis exists.
@@ -190,7 +190,6 @@ beforeEach(() => {
 });
 
 describe("the Finance rail", () => {
-  // §10.10
   it("offers the ARR screens to someone holding the ARR privilege, and no Flash Dashboard", () => {
     privileges.value = [987];
     showRail();
@@ -198,8 +197,8 @@ describe("the Finance rail", () => {
     expect(screen.queryByText("Flash Dashboard")).not.toBeInTheDocument();
   });
 
-  // The Flash Dashboard stays in the MIS app (spec §1), so its privilege has
-  // nothing to open here — not a Flash row, and not an empty MIS group either.
+  // The Flash Dashboard is not part of One WSO2, so its privilege has nothing
+  // to open here — not a Flash row, and not an empty MIS group either.
   it("offers no MIS entry at all to someone holding only the Flash privilege", () => {
     privileges.value = [789];
     showRail();
@@ -208,7 +207,7 @@ describe("the Finance rail", () => {
     expect(screen.queryByText("MIS")).not.toBeInTheDocument();
   });
 
-  // §10.12. The case the 987 collision makes dangerous: this person IS
+  // The case the 987 collision makes dangerous: this person IS
   // privilege 987 as far as One WSO2 is concerned, because every authenticated
   // user is. Only the MIS backend's own answer says otherwise.
   it("offers no MIS entry at all to someone holding neither", () => {
@@ -235,7 +234,7 @@ describe("the Finance rail", () => {
     }
   });
 
-  // The flag half of ticket 13: off means the entry is ABSENT, not disabled.
+  // Off means the entry is ABSENT, not disabled.
   // This is the assertion that would catch the flag being dropped from the
   // gate — the routing suite's redirect could pass while the rail still
   // advertised a screen that bounces on click.

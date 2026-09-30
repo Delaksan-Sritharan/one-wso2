@@ -135,7 +135,7 @@ import { misExportFilename, misFilenameWord } from "../export/misExportFilename"
  * What each Build screen calls itself, and which rail entry gates it.
  *
  * One `MisArrBuildPage` serves all three routes because they ARE one screen —
- * ticket 12 is the Period variations, not a second Build. What differs is the
+ * the Period is what varies, not a second Build. What differs is the
  * name and the gate id, so that is what this map holds; everything else reads
  * the Period out of `view`.
  */
@@ -370,8 +370,8 @@ function ArrBuildGrid({ view, scale }: { view: MisViewState; scale: MisScale }) 
       />
       {/* Mounted only while open. MUI would otherwise keep it in the document
           through its exit transition with the row and Period already cleared,
-          so the title reads as a bare separator on the way out — a flicker the
-          source has too (`drillDownTitle` runs unguarded on every render). */}
+          so the title reads as a bare separator on the way out — `drillDownTitle`
+          runs unguarded on every render. */}
       {opened !== null && (
       <MisCustomerDrillDown
         open
@@ -411,20 +411,18 @@ function ArrBuildGrid({ view, scale }: { view: MisViewState; scale: MisScale }) 
  * screen where `BuildTable`'s row windowing (07) actually runs.
  *
  * Its columns are `buildColumnRanges`, the same slice the Subscription Build
- * takes. The source is confusing here and ticket 10 got it wrong first time
- * round: this table FETCHES `generateFullYearRanges(-yearsBack, 0)` — a year
- * more than Subscription — while its COLUMN definition (`tableUtils.js:1091`)
- * is `-(yearsBack - 1)`, identical to Subscription's. So the source asks for a
- * year it never renders, and reading the fetch as if it were the column list
- * put six Periods on screen where the source shows five.
+ * takes. The fetch asks for one year more than those columns render
+ * (`generateFullYearRanges(-yearsBack, 0)` versus `-(yearsBack - 1)`), so
+ * reading the fetch as the column list would put six Periods on screen where
+ * five belong.
  */
 function CustomersGrid({ view, scale }: { view: MisViewState; scale: MisScale }) {
-  // BU only is the source's default — `DataGrid.js:365` is `useState(true)` —
-  // so it is the default here. Both breakdowns read the same response, so this
+  // The business-unit split is the default, so it starts on. Both breakdowns
+  // read the same response, so this
   // switches columns and fires no request.
   const [buOnly, setBuOnly] = useState(true);
   // `customerColumnRanges`, not `buildColumnRanges`: this is the one table with
-  // ranges of its own, and only on a Delayed type, where the source shows a
+  // ranges of its own, and only on a Delayed type, where the columns are a
   // recent run plus today rather than the whole Period. See misPeriods.ts.
   const ranges = useMemo(
     () => customerColumnRanges(view.period, view.viewWindow, view.filters),
@@ -447,8 +445,8 @@ function CustomersGrid({ view, scale }: { view: MisViewState; scale: MisScale })
     () => new Map(ranges.map((range) => [buildColumnLabel(range), range])),
     [ranges],
   );
-  // Seventeen identity columns, or eighteen on a Delayed type — the source
-  // spreads Delayed Day Count in only there.
+  // Seventeen identity columns, or eighteen on a Delayed type — Delayed Day
+  // Count is spread in only there.
   const leadColumns = customerLeadColumns(typeValueOf(view.filters));
 
   // Not memoised, for the same reason the Build's `byColumn` is not:
@@ -502,10 +500,9 @@ function CustomersGrid({ view, scale }: { view: MisViewState; scale: MisScale })
       negative: typeof raw === "number" && raw < 0,
       muted: raw === undefined,
       // A FIGURE cell opens the opportunities, and only a figure cell: only
-      // one belongs to a Period and so has a date to ask about. The source
-      // opens on any cell in the table, identity columns included, and then
-      // scrapes the date back out of the column header it printed
-      // (`DataGrid.js:604-626`).
+      // one belongs to a Period and so has a date to ask about. An identity
+      // cell has no date of its own, and scraping one out of the column header
+      // would ask about a date that was never in the cell.
       //
       // The Total row is excluded by `account` alone — its id is `TOTAL_ROW`,
       // which no account carries, so the lookup misses. An explicit
@@ -528,10 +525,10 @@ function CustomersGrid({ view, scale }: { view: MisViewState; scale: MisScale })
     return <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 1.5, mt: 1.5 }} />;
   }
 
-  // Above every state but loading, which is where the source puts its own
-  // (`DataGrid.js:1063-1105` gates the control on `!loading` alone) and where
-  // the Region Summary's two controls sit beside this one. It matters most on
-  // the states that are not the happy one: a reader who lands on an error or
+  // Above every state but loading: the control is gated on `!loading` alone,
+  // and it sits where the Region Summary's two controls sit beside this one.
+  // It matters most on the states that are not the happy one: a reader who
+  // lands on an error or
   // an empty book keeps the control, rather than losing the switch at the
   // moment they most want to try the other side of it.
   const breakdownTabs = <MisCustomerBreakdownTabs buOnly={buOnly} onChange={setBuOnly} />;
@@ -632,15 +629,14 @@ function CustomersGrid({ view, scale }: { view: MisViewState; scale: MisScale })
  */
 function RegionSummaryGrid({ view, scale }: { view: MisViewState; scale: MisScale }) {
   // Component state, and not in the URL — see `MisRegionSummaryTabs` and
-  // `MisRegionTypeTabs` for why, and `docs/ported-apps/mis.md` §11 for the
-  // decision both are waiting on.
+  // `MisRegionTypeTabs`. The two views are not part of the shared address.
   const [summaryView, setSummaryView] = useState<MisRegionSummaryView>(
     MIS_REGION_SUMMARY_VIEWS.EXIT_ARR,
   );
   const [bySalesRegion, setBySalesRegion] = useState(true);
 
-  // Switching view returns the cut to Sales Region, which is the source's own
-  // `handleTabChange`. The two views ask the backend for different things, so
+  // Switching view returns the cut to Sales Region. The two views ask the
+  // backend for different things, so
   // carrying a Sub Region cut across would silently re-read the other table by
   // a geography the reader chose for this one.
   const changeView = (next: MisRegionSummaryView) => {
@@ -767,15 +763,12 @@ function RegionExitGrid({
  * instead of business units, and the unit selection narrows the question here
  * where it is ignored there.
  *
- * ---- the unit selection is the deviation, and it is deliberate -------------
+ * ---- the unit selection binds to the tabs already on screen ---------------
  *
- * The source gives this view a pill row of its own — eight pills plus a custom
- * chip panel — held in the table's component state, beside the unit tabs the
- * screen already carries. Two unit controls on one screen that can disagree,
- * and only one of them in the link a reader shares. Here it binds to the tabs
+ * A second unit control beside the tabs could disagree with them, and only one
+ * of the two would be in the link a reader shares. Here it binds to the tabs
  * above, so there is one unit selection, it is in the address, and the tabs
- * stop being enabled-but-ignored on this Table. Recorded in
- * `docs/ported-apps/mis.md` §7, and it retires the §8 note about the tabs.
+ * stop being enabled-but-ignored on this Table.
  */
 function RegionMetricsGrid({
   view,
@@ -818,8 +811,8 @@ function RegionMetricsGrid({
       // One row is the computed total with no regions under it — the same
       // reading the Exit ARR view takes.
       isEmpty={rows.length <= 1}
-      // The source's own words for the state a custom selection with nothing
-      // ticked lands in, which is also where no columns lands.
+      // The words for a custom selection with nothing ticked, which is also
+      // where no columns lands.
       emptyMessage="Choose units to generate region metrics, or widen Years Back."
       errorMessage={`Couldn't load the ARR metrics. ${metrics.errorMessage}`}
       scale={scale}
@@ -1020,8 +1013,8 @@ function GridCaptionBar({ scale, exportButton }: { scale: MisScale; exportButton
 /**
  * `arr_build_bu_summary_2026-09-14.xlsx` — which table, and the day it was taken.
  *
- * Dated in Pacific Time rather than UTC, which is `misExportFilename`'s own
- * departure from the source; the table's own label rather than a second set of
+ * Dated in Pacific Time rather than UTC, which is how `misExportFilename`
+ * dates a file; the table's own label rather than a second set of
  * words for the four tables, so the file is named what the tab the reader
  * clicked is named.
  */
@@ -1059,7 +1052,7 @@ const oneSheet = <L extends MisLeadColumn>(sheet: MisBuildSheetInput<L>): MisWor
  */
 const ALL_CURRENCY = () => MIS_VALUE_TYPES.CURRENCY;
 
-/** The source's fixed widths for the two summaries' row-label columns. */
+/** Fixed widths for the two summaries' row-label columns. */
 const REGION_LABEL_WIDTH = 170;
 const BU_LABEL_WIDTH = 200;
 

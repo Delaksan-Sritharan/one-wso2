@@ -24,16 +24,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // Vitest's 5s default is the wrong one for this file: each test mounts a whole
 // MIS screen, and under the full suite's parallelism that runs past five
 // seconds while taking a fraction of one on its own. It began timing out when
-// ticket 14 added five more component-heavy files to the same run — the load
-// changed, not this file. Same line as the other screen-mounting suites here.
+// more component-heavy files joined the same run — the load changed, not this
+// file. Same line as the other screen-mounting suites here.
 vi.setConfig({ testTimeout: 20_000 });
 
-// Test checklist §10.10, §10.11 and §10.12 — what a person actually SEES at a
-// MIS URL they are and are not entitled to.
+// What a person actually sees at a MIS URL they are and are not entitled to.
 //
 // Two populations: the ARR privilege, and not. (A Flash-only holder is the
-// second — the Flash Dashboard stays in the MIS app (spec §1), and the gate
-// suite pins that its privilege opens nothing here.) The gate suite proves the
+// second — the Flash Dashboard is not part of One WSO2, and the gate suite
+// pins that its privilege opens nothing here.) The gate suite proves the
 // decision; this proves the decision reaches the screen.
 //
 // Typing a URL you cannot use gives a locked panel, NOT a redirect. A redirect
@@ -169,7 +168,7 @@ describe("someone holding the ARR privilege", () => {
   });
 });
 
-// §10.12. Being signed in is not a MIS privilege — which is precisely what 987
+// Being signed in is not a MIS privilege — which is precisely what 987
 // means everywhere else in this app, and why this is the case that would
 // regress silently.
 describe("someone without the ARR privilege", () => {

@@ -34,7 +34,7 @@ vi.hoisted(() => {
   } as Window["config"];
 });
 
-// The half of §10.12 that says "no MIS overview card".
+// Finance's landing must not advertise MIS to someone who cannot open it.
 //
 // Finance no longer HAS overview cards. Its landing forwards to the first item
 // the reader can open (`forwardsToFirstItem`, PerspectiveLanding), so the one
@@ -83,8 +83,8 @@ vi.mock("@context/perspective/PerspectiveContext", () => ({
 }));
 
 // One WSO2's own /user-info says 987 for EVERY reader below, because it says so
-// for every signed-in employee (PRIVILEGE.EMPLOYEE). That is the collision the
-// spec warns about: the number that means "may see company ARR" to MIS means
+// for every signed-in employee (PRIVILEGE.EMPLOYEE). That is the collision:
+// the number that means "may see company ARR" to MIS means
 // "is signed in" here. So a landing that read MIS access off this answer instead
 // of MIS's own would open ARR Build to the whole company, and this is the
 // answer that would make it do so.
@@ -212,7 +212,6 @@ describe("the Finance landing", () => {
     expect(address()).toBe(misPaths.arrBuild);
   });
 
-  // §10.12.
   it("offers nothing of MIS to someone holding neither privilege", () => {
     misPrivileges.value = [];
     openFinance();

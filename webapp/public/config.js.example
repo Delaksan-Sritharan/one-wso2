@@ -94,8 +94,8 @@ window.config = {
   // is GET <base-url>/update/user-info.
   // ONE_WSO2_UMT_BACKEND_URL: "<your-updates-manager-backend-url>",
 
-  // Finance MIS (digiops-finance/apps/mis) — its ARR service. Optional — when
-  // absent, MIS makes no requests.
+  // Finance MIS — the ARR service at ONE_WSO2_MIS_ARR_BACKEND_URL. Optional —
+  // when absent, MIS makes no requests.
   //
   // Two things to get right, each of which fails silently if you don't:
   //
@@ -107,13 +107,12 @@ window.config = {
   //  2. The version segment is part of the URL and differs by environment —
   //     production ends /v1, staging ends /v1.0. Don't normalise them.
   //
-  // Only the ARR service is configured here. MIS's Flash and Admin services
-  // serve only the Flash Dashboard, which stays in the MIS app, so they have
-  // no key.
+  // Only the ARR service is configured here. The Flash Dashboard is not part
+  // of One WSO2, so Flash and Admin have no key.
   //
   // Configuring the URL is not enough to show MIS: every MIS screen is also
   // behind the `mis` preview flag (ONE_WSO2_PREVIEW_FEATURES, below) until
-  // Finance has signed off its parity check.
+  // Finance has verified its figures.
   //
   // ONE_WSO2_MIS_ARR_BACKEND_URL: "<mis-arr-backend-url>",
 

@@ -78,11 +78,9 @@ import { MIS_SCALES, type MisScale } from "../util/misViewVocabulary";
 //
 // ---- where the Build's screens have a URL and this one does not ------------
 //
-// Every filter here is component state. The source's are too, so a shared link
-// opens on defaults in both apps — reproduced for parity rather than fixed,
-// because extending the URL contract ticket 02 pinned is a contract decision
-// and not a side effect of porting a table. Recorded as an open question in
-// spec §11.
+// Every filter here is component state, so a shared link opens on the defaults.
+// Putting them in the query string would be a new contract: nothing on this
+// screen is serialised today.
 
 /** The screen's own name, in the rail, the tab title and the heading. */
 const TITLE = "ARR Analysis";
@@ -129,12 +127,11 @@ function ArrAnalysis() {
   const configs = useMisAppConfigs();
 
   // The reads are keyed on the SETTLED filters, the controls on the live ones.
-  // Named `settled` rather than `applied`: the port reserves **Applied
-  // filter** for one serialised into the query string, and nothing on this
-  // screen is.
-  // Ticket 13 had two reads per change and no debounce; the charts below take
-  // that to ten — one per industry, two for the partner split — so a reader
-  // stepping through four Sales Regions would fire forty. Debounced in ONE
+  // Named `settled` rather than `applied`: an applied filter is one serialised
+  // into the query string, and nothing on this screen is.
+  // The charts take the reads to ten — one per industry, two for the partner
+  // split — so a reader stepping through four Sales Regions would fire forty.
+  // Debounced in ONE
   // place so all four reads move together: staggering them would leave the
   // table and the charts above it briefly answering different questions, which
   // is the one thing a screen built for comparing them must not do.
@@ -279,10 +276,9 @@ function ArrAnalysis() {
  * it.
  *
  * The logo count is the number of rows on screen rather than a figure from the
- * backend — which is what the source does too, and for a better reason than it
- * realises: `fetchSummaryMetrics` asks for `logoCount` and hard-codes the
- * answer to `0` (`arrAnalysisApi.js:197-210`), so the row count is the only
- * true one available. Counting the rows also makes the pair legible together:
+ * backend. The summary endpoint's `logoCount` is hard-coded to 0, so the row
+ * count is the only true one available. Counting the rows also makes the pair
+ * legible together:
  * the count is of exactly the accounts listed below it.
  */
 function SummaryCards({
@@ -333,10 +329,10 @@ function SummaryCards({
           <Skeleton variant="text" width={160} height={44} />
         ) : (
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            {/* A HEADLINE, so it is compact, in dollars, and NOT scaled — the
-                source's own rule, and `misHeadlineAmount` has no Scale
-                parameter to break it with. An em dash rather than a zero when
-                the figure never arrived: `$0` would state something. */}
+            {/* A HEADLINE, so it is compact, in dollars, and NOT scaled —
+                `misHeadlineAmount` has no Scale parameter to break it with. An
+                em dash rather than a zero when the figure never arrived: `$0`
+                would state something. */}
             {arr == null ? "—" : misHeadlineAmount(arr)}
           </Typography>
         )}
@@ -353,9 +349,8 @@ function SummaryCards({
             {/* The reader's Scale IS handed over here, and makes no
                 difference: `formatMisValue` reads it in the currency branch
                 and nowhere else, so a count cannot be divided by a thousand
-                however it is called. Spec §3, exercised rather than asserted —
-                which is the only reason this component takes `scale` at all now
-                that the figure above is a headline. */}
+                however it is called. That is why this component still takes
+                `scale` now that the figure above is a headline. */}
             {formatMisValue(accountCount, MIS_VALUE_TYPES.COUNT, { scale })}
           </Typography>
         )}

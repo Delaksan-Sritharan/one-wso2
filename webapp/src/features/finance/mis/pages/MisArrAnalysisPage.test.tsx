@@ -119,7 +119,7 @@ vi.mock("../api/useAnalysisAccounts", () => ({
     retry: () => {},
   }),
 }));
-// Ticket 14's two breakdowns. Same reason as the table's reads: what is under
+// The two breakdowns. Same reason as the table's reads: what is under
 // test is the flag and the gate, not what the charts say.
 vi.mock("../api/useAnalysisBreakdowns", () => ({
   useAnalysisPartnerModels: () => ({
