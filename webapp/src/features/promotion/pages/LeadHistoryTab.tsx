@@ -60,6 +60,7 @@ export default function LeadHistoryTab() {
     { field: "employeeEmail", headerName: "Employee Email", flex: 1.3, minWidth: 190 },
     { field: "promotionCycle", headerName: "Promotion Cycle", flex: 0.9, minWidth: 130 },
     {
+      display: "flex",
       field: "recommendationStatus",
       headerName: "Lead Status",
       flex: 0.9,
@@ -74,6 +75,7 @@ export default function LeadHistoryTab() {
       ),
     },
     {
+      display: "flex",
       field: "promotionRequestStatus",
       headerName: "Promotion Status",
       flex: 0.9,
@@ -84,6 +86,7 @@ export default function LeadHistoryTab() {
       ),
     },
     {
+      display: "flex",
       field: "action",
       headerName: "",
       sortable: false,

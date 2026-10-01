@@ -73,6 +73,7 @@ export default function CycleHistoryTab() {
   const columns: DataGrid.GridColDef<PromotionRequestFull>[] = [
     ...basePromotionRequestColumns(),
     {
+      display: "flex",
       field: "status",
       headerName: "Promotion Board Approval Status",
       flex: 1.2,
@@ -82,6 +83,7 @@ export default function CycleHistoryTab() {
       ),
     },
     {
+      display: "flex",
       field: "action",
       headerName: "Action",
       sortable: false,

@@ -77,6 +77,7 @@ export default function FLApprovedListTab() {
       valueGetter: (_value, row) => boardStatusLabel(row),
     },
     {
+      display: "flex",
       field: "action",
       headerName: "",
       sortable: false,

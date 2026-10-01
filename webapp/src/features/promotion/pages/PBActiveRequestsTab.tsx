@@ -97,6 +97,7 @@ export default function PBActiveRequestsTab() {
   const columns: DataGrid.GridColDef<PromotionRequestFull>[] = [
     ...basePromotionRequestColumns(),
     {
+      display: "flex",
       field: "action",
       headerName: "Action",
       sortable: false,
@@ -111,12 +112,12 @@ export default function PBActiveRequestsTab() {
             </IconButton>
           </Tooltip>
           <Tooltip title="Approve">
-            <IconButton size="small" onClick={() => confirmApprove([params.row.id])}>
+            <IconButton size="small" color="success" onClick={() => confirmApprove([params.row.id])}>
               <CheckIcon size={16} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Reject">
-            <IconButton size="small" onClick={() => setRejectTarget([params.row.id])}>
+            <IconButton size="small" color="error" onClick={() => setRejectTarget([params.row.id])}>
               <XIcon size={16} />
             </IconButton>
           </Tooltip>

@@ -101,6 +101,7 @@ function NotifyGrid({
   const columns: DataGrid.GridColDef<PromotionRequestFull>[] = [
     ...basePromotionRequestColumns(),
     {
+      display: "flex",
       field: "action",
       headerName: "",
       sortable: false,

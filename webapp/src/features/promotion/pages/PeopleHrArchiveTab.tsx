@@ -92,6 +92,7 @@ export default function PeopleHrArchiveTab() {
 
   const columns: DataGrid.GridColDef<ArchivedPromotion>[] = [
     {
+      display: "flex",
       field: "firstName",
       headerName: "Employee",
       flex: 1,
@@ -105,6 +106,7 @@ export default function PeopleHrArchiveTab() {
     { field: "email", headerName: "Email", flex: 1.2, minWidth: 200 },
     { field: "promotedDesignation", headerName: "Promoted Designation", flex: 1.2, minWidth: 200 },
     {
+      display: "flex",
       field: "inBand",
       headerName: "Type",
       flex: 0.6,
