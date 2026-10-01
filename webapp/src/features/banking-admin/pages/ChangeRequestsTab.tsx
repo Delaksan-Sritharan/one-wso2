@@ -132,6 +132,7 @@ export default function ChangeRequestsTab() {
               key={request.accountId}
               request={request}
               disabled={submitting}
+              approving={approveAccount.isPending && approveAccount.variables === request.accountId}
               onApprove={() => requestApprove(request)}
               onReject={() => setRejectTarget(request)}
               onInfo={() => setInfoTarget(request)}
@@ -149,7 +150,7 @@ export default function ChangeRequestsTab() {
       <ConfirmationDialog content={confirmation} onClose={() => setConfirmation(null)} />
 
       {rejectTarget && (
-        <RejectDialog isSubmitting={submitting} onCancel={() => setRejectTarget(null)} onSubmit={submitReject} />
+        <RejectDialog isSubmitting={rejectAccount.isPending} onCancel={() => setRejectTarget(null)} onSubmit={submitReject} />
       )}
 
       {infoTarget && <AccountDetailsDialog request={infoTarget} onClose={() => setInfoTarget(null)} />}
@@ -160,12 +161,14 @@ export default function ChangeRequestsTab() {
 function RequestCard({
   request,
   disabled,
+  approving,
   onApprove,
   onReject,
   onInfo,
 }: {
   request: BankAccount;
   disabled: boolean;
+  approving: boolean;
   onApprove: () => void;
   onReject: () => void;
   onInfo: () => void;
@@ -194,10 +197,10 @@ function RequestCard({
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button size="small" disabled={disabled} loading={disabled} onClick={onApprove}>
+          <Button size="small" disabled={disabled} loading={approving} onClick={onApprove}>
             Approve
           </Button>
-          <Button size="small" color="error" disabled={disabled} loading={disabled} onClick={onReject}>
+          <Button size="small" color="error" disabled={disabled} onClick={onReject}>
             Reject
           </Button>
           <Button size="small" onClick={onInfo}>

@@ -133,6 +133,7 @@ export default function AdminTab() {
           currentValue={config?.salaryThreshold}
           canEdit={isPeopleOperationsAdmin}
           disabled={submitting}
+          updating={updateThreshold.isPending && updateThreshold.variables?.key === "SALARY_THRESHOLD"}
           onUpdate={(value) => requestThresholdUpdate("SALARY_THRESHOLD", value, "Salary Threshold Date")}
         />
         <ThresholdField
@@ -141,6 +142,7 @@ export default function AdminTab() {
           currentValue={config?.consultancyThreshold}
           canEdit={isFinanceAdmin}
           disabled={submitting}
+          updating={updateThreshold.isPending && updateThreshold.variables?.key === "CONSULTANCY_THRESHOLD"}
           onUpdate={(value) => requestThresholdUpdate("CONSULTANCY_THRESHOLD", value, "Consultancy Threshold Date")}
         />
       </Stack>
@@ -155,7 +157,12 @@ export default function AdminTab() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Button variant="contained" disabled={submitting} loading={submitting} onClick={() => setAddBankOpen(true)}>
+            <Button
+              variant="contained"
+              disabled={submitting}
+              loading={createBank.isPending}
+              onClick={() => setAddBankOpen(true)}
+            >
               Add Bank
             </Button>
           </Box>
@@ -222,7 +229,7 @@ export default function AdminTab() {
           <Button
             variant="contained"
             disabled={!isNewBankValid || submitting}
-            loading={submitting}
+            loading={createBank.isPending}
             onClick={submitNewBank}
           >
             Submit
@@ -241,6 +248,7 @@ function ThresholdField({
   currentValue,
   canEdit,
   disabled,
+  updating,
   onUpdate,
 }: {
   label: string;
@@ -248,6 +256,7 @@ function ThresholdField({
   currentValue: number | undefined;
   canEdit: boolean;
   disabled: boolean;
+  updating: boolean;
   onUpdate: (value: number) => void;
 }) {
   // `undefined` means "not yet touched by the admin" — the displayed value
@@ -287,7 +296,7 @@ function ThresholdField({
         variant="contained"
         aria-label={buttonLabel}
         disabled={value === "" || isUnchanged || !canEdit || disabled}
-        loading={disabled}
+        loading={updating}
         onClick={() => value !== "" && onUpdate(value)}
       >
         Update

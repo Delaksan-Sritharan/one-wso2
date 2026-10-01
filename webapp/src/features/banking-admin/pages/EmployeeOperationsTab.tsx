@@ -131,8 +131,18 @@ export default function EmployeeOperationsTab() {
               }
             }
           }
-          if (failedCount === 0 && deactivatedCount > 0) {
+          // Always leave the admin with one summary line, even when the two
+          // per-account counters above don't tell the whole story on their
+          // own: no ACTIVE accounts at all (both stay 0), or a partial
+          // failure (the accounts that did deactivate are otherwise only
+          // implied by the per-account error toasts already shown).
+          const attempted = deactivatedCount + failedCount;
+          if (attempted === 0) {
+            showSuccess(`Resigned ${employeeEmail}: no active accounts to deactivate.`);
+          } else if (failedCount === 0) {
             showSuccess(`Resigned ${employeeEmail}: deactivated ${deactivatedCount} account(s).`);
+          } else {
+            showError(`Resigned ${employeeEmail}: deactivated ${deactivatedCount} of ${attempted} account(s).`);
           }
         })();
       },
@@ -157,7 +167,7 @@ export default function EmployeeOperationsTab() {
               size="small"
               color="error"
               disabled={a.accountStatus === "INACTIVE" || submitting}
-              loading={submitting}
+              loading={deactivateAccount.isPending && deactivateAccount.variables?.accountId === a.accountId}
               onClick={() => requestDeactivate(a)}
             >
               Deactivate
