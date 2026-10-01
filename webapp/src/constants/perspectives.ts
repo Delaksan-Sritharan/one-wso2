@@ -51,6 +51,7 @@ import {
 import type { Capability, MenuApp } from "@constants/appMenu";
 import {
   FINANCE_OVERVIEW_APPS,
+  FINANCE_MASTER_DATA_APPS,
   FINANCE_PERSPECTIVE_APPS,
   ME_FINANCE_APPS,
 } from "@constants/financeApps";
@@ -619,6 +620,13 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
       // so reading one for the other would show company revenue to everyone.
       // Behind the `mis` preview flag. The routes carry the same flag.
       ...(isPreviewEnabled("mis") ? appsToSections(MIS_APPS) : []),
+      // Master Data last, under everything else. It is reference data an
+      // administrator edits occasionally — subsidiaries, departments, expense
+      // types, the card register — not a screen anyone opens to do their day's
+      // work, and the rail reads top to bottom in roughly that order. It is
+      // also the only group here that most readers never see at all, so
+      // keeping it off the path to the screens they do use costs them nothing.
+      ...appsToSections(FINANCE_MASTER_DATA_APPS),
     ],
   },
   // Legal. Currently just a second entry point into Due Diligence (see the

@@ -23,6 +23,7 @@ import {
   Box,
   Button,
   Chip,
+  Skeleton,
   Stack,
   Tab,
   Table,
@@ -261,8 +262,17 @@ export default function DecidedTab() {
 
       {/* "Nothing has been decided" is a claim about the data, so it is only
           made when the data actually arrived — a failure stands alone,
-          saying both at once tells the reader two different things. */}
-      {queuesLoading ? null : expenseRows.length === 0 && opdRows.length === 0 ? (
+          saying both at once tells the reader two different things.
+          A Skeleton here, unlike `identityLoading` above: that one guards
+          the WHOLE tab, which flips between "tabs" and "nothing" as identity
+          resolves, so a skeleton there would be one more thing to blink on
+          the way to a final answer. This one guards only the list rows below
+          still-mounted tabs and filters, whose shape never changes between a
+          fresh page load and a filter change — so with nothing here, a page
+          load and "nothing was ever decided" looked identical. */}
+      {queuesLoading ? (
+        <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1.5 }} />
+      ) : expenseRows.length === 0 && opdRows.length === 0 ? (
         !failure && (
           <Typography sx={{ fontSize: 13, color: "text.secondary", py: 3 }}>
             {employee || claimIdFilter ? "No claims match these filters." : `Nothing ${outcome} yet.`}
@@ -304,8 +314,19 @@ export default function DecidedTab() {
                   {money(claim.totalAmount, claim.currencyCode ?? "LKR")}
                 </TableCell>
                 {/* Blank for a lead-stage decision: the backend records no lead
-                    approver, so naming one would be a guess. */}
-                <TableCell sx={CELL}>{claim.statusDetails.financeApproverEmail ?? "—"}</TableCell>
+                    approver, so naming one would be a guess. ALSO blank for a
+                    lead-only viewer on a row finance decided: `leadDecided`
+                    includes APPROVED/FINANCE_REJECTED for exactly that
+                    person — claims they forwarded, that finance went on to
+                    settle — so without this a lead with no finance role of
+                    their own still saw which finance colleague decided it.
+                    `canExpenseFinance` is the one thing that tells rows
+                    apart here without tagging each one by its query: a
+                    reader holding both roles stays able to see it, same as
+                    today, because they are finance too, not only a lead. */}
+                <TableCell sx={CELL}>
+                  {canExpenseFinance ? (claim.statusDetails.financeApproverEmail ?? "—") : "—"}
+                </TableCell>
                 <TableCell sx={CELL}>
                   <Outcome status={claim.statusDetails.status} />
                 </TableCell>

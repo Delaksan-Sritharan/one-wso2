@@ -22,6 +22,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Skeleton,
   Stack,
   Table,
   TableBody,
@@ -276,7 +277,16 @@ export default function NeedsYouTab() {
         />
       </Stack>
 
-      {queuesLoading ? null : total === 0 && failures.length === 0 ? (
+      {/* A Skeleton here, unlike `identityLoading` above: that one guards the
+          WHOLE tab, flipping between "tabs" and "nothing" as identity
+          resolves, so a skeleton there is one more thing to blink on the way
+          to a final answer. This one guards only the list rows below
+          still-mounted tabs and filters, whose shape never changes between a
+          fresh load and a filter change — so with nothing here, a page load
+          and "nothing is waiting on you" looked identical. */}
+      {queuesLoading ? (
+        <Skeleton variant="rectangular" height={220} sx={{ borderRadius: 1.5 }} />
+      ) : total === 0 && failures.length === 0 ? (
         <Typography sx={{ fontSize: 13, color: "text.secondary", py: 3 }}>
           {employee || claimIdFilter ? "No claims match these filters." : "Nothing is waiting on you."}
         </Typography>

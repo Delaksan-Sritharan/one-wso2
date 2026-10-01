@@ -36,9 +36,14 @@ import type { ExpenseTypeFilter } from "../masterDataTypes";
  * is what the table is showing. Without the split, every keystroke in the
  * filter bar would be a new query key and a new request — the source avoids
  * that with an explicit Apply, and so does this.
+ *
+ * Filters start collapsed. Nothing is loaded until the first Apply anyway
+ * (`hasApplied` below), so opening on an already-expanded bar showed a form
+ * before there was anything to filter — "Show Filters" is the deliberate
+ * first click, not a state the screen should guess its way past.
  */
 export default function ExpenseTypesPage() {
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [draft, setDraft] = useState<ExpenseTypeFilter>({});
   const [applied, setApplied] = useState<ExpenseTypeFilter | null>(null);
 
