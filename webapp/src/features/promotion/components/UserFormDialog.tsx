@@ -147,7 +147,7 @@ function UserFormDialogContent({
               renderValue={(selected) => (
                 <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
                   {(selected as PromotionRole[]).map((r) => (
-                    <Chip key={r} label={r} size="small" color={promotionRoleChipColor(r)} />
+                    <Chip key={r} label={r} size="small" variant="outlined" color={promotionRoleChipColor(r)} />
                   ))}
                 </Box>
               )}

@@ -110,7 +110,7 @@ export default function AdminTimeBasedPromotionsTab() {
       flex: 0.9,
       minWidth: 120,
       renderCell: (params) => (
-        <Chip label={params.value} size="small" color={promotionRequestChipColor(params.value)} />
+        <Chip label={params.value} size="small" variant="outlined" color={promotionRequestChipColor(params.value)} />
       ),
     },
     {
@@ -128,6 +128,7 @@ export default function AdminTimeBasedPromotionsTab() {
               key={r.recommendationID}
               label={LEAD_STATUS_LABEL[r.recommendationStatus] ?? r.recommendationStatus}
               size="small"
+              variant="outlined"
               color={recommendationChipColor(r.recommendationStatus)}
             />
           ))}

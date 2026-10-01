@@ -71,7 +71,7 @@ export default function LeadHistoryTab() {
       // match nothing, since no row's raw status is ever literally APPROVED.
       valueGetter: (value) => recommendationStatusLabel(value),
       renderCell: (params) => (
-        <Chip label={params.value} size="small" color={recommendationChipColor(params.row.recommendationStatus)} />
+        <Chip label={params.value} size="small" variant="outlined" color={recommendationChipColor(params.row.recommendationStatus)} />
       ),
     },
     {
@@ -82,7 +82,7 @@ export default function LeadHistoryTab() {
       minWidth: 150,
       valueGetter: (value, row) => promotionRequestStatusLabel(value, cycle.cycle?.id === row.promotionCycleId),
       renderCell: (params) => (
-        <Chip label={params.value} size="small" color={promotionRequestChipColor(params.value)} />
+        <Chip label={params.value} size="small" variant="outlined" color={promotionRequestChipColor(params.value)} />
       ),
     },
     {

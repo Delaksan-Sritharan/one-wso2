@@ -106,6 +106,7 @@ export default function FLTimeBasedTab() {
                         key={rec.recommendationID}
                         label={LEAD_STATUS_LABEL[rec.recommendationStatus] ?? rec.recommendationStatus}
                         size="small"
+                        variant="outlined"
                         color={recommendationChipColor(rec.recommendationStatus)}
                       />
                     ))}

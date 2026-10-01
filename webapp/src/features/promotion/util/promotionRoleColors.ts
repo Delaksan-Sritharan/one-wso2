@@ -29,7 +29,7 @@ export function promotionRoleChipColor(role: PromotionRole): PromotionChipColor 
     case "LEAD":
       return "success";
     case "PROMOTION_BOARD_MEMBER":
-      return "default";
+      return "info";
     case "EMPLOYEE":
       return "primary";
     default:

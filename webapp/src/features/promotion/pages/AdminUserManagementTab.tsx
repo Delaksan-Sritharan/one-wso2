@@ -135,9 +135,9 @@ export default function AdminUserManagementTab() {
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap" }}>
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ py: 0.5 }}>
           {params.row.roles.map((role) => (
-            <Chip key={role} label={role} size="small" color={promotionRoleChipColor(role)} />
+            <Chip key={role} label={role} size="small" variant="outlined" color={promotionRoleChipColor(role)} />
           ))}
         </Stack>
       ),
@@ -290,6 +290,10 @@ export default function AdminUserManagementTab() {
             rows={filtered}
             getRowId={(row) => row.id}
             columns={columns}
+            // A user with several roles wraps the Roles cell onto a second
+            // line — a fixed row height would then clip it (and crop the
+            // Status/Actions cells beside it); let the row grow to fit.
+            getRowHeight={() => "auto"}
             showToolbar
             slots={{ toolbar: PromotionGridToolbar }}
             sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}

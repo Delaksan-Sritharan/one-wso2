@@ -60,7 +60,7 @@ export default function AdminIndividualContributorTab() {
       flex: 0.9,
       minWidth: 130,
       renderCell: (params) => (
-        <Chip label={params.value} size="small" color={promotionRequestChipColor(params.value)} />
+        <Chip label={params.value} size="small" variant="outlined" color={promotionRequestChipColor(params.value)} />
       ),
     },
     {

@@ -163,7 +163,8 @@ export default function AdminPromotionCycleTab() {
               <Chip
                 label={cycle.cycle.status === "OPEN" ? "Open" : cycle.cycle.status}
                 size="small"
-                color={cycle.cycle.status === "OPEN" ? "success" : "default"}
+                variant="outlined"
+                color={cycle.cycle.status === "OPEN" ? "info" : "default"}
               />
               <Typography variant="h5" sx={{ fontWeight: 700, mt: 1 }}>
                 {cycle.cycle.name} Promotion Cycle

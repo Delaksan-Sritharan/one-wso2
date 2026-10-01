@@ -79,7 +79,7 @@ export default function CycleHistoryTab() {
       flex: 1.2,
       minWidth: 180,
       renderCell: (params) => (
-        <Chip label={params.value} size="small" color={promotionRequestChipColor(params.value)} />
+        <Chip label={params.value} size="small" variant="outlined" color={promotionRequestChipColor(params.value)} />
       ),
     },
     {

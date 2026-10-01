@@ -65,6 +65,7 @@ export default function PromotionRequestDetailPanel({ request }: { request: Prom
                   <Chip
                     label={rec.recommendationStatus}
                     size="small"
+                    variant="outlined"
                     color={recommendationChipColor(rec.recommendationStatus)}
                     sx={{ height: 20, fontSize: 10.5 }}
                   />

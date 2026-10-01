@@ -47,6 +47,8 @@ describe("promotionRequestChipColor", () => {
     expect(promotionRequestChipColor("DECLINED")).toBe("error");
     expect(promotionRequestChipColor("APPROVED")).toBe("success");
     expect(promotionRequestChipColor("REJECTED")).toBe("error");
+    expect(promotionRequestChipColor("DRAFT")).toBe("info");
+    expect(promotionRequestChipColor("WITHDRAW")).toBe("warning");
   });
 
   it("falls back to info for anything else", () => {
@@ -57,7 +59,7 @@ describe("promotionRequestChipColor", () => {
 describe("recommendationChipColor", () => {
   it("gives every recommendation status a distinct, theme-safe semantic colour", () => {
     expect(recommendationChipColor("DECLINED")).toBe("error");
-    expect(recommendationChipColor("REQUESTED")).toBe("info");
+    expect(recommendationChipColor("REQUESTED")).toBe("warning");
     expect(recommendationChipColor("SUBMITTED")).toBe("success");
     expect(recommendationChipColor("EXPIRED")).toBe("default");
   });
