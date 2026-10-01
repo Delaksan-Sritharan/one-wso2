@@ -431,6 +431,32 @@ describe("what it shows", () => {
   });
 });
 
+// `leadDecided` carries APPROVED/FINANCE_REJECTED for exactly a lead-only
+// reader's own forwarded claims — the ones finance went on to settle. Without
+// this, a lead with no finance role of their own could still read which
+// finance colleague decided a claim they only forwarded.
+describe("a finance colleague's identity, on a claim a lead merely forwarded", () => {
+  it("is withheld from a reader who is a lead and nothing else", async () => {
+    flags.finance = false;
+    data.lead = [expenseClaim({ id: "EXP-FWD", statusDetails: { ...expenseClaim({}).statusDetails } })];
+    show();
+
+    const row = (await screen.findByText("EXP-FWD")).closest("tr")!;
+    expect(within(row).queryByText("fin@wso2.com")).not.toBeInTheDocument();
+    expect(within(row).getByText("—")).toBeInTheDocument();
+  });
+
+  // The flip side, so the fix above cannot be read as "finance emails never
+  // show": a reader holding the finance role too still sees it — they are
+  // finance, not only a lead, whichever query the row happened to come from.
+  it("still shows for a reader who is a lead AND finance", async () => {
+    data.finance = [expenseClaim({ id: "EXP-SEEN" })];
+    show();
+
+    const row = (await screen.findByText("EXP-SEEN")).closest("tr")!;
+    expect(within(row).getByText("fin@wso2.com")).toBeInTheDocument();
+  });
+});
 
 // Same trap as Needs you: the call that decides which queues run. When it fails
 // the flags read false, the queues are disabled rather than failing, and a

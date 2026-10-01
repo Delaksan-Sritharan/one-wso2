@@ -314,8 +314,19 @@ export default function DecidedTab() {
                   {money(claim.totalAmount, claim.currencyCode ?? "LKR")}
                 </TableCell>
                 {/* Blank for a lead-stage decision: the backend records no lead
-                    approver, so naming one would be a guess. */}
-                <TableCell sx={CELL}>{claim.statusDetails.financeApproverEmail ?? "—"}</TableCell>
+                    approver, so naming one would be a guess. ALSO blank for a
+                    lead-only viewer on a row finance decided: `leadDecided`
+                    includes APPROVED/FINANCE_REJECTED for exactly that
+                    person — claims they forwarded, that finance went on to
+                    settle — so without this a lead with no finance role of
+                    their own still saw which finance colleague decided it.
+                    `canExpenseFinance` is the one thing that tells rows
+                    apart here without tagging each one by its query: a
+                    reader holding both roles stays able to see it, same as
+                    today, because they are finance too, not only a lead. */}
+                <TableCell sx={CELL}>
+                  {canExpenseFinance ? (claim.statusDetails.financeApproverEmail ?? "—") : "—"}
+                </TableCell>
                 <TableCell sx={CELL}>
                   <Outcome status={claim.statusDetails.status} />
                 </TableCell>
