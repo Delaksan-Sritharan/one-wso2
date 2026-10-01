@@ -156,3 +156,50 @@ export function getReleaseDownloads(
   params.set("interval", query.interval);
   return authedGet(`${credentialedBase()}/api/v1/stats/daily?${params}`, accessToken);
 }
+
+export interface VersionPoint {
+  date: string;
+  value: number;
+}
+
+export interface VersionSeriesItem {
+  releaseTag: string;
+  releaseName: string | null;
+  points: VersionPoint[];
+}
+
+export interface VersionSeriesResponse {
+  series: VersionSeriesItem[];
+}
+
+export interface ReleaseFile {
+  assetName: string;
+  downloadCount: number;
+  releaseTag: string;
+}
+
+export interface ReleaseFilesResponse {
+  assets: ReleaseFile[];
+}
+
+export function getVersionSeries(
+  accessToken: string,
+  query: { repoId: number; from: string; to: string; interval: ReleaseDownloadGrain },
+): Promise<VersionSeriesResponse> {
+  const params = new URLSearchParams({ from: query.from, to: query.to, interval: query.interval });
+  return authedGet(
+    `${credentialedBase()}/api/v1/stats/versions/${query.repoId}/series?${params}`,
+    accessToken,
+  );
+}
+
+export function getReleaseFiles(
+  accessToken: string,
+  query: { repoId: number; from: string; to: string; version: string },
+): Promise<ReleaseFilesResponse> {
+  const params = new URLSearchParams({ from: query.from, to: query.to, version: query.version });
+  return authedGet(
+    `${credentialedBase()}/api/v1/stats/assets/${query.repoId}?${params}`,
+    accessToken,
+  );
+}

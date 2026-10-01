@@ -232,6 +232,7 @@ describe("perspectives whose landing forwards to the first rail item", () => {
       expect(labels).toContain("Product Download Stats");
       expect(labels).toContain("Overview");
       expect(labels).toContain("Downloads");
+      expect(labels).toContain("Versions");
     });
   });
 });
