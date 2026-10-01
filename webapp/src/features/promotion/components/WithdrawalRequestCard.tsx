@@ -15,7 +15,7 @@
 // under the License.
 
 import { useState } from "react";
-import { Box, Chip, Collapse, Grid, IconButton, Tooltip, Typography } from "@wso2/oxygen-ui";
+import { alpha, Box, Chip, Collapse, Grid, IconButton, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { CheckIcon, ChevronDownIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import JobBandTransitionChips from "./JobBandTransitionChips";
 import PromotionRichTextContent from "./PromotionRichTextContent";
@@ -51,7 +51,10 @@ export default function WithdrawalRequestCard({
         borderColor: "divider",
         borderRadius: 1,
         mb: 1.25,
-        bgcolor: isRemoved ? "error.50" : undefined,
+        // `.50` isn't guaranteed on a semantic color — some Oxygen presets
+        // define only `main`/`contrastText`, so this silently rendered no
+        // background at all. `alpha()` on `.main` always resolves to a tint.
+        bgcolor: (theme) => (isRemoved ? alpha(theme.palette.error.main, 0.08) : undefined),
       }}
     >
       <Grid container spacing={2} sx={{ width: "100%", alignItems: "center", p: 2 }}>

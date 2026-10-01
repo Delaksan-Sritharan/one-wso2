@@ -24,7 +24,7 @@
 // usePromotionRequests call with/without enableBuFilter rather than two
 // separate endpoints.
 import { useState } from "react";
-import { Box, Chip, DataGrid, Grid, IconButton, MenuItem, Select, Skeleton, Tooltip, Typography } from "@wso2/oxygen-ui";
+import { alpha, Box, Chip, DataGrid, Grid, IconButton, MenuItem, Select, Skeleton, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useUserInfo } from "@api/useUserInfo";
@@ -39,8 +39,13 @@ import { PromotionGridToolbar } from "../components/PromotionGridToolbar";
 import { promotionRequestChipColor } from "../util/promotionStatus";
 import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
 import type { PromotionRequestFull } from "../api/types";
+import type { Theme } from "@wso2/oxygen-ui";
 
-const ROW_COLOR_SX = { "& .row-approved": { bgcolor: "success.50" } };
+// `.50`/`.100` shade tokens aren't guaranteed on a semantic color — some
+// Oxygen presets define only `main`/`contrastText`, so a literal "success.50"
+// silently rendered no background at all. `alpha()` on `.main` (which every
+// preset defines) always resolves to a visible tint.
+const ROW_COLOR_SX = { "& .row-approved": { bgcolor: (theme: Theme) => alpha(theme.palette.success.main, 0.08) } };
 
 export default function CycleHistoryTab() {
   const userInfo = useUserInfo();

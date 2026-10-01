@@ -21,7 +21,7 @@
 // it's tracking what happens next to a request this lead already signed
 // off on, not re-litigating it). Read-only — no bulk actions, no edit.
 import { useState } from "react";
-import { Box, DataGrid, Divider, IconButton, Skeleton, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
+import { alpha, Box, DataGrid, Divider, IconButton, Skeleton, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
@@ -32,6 +32,7 @@ import { PromotionGridToolbar } from "../components/PromotionGridToolbar";
 import PromotionRequestDetailDialog from "../components/PromotionRequestDetailDialog";
 import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
 import type { PromotionRequestFull } from "../api/types";
+import type { Theme } from "@wso2/oxygen-ui";
 
 // Source's own transformFLState — the Promotion Board's decision, in the
 // functional lead's own terms (FL_APPROVED just means "still with the
@@ -45,9 +46,13 @@ function boardStatusLabel(request: PromotionRequestFull): string {
   return "Rejected";
 }
 
+// `.50`/`.100` shade tokens aren't guaranteed on a semantic color — some
+// Oxygen presets define only `main`/`contrastText`, so a literal "success.50"
+// silently rendered no background at all. `alpha()` on `.main` (which every
+// preset defines) always resolves to a visible tint.
 const ROW_COLOR_SX = {
-  "& .row-approved": { bgcolor: "success.50" },
-  "& .row-rejected": { bgcolor: "error.50" },
+  "& .row-approved": { bgcolor: (theme: Theme) => alpha(theme.palette.success.main, 0.08) },
+  "& .row-rejected": { bgcolor: (theme: Theme) => alpha(theme.palette.error.main, 0.08) },
 };
 
 export default function FLApprovedListTab() {
