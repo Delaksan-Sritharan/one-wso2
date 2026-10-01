@@ -19,7 +19,6 @@ import { useAsgardeo } from "@asgardeo/react";
 import { authedGet, defaultQueryRetry } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { promotionBackendUrl, promotionServiceUrls } from "@config/apiConfig";
-import { isPreviewEnabled } from "@config/previewFeatures";
 import { digiopsHeaders } from "@features/my/util/digiopsHeaders";
 import type { PromotionHistoryResponse } from "./types";
 
@@ -31,18 +30,13 @@ import type { PromotionHistoryResponse } from "./types";
 //
 // Non-lead / non-admin users can only fetch their own history — the
 // backend authorization rejects cross-user lookups with a 401/403.
-//
-// The promotion preview flag is checked here rather than by each caller:
-// the Me profile card calls this outside any promotion route, so a
-// caller-side check is one that a new caller can forget.
 export function usePromotionHistory(workEmail: string | undefined, enabled: boolean) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
   const backendConfigured = Boolean(promotionBackendUrl);
   return useQuery<PromotionHistoryResponse>({
     queryKey: ["promotion-history", workEmail],
-    enabled:
-      enabled && isPreviewEnabled("promotion") && isSignedIn && backendConfigured && Boolean(workEmail),
+    enabled: enabled && isSignedIn && backendConfigured && Boolean(workEmail),
     queryFn: async () => {
       const accessToken = await getAccessToken();
       return authedGet<PromotionHistoryResponse>(
