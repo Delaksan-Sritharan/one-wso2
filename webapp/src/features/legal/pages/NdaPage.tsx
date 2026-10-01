@@ -21,12 +21,14 @@ import {
   Box,
   Button,
   CircularProgress,
+  IconButton,
   MenuItem,
   Snackbar,
   TextField,
+  Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
-import { DownloadIcon } from "@wso2/oxygen-ui-icons-react";
+import { DownloadIcon, InfoIcon } from "@wso2/oxygen-ui-icons-react";
 import { pdf } from "@react-pdf/renderer";
 import PerspectiveHeader from "@components/perspective-header/PerspectiveHeader";
 import { useCustomerSearch, formatCustomerAddress, type CustomerResult } from "@features/legal/api/useCustomerSearch";
@@ -34,16 +36,8 @@ import NdaPdfDocument, { NDA_ENTITY_CONFIGS } from "./NdaPdfDocument";
 
 // ── Static option lists ─────────────────────────────────────────────────────
 
-// All current WSO2 NDA templates are Mutual NDAs. The other types are listed
-// for completeness and may be backed by documents in future.
-const NDA_TEMPLATES = [
-  "Mutual NDA \u2014 Standard",
-  "One-Way NDA \u2014 Vendor",
-  "One-Way NDA \u2014 Customer",
-  "Partnership NDA",
-  "Evaluation NDA",
-  "Employee NDA",
-];
+// Only Mutual NDA — Standard is currently supported.
+const NDA_TEMPLATE_LOCKED = "Mutual NDA \u2014 Standard";
 
 // Derived from the keys of NDA_ENTITY_CONFIGS so label and value stay in sync.
 // Each entry corresponds to an official WSO2 NDA template docx file.
@@ -88,7 +82,7 @@ function CustomerDetailRow({ label, value }: { label: string; value: string | nu
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default function NdaPage(): JSX.Element {
-  const [template, setTemplate] = useState("");
+  const [template] = useState(NDA_TEMPLATE_LOCKED);
   const [wso2Company, setWso2Company] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerResult | null>(null);
   const [customerInput, setCustomerInput] = useState("");
@@ -152,38 +146,39 @@ export default function NdaPage(): JSX.Element {
       />
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, maxWidth: 480 }}>
-        {/* NDA Template */}
+        {/* NDA Template — locked to Mutual NDA Standard for now */}
         <TextField
-          select
           fullWidth
           label="NDA Template"
           value={template}
-          onChange={(e) => setTemplate(e.target.value)}
-        >
-          {NDA_TEMPLATES.map((t) => (
-            <MenuItem key={t} value={t}>
-              {t}
-            </MenuItem>
-          ))}
-        </TextField>
+          disabled
+        />
 
         {/* WSO2 Company — one option per official NDA template docx */}
-        <TextField
-          select
-          fullWidth
-          label="WSO2 Company"
-          value={wso2Company}
-          onChange={(e) => setWso2Company(e.target.value)}
-        >
-          {WSO2_COMPANIES.map((c) => (
-            <MenuItem key={c.value} value={c.value}>
-              {c.label}
-            </MenuItem>
-          ))}
-        </TextField>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <TextField
+            select
+            fullWidth
+            label="WSO2 Company"
+            value={wso2Company}
+            onChange={(e) => setWso2Company(e.target.value)}
+          >
+            {WSO2_COMPANIES.map((c) => (
+              <MenuItem key={c.value} value={c.value}>
+                {c.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Tooltip title="The WSO2 entity is determined based on the customer's country." placement="right">
+            <IconButton size="small" sx={{ color: "text.secondary", flexShrink: 0 }}>
+              <InfoIcon size={18} />
+            </IconButton>
+          </Tooltip>
+        </Box>
 
         {/* Customer Name — server-side search via customer-search API */}
-        <Autocomplete
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Autocomplete
           fullWidth
           options={customerOptions}
           value={selectedCustomer}
@@ -218,6 +213,15 @@ export default function NdaPage(): JSX.Element {
             />
           )}
         />
+          <Tooltip
+            title="Customer name and address are retrieved from Salesforce. Select the appropriate customer name from the dropdown, based on the Salesforce Account Name."
+            placement="right"
+          >
+            <IconButton size="small" sx={{ color: "text.secondary", flexShrink: 0 }}>
+              <InfoIcon size={18} />
+            </IconButton>
+          </Tooltip>
+        </Box>
 
         {/* Customer verification card — shown once a customer is selected */}
         {selectedCustomer && (
@@ -234,13 +238,23 @@ export default function NdaPage(): JSX.Element {
               backgroundColor: "action.hover",
             }}
           >
-            <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Customer Details
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Customer Details
+              </Typography>
+              <Tooltip title="Customer details are retrieved from Salesforce." placement="right">
+                <IconButton size="small" sx={{ p: 0, color: "text.secondary" }}>
+                  <InfoIcon size={14} />
+                </IconButton>
+              </Tooltip>
+            </Box>
             <CustomerDetailRow label="Country" value={selectedCustomer.address?.billingCountry} />
             <CustomerDetailRow label="Address" value={formatCustomerAddress(selectedCustomer.address ?? null)} />
             <CustomerDetailRow label="Region" value={selectedCustomer.subRegion} />
             <CustomerDetailRow label="Industry" value={selectedCustomer.subIndustry} />
+            <Alert severity="warning" sx={{ mt: 1, py: 0.5, fontSize: "0.75rem" }}>
+              Please verify the customer name and address, as they will be sent to NDA exactly as shown here.
+            </Alert>
           </Box>
         )}
 

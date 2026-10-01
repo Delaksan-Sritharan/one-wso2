@@ -15,7 +15,7 @@
 // under the License.
 
 import { Box, Card, Skeleton, Typography } from "@wso2/oxygen-ui";
-import { ArrowRightIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArrowRightIcon, FileTextIcon } from "@wso2/oxygen-ui-icons-react";
 import { NavLink } from "react-router";
 import PerspectiveHeader from "@components/perspective-header/PerspectiveHeader";
 import { useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
@@ -32,30 +32,42 @@ export default function LegalPage() {
     <Box>
       <PerspectiveHeader
         title="Legal"
-        subtitle="Legal review tools — reseller and trade-reference due diligence."
+        subtitle="Legal review tools — non-disclosure agreements, reseller and trade-reference due diligence."
       />
 
-      {gate.isResolving ? (
-        <Skeleton variant="rectangular" height={132} sx={{ borderRadius: 1.5, maxWidth: 480 }} />
-      ) : !show ? (
-        <Card variant="outlined" sx={{ p: 2.5, maxWidth: 480 }}>
-          <Typography sx={{ fontSize: 15, fontWeight: 700, mb: 0.75 }}>
-            Nothing here for you yet
-          </Typography>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 480 }}>
+        {/* NDA — always visible */}
+        <Card
+          variant="outlined"
+          component={NavLink}
+          to="/legal/nda"
+          sx={{
+            p: 2.5,
+            display: "block",
+            textDecoration: "none",
+            color: "inherit",
+            transition: "border-color .12s, background-color .12s",
+            "&:hover": { borderColor: "primary.main", bgcolor: "action.hover" },
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.75 }}>
+            <FileTextIcon size={16} />
+            <Typography sx={{ fontSize: 15, fontWeight: 700, flex: 1 }}>NDA</Typography>
+            <ArrowRightIcon size={15} />
+          </Box>
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            Legal currently holds the Due Diligence app.
+            Generate and download mutual non-disclosure agreements for WSO2 entities.
           </Typography>
         </Card>
-      ) : (
-        <Box sx={{ maxWidth: 480 }}>
+
+        {/* Due Diligence — gated */}
+        {gate.isResolving ? (
+          <Skeleton variant="rectangular" height={88} sx={{ borderRadius: 1.5 }} />
+        ) : show && (
           <Card
             variant="outlined"
             component={NavLink}
             to="/due-diligence/partners"
-            // Due Diligence lives at its own top-level path (shared with
-            // Finance), outside "/legal" — without this, the rail falls back
-            // to the default perspective instead of staying on Legal. Same
-            // fix the rail's own links already use — see SideRail.tsx.
             state={{ fromPerspective: "legal" }}
             sx={{
               p: 2.5,
@@ -73,8 +85,8 @@ export default function LegalPage() {
             </Box>
             <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{DUE_DILIGENCE_APPS[0].purpose}</Typography>
           </Card>
-        </Box>
-      )}
+        )}
+      </Box>
     </Box>
   );
 }
