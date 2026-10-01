@@ -15,7 +15,7 @@
 // under the License.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Bank } from "@features/my/api/types";
 
@@ -47,6 +47,12 @@ vi.mock("@tanstack/react-query", () => ({
   useIsMutating: () => isMutatingCount.value,
 }));
 
+const showSuccess = vi.hoisted(() => vi.fn());
+const showError = vi.hoisted(() => vi.fn());
+vi.mock("@context/notifications/NotificationsContext", () => ({
+  useNotifications: () => ({ showSuccess, showError, showWarning: vi.fn() }),
+}));
+
 vi.mock("@features/my/api/useBanks", () => ({
   useBanks: () => ({ data: { banks: banks.data, count: banks.data.length }, isLoading: false, isError: false }),
 }));
@@ -74,6 +80,8 @@ beforeEach(() => {
   updateThreshold.mutate.mockReset();
   updateThreshold.mutateAsync.mockReset().mockResolvedValue(undefined);
   isMutatingCount.value = 0;
+  showSuccess.mockClear();
+  showError.mockClear();
 });
 
 describe("AdminTab thresholds", () => {
@@ -248,7 +256,10 @@ describe("AdminTab one submission at a time", () => {
     await user.type(input, "25");
     await user.click(screen.getByRole("button", { name: "Update Salary Threshold" }));
     await user.click(await screen.findByRole("button", { name: "Confirm" }));
-    expect(await screen.findByText(/failed to update.*backend rejected the update/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(showError).toHaveBeenCalledWith(expect.stringMatching(/failed to update.*backend rejected the update/i)),
+    );
+    expect(showSuccess).not.toHaveBeenCalled();
   });
 
   it("shows an error instead of swallowing a failed create-bank request", async () => {
@@ -265,6 +276,41 @@ describe("AdminTab one submission at a time", () => {
     await user.click(await screen.findByText("Sri Lanka"));
     await user.click(within(dialog).getByRole("button", { name: "Submit" }));
     await user.click(await screen.findByRole("button", { name: "Confirm" }));
-    expect(await screen.findByText(/failed to add the bank.*duplicate swift code/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(showError).toHaveBeenCalledWith(expect.stringMatching(/failed to add the bank.*duplicate swift code/i)),
+    );
+    expect(showSuccess).not.toHaveBeenCalled();
+  });
+});
+
+describe("AdminTab success notifications", () => {
+  it("shows a success notification once the threshold update resolves", async () => {
+    const user = userEvent.setup();
+    privileges.value = { isPeopleOperationsAdmin: true, isFinanceAdmin: false };
+    render(<AdminTab />);
+    const input = screen.getByLabelText("Salary Threshold Day (1-31)");
+    await user.clear(input);
+    await user.type(input, "25");
+    await user.click(screen.getByRole("button", { name: "Update Salary Threshold" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(expect.stringContaining("25")));
+    expect(showError).not.toHaveBeenCalled();
+  });
+
+  it("shows a success notification once a bank is created", async () => {
+    const user = userEvent.setup();
+    banks.data = [bank({ bankCode: "COM001", swiftCode: "COMBLK" })];
+    render(<AdminTab />);
+    await user.click(screen.getByRole("button", { name: "Add Bank" }));
+    const dialog = screen.getByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Bank Name"), "Sampath Bank");
+    await user.type(within(dialog).getByLabelText("Bank Code"), "SAM001");
+    await user.type(within(dialog).getByLabelText("SWIFT Code"), "SAMPLK");
+    await user.click(within(dialog).getByLabelText("Location"));
+    await user.click(await screen.findByText("Sri Lanka"));
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(expect.stringContaining("Sampath Bank")));
+    expect(showError).not.toHaveBeenCalled();
   });
 });
