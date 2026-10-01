@@ -16,8 +16,9 @@
  * under the License.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
+import type { Capability } from "@constants/appMenu";
 
 // Three backends, three vocabularies, none of them the people-app roles the
 // rail normally reads. These are the rules the standalone apps enforce, so they
@@ -49,7 +50,7 @@ vi.mock("../expense/useExpense", () => ({
   }),
 }));
 
-const { useFinanceGate } = await import("./useFinanceGate");
+const { useFinanceGate, canSeeMasterData } = await import("./useFinanceGate");
 const { FINANCE_ITEM_IDS } = await import("@constants/financeApps");
 
 const gate = () => renderHook(() => useFinanceGate()).result.current;
@@ -197,5 +198,104 @@ describe("Credit Card Expenses' submitter-facing items", () => {
     expect(gate().canSee("cc-new")).toBe(true);
     expect(gate().canSee("cc-pending")).toBe(true);
     expect(gate().canSee("cc-history")).toBe(true);
+  });
+});
+
+// Master Data is gated on TWO things that answer two different questions, and
+// both have to say yes: the preview flag ("does this environment have the
+// feature yet") and `admin` ("may this reader use it"). Neither alone is
+// enough, which is the whole point — turning the flag on in an environment
+// must not hand finance's reference tables to every employee in it, and
+// holding `admin` must not surface a feature the environment has not enabled.
+describe("the Master Data tables", () => {
+  const admin = new Set<Capability>(["employee", "admin"]);
+  const employee = new Set<Capability>(["employee"]);
+
+  function previewFlag(on: boolean): void {
+    window.config = {
+      ...window.config,
+      ONE_WSO2_PREVIEW_FEATURES: { "finance-master-data": on },
+    };
+  }
+
+  afterEach(() => {
+    delete window.config?.ONE_WSO2_PREVIEW_FEATURES;
+  });
+
+  it("opens for an admin in an environment that has the feature", () => {
+    previewFlag(true);
+    expect(canSeeMasterData(admin)).toBe(true);
+  });
+
+  // The flag is the reason production is safe while this sits in `main`.
+  it("stays shut for an admin where the flag is off", () => {
+    previewFlag(false);
+    expect(canSeeMasterData(admin)).toBe(false);
+  });
+
+  // Absent means off — prod is safe because nobody touched its config, not
+  // because somebody remembered to write `false`.
+  it("stays shut where no flag was ever set", () => {
+    expect(canSeeMasterData(admin)).toBe(false);
+  });
+
+  it("stays shut for a non-admin even where the flag is on", () => {
+    previewFlag(true);
+    expect(canSeeMasterData(employee)).toBe(false);
+    expect(canSeeMasterData(undefined)).toBe(false);
+  });
+});
+
+// `isResolving` is what every caller renders NOTHING on — FinanceOverviewPage
+// returns null, ClaimApprovalPage drops its tabs and its <Outlet />, the rail
+// hides the row. So it going back to true after a real answer is not a slower
+// answer: it is a screen that was there blanking and coming back, which is
+// what the Finance section flickering was.
+//
+// It can go back on its own, for reasons that say nothing about this reader: a
+// query disabled because its backend is not configured in an environment stays
+// `isPending` for good, so `foldIdentityError` reports it as loading again
+// every time identity re-checks. Hence a one-way latch, pinned here.
+describe("settling, and staying settled", () => {
+  function latching(enabled = true) {
+    const { result, rerender } = renderHook(({ on }) => useFinanceGate(on), {
+      initialProps: { on: enabled },
+    });
+    return { result, rerender };
+  }
+
+  it("reports resolving until the backends have answered", () => {
+    roles.loading = true;
+    expect(latching().result.current.isResolving).toBe(true);
+  });
+
+  // THE regression.
+  it("never reports resolving again once they have", () => {
+    roles.loading = true;
+    const { result, rerender } = latching();
+    expect(result.current.isResolving).toBe(true);
+
+    roles.loading = false;
+    rerender({ on: true });
+    expect(result.current.isResolving).toBe(false);
+
+    // A backend going back to loading — an identity re-check reaching a query
+    // that never ran, a refetch — must not un-settle the gate.
+    roles.loading = true;
+    rerender({ on: true });
+    expect(result.current.isResolving).toBe(false);
+  });
+
+  // A gate switched off has answered nothing, so its all-false reading is not
+  // a settled answer to latch. The rail's gate is off on every perspective but
+  // Me and Finance, and latching there would have it report "settled, no
+  // access" the moment someone switched to Finance.
+  it("does not count a switched-off gate as having answered", () => {
+    roles.loading = true;
+    const { result, rerender } = latching(false);
+    expect(result.current.isResolving).toBe(false);
+
+    rerender({ on: true });
+    expect(result.current.isResolving).toBe(true);
   });
 });

@@ -22,7 +22,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  Skeleton,
   Stack,
   Table,
   TableBody,
@@ -166,9 +165,7 @@ export default function NeedsYouTab() {
   const identityLoading = expenseAppData.isLoading || opdUserInfo.isLoading;
   const queuesLoading = leadQueue.isLoading || financeQueue.isLoading || opdQueue.isLoading;
 
-  if (identityLoading) {
-    return <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 1.5 }} />;
-  }
+  if (identityLoading) return null;
 
   // Opening an expense claim replaces this whole tab with the same review
   // screen Lead/Finance Approvals uses — the app's own decision, its own
@@ -279,9 +276,7 @@ export default function NeedsYouTab() {
         />
       </Stack>
 
-      {queuesLoading ? (
-        <Skeleton variant="rectangular" height={220} sx={{ borderRadius: 1.5 }} />
-      ) : total === 0 && failures.length === 0 ? (
+      {queuesLoading ? null : total === 0 && failures.length === 0 ? (
         <Typography sx={{ fontSize: 13, color: "text.secondary", py: 3 }}>
           {employee || claimIdFilter ? "No claims match these filters." : "Nothing is waiting on you."}
         </Typography>
