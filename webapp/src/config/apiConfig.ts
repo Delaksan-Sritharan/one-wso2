@@ -340,11 +340,6 @@ export const parServiceUrls = {
   // caller being a lead in the active cycle (or admin), not scoped to their
   // own participation the way parCycles(email, "CLOSED") above is.
   parAllClosedCycles: () => `${parBackendUrl}/par-cycles?status=CLOSED`,
-  // GET .../participants?leadEmail= — same endpoint parServiceUrls.par360Participants
-  // hits with no leadEmail (org-wide); EmployeeHistoryView.tsx's own
-  // fetchParticipants scopes it to the calling lead's own reports instead.
-  parHistoryParticipants: (parCycleId: number, leadEmail: string) =>
-    `${parBackendUrl}/par-cycles/${parCycleId}/participants?leadEmail=${encodeURIComponent(leadEmail)}`,
   // GET .../employees/{email}/reviews — every review ABOUT that employee
   // (reviewer, rating, comment, status), regardless of who's asking, as
   // opposed to par360Review (the caller's OWN review of someone else).
@@ -571,6 +566,35 @@ export const expenseServiceUrls = {
     `${expenseBackendUrl}/claims/${encodeURIComponent(email)}/transactions/receipts/file`,
   receiptFile: (fileName: string) =>
     `${expenseBackendUrl}/claims/transactions/receipts/file/${encodeURIComponent(fileName)}`,
+};
+
+// Finance master data — ONE_WSO2_FINANCE_MASTER_DATA_BACKEND_URL.
+//
+// Reference data the other finance apps are keyed against: subsidiaries,
+// departments, expense types and corporate credit cards. Every screen is a
+// CRUD table, so the four collections below each take GET (list) / POST
+// (create) / PATCH /{id} / DELETE /{id}.
+export const financeMasterDataBackendUrl: string =
+  window.config?.ONE_WSO2_FINANCE_MASTER_DATA_BACKEND_URL ?? "";
+
+export function isFinanceMasterDataBackendConfigured(): boolean {
+  return Boolean(financeMasterDataBackendUrl);
+}
+
+export const financeMasterDataServiceUrls = {
+  userInfo: `${financeMasterDataBackendUrl}/user-info`,
+  // The four collections, keyed by path segment, so the item helpers below
+  // can serve all four tabs off one shared builder.
+  collection: (name: string) => `${financeMasterDataBackendUrl}/${name}`,
+  item: (name: string, id: number) =>
+    `${financeMasterDataBackendUrl}/${name}/${encodeURIComponent(String(id))}`,
+  // Expense types are the one table fetched through a POST filter rather than
+  // a plain GET.
+  searchExpenseTypes: `${financeMasterDataBackendUrl}/search-expense-types`,
+  // Dropdown/autocomplete sources for the forms and the expense-type filters.
+  glCodes: `${financeMasterDataBackendUrl}/gl-codes`,
+  employeeEmails: `${financeMasterDataBackendUrl}/employees/email`,
+  expenseTypeAutocomplete: `${financeMasterDataBackendUrl}/expense-types/autocomplete-values`,
 };
 
 // ---- Updates Manager backend ---------------------------------------------

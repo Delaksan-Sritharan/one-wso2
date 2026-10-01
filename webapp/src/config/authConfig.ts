@@ -87,7 +87,7 @@ declare global {
       // "not configured" state. Leave-app has its own /user-info +
       // privileges, distinct from people-app.
       ONE_WSO2_LEAVE_BACKEND_URL?: string;
-      // Base URLs for the three digiops-finance backends surfaced in the
+      // Base URLs for the digiops-finance backends surfaced in the
       // Finance perspective. Each is its own service with its own
       // /user-info + role scheme. Optional — when a URL is absent, that
       // app's screens show a "not connected" state instead of firing
@@ -95,6 +95,7 @@ declare global {
       ONE_WSO2_OPD_BACKEND_URL?: string; // opd-claims
       ONE_WSO2_CC_EXPENSES_BACKEND_URL?: string; // cc-expenses
       ONE_WSO2_EXPENSE_CLAIMS_BACKEND_URL?: string; // expense-claims
+      ONE_WSO2_FINANCE_MASTER_DATA_BACKEND_URL?: string; // finance-master-data
       // Base URL for the digiops-finance due_diligence backend — the Due
       // Diligence app, surfaced under both the Finance and Legal
       // perspectives. Same optional/"not connected" contract as the three

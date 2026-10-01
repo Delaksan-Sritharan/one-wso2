@@ -54,6 +54,7 @@ import {
   FINANCE_PERSPECTIVE_APPS,
   ME_FINANCE_APPS,
 } from "@constants/financeApps";
+import { MIS_APPS } from "@constants/misApps";
 import { CLAIM_APPROVAL_PATH } from "@features/finance/approvals/claimApprovalTabs";
 import { MARKETING_OPS_APPS } from "@constants/marketingOpsApps";
 import { DUE_DILIGENCE_APPS } from "@constants/dueDiligenceApps";
@@ -612,6 +613,12 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
       // BANKING_ADMIN_SECTION above). Same object, included in both places,
       // so the two rails can't drift.
       BANKING_ADMIN_SECTION,
+      // Finance MIS reports company-wide revenue. It sits under Finance.
+      // Gated on the MIS ARR backend's own privileges, not on `requires` —
+      // see useMisGate. Privilege 987 is also this app's PRIVILEGE.EMPLOYEE,
+      // so reading one for the other would show company revenue to everyone.
+      // Behind the `mis` preview flag. The routes carry the same flag.
+      ...(isPreviewEnabled("mis") ? appsToSections(MIS_APPS) : []),
     ],
   },
   // Legal. Currently just a second entry point into Due Diligence (see the
