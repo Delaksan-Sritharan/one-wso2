@@ -171,6 +171,10 @@ window.config = {
   // Each entry is deleted when its feature ships — a list that only grows
   // stops describing anything.
   //
+<<<<<<< HEAD
   // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, engineering: false, mis: false },
+=======
+  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, "finance-master-data": false, engineering: false, mis: false, eventPlatform: false },
+>>>>>>> origin/main
 
 };

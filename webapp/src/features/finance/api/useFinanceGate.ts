@@ -21,6 +21,7 @@ import {
   isOpdBackendConfigured,
 } from "@config/apiConfig";
 import { FINANCE_APPS } from "@constants/financeApps";
+import { isLocalAdminOverride } from "@config/localAdmin";
 import type { Capability } from "@constants/appMenu";
 import { useCcUserInfo } from "../cc/useCc";
 import { ccHasAccess } from "../cc/ccTypes";
@@ -59,7 +60,14 @@ const RESTRICTED_IDS = new Set(
  * and the per-reader permission is all that is left to check.
  */
 export function canSeeMasterData(caps: ReadonlySet<Capability> | undefined): boolean {
-  return caps?.has("admin") ?? false;
+  // Local development stands in for the `admin` privilege no test account
+  // holds, so these screens can be opened on the machine they are built on.
+  // Inert anywhere but a loopback host, and switched on from a gitignored
+  // file — see @config/localAdmin, which explains why this is not a preview
+  // feature. Deliberately here rather than in `capabilitiesFromPrivileges`:
+  // this opens Master Data, not every admin-gated screen in the portal.
+  //
+  return isLocalAdminOverride() || (caps?.has("admin") ?? false);
 }
 
 // Role-gates the Finance menu items (surfaced under Me) against each app's
