@@ -21,6 +21,7 @@ import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { useParEmployeeItemVisible } from "@features/par/api/useParData";
 import VehiclesCard from "./VehiclesCard";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import { isPromotionBackendConfigured } from "@features/promotion/api/usePromotionEmployeeInfo";
 import { usePromotionHistory } from "@features/promotion/api/usePromotionHistory";
 import { latestPromotion, promotionSummary } from "@features/promotion/util/promotionHistory";
@@ -49,6 +50,9 @@ export default function ConnectedServices() {
   const promotionInfo = usePromotionHistory(ownerEmail, true);
   const lastPromotion = latestPromotion(promotionInfo.data?.promotionRequests);
   const promotionConfigured = isPromotionBackendConfigured();
+  // The hook already asks nothing while the promotion preview is off; this
+  // hides the line too, which would otherwise read "No promotions".
+  const promotionPreview = isPreviewEnabled("promotion");
   const [historyOpen, setHistoryOpen] = useState(false);
   // Same query key as MyProfilePage's own useMeProfile() call, so this
   // shares its cache rather than firing a second request. Gates the "Open
@@ -68,36 +72,38 @@ export default function ConnectedServices() {
           <Typography sx={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "text.secondary", fontWeight: 600, mb: 1.5 }}>
             Performance &amp; growth
           </Typography>
-          <Stack direction="row" spacing={1.25} sx={{ py: 1.125, alignItems: "center", borderBottom: 1, borderColor: "divider" }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 500, fontSize: 13 }}>Last promotion</Typography>
-              <LastPromotionValue
-                configured={promotionConfigured}
-                // isPaused covers a retry held back while the tab is in the
-                // background — still loading, not an empty result.
-                isLoading={promotionInfo.isLoading || promotionInfo.isPaused}
-                isError={promotionInfo.isError}
-                summary={lastPromotion ? promotionSummary(lastPromotion) : null}
-              />
-            </Box>
-            {/* History is only offered when there is something to show —
-                with no approved promotions (or while loading, or when the
-                backend isn't configured) the dialog would be empty. A failed
-                load gets a retry instead, since nothing else re-fetches. */}
-            {lastPromotion ? (
-              <Button variant="outlined" size="small" onClick={() => setHistoryOpen(true)}>
-                View promotion history
-              </Button>
-            ) : promotionInfo.isError ? (
-              <Button
-                size="small"
-                disabled={promotionInfo.isFetching}
-                onClick={() => void promotionInfo.refetch()}
-              >
-                Retry
-              </Button>
-            ) : null}
-          </Stack>
+          {promotionPreview && (
+            <Stack direction="row" spacing={1.25} sx={{ py: 1.125, alignItems: "center", borderBottom: 1, borderColor: "divider" }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: 13 }}>Last promotion</Typography>
+                <LastPromotionValue
+                  configured={promotionConfigured}
+                  // isPaused covers a retry held back while the tab is in the
+                  // background — still loading, not an empty result.
+                  isLoading={promotionInfo.isLoading || promotionInfo.isPaused}
+                  isError={promotionInfo.isError}
+                  summary={lastPromotion ? promotionSummary(lastPromotion) : null}
+                />
+              </Box>
+              {/* History is only offered when there is something to show —
+                  with no approved promotions (or while loading, or when the
+                  backend isn't configured) the dialog would be empty. A failed
+                  load gets a retry instead, since nothing else re-fetches. */}
+              {lastPromotion ? (
+                <Button variant="outlined" size="small" onClick={() => setHistoryOpen(true)}>
+                  View promotion history
+                </Button>
+              ) : promotionInfo.isError ? (
+                <Button
+                  size="small"
+                  disabled={promotionInfo.isFetching}
+                  onClick={() => void promotionInfo.refetch()}
+                >
+                  Retry
+                </Button>
+              ) : null}
+            </Stack>
+          )}
           <PerformanceStages workEmail={ownerEmail} />
           {!parGate.isLoading && parGate.canSee && (
             <Box sx={{ mt: 1.25 }}>
@@ -113,11 +119,13 @@ export default function ConnectedServices() {
         <VehiclesCard ownerEmail={ownerEmail} />
       </Box>
 
-      <PromotionHistoryDialog
-        open={historyOpen}
-        workEmail={ownerEmail}
-        onClose={() => setHistoryOpen(false)}
-      />
+      {promotionPreview && (
+        <PromotionHistoryDialog
+          open={historyOpen}
+          workEmail={ownerEmail}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
     </>
   );
 }
