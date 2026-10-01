@@ -99,9 +99,39 @@ async function idTokenStillLive(): Promise<boolean> {
  * query, and renders the content immediately.
  *
  * Cleared on sign-out, so a second account in the same tab cannot be seeded
- * with the first one's identity.
+ * with the first one's identity. Two layers, because neither alone is
+ * reliable — see `forgetResolvedSubOnSignOut` below for the one that
+ * actually has to hold.
  */
 let resolvedSub: string | null = null;
+
+/**
+ * The real sign-out boundary. `useSecureSignOut` is every production path
+ * out of a session, and it calls this unconditionally alongside its own
+ * `qc.clear()` — so the shared identity is dropped whether or not any
+ * `useAsgardeoSub()` instance happens to be mounted at that moment.
+ *
+ * That "whether or not" is not a hedge, it is the actual bug this closes.
+ * The effect below ALSO clears `resolvedSub` when it observes `isSignedIn`
+ * go false — but that only runs for an instance that is both mounted and
+ * re-renders with the new value. `AuthGuard` swaps its whole authenticated
+ * subtree for a spinner in the SAME render that `isSignedIn` goes false,
+ * unmounting every consumer of this hook before any of them gets a chance to
+ * react to the very prop change that is tearing them down. A component torn
+ * down never re-renders to observe what tore it down. So on every normal
+ * sign-out, `resolvedSub` was left holding the outgoing user's identity —
+ * and the next account to sign in in the same tab would seed straight from
+ * it, synchronously, before its own token had even been read, issuing its
+ * first requests under the PREVIOUS user's subject until decoding caught up.
+ *
+ * The effect's own clear stays, for a sign-out that does not reach
+ * `useSecureSignOut` at all — Asgardeo's own session-expiry detection, say,
+ * which sets `isSignedIn` false directly with no callback of ours in the
+ * loop. Belt and braces: this function is the belt.
+ */
+export function forgetResolvedSubOnSignOut(): void {
+  resolvedSub = null;
+}
 
 /** Test-only: drop the shared identity so each test starts from nothing. */
 export function __resetResolvedSubForTests(): void {

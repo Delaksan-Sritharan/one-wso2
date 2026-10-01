@@ -32,7 +32,12 @@ vi.mock("@asgardeo/react", () => ({
   useAsgardeo: () => ({ isSignedIn: true, getDecodedIdToken }),
 }));
 
-import { __resetResolvedSubForTests, foldIdentityError, useAsgardeoSub } from "./useAsgardeoSub";
+import {
+  __resetResolvedSubForTests,
+  foldIdentityError,
+  forgetResolvedSubOnSignOut,
+  useAsgardeoSub,
+} from "./useAsgardeoSub";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 function jwt(payload: Record<string, unknown>): string {
@@ -204,6 +209,35 @@ describe("useAsgardeoSub — deciding whether a decode failure means the session
     expect(seen[0]).toBe("ready");
     expect(seen).not.toContain("loading");
     expect(second.result.current.state).toEqual({ status: "ready", sub: "uid-1" });
+  });
+
+  // THE regression CodeRabbit found. `AuthGuard` unmounts every consumer of
+  // this hook in the SAME render that `isSignedIn` goes false, so the
+  // per-instance effect's own `if (!isSignedIn)` clear can miss entirely —
+  // no instance survives to observe the change it would be reacting to. This
+  // is why `forgetResolvedSubOnSignOut` exists and why `useSecureSignOut`
+  // calls it directly: it must work with ZERO `useAsgardeoSub()` instances
+  // mounted in between, which is the exact shape of a real sign-out.
+  it("stops a later mount seeding from a sub nobody was still mounted to clear", async () => {
+    getDecodedIdToken.mockResolvedValue({ sub: "uid-1" });
+    const first = renderHook(() => useAsgardeoSub());
+    await waitFor(() => expect(first.result.current.state.status).toBe("ready"));
+    first.unmount();
+
+    // The real sign-out boundary, called with nothing of this hook's mounted
+    // — exactly what useSecureSignOut does.
+    forgetResolvedSubOnSignOut();
+
+    // A different account signs in; this is its first-ever instance.
+    getDecodedIdToken.mockResolvedValue({ sub: "uid-2" });
+    const second = renderHook(() => useAsgardeoSub());
+
+    // Not "ready" with uid-1, not even "ready" with uid-2 yet — "loading",
+    // same as any instance that has never resolved anything.
+    expect(second.result.current.state).toEqual({ status: "loading" });
+
+    await waitFor(() => expect(second.result.current.state.status).toBe("ready"));
+    expect(second.result.current.state).toEqual({ status: "ready", sub: "uid-2" });
   });
 
   // Unchanged, and worth keeping pinned: once the dialog owns the message,
