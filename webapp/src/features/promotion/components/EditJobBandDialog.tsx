@@ -130,7 +130,7 @@ function EditJobBandDialogContent({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} disabled={update.isPending}>
+        <Button variant="contained" color="primary" onClick={handleSave} disabled={update.isPending}>
           Save
         </Button>
       </DialogActions>

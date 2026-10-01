@@ -120,7 +120,7 @@ function DeclinedReasonDialogContent({
             >
               Cancel
             </Button>
-            <Button disabled={!canSave} onClick={() => onSave(value.trim())}>
+            <Button variant="contained" color="primary" disabled={!canSave} onClick={() => onSave(value.trim())}>
               Save
             </Button>
           </>

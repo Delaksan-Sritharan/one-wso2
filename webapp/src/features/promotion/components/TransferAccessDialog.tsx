@@ -66,6 +66,8 @@ function TransferAccessDialogContent({ user, onClose }: { user: PromotionUser; o
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button
+          variant="contained"
+          color="primary"
           disabled={!newEmail || updateUser.isPending}
           onClick={() => {
             if (!newEmail) return;

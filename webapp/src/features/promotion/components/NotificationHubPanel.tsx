@@ -153,19 +153,25 @@ function NotifyGrid({
       ) : (
         <>
           <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 1 }}>
-            <Button
-              size="small"
-              startIcon={<SendIcon size={16} />}
-              disabled={selectedIds.length === 0}
-              onClick={() =>
-                setDialog({
-                  ids: selectedIds,
-                  message: "Would you like to send a notification to the selected list?",
-                })
-              }
-            >
-              Notify selected
-            </Button>
+            <Tooltip title={selectedIds.length === 0 ? "Select rows to notify" : "Notify selected applicants"}>
+              <span>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="primary"
+                  startIcon={<SendIcon size={16} />}
+                  disabled={selectedIds.length === 0}
+                  onClick={() =>
+                    setDialog({
+                      ids: selectedIds,
+                      message: "Would you like to send a notification to the selected list?",
+                    })
+                  }
+                >
+                  {`Notify selected ${selectedIds.length || ""}`.trim()}
+                </Button>
+              </span>
+            </Tooltip>
           </Box>
           <DataGrid.DataGrid
             rows={rows}

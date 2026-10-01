@@ -178,7 +178,7 @@ function UserFormDialogContent({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button disabled={!canSave} onClick={handleSave}>
+        <Button variant="contained" color="primary" disabled={!canSave} onClick={handleSave}>
           Save
         </Button>
       </DialogActions>

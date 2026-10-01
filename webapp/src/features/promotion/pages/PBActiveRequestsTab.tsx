@@ -170,23 +170,34 @@ export default function PBActiveRequestsTab() {
 
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
         <Stack direction="row" spacing={1}>
-          <Button
-            size="small"
-            startIcon={<CheckIcon size={16} />}
-            disabled={selectedIds.length === 0}
-            onClick={() => confirmApprove(selectedIds)}
-          >
-            Approve
-          </Button>
-          <Button
-            size="small"
-            color="error"
-            startIcon={<XIcon size={16} />}
-            disabled={selectedIds.length === 0}
-            onClick={() => setRejectTarget(selectedIds)}
-          >
-            Reject
-          </Button>
+          <Tooltip title={selectedIds.length === 0 ? "Select requests to approve" : "Approve selected requests"}>
+            <span>
+              <Button
+                size="small"
+                variant="contained"
+                color="success"
+                startIcon={<CheckIcon size={16} />}
+                disabled={selectedIds.length === 0}
+                onClick={() => confirmApprove(selectedIds)}
+              >
+                {`Approve ${selectedIds.length || ""}`.trim()}
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip title={selectedIds.length === 0 ? "Select requests to reject" : "Reject selected requests"}>
+            <span>
+              <Button
+                size="small"
+                variant="contained"
+                color="error"
+                startIcon={<XIcon size={16} />}
+                disabled={selectedIds.length === 0}
+                onClick={() => setRejectTarget(selectedIds)}
+              >
+                {`Reject ${selectedIds.length || ""}`.trim()}
+              </Button>
+            </span>
+          </Tooltip>
         </Stack>
         <Tooltip title="Refresh">
           <IconButton
