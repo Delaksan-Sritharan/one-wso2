@@ -24,40 +24,6 @@
 
 import { refreshAccessToken } from "@api/authBridge";
 
-// LOCAL ONLY — DO NOT COMMIT. Forges the x-jwt-assertion header the gateway
-// adds in staging/prod, which a locally-run backend has no gateway to
-// provide. Gated on ONE_WSO2_INJECT_JWT_HEADER_LOCALLY + localhost, so it
-// cannot act in a deployed build even if committed by accident. Returns null
-// (and so changes nothing) unless the URL is one of the backends below.
-//
-// The list is named explicitly rather than "any localhost URL": these two
-// services happen to share port 9090 today, so matching loosely would look
-// like it worked for the wrong reason and break the moment one of them moves
-// to a staging URL.
-const LOCAL_JWT_BACKEND_KEYS = [
-  "ONE_WSO2_EXPENSE_CLAIMS_BACKEND_URL",
-  "ONE_WSO2_FINANCE_MASTER_DATA_BACKEND_URL",
-] as const;
-
-function localJwtAssertion(url: string): string | null {
-  if (typeof window === "undefined" || window.location.hostname !== "localhost") return null;
-  const cfg = (window as unknown as { config?: Record<string, string> }).config;
-  if (cfg?.ONE_WSO2_INJECT_JWT_HEADER_LOCALLY !== "true") return null;
-  // Only for a backend that is itself local — a staging URL reaches a real
-  // gateway, which sets this header properly and would reject a forged one.
-  const matches = LOCAL_JWT_BACKEND_KEYS.some((key) => {
-    const backend = cfg?.[key] ?? "";
-    return backend.startsWith("http://localhost") && url.startsWith(backend);
-  });
-  if (!matches) return null;
-
-  const b64url = (obj: unknown) =>
-    btoa(JSON.stringify(obj)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  const header = b64url({ alg: "HS256", typ: "JWT" });
-  const payload = b64url({ email: "siddiha@wso2.com", groups: ["wso2-everyone"] });
-  return `${header}.${payload}.unsigned`;
-}
-
 // Thrown on non-2xx responses (and on unexpectedly-empty 2xx GETs). Carries
 // the HTTP status so retry logic (both per-query in features and global in
 // AppWithConfig) can key off it without regex-parsing the message.
@@ -146,17 +112,10 @@ function buildHeaders(extraHeaders?: Record<string, string>, withJsonBody?: bool
 // same retry-on-401 behavior without going through authedGet's JSON
 // parsing.
 export async function fetchWithReauth(url: string, init: RequestInit, accessToken: string): Promise<Response> {
-  const withAuth = (token: string): RequestInit => {
-    const jwt = localJwtAssertion(url);
-    return {
-      ...init,
-      headers: {
-        ...(init.headers as Record<string, string>),
-        Authorization: `Bearer ${token}`,
-        ...(jwt ? { "x-jwt-assertion": jwt } : {}),
-      },
-    };
-  };
+  const withAuth = (token: string): RequestInit => ({
+    ...init,
+    headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${token}` },
+  });
   const first = await fetch(url, withAuth(accessToken));
   if (first.status !== 401) return first;
 

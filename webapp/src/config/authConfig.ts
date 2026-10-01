@@ -172,11 +172,6 @@ declare global {
       // shows nothing. Typed loosely here and narrowed by `PreviewFeature` at
       // the read, so this declaration does not have to be edited for each flag.
       ONE_WSO2_PREVIEW_FEATURES?: Record<string, boolean | undefined>;
-      // LOCAL ONLY: stand in for the people-app `admin` privilege (999) that
-      // no test account holds, so admin-gated finance screens can be worked
-      // on. Ignored anywhere but a loopback host, and the file this lives in
-      // is gitignored — see @config/localAdmin for both guards.
-      ONE_WSO2_LOCAL_ADMIN?: boolean;
     };
   }
 }

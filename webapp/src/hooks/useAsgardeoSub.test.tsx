@@ -211,7 +211,7 @@ describe("useAsgardeoSub — deciding whether a decode failure means the session
     expect(second.result.current.state).toEqual({ status: "ready", sub: "uid-1" });
   });
 
-  // THE regression CodeRabbit found. `AuthGuard` unmounts every consumer of
+  // THE regression this exists to close. `AuthGuard` unmounts every consumer of
   // this hook in the SAME render that `isSignedIn` goes false, so the
   // per-instance effect's own `if (!isSignedIn)` clear can miss entirely —
   // no instance survives to observe the change it would be reacting to. This

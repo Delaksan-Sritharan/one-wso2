@@ -21,7 +21,6 @@ import {
   isOpdBackendConfigured,
 } from "@config/apiConfig";
 import { FINANCE_APPS } from "@constants/financeApps";
-import { isLocalAdminOverride } from "@config/localAdmin";
 import type { Capability } from "@constants/appMenu";
 import { useCcUserInfo } from "../cc/useCc";
 import { ccHasAccess } from "../cc/ccTypes";
@@ -60,14 +59,7 @@ const RESTRICTED_IDS = new Set(
  * and the per-reader permission is all that is left to check.
  */
 export function canSeeMasterData(caps: ReadonlySet<Capability> | undefined): boolean {
-  // Local development stands in for the `admin` privilege no test account
-  // holds, so these screens can be opened on the machine they are built on.
-  // Inert anywhere but a loopback host, and switched on from a gitignored
-  // file — see @config/localAdmin, which explains why this is not a preview
-  // feature. Deliberately here rather than in `capabilitiesFromPrivileges`:
-  // this opens Master Data, not every admin-gated screen in the portal.
-  //
-  return isLocalAdminOverride() || (caps?.has("admin") ?? false);
+  return caps?.has("admin") ?? false;
 }
 
 // Role-gates the Finance menu items (surfaced under Me) against each app's
@@ -202,13 +194,21 @@ export function useFinanceGate(enabled = true, caps?: ReadonlySet<Capability>): 
   // happened to land first, which could be the half-loaded one.
   //
   // `hasAnswered` asks the question that actually has a stable answer: has
-  // this backend finished having its say? `isSuccess` and `isError` are
-  // terminal in React Query — a refetch of an errored query keeps
-  // `status: "error"` until it succeeds — so neither ever goes back to
-  // false, and a backend this environment has no URL for is counted as
-  // answered because it is never going to be asked. The conjunction of three
-  // monotonic facts is itself monotonic, so `isResolving` can only ever go
-  // true → false, once, for the life of the mount.
+  // this backend finished having its say, FOR THE IDENTITY IT WAS ASKED
+  // ABOUT? `isSuccess` and `isError` are terminal in React Query — a refetch
+  // of an errored query keeps `status: "error"` until it succeeds — so
+  // neither ever goes back to false for a given query, and a backend this
+  // environment has no URL for is counted as answered because it is never
+  // going to be asked.
+  //
+  // That makes `isResolving` monotonic per identity, not for the life of the
+  // mount outright: `userSub` is part of every query key here, so an identity
+  // retry (a decode failure moving `useAsgardeoSub` from "error" back to
+  // "loading") or a different account signing in in the same tab both point
+  // these queries at a key that has never answered, and `isResolving` goes
+  // back to true — correctly, since that identity genuinely has not. What it
+  // cannot do is flicker for a reason that has nothing to do with the
+  // reader, which is the bug this replaced.
   const hasAnswered = (q: { isSuccess: boolean; isError: boolean }, configured: boolean) =>
     !configured || q.isSuccess || q.isError;
 
