@@ -47,20 +47,6 @@ function DashboardBody() {
   const userInfo = useOpdUserInfo();
   const summary = useOpdDashboardSummary();
 
-  // `routes.tsx:20-24` puts this screen behind View.FINANCE — it is every
-  // employee's spend, not your own, so the approver role is what opens it.
-  //
-  // `isError` is excluded deliberately: a failed lookup leaves `data`
-  // undefined, which reads as "no role", and telling a finance approver they
-  // lack access because a request failed is worse than showing them a retry.
-  if (!userInfo.isLoading && !userInfo.isError && !opdHasRole(userInfo.data, OPD_ROLE.FINANCE_APPROVER)) {
-    return (
-      <Alert severity="info">
-        OPD analytics is limited to the finance team who review these claims.
-      </Alert>
-    );
-  }
-
   if (userInfo.isLoading || summary.isLoading) {
     return (
       <Stack spacing={2}>
@@ -68,6 +54,41 @@ function DashboardBody() {
           <Skeleton key={i} variant="rounded" height={80} />
         ))}
       </Stack>
+    );
+  }
+
+  // `routes.tsx:20-24` puts this screen behind View.FINANCE — it is every
+  // employee's spend, not your own, so the approver role is what opens it.
+  //
+  // `!isLoading`, not `isSuccess`: `isSuccess` excludes a query that is
+  // `enabled: false` and will never fetch (no OPD backend configured in this
+  // environment) — that query sits at `isPending: true` forever with
+  // `isSuccess` permanently false, so gating on it fell through this refusal
+  // entirely and landed on `if (!data) return null` below: a blank page,
+  // forever, with nothing saying why. `!isLoading` reads true for that case,
+  // same as a real "no role" answer — the refusal fires, matching what this
+  // screen showed before `isSuccess` was tried here.
+  //
+  // It does not reopen the window that made `isSuccess` look necessary.
+  // `foldIdentityError` (useAsgardeoSub.ts) synthesizes `isLoading: true` for
+  // the ENTIRE identity-resolving window on every fresh mount — switching the
+  // Overview dropdown to OPD Claims mounts this whole body new — and once
+  // identity is ready, this installed React Query (5.90.20, checked directly:
+  // a query's `isFetching` is already true on the SAME render its `enabled`
+  // flips true, no render in between where it reads false) means there is no
+  // gap where `isLoading` reads false while an answer might still arrive.
+  //
+  // `isError` was already excluded by `isSuccess` for free (React Query's
+  // states are mutually exclusive); `!isLoading` does not carry that for
+  // free, since an errored query is also `isLoading: false`. Without this
+  // line, a failed lookup would read as "no role" and refuse a finance
+  // approver for a request that merely failed, which the ErrorNotice branch
+  // below exists specifically to avoid.
+  if (!userInfo.isLoading && !userInfo.isError && !opdHasRole(userInfo.data, OPD_ROLE.FINANCE_APPROVER)) {
+    return (
+      <Alert severity="info">
+        OPD analytics is limited to the finance team who review these claims.
+      </Alert>
     );
   }
 

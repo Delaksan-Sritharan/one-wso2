@@ -14,10 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import { useState } from "react";
 import type { VisibilityAnswer } from "@components/side-rail/visibilityFold";
 import { FINANCE_APPS } from "@constants/financeApps";
-import type { Capability } from "@constants/appMenu";
 import { isPreviewEnabled } from "@config/previewFeatures";
+import type { Capability } from "@constants/appMenu";
 import { useCcUserInfo } from "../cc/useCc";
 import { ccHasAccess } from "../cc/ccTypes";
 import { useOpdUserInfo } from "../opd/useOpd";
@@ -49,6 +50,12 @@ const RESTRICTED_IDS = new Set(
  * Exported so both the switch case and the route call the same check —
  * two independent copies of `isPreviewEnabled(...) && caps.has("admin")`
  * is how one of them quietly drifts from the other.
+ *
+ * Two gates answering two different questions, and BOTH have to say yes:
+ * the preview flag is "does this environment have the feature yet"
+ * (absent means off, so production stays untouched by this merging), and
+ * `admin` is the actual per-reader permission. Turning the flag on in an
+ * environment does not hand the tables to every employee in it.
  */
 export function canSeeMasterData(caps: ReadonlySet<Capability> | undefined): boolean {
   return isPreviewEnabled("finance-master-data") && (caps?.has("admin") ?? false);
@@ -170,7 +177,35 @@ export function useFinanceGate(enabled = true, caps?: ReadonlySet<Capability>): 
     }
   };
 
-  const isResolving = enabled && (cc.isLoading || opd.isLoading || expense.isLoading);
+  // `isResolving` is the one answer here that can go BACKWARDS, and it is the
+  // one every caller renders nothing on: `FinanceOverviewPage` returns null,
+  // `ClaimApprovalPage` drops its tabs and its <Outlet />, the rail hides the
+  // row. So an answer that un-settles is not a slower answer — it is a screen
+  // blanking and coming back, which is the flickering.
+  //
+  // The roles beside it cannot go backwards: they read `cc.data` / `opd.data`
+  // / `expense.data`, and React Query keeps a query's data once it has any.
+  // The raw loading flags can, and for reasons that have nothing to do with
+  // this reader — a query disabled because its backend isn't configured in
+  // this environment stays `isPending` forever, so `foldIdentityError` reports
+  // it as loading AGAIN every time identity re-checks. (useAsgardeoSub no
+  // longer re-checks needlessly, which fixes that at the source; this is the
+  // second line of defence, and it is the one that holds whatever else
+  // upstream does.)
+  //
+  // Hence a one-way latch: resolving until the first settled answer, never
+  // again after it. Only settled answers while `enabled` count — a gate
+  // switched off, as the rail's is on every other perspective, has answered
+  // nothing, and treating that as settled would latch a wrong answer.
+  // Set during render, not from an effect: React supports a component
+  // adjusting its own state while rendering (it re-runs the render before
+  // committing anything), and that is what this needs — an effect would let
+  // one render escape with `isResolving` already wrong.
+  const [everSettled, setEverSettled] = useState(false);
+  const stillAnswering = enabled && (cc.isLoading || opd.isLoading || expense.isLoading);
+  if (enabled && !stillAnswering && !everSettled) setEverSettled(true);
+  const isResolving = stillAnswering && !everSettled;
+
   return { canSee, isResolving, ccHasOwnCard, opdFinance, opdErrored };
 }
 

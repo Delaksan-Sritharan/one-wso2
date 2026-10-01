@@ -30,8 +30,7 @@ import {
 } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
-import ErrorSnackbar from "@components/error-snackbar/ErrorSnackbar";
-import { useErrorSnackbar } from "@components/error-snackbar/useErrorSnackbar";
+import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useBankAccounts } from "@features/my/api/useBankAccounts";
 import { useBankingConfig } from "@features/my/api/useBankingConfig";
 import { useBankingEmployees } from "@features/my/api/useBankingEmployees";
@@ -75,7 +74,7 @@ export default function EmployeeOperationsTab() {
   const [confirmation, setConfirmation] = useState<ConfirmationContent | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [addAccountType, setAddAccountType] = useState<AccountType | null>(null);
-  const { snack, showError, close: closeSnack } = useErrorSnackbar();
+  const { showSuccess, showError } = useNotifications();
 
   const employees = employeesQuery.data ?? [];
   const accounts = accountsQuery.data?.bankAccounts ?? [];
@@ -87,8 +86,10 @@ export default function EmployeeOperationsTab() {
       text: "Are you sure you want to deactivate these account?",
       confirmAction: () => {
         if (!selectedEmployee) return;
+        const employeeEmail = selectedEmployee.workEmail;
         deactivateAccount
-          .mutateAsync({ accountId: account.accountId, employeeEmail: selectedEmployee.workEmail })
+          .mutateAsync({ accountId: account.accountId, employeeEmail })
+          .then(() => showSuccess(`Deactivated account ${account.accountId} for ${employeeEmail}.`))
           .catch((error: unknown) => showError(`Failed to deactivate the account. ${describeError(error)}`));
       },
     });
@@ -99,25 +100,49 @@ export default function EmployeeOperationsTab() {
       title: "Confirm Resignation",
       text: "Are you sure you want to resign this employee? This will deactivate employee's all active bank accounts !",
       confirmAction: () => {
-        if (!selectedEmployee) return;
+        if (!selectedEmployee || !accountsQuery.isSuccess) return;
+        const employeeEmail = selectedEmployee.workEmail;
         void (async () => {
           // Resign has no dedicated backend endpoint — every currently-Active
           // account is deactivated in turn, behind this one confirmation.
           // Each account gets its own try/catch, so one account's deactivate
           // failing (the backend can 500 on a CONSULTANCY account with no
           // NetSuite internal id on file, for instance) must not stop the
-          // remaining active accounts from being attempted too.
+          // remaining active accounts from being attempted too. Each
+          // failure is surfaced through the same notification banner every
+          // other action here uses, rather than only the console, so a
+          // partial Resign is never silently indistinguishable from a
+          // complete one.
+          let deactivatedCount = 0;
+          let failedCount = 0;
           for (const account of accounts) {
             if (account.accountStatus === "ACTIVE") {
               try {
                 await deactivateAccount.mutateAsync({
                   accountId: account.accountId,
-                  employeeEmail: selectedEmployee.workEmail,
+                  employeeEmail,
                 });
+                deactivatedCount += 1;
               } catch (error) {
-                console.error(`Failed to deactivate account ${account.accountId}:`, error);
+                failedCount += 1;
+                showError(
+                  `Failed to deactivate account ${account.accountId} for ${employeeEmail}. ${describeError(error)}`,
+                );
               }
             }
+          }
+          // Always leave the admin with one summary line, even when the two
+          // per-account counters above don't tell the whole story on their
+          // own: no ACTIVE accounts at all (both stay 0), or a partial
+          // failure (the accounts that did deactivate are otherwise only
+          // implied by the per-account error toasts already shown).
+          const attempted = deactivatedCount + failedCount;
+          if (attempted === 0) {
+            showSuccess(`Resigned ${employeeEmail}: no active accounts to deactivate.`);
+          } else if (failedCount === 0) {
+            showSuccess(`Resigned ${employeeEmail}: deactivated ${deactivatedCount} account(s).`);
+          } else {
+            showError(`Resigned ${employeeEmail}: deactivated ${deactivatedCount} of ${attempted} account(s).`);
           }
         })();
       },
@@ -142,6 +167,7 @@ export default function EmployeeOperationsTab() {
               size="small"
               color="error"
               disabled={a.accountStatus === "INACTIVE" || submitting}
+              loading={deactivateAccount.isPending && deactivateAccount.variables?.accountId === a.accountId}
               onClick={() => requestDeactivate(a)}
             >
               Deactivate
@@ -185,7 +211,13 @@ export default function EmployeeOperationsTab() {
             <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
               Employee Details
             </Typography>
-            <Button variant="contained" color="error" disabled={submitting} onClick={requestResign}>
+            <Button
+              variant="contained"
+              color="error"
+              disabled={submitting || !accountsQuery.isSuccess}
+              loading={submitting}
+              onClick={requestResign}
+            >
               Resign Employee
             </Button>
           </Stack>
@@ -262,8 +294,6 @@ export default function EmployeeOperationsTab() {
           }}
         />
       )}
-
-      <ErrorSnackbar snack={snack} onClose={closeSnack} />
     </Box>
   );
 }

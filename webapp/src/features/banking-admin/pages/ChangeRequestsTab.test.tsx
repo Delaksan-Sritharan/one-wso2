@@ -15,7 +15,7 @@
 // under the License.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { BankAccount } from "@features/my/api/types";
 
@@ -43,6 +43,12 @@ const rejectAccount = vi.hoisted(() => ({
 const isMutatingCount = vi.hoisted(() => ({ value: 0 }));
 vi.mock("@tanstack/react-query", () => ({
   useIsMutating: () => isMutatingCount.value,
+}));
+
+const showSuccess = vi.hoisted(() => vi.fn());
+const showError = vi.hoisted(() => vi.fn());
+vi.mock("@context/notifications/NotificationsContext", () => ({
+  useNotifications: () => ({ showSuccess, showError, showWarning: vi.fn() }),
 }));
 
 vi.mock("@features/my/api/usePendingSalaryAccounts", () => ({
@@ -96,6 +102,8 @@ beforeEach(() => {
   rejectAccount.mutate.mockReset();
   rejectAccount.mutateAsync.mockReset().mockResolvedValue(undefined);
   isMutatingCount.value = 0;
+  showSuccess.mockClear();
+  showError.mockClear();
 });
 
 describe("ChangeRequestsTab list", () => {
@@ -217,7 +225,10 @@ describe("ChangeRequestsTab actions", () => {
     render(<ChangeRequestsTab />);
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await user.click(await screen.findByRole("button", { name: "Confirm" }));
-    expect(await screen.findByText(/failed to approve.*account already active/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(showError).toHaveBeenCalledWith(expect.stringMatching(/failed to approve.*account already active/i)),
+    );
+    expect(showSuccess).not.toHaveBeenCalled();
   });
 
   it("shows an error instead of swallowing a failed reject", async () => {
@@ -229,6 +240,31 @@ describe("ChangeRequestsTab actions", () => {
     const dialog = screen.getByRole("dialog");
     await user.type(within(dialog).getByLabelText("Reason for Rejection"), "Invalid account details");
     await user.click(within(dialog).getByRole("button", { name: "Reject" }));
-    expect(await screen.findByText(/failed to reject.*backend timeout/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(showError).toHaveBeenCalledWith(expect.stringMatching(/failed to reject.*backend timeout/i)),
+    );
+    expect(showSuccess).not.toHaveBeenCalled();
+  });
+
+  it("shows a success notification once Approve resolves", async () => {
+    const user = userEvent.setup();
+    accounts.data = [bankAccount({ accountId: 7, employeeEmail: "jane@wso2.com" })];
+    render(<ChangeRequestsTab />);
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(expect.stringContaining("jane@wso2.com")));
+    expect(showError).not.toHaveBeenCalled();
+  });
+
+  it("shows a success notification once Reject resolves", async () => {
+    const user = userEvent.setup();
+    accounts.data = [bankAccount({ accountId: 7, employeeEmail: "jane@wso2.com" })];
+    render(<ChangeRequestsTab />);
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    const dialog = screen.getByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Reason for Rejection"), "Invalid account details");
+    await user.click(within(dialog).getByRole("button", { name: "Reject" }));
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(expect.stringContaining("jane@wso2.com")));
+    expect(showError).not.toHaveBeenCalled();
   });
 });

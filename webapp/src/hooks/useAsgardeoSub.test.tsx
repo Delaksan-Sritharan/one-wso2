@@ -149,6 +149,34 @@ describe("useAsgardeoSub — deciding whether a decode failure means the session
     expect(refreshIdToken).toHaveBeenCalledTimes(1);
   });
 
+  // A resolved identity must not be withdrawn while it is re-checked. This
+  // effect re-runs whenever `isSignedIn`, `getDecodedIdToken` or a retry
+  // changes, and it used to reset to `loading` every time — which nothing
+  // downstream can absorb: `foldIdentityError` turns "identity loading + query
+  // still pending" into a synthetic `isLoading`, and a DISABLED query is
+  // pending for good (an unconfigured backend, a role-gated queue). So every
+  // re-run flipped those hooks back to loading, `useFinanceGate.isResolving`
+  // with them, and every screen keyed off it blanked and came back. That was
+  // the Finance section's flickering.
+  it("keeps a resolved sub on screen while it re-checks", async () => {
+    getDecodedIdToken.mockResolvedValue({ sub: "uid-1" });
+    const seen: string[] = [];
+
+    const { result } = renderHook(() => {
+      const hook = useAsgardeoSub();
+      seen.push(hook.state.status);
+      return hook;
+    });
+    await waitFor(() => expect(result.current.state.status).toBe("ready"));
+
+    const before = seen.length;
+    result.current.retry();
+    await waitFor(() => expect(getDecodedIdToken).toHaveBeenCalledTimes(2));
+
+    expect(seen.slice(before)).not.toContain("loading");
+    expect(result.current.state).toEqual({ status: "ready", sub: "uid-1" });
+  });
+
   // Unchanged, and worth keeping pinned: once the dialog owns the message,
   // this hook stays on its skeleton rather than lighting up eleven separate
   // error notices blaming eleven features for one dead session.

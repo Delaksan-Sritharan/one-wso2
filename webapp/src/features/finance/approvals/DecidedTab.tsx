@@ -23,7 +23,6 @@ import {
   Box,
   Button,
   Chip,
-  Skeleton,
   Stack,
   Tab,
   Table,
@@ -165,7 +164,7 @@ export default function DecidedTab() {
   const identityLoading = expenseAppData.isLoading || opdUserInfo.isLoading;
   const queuesLoading = leadDecided.isLoading || financeDecided.isLoading || opdDecided.isLoading;
 
-  if (identityLoading) return <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 1.5 }} />;
+  if (identityLoading) return null;
 
   // Same review screen Needs You opens, `pending={false}`: Approve/Reject are
   // replaced by the status chip, which opens the activity trail instead — the
@@ -263,9 +262,7 @@ export default function DecidedTab() {
       {/* "Nothing has been decided" is a claim about the data, so it is only
           made when the data actually arrived — a failure stands alone,
           saying both at once tells the reader two different things. */}
-      {queuesLoading ? (
-        <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1.5 }} />
-      ) : expenseRows.length === 0 && opdRows.length === 0 ? (
+      {queuesLoading ? null : expenseRows.length === 0 && opdRows.length === 0 ? (
         !failure && (
           <Typography sx={{ fontSize: 13, color: "text.secondary", py: 3 }}>
             {employee || claimIdFilter ? "No claims match these filters." : `Nothing ${outcome} yet.`}

@@ -15,7 +15,7 @@
 // under the License.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { BankAccount, BankingEmployee } from "@features/my/api/types";
 
@@ -29,7 +29,7 @@ import type { BankAccount, BankingEmployee } from "@features/my/api/types";
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
 
 const employees = vi.hoisted(() => ({ data: [] as BankingEmployee[] }));
-const accounts = vi.hoisted(() => ({ data: [] as BankAccount[] }));
+const accounts = vi.hoisted(() => ({ data: [] as BankAccount[], isLoading: false, isError: false }));
 const bankAccountsSpy = vi.hoisted(() => vi.fn());
 const deactivateAccount = vi.hoisted(() => ({
   mutate: vi.fn(),
@@ -45,6 +45,12 @@ vi.mock("@tanstack/react-query", () => ({
   useIsMutating: () => isMutatingCount.value,
 }));
 
+const showSuccess = vi.hoisted(() => vi.fn());
+const showError = vi.hoisted(() => vi.fn());
+vi.mock("@context/notifications/NotificationsContext", () => ({
+  useNotifications: () => ({ showSuccess, showError, showWarning: vi.fn() }),
+}));
+
 vi.mock("@features/my/api/useBankingEmployees", () => ({
   useBankingEmployees: () => ({ data: employees.data, isLoading: false, isError: false }),
 }));
@@ -53,8 +59,9 @@ vi.mock("@features/my/api/useBankAccounts", () => ({
     bankAccountsSpy(workEmail);
     return {
       data: { bankAccounts: accounts.data, count: accounts.data.length },
-      isLoading: false,
-      isError: false,
+      isLoading: accounts.isLoading,
+      isError: accounts.isError,
+      isSuccess: !accounts.isLoading && !accounts.isError,
       refetch: vi.fn(),
     };
   },
@@ -134,10 +141,14 @@ async function selectEmployee(user: ReturnType<typeof userEvent.setup>, label = 
 beforeEach(() => {
   employees.data = [employee()];
   accounts.data = [];
+  accounts.isLoading = false;
+  accounts.isError = false;
   bankAccountsSpy.mockReset();
   deactivateAccount.mutate.mockReset();
   deactivateAccount.mutateAsync.mockReset().mockResolvedValue(undefined);
   isMutatingCount.value = 0;
+  showSuccess.mockClear();
+  showError.mockClear();
 });
 
 describe("EmployeeOperationsTab", () => {
@@ -182,9 +193,11 @@ describe("EmployeeOperationsTab", () => {
     expect(deactivateAccount.mutateAsync).toHaveBeenCalledTimes(2);
     expect(deactivateAccount.mutateAsync).toHaveBeenCalledWith({ accountId: 1, employeeEmail: "jane@wso2.com" });
     expect(deactivateAccount.mutateAsync).toHaveBeenCalledWith({ accountId: 2, employeeEmail: "jane@wso2.com" });
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(expect.stringContaining("jane@wso2.com")));
+    expect(showError).not.toHaveBeenCalled();
   });
 
-  it("keeps deactivating the remaining Active accounts when one of them fails", async () => {
+  it("keeps deactivating the remaining Active accounts when one of them fails, and reports that failure", async () => {
     const user = userEvent.setup();
     accounts.data = [
       bankAccount({ accountId: 1, accountStatus: "ACTIVE" }),
@@ -201,6 +214,29 @@ describe("EmployeeOperationsTab", () => {
     expect(deactivateAccount.mutateAsync).toHaveBeenCalledTimes(2);
     expect(deactivateAccount.mutateAsync).toHaveBeenCalledWith({ accountId: 1, employeeEmail: "jane@wso2.com" });
     expect(deactivateAccount.mutateAsync).toHaveBeenCalledWith({ accountId: 2, employeeEmail: "jane@wso2.com" });
+    // The failed account (1) is no longer silently console.error'd only —
+    // it now reaches the same notification banner every other failure here
+    // uses, and a partial Resign does not also claim overall success.
+    await waitFor(() =>
+      expect(showError).toHaveBeenCalledWith(expect.stringMatching(/account 1.*jane@wso2\.com.*http 500/i)),
+    );
+    expect(showSuccess).not.toHaveBeenCalled();
+  });
+
+  it("disables Resign Employee while the account query is still loading, instead of treating it as no accounts", async () => {
+    const user = userEvent.setup();
+    accounts.isLoading = true;
+    render(<EmployeeOperationsTab />);
+    await selectEmployee(user);
+    expect(screen.getByRole("button", { name: "Resign Employee" })).toBeDisabled();
+  });
+
+  it("disables Resign Employee when the account query has failed", async () => {
+    const user = userEvent.setup();
+    accounts.isError = true;
+    render(<EmployeeOperationsTab />);
+    await selectEmployee(user);
+    expect(screen.getByRole("button", { name: "Resign Employee" })).toBeDisabled();
   });
 
   it("disables Deactivate and Resign Employee while a deactivate mutation is already in flight", async () => {
@@ -221,7 +257,23 @@ describe("EmployeeOperationsTab", () => {
     await selectEmployee(user);
     await user.click(screen.getByRole("button", { name: "Deactivate" }));
     await user.click(await screen.findByRole("button", { name: "Confirm" }));
-    expect(await screen.findByText(/failed to deactivate.*http 500/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(showError).toHaveBeenCalledWith(expect.stringMatching(/failed to deactivate.*http 500/i)),
+    );
+    expect(showSuccess).not.toHaveBeenCalled();
+  });
+
+  it("shows a success notification once a single-account Deactivate resolves", async () => {
+    const user = userEvent.setup();
+    accounts.data = [bankAccount({ accountId: 1, accountStatus: "ACTIVE" })];
+    render(<EmployeeOperationsTab />);
+    await selectEmployee(user);
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm" }));
+    await waitFor(() =>
+      expect(showSuccess).toHaveBeenCalledWith(expect.stringMatching(/account 1.*jane@wso2\.com/i)),
+    );
+    expect(showError).not.toHaveBeenCalled();
   });
 
   it("disables the Reimbursement option for an ineligible location", async () => {
