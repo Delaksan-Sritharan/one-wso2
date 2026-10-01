@@ -216,6 +216,34 @@ describe("Versions", () => {
     expect(fetchMock.mock.calls.filter((call) => String(call[0]).includes("/series")).length).toBeGreaterThan(1);
   });
 
+  it("keeps v1.10 ahead of v1.9 when choosing the five most recent releases", async () => {
+    window.config = configured();
+    const tags = ["v1.6", "v1.7", "v1.8", "v1.9", "v1.10", "v1.11"];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/repositories")) {
+          return json({
+            repositories: [{ id: 3, repoName: "product-is", productName: "Identity Server", isActive: true }],
+          });
+        }
+        if (url.includes("/series")) {
+          return json({
+            series: tags.map((tag) => ({
+              releaseTag: tag,
+              releaseName: tag,
+              points: [{ date: "2026-09-28", value: 1 }],
+            })),
+          });
+        }
+        return json({ assets: [] });
+      }),
+    );
+    renderVersions();
+    expect(await screen.findAllByText("v1.10")).toHaveLength(2);
+    expect(screen.getAllByText("v1.6")).toHaveLength(1);
+  });
+
   it("shows an error when the product list fails", async () => {
     window.config = configured();
     const fetchMock = vi.fn(async (url: string) => {

@@ -68,7 +68,9 @@ function shareLabel(part: number, whole: number): string {
 }
 
 function mostRecent(series: readonly VersionSeriesItem[], limit: number): VersionSeriesItem[] {
-  return [...series].sort((a, b) => b.releaseTag.localeCompare(a.releaseTag)).slice(0, limit);
+  return [...series]
+    .sort((a, b) => b.releaseTag.localeCompare(a.releaseTag, undefined, { numeric: true }))
+    .slice(0, limit);
 }
 
 export default function EngineeringVersionsPage(): JSX.Element {
