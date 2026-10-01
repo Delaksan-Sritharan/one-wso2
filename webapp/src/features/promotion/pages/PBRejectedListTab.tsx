@@ -18,7 +18,7 @@
 // — every request the Promotion Board itself rejected (REJECTED), org-wide.
 // Read-only, structurally identical to PBApprovedListTab.
 import { useState } from "react";
-import { Box, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
+import { Box, Card, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
 import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
@@ -96,16 +96,18 @@ export default function PBRejectedListTab() {
       ) : rows.length === 0 ? (
         <PromotionEmptyState message="There are no rejected promotion requests" />
       ) : (
-        <DataGrid.DataGrid
-          rows={rows}
-          columns={columns}
-          getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? "row-stripe" : "")}
-          showToolbar
-          slots={{ toolbar: PromotionGridToolbar }}
-          sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX, ...STRIPE_SX }}
-          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-          pageSizeOptions={[10, 25, 50]}
-        />
+        <Card variant="outlined" sx={{ p: 2 }}>
+          <DataGrid.DataGrid
+            rows={rows}
+            columns={columns}
+            getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? "row-stripe" : "")}
+            showToolbar
+            slots={{ toolbar: PromotionGridToolbar }}
+            sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX, ...STRIPE_SX }}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            pageSizeOptions={[10, 25, 50]}
+          />
+        </Card>
       )}
     </>
   );

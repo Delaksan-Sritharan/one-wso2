@@ -27,6 +27,7 @@ import {
   Alert,
   Box,
   Button,
+  Card,
   Chip,
   DataGrid,
   DatePickers,
@@ -190,16 +191,18 @@ export default function PeopleHrArchiveTab() {
           {rows.length === 0 ? (
             <PromotionEmptyState message="No archived promotions match these filters." />
           ) : (
-            <DataGrid.DataGrid
-              rows={rows}
-              getRowId={(row) => `${row.email}-${row.promotionEffectiveDate}-${row.promotedDesignation}`}
-              columns={columns}
-              showToolbar
-              slots={{ toolbar: PromotionGridToolbar }}
-              sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
-              initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
-              pageSizeOptions={[25, 50, 100]}
-            />
+            <Card variant="outlined" sx={{ p: 2 }}>
+              <DataGrid.DataGrid
+                rows={rows}
+                getRowId={(row) => `${row.email}-${row.promotionEffectiveDate}-${row.promotedDesignation}`}
+                columns={columns}
+                showToolbar
+                slots={{ toolbar: PromotionGridToolbar }}
+                sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+                initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+                pageSizeOptions={[25, 50, 100]}
+              />
+            </Card>
           )}
         </>
       )}

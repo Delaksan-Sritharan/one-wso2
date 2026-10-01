@@ -319,15 +319,17 @@ export default function AdminTimeBasedPromotionsTab() {
               </IconButton>
             </Tooltip>
           </Box>
-          <DataGrid.DataGrid
-            rows={rows}
-            columns={columns}
-            showToolbar
-            slots={{ toolbar: PromotionGridToolbar }}
-            sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-            pageSizeOptions={[10, 25, 50]}
-          />
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <DataGrid.DataGrid
+              rows={rows}
+              columns={columns}
+              showToolbar
+              slots={{ toolbar: PromotionGridToolbar }}
+              sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+              initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+              pageSizeOptions={[10, 25, 50]}
+            />
+          </Card>
         </>
       )}
     </>

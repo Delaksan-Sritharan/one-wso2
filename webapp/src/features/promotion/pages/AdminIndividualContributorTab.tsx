@@ -21,7 +21,7 @@
 // action here at all (contrast every other admin/lead/board grid), the only
 // mutation is editing a rejected request's own reason after the fact.
 import { useState } from "react";
-import { Box, Chip, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
+import { Box, Card, Chip, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
 import { EyeIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
@@ -151,15 +151,17 @@ export default function AdminIndividualContributorTab() {
       ) : rows.length === 0 ? (
         <PromotionEmptyState message="There are no promotion requests for the active cycle" />
       ) : (
-        <DataGrid.DataGrid
-          rows={rows}
-          columns={columns}
-          showToolbar
-          slots={{ toolbar: PromotionGridToolbar }}
-          sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
-          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-          pageSizeOptions={[10, 25, 50]}
-        />
+        <Card variant="outlined" sx={{ p: 2 }}>
+          <DataGrid.DataGrid
+            rows={rows}
+            columns={columns}
+            showToolbar
+            slots={{ toolbar: PromotionGridToolbar }}
+            sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            pageSizeOptions={[10, 25, 50]}
+          />
+        </Card>
       )}
     </>
   );

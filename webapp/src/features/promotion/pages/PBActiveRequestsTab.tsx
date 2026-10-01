@@ -24,7 +24,7 @@
 // `from: "promotion_board"` passed to approve/reject, and the deadline field
 // read (promotionBoardDeadline, not functionalLeadDeadline).
 import { useState } from "react";
-import { Alert, Box, Button, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
+import { Alert, Box, Button, Card, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
 import { CheckIcon, ChevronDownIcon, PencilIcon, RefreshCwIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
@@ -217,21 +217,23 @@ export default function PBActiveRequestsTab() {
       ) : rows.length === 0 ? (
         <PromotionEmptyState message="There are no active promotion requests" />
       ) : (
-        <DataGrid.DataGrid
-          rows={rows}
-          columns={columns}
-          checkboxSelection
-          rowSelectionModel={{ type: "include", ids: new Set(selectedIds) }}
-          onRowSelectionModelChange={(model) =>
-            setSelectedIds(resolveGridSelectedIds(model, rows))
-          }
-          getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? "row-stripe" : "")}
-          showToolbar
-          slots={{ toolbar: PromotionGridToolbar }}
-          sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX, ...STRIPE_SX }}
-          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-          pageSizeOptions={[10, 25, 50]}
-        />
+        <Card variant="outlined" sx={{ p: 2 }}>
+          <DataGrid.DataGrid
+            rows={rows}
+            columns={columns}
+            checkboxSelection
+            rowSelectionModel={{ type: "include", ids: new Set(selectedIds) }}
+            onRowSelectionModelChange={(model) =>
+              setSelectedIds(resolveGridSelectedIds(model, rows))
+            }
+            getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? "row-stripe" : "")}
+            showToolbar
+            slots={{ toolbar: PromotionGridToolbar }}
+            sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX, ...STRIPE_SX }}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            pageSizeOptions={[10, 25, 50]}
+          />
+        </Card>
       )}
     </>
   );
