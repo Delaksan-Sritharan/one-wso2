@@ -23,7 +23,7 @@
 // other grid in this app opens a dialog on its own row actions.
 import { useState } from "react";
 import { Box, Card, Chip, DataGrid, IconButton, Popover, Skeleton, TextField, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { CalendarOffIcon, CheckIcon, InboxIcon, PlayIcon, TriangleAlertIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
+import { CheckIcon, PlayIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { humanizeHttpError } from "@api/http";
@@ -170,25 +170,20 @@ export default function LeadPendingRequestsTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : cycle.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
         />
       ) : !cycle.cycle ? (
-        <PromotionEmptyState
-          icon={<CalendarOffIcon size={28} />}
-          message="We are not accepting promotion requests right now"
-        />
+        <PromotionEmptyState message="We are not accepting promotion requests right now" />
       ) : deadlinePast ? (
-        <PromotionEmptyState icon={<CalendarOffIcon size={28} />} message="The Lead deadline has passed." />
+        <PromotionEmptyState message="The Lead deadline has passed." />
       ) : recommendations.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load recommendation requests. ${humanizeHttpError(recommendations.error)}`}
         />
       ) : list.length === 0 ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no pending promotion requests." />
+        <PromotionEmptyState message="There are no pending promotion requests." />
       ) : (
         <Card variant="outlined" sx={{ p: 2 }}>
           <DataGrid.DataGrid

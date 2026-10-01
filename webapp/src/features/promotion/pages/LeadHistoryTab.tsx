@@ -21,7 +21,7 @@
 // list.
 import { useState } from "react";
 import { Box, Card, Chip, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
-import { ChevronDownIcon, InboxIcon, RefreshCwIcon, TriangleAlertIcon } from "@wso2/oxygen-ui-icons-react";
+import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { humanizeHttpError } from "@api/http";
@@ -30,38 +30,14 @@ import { useLeadRecommendations } from "../api/useLeadRecommendations";
 import PromotionEmptyState from "../components/PromotionEmptyState";
 import RecommendationHistoryDetailDialog from "../components/RecommendationHistoryDetailDialog";
 import { PromotionGridToolbar } from "../components/PromotionGridToolbar";
-import { promotionRequestStatusLabel, recommendationStatusLabel } from "../util/promotionStatus";
+import {
+  promotionRequestChipColor,
+  promotionRequestStatusLabel,
+  recommendationChipColor,
+  recommendationStatusLabel,
+} from "../util/promotionStatus";
 import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
-import type { PromotionRecommendation, PromotionRequestStatus, RecommendationStatus } from "../api/types";
-
-// Chip `color` (a theme palette role), not a fixed hex — stays legible
-// across every Oxygen theme preset instead of only the one it was picked
-// against.
-function recommendationChipColor(status: RecommendationStatus): "success" | "error" | "default" {
-  if (status === "SUBMITTED") return "success";
-  if (status === "DECLINED") return "error";
-  return "default"; // EXPIRED
-}
-
-function promotionStatusChipColor(
-  status: PromotionRequestStatus,
-): "success" | "error" | "warning" | "info" | "default" {
-  switch (status) {
-    case "APPROVED":
-      return "success";
-    case "REJECTED":
-    case "FL_REJECTED":
-      return "error";
-    case "IN_PROGRESS":
-    case "FL_APPROVED":
-      return "warning";
-    case "SUBMITTED":
-    case "PROCESSING":
-      return "info";
-    default:
-      return "default";
-  }
-}
+import type { PromotionRecommendation } from "../api/types";
 
 export default function LeadHistoryTab() {
   const userInfo = useUserInfo();
@@ -100,7 +76,7 @@ export default function LeadHistoryTab() {
       renderCell: (params) => {
         const isActiveCycle = cycle.cycle?.id === params.row.promotionCycleId;
         const label = promotionRequestStatusLabel(params.value, isActiveCycle);
-        return <Chip label={label} size="small" color={promotionStatusChipColor(label)} />;
+        return <Chip label={label} size="small" color={promotionRequestChipColor(label)} />;
       },
     },
     {
@@ -142,12 +118,11 @@ export default function LeadHistoryTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : history.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load recommendations history. ${humanizeHttpError(history.error)}`}
         />
       ) : list.length === 0 ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no submitted requests!" />
+        <PromotionEmptyState message="There are no submitted requests!" />
       ) : (
         <Card variant="outlined" sx={{ p: 2 }}>
           <DataGrid.DataGrid

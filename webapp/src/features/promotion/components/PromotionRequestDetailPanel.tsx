@@ -18,7 +18,7 @@ import { Alert, AlertTitle, Avatar, Box, Chip, Divider, Skeleton, Stack, Typogra
 import { humanizeHttpError } from "@api/http";
 import type { PromotionRequestFull } from "../api/types";
 import { decodePromotionText } from "../util/promotionRichText";
-import { recommendationColor } from "../util/promotionStatus";
+import { recommendationChipColor } from "../util/promotionStatus";
 import { usePromotionEmployeeInfo } from "../api/usePromotionEmployeeInfo";
 import { usePromotionHistory } from "../api/usePromotionHistory";
 import PromotionRichTextContent from "./PromotionRichTextContent";
@@ -65,7 +65,8 @@ export default function PromotionRequestDetailPanel({ request }: { request: Prom
                   <Chip
                     label={rec.recommendationStatus}
                     size="small"
-                    sx={{ bgcolor: recommendationColor(rec.recommendationStatus), color: "white", height: 20, fontSize: 10.5 }}
+                    color={recommendationChipColor(rec.recommendationStatus)}
+                    sx={{ height: 20, fontSize: 10.5 }}
                   />
                 </Stack>
                 <PromotionRichTextContent content={decodePromotionText(rec.recommendationStatement)} />

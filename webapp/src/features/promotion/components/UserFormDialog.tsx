@@ -32,7 +32,7 @@ import {
 } from "@wso2/oxygen-ui";
 import { useAdminEmployeeDirectory, useInsertUser, useUpdateUser } from "../api/useAdminUsers";
 import FunctionalLeadAclSelector from "./FunctionalLeadAclSelector";
-import { ASSIGNABLE_PROMOTION_ROLES, promotionRoleColor } from "../util/promotionRoleColors";
+import { ASSIGNABLE_PROMOTION_ROLES, promotionRoleChipColor } from "../util/promotionRoleColors";
 import { buildAclPayload, selectionFromAcl, type PromotionAclSelection } from "../util/promotionAcl";
 import type { PromotionBusinessUnitAccess, PromotionRole, PromotionUser } from "../api/types";
 
@@ -147,7 +147,7 @@ function UserFormDialogContent({
               renderValue={(selected) => (
                 <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
                   {(selected as PromotionRole[]).map((r) => (
-                    <Chip key={r} label={r} size="small" sx={{ bgcolor: promotionRoleColor(r), color: "white" }} />
+                    <Chip key={r} label={r} size="small" color={promotionRoleChipColor(r)} />
                   ))}
                 </Box>
               )}

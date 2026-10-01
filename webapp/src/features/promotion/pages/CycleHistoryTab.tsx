@@ -25,7 +25,7 @@
 // separate endpoints.
 import { useState } from "react";
 import { Box, Chip, DataGrid, Grid, IconButton, MenuItem, Select, Skeleton, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { ChevronDownIcon, InboxIcon, RefreshCwIcon, TriangleAlertIcon } from "@wso2/oxygen-ui-icons-react";
+import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
@@ -36,7 +36,7 @@ import { basePromotionRequestColumns } from "../components/promotionRequestColum
 import PromotionEmptyState from "../components/PromotionEmptyState";
 import PromotionRequestDetailDialog from "../components/PromotionRequestDetailDialog";
 import { PromotionGridToolbar } from "../components/PromotionGridToolbar";
-import { promotionRequestColor } from "../util/promotionStatus";
+import { promotionRequestChipColor } from "../util/promotionStatus";
 import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
 import type { PromotionRequestFull } from "../api/types";
 
@@ -73,7 +73,7 @@ export default function CycleHistoryTab() {
       flex: 1.2,
       minWidth: 180,
       renderCell: (params) => (
-        <Chip label={params.value} size="small" sx={{ bgcolor: promotionRequestColor(params.value), color: "white" }} />
+        <Chip label={params.value} size="small" color={promotionRequestChipColor(params.value)} />
       ),
     },
     {
@@ -138,12 +138,11 @@ export default function CycleHistoryTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : cycles.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load promotion cycles. ${humanizeHttpError(cycles.error)}`}
         />
       ) : !selectedCycle ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="Select a promotion cycle to view details." />
+        <PromotionEmptyState message="Select a promotion cycle to view details." />
       ) : (
         <>
           <Grid container spacing={3} sx={{ p: 2.5, mb: 2, border: 1, borderColor: "divider", borderRadius: 1 }}>
@@ -177,12 +176,11 @@ export default function CycleHistoryTab() {
             <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 1 }} />
           ) : requests.isError ? (
             <PromotionEmptyState
-              icon={<TriangleAlertIcon size={28} />}
               tone="error"
               message={`Unable to load promotion requests. ${humanizeHttpError(requests.error)}`}
             />
           ) : rows.length === 0 ? (
-            <PromotionEmptyState icon={<InboxIcon size={28} />} message="There is no promotion request in this cycle." />
+            <PromotionEmptyState message="There is no promotion request in this cycle." />
           ) : (
             <DataGrid.DataGrid
               rows={rows}

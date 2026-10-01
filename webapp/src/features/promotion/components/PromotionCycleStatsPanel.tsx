@@ -31,12 +31,17 @@ function count(data: PromotionRequestFull[], statuses: PromotionRequestStatus[])
   return data.filter((r) => statuses.includes(r.status)).length;
 }
 
+// `color` is a theme palette path (e.g. "primary.main"), not a fixed hex —
+// set once on the wrapping Box so it resolves per the active Oxygen theme,
+// then inherited by the icon via SVG's own `currentColor` default (lucide
+// icons only hardcode their stroke when a literal `color` prop overrides
+// it) and by the value text via `color: "inherit"`.
 function Tile({ icon: Icon, color, value, label }: { icon: LucideIcon; color: string; value: number; label: string }) {
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flex: 1, minWidth: 0 }}>
-      <Icon size={22} color={color} />
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flex: 1, minWidth: 0, color }}>
+      <Icon size={22} />
       <Box sx={{ minWidth: 0 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, color, lineHeight: 1.1 }}>{value}</Typography>
+        <Typography variant="h6" sx={{ fontWeight: 700, color: "inherit", lineHeight: 1.1 }}>{value}</Typography>
         <Typography variant="caption" sx={{ color: "text.secondary", whiteSpace: "nowrap" }}>{label}</Typography>
       </Box>
     </Box>
@@ -69,27 +74,27 @@ export default function PromotionCycleStatsPanel({
   return (
     <Box>
       <Section title="Promotion Board Stats">
-        <Tile icon={FileTextIcon} color="#0065FF" value={count(data, ["APPROVED", "REJECTED", "FL_APPROVED"])} label="Total Requests" />
-        <Tile icon={ClockIcon} color="#5243AA" value={count(data, ["FL_APPROVED"])} label="Pending Applications" />
-        <Tile icon={CheckIcon} color="#00A3BF" value={count(data, ["APPROVED"])} label="Approved Applications" />
-        <Tile icon={XIcon} color="#DE350B" value={count(data, ["REJECTED"])} label="Rejected Applications" />
+        <Tile icon={FileTextIcon} color="primary.main" value={count(data, ["APPROVED", "REJECTED", "FL_APPROVED"])} label="Total Requests" />
+        <Tile icon={ClockIcon} color="warning.main" value={count(data, ["FL_APPROVED"])} label="Pending Applications" />
+        <Tile icon={CheckIcon} color="success.main" value={count(data, ["APPROVED"])} label="Approved Applications" />
+        <Tile icon={XIcon} color="error.main" value={count(data, ["REJECTED"])} label="Rejected Applications" />
       </Section>
       <Section title="Functional Lead Stats">
         <Tile
           icon={FileTextIcon}
-          color="#2684FF"
+          color="primary.main"
           value={count(data, ["SUBMITTED", "FL_REJECTED", "FL_APPROVED", "APPROVED", "REJECTED"])}
           label="Total Requests"
         />
-        <Tile icon={ClockIcon} color="#6554C0" value={count(data, ["SUBMITTED"])} label="Pending Applications" />
-        <Tile icon={CheckIcon} color="#008DA6" value={count(data, ["FL_APPROVED", "APPROVED", "REJECTED"])} label="Approved Applications" />
-        <Tile icon={XIcon} color="#DE350B" value={count(data, ["FL_REJECTED"])} label="Rejected Applications" />
+        <Tile icon={ClockIcon} color="warning.main" value={count(data, ["SUBMITTED"])} label="Pending Applications" />
+        <Tile icon={CheckIcon} color="success.main" value={count(data, ["FL_APPROVED", "APPROVED", "REJECTED"])} label="Approved Applications" />
+        <Tile icon={XIcon} color="error.main" value={count(data, ["FL_REJECTED"])} label="Rejected Applications" />
       </Section>
       <Section title="Stats">
-        <Tile icon={FileTextIcon} color="#0065FF" value={data.length} label="Total Requests" />
-        <Tile icon={SendIcon} color="#00A3BF" value={count(data, ["SUBMITTED", "FL_REJECTED", "FL_APPROVED", "REJECTED", "APPROVED"])} label="Submitted Applications" />
-        <Tile icon={CopyIcon} color="#5243AA" value={count(data, ["DRAFT"])} label="Pending Applications" />
-        <Tile icon={Trash2Icon} color="#DE350B" value={count(data, ["REMOVED"])} label="Removed Applications" />
+        <Tile icon={FileTextIcon} color="primary.main" value={data.length} label="Total Requests" />
+        <Tile icon={SendIcon} color="info.main" value={count(data, ["SUBMITTED", "FL_REJECTED", "FL_APPROVED", "REJECTED", "APPROVED"])} label="Submitted Applications" />
+        <Tile icon={CopyIcon} color="warning.main" value={count(data, ["DRAFT"])} label="Pending Applications" />
+        <Tile icon={Trash2Icon} color="error.main" value={count(data, ["REMOVED"])} label="Removed Applications" />
       </Section>
     </Box>
   );

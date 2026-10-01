@@ -36,7 +36,7 @@ import {
   Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
-import { EyeIcon, InboxIcon, RefreshCwIcon, TriangleAlertIcon, UploadIcon } from "@wso2/oxygen-ui-icons-react";
+import { EyeIcon, RefreshCwIcon, UploadIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
@@ -53,13 +53,13 @@ import PromotionFeedbackSnackbar from "../components/PromotionFeedbackSnackbar";
 import { usePromotionFeedback } from "../util/usePromotionFeedback";
 import PromotionSyncStatusLabel from "../components/PromotionSyncStatusLabel";
 import { encodePromotionText } from "../util/promotionRichText";
-import { promotionRequestColor } from "../util/promotionStatus";
+import { promotionRequestChipColor, recommendationChipColor } from "../util/promotionStatus";
 import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
-import type { PromotionRecommendation, PromotionRequestFull } from "../api/types";
+import type { PromotionRecommendation, PromotionRequestFull, RecommendationStatus } from "../api/types";
 
-const LEAD_STATUS_SX: Record<string, { label: string; color: string }> = {
-  REQUESTED: { label: "Pending", color: "#5243AA" },
-  SUBMITTED: { label: "Approved", color: "#36B37E" },
+const LEAD_STATUS_LABEL: Partial<Record<RecommendationStatus, string>> = {
+  REQUESTED: "Pending",
+  SUBMITTED: "Approved",
 };
 
 function declinedRecommendations(row: PromotionRequestFull): PromotionRecommendation[] {
@@ -107,7 +107,7 @@ export default function AdminTimeBasedPromotionsTab() {
       flex: 1,
       minWidth: 150,
       renderCell: (params) => (
-        <Chip label={params.value} size="small" sx={{ bgcolor: promotionRequestColor(params.value), color: "white" }} />
+        <Chip label={params.value} size="small" color={promotionRequestChipColor(params.value)} />
       ),
     },
     {
@@ -119,12 +119,14 @@ export default function AdminTimeBasedPromotionsTab() {
       filterable: false,
       renderCell: (params) => (
         <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ py: 0.5 }}>
-          {params.row.recommendations.map((r) => {
-            const sx = LEAD_STATUS_SX[r.recommendationStatus] ?? { label: r.recommendationStatus, color: "#8993A4" };
-            return (
-              <Chip key={r.recommendationID} label={sx.label} size="small" sx={{ bgcolor: sx.color, color: "white" }} />
-            );
-          })}
+          {params.row.recommendations.map((r) => (
+            <Chip
+              key={r.recommendationID}
+              label={LEAD_STATUS_LABEL[r.recommendationStatus] ?? r.recommendationStatus}
+              size="small"
+              color={recommendationChipColor(r.recommendationStatus)}
+            />
+          ))}
         </Stack>
       ),
     },
@@ -180,14 +182,13 @@ export default function AdminTimeBasedPromotionsTab() {
   if (cycle.isError) {
     return (
       <PromotionEmptyState
-        icon={<TriangleAlertIcon size={28} />}
         tone="error"
         message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
       />
     );
   }
   if (!cycle.cycle) {
-    return <PromotionEmptyState icon={<InboxIcon size={28} />} message="There is no active promotion cycle" />;
+    return <PromotionEmptyState message="There is no active promotion cycle" />;
   }
 
   if (sync.state === "IN_PROGRESS") {
@@ -245,7 +246,6 @@ export default function AdminTimeBasedPromotionsTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : requests.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load promotion requests. ${humanizeHttpError(requests.error)}`}
         />

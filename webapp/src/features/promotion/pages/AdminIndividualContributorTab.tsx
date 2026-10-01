@@ -22,7 +22,7 @@
 // mutation is editing a rejected request's own reason after the fact.
 import { useState } from "react";
 import { Box, Chip, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
-import { EyeIcon, InboxIcon, RefreshCwIcon, TriangleAlertIcon } from "@wso2/oxygen-ui-icons-react";
+import { EyeIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests, useUpdatePromotionRequestRejectionReason } from "../api/usePromotionRequests";
@@ -32,7 +32,7 @@ import PromotionFeedbackSnackbar from "../components/PromotionFeedbackSnackbar";
 import { usePromotionFeedback } from "../util/usePromotionFeedback";
 import { PromotionGridToolbar } from "../components/PromotionGridToolbar";
 import DeclinedReasonDialog, { type DeclinedReasonTarget } from "../components/DeclinedReasonDialog";
-import { promotionRequestColor } from "../util/promotionStatus";
+import { promotionRequestChipColor } from "../util/promotionStatus";
 import { encodePromotionText } from "../util/promotionRichText";
 import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
 import type { PromotionRequestFull } from "../api/types";
@@ -57,7 +57,7 @@ export default function AdminIndividualContributorTab() {
       flex: 1,
       minWidth: 150,
       renderCell: (params) => (
-        <Chip label={params.value} size="small" sx={{ bgcolor: promotionRequestColor(params.value), color: "white" }} />
+        <Chip label={params.value} size="small" color={promotionRequestChipColor(params.value)} />
       ),
     },
     {
@@ -136,22 +136,20 @@ export default function AdminIndividualContributorTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : cycle.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
         />
       ) : !cycle.cycle ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="There is no active promotion cycle" />
+        <PromotionEmptyState message="There is no active promotion cycle" />
       ) : requests.isPending ? (
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : requests.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load promotion requests. ${humanizeHttpError(requests.error)}`}
         />
       ) : rows.length === 0 ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no promotion requests for the active cycle" />
+        <PromotionEmptyState message="There are no promotion requests for the active cycle" />
       ) : (
         <DataGrid.DataGrid
           rows={rows}
