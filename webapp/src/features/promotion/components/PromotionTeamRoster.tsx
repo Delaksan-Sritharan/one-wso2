@@ -22,7 +22,6 @@ import { usePromotionTeam } from "../api/usePromotionTeam";
 import PromotionEmptyState from "./PromotionEmptyState";
 import PromotionEmployeeCard from "./PromotionEmployeeCard";
 import PromotionEmployeeHistoryDialog from "./PromotionEmployeeHistoryDialog";
-import { TriangleAlertIcon, InboxIcon } from "@wso2/oxygen-ui-icons-react";
 
 // Ports source's own employeesHistory.tsx / indirectReports.tsx — identical
 // screens bar which relationship they query, so one shared component
@@ -84,14 +83,13 @@ export default function PromotionTeamRoster({ kind, email }: { kind: "direct" | 
         </Box>
       ) : team.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load employees. ${humanizeHttpError(team.error)}`}
         />
       ) : employees.length === 0 ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no employees assigned to you" />
+        <PromotionEmptyState message="There are no employees assigned to you" />
       ) : filtered.length === 0 ? (
-        <PromotionEmptyState icon={<SearchIcon size={28} />} message="No employees found" />
+        <PromotionEmptyState message="No employees found" />
       ) : (
         filtered.map((emp) => (
           <PromotionEmployeeCard key={emp.workEmail} employee={emp} onView={() => setViewingEmail(emp.workEmail)} />

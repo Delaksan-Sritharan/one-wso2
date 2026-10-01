@@ -22,7 +22,7 @@
 // tab, matching source) rather than issuing three separate queries.
 import { useState } from "react";
 import { Box, Button, DataGrid, IconButton, Skeleton, Tab, Tabs, Tooltip } from "@wso2/oxygen-ui";
-import { CheckIcon, InboxIcon, MailCheckIcon, SendIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
+import { CheckIcon, MailCheckIcon, SendIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { useNotifyPromotionRequest } from "../api/usePromotionRequests";
 import { basePromotionRequestColumns } from "../components/promotionRequestColumns";
 import PromotionEmptyState from "./PromotionEmptyState";
@@ -60,7 +60,7 @@ export default function NotificationHubPanel({
   );
 
   if (cycle === null) {
-    return <PromotionEmptyState icon={<InboxIcon size={28} />} message="No promotion cycle found" />;
+    return <PromotionEmptyState message="No promotion cycle found" />;
   }
 
   return (
@@ -148,7 +148,7 @@ function NotifyGrid({
         }}
       />
       {rows.length === 0 ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message={emptyMessage} />
+        <PromotionEmptyState message={emptyMessage} />
       ) : (
         <>
           <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 1 }}>
@@ -198,7 +198,7 @@ function SentGrid({ rows }: { rows: PromotionRequestFull[] }) {
   ];
 
   return rows.length === 0 ? (
-    <PromotionEmptyState icon={<InboxIcon size={28} />} message="No records found" />
+    <PromotionEmptyState message="No records found" />
   ) : (
     <DataGrid.DataGrid
       rows={rows}

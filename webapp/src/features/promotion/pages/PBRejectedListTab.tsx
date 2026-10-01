@@ -19,7 +19,7 @@
 // Read-only, structurally identical to PBApprovedListTab.
 import { useState } from "react";
 import { Box, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
-import { ChevronDownIcon, InboxIcon, RefreshCwIcon, TriangleAlertIcon } from "@wso2/oxygen-ui-icons-react";
+import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests } from "../api/usePromotionRequests";
@@ -85,18 +85,16 @@ export default function PBRejectedListTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : cycle.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
         />
       ) : requests.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load promotion requests. ${humanizeHttpError(requests.error)}`}
         />
       ) : rows.length === 0 ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no rejected promotion requests" />
+        <PromotionEmptyState message="There are no rejected promotion requests" />
       ) : (
         <DataGrid.DataGrid
           rows={rows}

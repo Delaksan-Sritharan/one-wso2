@@ -25,7 +25,7 @@
 // read (promotionBoardDeadline, not functionalLeadDeadline).
 import { useState } from "react";
 import { Alert, Box, Button, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
-import { CalendarOffIcon, CheckIcon, ChevronDownIcon, InboxIcon, PencilIcon, RefreshCwIcon, TriangleAlertIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
+import { CheckIcon, ChevronDownIcon, PencilIcon, RefreshCwIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useActivePromotionCycle, isPromotionDeadlinePast } from "../api/usePromotionCycle";
@@ -204,20 +204,18 @@ export default function PBActiveRequestsTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : cycle.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
         />
       ) : deadlinePast ? (
-        <PromotionEmptyState icon={<CalendarOffIcon size={28} />} message="The Promotion Board Deadline has passed." />
+        <PromotionEmptyState message="The Promotion Board Deadline has passed." />
       ) : requests.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load promotion requests. ${humanizeHttpError(requests.error)}`}
         />
       ) : rows.length === 0 ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no active promotion requests" />
+        <PromotionEmptyState message="There are no active promotion requests" />
       ) : (
         <DataGrid.DataGrid
           rows={rows}

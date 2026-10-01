@@ -22,7 +22,7 @@
 // tab, not a linkable top-level tab the way the portal's own five tabs are.
 import { useState } from "react";
 import { Box, Breadcrumbs, Button, Grid, IconButton, Link, Skeleton, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { BellIcon, RefreshCwIcon, TriangleAlertIcon, XCircleIcon } from "@wso2/oxygen-ui-icons-react";
+import { BellIcon, RefreshCwIcon, XCircleIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
@@ -49,7 +49,6 @@ export default function AdminPromotionCycleTab() {
   if (cycle.isError) {
     return (
       <PromotionEmptyState
-        icon={<TriangleAlertIcon size={28} />}
         tone="error"
         message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
       />

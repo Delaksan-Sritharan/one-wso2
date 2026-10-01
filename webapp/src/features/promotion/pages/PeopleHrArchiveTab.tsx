@@ -40,7 +40,7 @@ import {
   TextField,
   Typography,
 } from "@wso2/oxygen-ui";
-import { ArchiveIcon, TrendingUpIcon, TriangleAlertIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArchiveIcon, TrendingUpIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { usePromotionArchive } from "../api/usePromotionArchive";
 import PromotionEmptyState from "../components/PromotionEmptyState";
@@ -169,7 +169,6 @@ export default function PeopleHrArchiveTab() {
         // Skeleton, rather than leaving the "'To' is before 'from'" field-level
         // helper text as the only explanation for a permanently-loading panel.
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="warning"
           message="'To' is before 'from' — fix the date range to see results."
         />
@@ -177,7 +176,6 @@ export default function PeopleHrArchiveTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : archive.isError ? (
         <PromotionEmptyState
-          icon={<ArchiveIcon size={28} />}
           tone="error"
           message={`Unable to load the archived promotions. ${humanizeHttpError(archive.error)}`}
         />
@@ -190,7 +188,7 @@ export default function PeopleHrArchiveTab() {
             {filtered && " (filtered)"}
           </Typography>
           {rows.length === 0 ? (
-            <PromotionEmptyState icon={<ArchiveIcon size={28} />} message="No archived promotions match these filters." />
+            <PromotionEmptyState message="No archived promotions match these filters." />
           ) : (
             <DataGrid.DataGrid
               rows={rows}

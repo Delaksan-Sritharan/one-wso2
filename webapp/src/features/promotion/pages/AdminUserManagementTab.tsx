@@ -21,7 +21,7 @@
 // employee, and bulk-sync the user list from a Google Sheet.
 import { useEffect, useRef, useState } from "react";
 import { Box, IconButton, InputAdornment, Skeleton, TextField, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { PlusIcon, RefreshCwIcon, SearchIcon, TriangleAlertIcon, UploadIcon } from "@wso2/oxygen-ui-icons-react";
+import { PlusIcon, RefreshCwIcon, SearchIcon, UploadIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useUserInfo } from "@api/useUserInfo";
@@ -137,7 +137,6 @@ export default function AdminUserManagementTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : users.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load user information. ${humanizeHttpError(users.error)}`}
         />
