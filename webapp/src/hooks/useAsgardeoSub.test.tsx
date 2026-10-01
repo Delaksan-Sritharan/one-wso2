@@ -32,7 +32,7 @@ vi.mock("@asgardeo/react", () => ({
   useAsgardeo: () => ({ isSignedIn: true, getDecodedIdToken }),
 }));
 
-import { foldIdentityError, useAsgardeoSub } from "./useAsgardeoSub";
+import { __resetResolvedSubForTests, foldIdentityError, useAsgardeoSub } from "./useAsgardeoSub";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 function jwt(payload: Record<string, unknown>): string {
@@ -50,6 +50,9 @@ const liveToken = () => jwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
 const deadToken = () => jwt({ exp: Math.floor(Date.now() / 1000) - 3600 });
 
 beforeEach(() => {
+  // The resolved sub is shared across instances by design, so it outlives a
+  // single test unless each one starts from nothing.
+  __resetResolvedSubForTests();
   vi.clearAllMocks();
   getSessionExpiredSnapshot.mockReturnValue(false);
   refreshIdToken.mockResolvedValue("refreshed");
@@ -175,6 +178,32 @@ describe("useAsgardeoSub — deciding whether a decode failure means the session
 
     expect(seen.slice(before)).not.toContain("loading");
     expect(result.current.state).toEqual({ status: "ready", sub: "uid-1" });
+  });
+
+  // Mounting a screen must not re-decode the token behind a skeleton when the
+  // app already knows who is signed in. `userSub` is part of every finance
+  // query KEY, so an instance that starts at "loading" keys onto an EMPTY
+  // cache entry and reports no data for it — which is why switching Finance →
+  // Overview's dropdown to OPD Claims flashed a skeleton over data already in
+  // hand, on every single switch.
+  it("starts a later instance from the identity already resolved", async () => {
+    getDecodedIdToken.mockResolvedValue({ sub: "uid-1" });
+
+    const first = renderHook(() => useAsgardeoSub());
+    await waitFor(() => expect(first.result.current.state.status).toBe("ready"));
+
+    // A screen mounting afterwards — a fresh hook instance, as a dropdown
+    // switch produces — is ready on its very first render, not "loading".
+    const seen: string[] = [];
+    const second = renderHook(() => {
+      const hook = useAsgardeoSub();
+      seen.push(hook.state.status);
+      return hook;
+    });
+
+    expect(seen[0]).toBe("ready");
+    expect(seen).not.toContain("loading");
+    expect(second.result.current.state).toEqual({ status: "ready", sub: "uid-1" });
   });
 
   // Unchanged, and worth keeping pinned: once the dialog owns the message,

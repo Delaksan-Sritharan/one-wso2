@@ -53,8 +53,7 @@ function settled(access: Partial<typeof gate>) {
     opdErrored: false,
     ...access,
   });
-  gate.canSee = (id) =>
-    id === "finance-overview" && (gate.ccHasOwnCard || gate.opdFinance || gate.opdErrored);
+  gate.canSee = (id) => id === "finance-overview" && (gate.ccHasOwnCard || gate.opdFinance);
 }
 
 beforeEach(() => {
@@ -143,10 +142,22 @@ describe("what the switcher offers", () => {
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
-  // A failed OPD lookup is not the same answer as "no role": it is the reason
-  // Overview is reachable at all for a no-card reader, so it lands there.
-  it("lands an erroring OPD lookup on the OPD tab, which can be retried", () => {
+  // A failed lookup is not a role. `foldIdentityError` reports every finance
+  // query as `isError` whenever identity itself fails to resolve, so opening
+  // this screen on an error opened it for readers holding nothing at all —
+  // and closed it again when identity recovered, which is the blinking.
+  it("stays shut for a reader whose OPD lookup merely failed", () => {
     settled({ opdErrored: true });
+    render(<FinanceOverviewPage />);
+
+    expect(aDashboard()).not.toBeInTheDocument();
+    expect(screen.getByText(/isn't available for your role/)).toBeInTheDocument();
+  });
+
+  // The flip side: a real approver still gets in while OPD is having a bad
+  // minute, and lands on the tab with the retry rather than the empty one.
+  it("still opens the OPD tab for a real approver whose lookup failed", () => {
+    settled({ opdFinance: true, opdErrored: true });
     render(<FinanceOverviewPage />);
 
     expect(screen.getByTestId("opd-dashboard")).toBeInTheDocument();

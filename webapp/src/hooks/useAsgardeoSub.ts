@@ -81,9 +81,38 @@ async function idTokenStillLive(): Promise<boolean> {
   }
 }
 
+/**
+ * The `sub` this tab has already resolved, shared by every instance of the
+ * hook below.
+ *
+ * There is exactly one signed-in user per tab, so every call site resolves the
+ * same string — but each call site has its own `useState`, so each one used to
+ * start at `{status: "loading"}` and re-decode the token from scratch. That is
+ * not merely wasteful: `userSub` is part of every finance query KEY, so a hook
+ * that has not resolved yet reads `["opd-user-info", undefined]` — a different,
+ * EMPTY cache entry — and reports no data for it. Mounting a screen therefore
+ * showed a skeleton over data the app already had, every time.
+ *
+ * Switching Finance → Overview's dropdown to OPD Claims mounts that whole
+ * dashboard fresh, so that was a skeleton flash on every switch. Seeded from
+ * here instead, a fresh mount starts at "ready", keys straight onto the cached
+ * query, and renders the content immediately.
+ *
+ * Cleared on sign-out, so a second account in the same tab cannot be seeded
+ * with the first one's identity.
+ */
+let resolvedSub: string | null = null;
+
+/** Test-only: drop the shared identity so each test starts from nothing. */
+export function __resetResolvedSubForTests(): void {
+  resolvedSub = null;
+}
+
 export function useAsgardeoSub(): { state: SubState; retry: () => void } {
   const { isSignedIn, getDecodedIdToken } = useAsgardeo();
-  const [state, setState] = useState<SubState>({ status: "loading" });
+  const [state, setState] = useState<SubState>(() =>
+    resolvedSub ? { status: "ready", sub: resolvedSub } : { status: "loading" },
+  );
   // A tick counter drives the identity-resolution effect: bumping it
   // re-runs getDecodedIdToken() so a user-visible "Retry" can recover
   // from a decode error without having to sign out and back in.
@@ -92,6 +121,9 @@ export function useAsgardeoSub(): { state: SubState; retry: () => void } {
 
   useEffect(() => {
     if (!isSignedIn) {
+      // A different account may sign in next; it must not inherit this one's
+      // identity from the shared cache above.
+      resolvedSub = null;
       setState({ status: "loading" });
       return;
     }
@@ -122,6 +154,9 @@ export function useAsgardeoSub(): { state: SubState; retry: () => void } {
         if (cancelled) return;
         const s = (token as { sub?: string } | null | undefined)?.sub;
         if (typeof s === "string" && s.length > 0) {
+          // Shared, so the NEXT screen to mount starts from this answer
+          // instead of decoding the token again behind a skeleton.
+          resolvedSub = s;
           // Same sub, same object: a re-check that confirms what we already
           // knew must not re-render every consumer of this hook.
           setState((prev) =>
@@ -166,6 +201,7 @@ export function useAsgardeoSub(): { state: SubState; retry: () => void } {
             if (cancelled) return;
             const s = (retried as { sub?: string } | null | undefined)?.sub;
             if (typeof s === "string" && s.length > 0) {
+              resolvedSub = s;
               setState({ status: "ready", sub: s });
               return;
             }
@@ -179,6 +215,7 @@ export function useAsgardeoSub(): { state: SubState; retry: () => void } {
           if (cancelled) return;
           const s = (token as { sub?: string } | null | undefined)?.sub;
           if (typeof s === "string" && s.length > 0) {
+            resolvedSub = s;
             setState({ status: "ready", sub: s });
             return;
           }
