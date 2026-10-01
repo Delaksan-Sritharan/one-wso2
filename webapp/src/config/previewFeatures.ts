@@ -109,7 +109,13 @@ export type PreviewFeature =
    * `/me` roles still decide who sees which item once this is on. See
    * docs/ported-apps/cado2.md.
    */
-  | "cado2";
+  | "cado2"
+  /**
+   * Today I Learned (Me → Today I Learned route/rail item). Waiting on
+   * til-backend's first real Choreo deployment and the Google Chat App's
+   * Space/Dialog registration (outside this codebase) before going live.
+   */
+  | "til";
 
 /**
  * Whether a preview feature should be shown.

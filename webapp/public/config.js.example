@@ -25,6 +25,7 @@ window.config = {
 
   // Cafeteria menu backend (daily menu, lunch feedback, dinner orders).
   // ONE_WSO2_MENU_BACKEND_URL: "<your-menu-backend-url>",
+  // ONE_WSO2_TIL_BACKEND_URL: "<your-til-backend-url>",
 
   // Subscriptions backend (PickMe Commute + LaaS opt-in/opt-out). The two
   // admin group names come from this backend's own /subscriptions/meta-info,

@@ -63,6 +63,7 @@ import { MARKETING_OPS_APPS } from "@constants/marketingOpsApps";
 import { DUE_DILIGENCE_APPS } from "@constants/dueDiligenceApps";
 import { SECURITY_APPS } from "@constants/securityApps";
 import { ME_APPS } from "@constants/meApps";
+import { ME_TIL_APPS } from "@constants/tilApps";
 import { ME_PAR_APPS } from "@constants/parApps";
 import { ME_PROMOTION_APPS } from "@constants/promotionApps";
 import { INFRA_APPS } from "@constants/infraApps";
@@ -468,6 +469,10 @@ const ME_SECTIONS: PerspectiveSection[] = [
   // "Promotion" group under People Ops) is ready for production — see
   // isPreviewEnabled's own call in PEOPLE_OPS_SECTIONS below and in App.tsx.
   ...(isPreviewEnabled("promotion") ? appsToSections(ME_PROMOTION_APPS) : []),
+  // Today I Learned's employee portal. Held behind a preview flag until
+  // til-backend has a real Choreo deployment and the Chat App side is
+  // registered — see isPreviewEnabled("til")'s doc comment in previewFeatures.ts.
+  ...(isPreviewEnabled("til") ? appsToSections(ME_TIL_APPS) : []),
 ];
 
 const UMT_SECTIONS: PerspectiveSection[] = [
