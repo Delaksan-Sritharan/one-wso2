@@ -232,7 +232,7 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
           children: [
             {
               id: "promotion-lead-portal",
-              label: "Lead View",
+              label: "Time Based Promotions",
               path: "/people-ops/promotion/lead",
             },
             // A separate Lead-role screen from Lead View above (source's own
