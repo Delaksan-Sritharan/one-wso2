@@ -34,7 +34,10 @@ export default function PromotionTableHeader({ columns }: { columns: PromotionTa
         alignItems: "center",
         borderBottom: "1px dashed",
         borderColor: "divider",
-        px: 2.5,
+        // Matches the `p: 2` every row component below uses on its own Grid
+        // container — anything else and the header labels drift out of
+        // register with the column content beneath them.
+        px: 2,
         py: 0.75,
         mb: 0.75,
       }}

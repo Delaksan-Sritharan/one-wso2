@@ -19,16 +19,38 @@
 // Functional Lead ACL), not the whole employee directory. Add/edit,
 // activate/deactivate, delete, transfer a lead's account to a different
 // employee, and bulk-sync the user list from a Google Sheet.
+//
+// A data grid, matching the convention every other portal in this app
+// already uses, instead of a hand-rolled column-header-plus-dashed-card
+// list — that hand-rolled shape is what caused the header/row alignment
+// drift a plain Grid can't avoid (its own `spacing` applies a compensating
+// negative margin that a data grid's native column layout never has to
+// fight).
 import { useEffect, useRef, useState } from "react";
-import { Box, IconButton, InputAdornment, Skeleton, TextField, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { PlusIcon, RefreshCwIcon, SearchIcon, UploadIcon } from "@wso2/oxygen-ui-icons-react";
+import {
+  Avatar,
+  Box,
+  Card,
+  Chip,
+  DataGrid,
+  IconButton,
+  InputAdornment,
+  Skeleton,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography,
+} from "@wso2/oxygen-ui";
+import { ArrowRightLeftIcon, PencilIcon, PlusIcon, RefreshCwIcon, SearchIcon, Trash2Icon, UploadIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { useAdminUsers, useDeleteUser, useSyncUsers, useUpdateUser } from "../api/useAdminUsers";
 import { usePromotionSyncState } from "../api/usePromotionSyncState";
-import UserRow from "../components/UserRow";
+import { PromotionGridToolbar } from "../components/PromotionGridToolbar";
 import UserFormDialog from "../components/UserFormDialog";
 import TransferAccessDialog from "../components/TransferAccessDialog";
 import GoogleSheetLinkDialog from "../components/GoogleSheetLinkDialog";
@@ -36,6 +58,8 @@ import PromotionFeedbackSnackbar from "../components/PromotionFeedbackSnackbar";
 import { usePromotionFeedback } from "../util/usePromotionFeedback";
 import PromotionSyncStatusLabel from "../components/PromotionSyncStatusLabel";
 import PromotionEmptyState from "../components/PromotionEmptyState";
+import { promotionRoleChipColor } from "../util/promotionRoleColors";
+import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
 import type { PromotionUser } from "../api/types";
 
 export default function AdminUserManagementTab() {
@@ -78,6 +102,122 @@ export default function AdminUserManagementTab() {
   const filtered = allUsers.filter((u) =>
     `${u.firstName} ${u.lastName}`.toLowerCase().includes(search.trim().toLowerCase()),
   );
+
+  const columns: DataGrid.GridColDef<PromotionUser>[] = [
+    {
+      display: "flex",
+      field: "firstName",
+      headerName: "User",
+      flex: 1.4,
+      minWidth: 220,
+      renderCell: (params) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, height: "100%" }}>
+          <Avatar src={params.row.employeeThumbnail ?? undefined} sx={{ width: 36, height: 36, flexShrink: 0 }}>
+            {params.row.firstName?.[0]}
+          </Avatar>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="body2" sx={{ fontWeight: params.row.email === selfEmail ? 700 : 500 }} noWrap>
+              {params.row.firstName} {params.row.lastName}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+              {params.row.email}
+            </Typography>
+          </Box>
+        </Box>
+      ),
+    },
+    {
+      display: "flex",
+      field: "roles",
+      headerName: "Roles",
+      flex: 1.2,
+      minWidth: 200,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap" }}>
+          {params.row.roles.map((role) => (
+            <Chip key={role} label={role} size="small" color={promotionRoleChipColor(role)} />
+          ))}
+        </Stack>
+      ),
+    },
+    {
+      display: "flex",
+      field: "active",
+      headerName: "Status",
+      flex: 0.8,
+      minWidth: 160,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          value={params.row.active ? "active" : "inactive"}
+          disabled={togglingId === params.row.id && updateUser.isPending}
+          onChange={(_e, value) => {
+            if (!value) return;
+            const active = value === "active";
+            setConfirmContent({
+              title: active ? "Activate user" : "Deactivate user",
+              text: `Are you sure do you want to ${active ? "activate" : "deactivate"} this user?`,
+              confirmLabel: active ? "Activate" : "Deactivate",
+              confirmAction: () => {
+                setTogglingId(params.row.id);
+                updateUser.mutate(
+                  { id: params.row.id, active, roles: params.row.roles, functionalLeadAccessLevels: params.row.functionalLeadAccessLevels },
+                  { onSettled: () => setTogglingId(null) },
+                );
+              },
+            });
+          }}
+        >
+          <ToggleButton value="active">Active</ToggleButton>
+          <ToggleButton value="inactive">Inactive</ToggleButton>
+        </ToggleButtonGroup>
+      ),
+    },
+    {
+      display: "flex",
+      field: "action",
+      headerName: "Actions",
+      sortable: false,
+      filterable: false,
+      disableExport: true,
+      flex: 0.7,
+      minWidth: 130,
+      renderCell: (params) => (
+        <Box sx={{ display: "flex" }}>
+          <Tooltip title="Transfer access">
+            <IconButton size="small" onClick={() => setTransferTarget(params.row)}>
+              <ArrowRightLeftIcon size={16} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Edit">
+            <IconButton size="small" onClick={() => setFormTarget(params.row)}>
+              <PencilIcon size={16} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete">
+            <IconButton
+              size="small"
+              onClick={() =>
+                setConfirmContent({
+                  title: "Delete user",
+                  text: `Are you sure you want to delete ${params.row.email}?`,
+                  confirmLabel: "Delete",
+                  confirmAction: () => deleteUser.mutate(params.row.id),
+                })
+              }
+            >
+              <Trash2Icon size={16} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      ),
+    },
+  ];
 
   return (
     <>
@@ -145,40 +285,18 @@ export default function AdminUserManagementTab() {
           No users found
         </Typography>
       ) : (
-        <Box sx={{ maxHeight: "calc(100vh - 400px)", minHeight: 300, overflow: "auto" }}>
-          {filtered.map((user) => (
-            <UserRow
-              key={user.id}
-              user={user}
-              isSelf={user.email === selfEmail}
-              toggling={togglingId === user.id && updateUser.isPending}
-              onEdit={() => setFormTarget(user)}
-              onTransfer={() => setTransferTarget(user)}
-              onDelete={() =>
-                setConfirmContent({
-                  title: "Delete user",
-                  text: `Are you sure you want to delete ${user.email}?`,
-                  confirmLabel: "Delete",
-                  confirmAction: () => deleteUser.mutate(user.id),
-                })
-              }
-              onToggleActive={(active) =>
-                setConfirmContent({
-                  title: active ? "Activate user" : "Deactivate user",
-                  text: `Are you sure do you want to ${active ? "activate" : "deactivate"} this user?`,
-                  confirmLabel: active ? "Activate" : "Deactivate",
-                  confirmAction: () => {
-                    setTogglingId(user.id);
-                    updateUser.mutate(
-                      { id: user.id, active, roles: user.roles, functionalLeadAccessLevels: user.functionalLeadAccessLevels },
-                      { onSettled: () => setTogglingId(null) },
-                    );
-                  },
-                })
-              }
-            />
-          ))}
-        </Box>
+        <Card variant="outlined" sx={{ p: 2 }}>
+          <DataGrid.DataGrid
+            rows={filtered}
+            getRowId={(row) => row.id}
+            columns={columns}
+            showToolbar
+            slots={{ toolbar: PromotionGridToolbar }}
+            sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            pageSizeOptions={[10, 25, 50]}
+          />
+        </Card>
       )}
     </>
   );
