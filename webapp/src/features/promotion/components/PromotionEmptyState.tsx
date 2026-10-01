@@ -16,9 +16,7 @@
 
 import { Box, Typography } from "@wso2/oxygen-ui";
 
-// Plain centered message, no icon — the same empty-grid convention
-// CcHistoryPage's own NoRows overlay uses, rather than source's own
-// StateWithImage (component/ui/stateWithImage.tsx) icon-beside-text look.
+// Render a centered, icon-free message for empty results and load errors.
 export default function PromotionEmptyState({
   message,
   tone = "primary",

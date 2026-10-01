@@ -64,8 +64,13 @@ export default function LeadHistoryTab() {
       headerName: "Lead Status",
       flex: 0.9,
       minWidth: 130,
+      // The label, not the raw status, so filtering/sorting/export (which
+      // all read `valueGetter`'s output, not `renderCell`'s) match what the
+      // grid actually displays — a filter for "APPROVED" would otherwise
+      // match nothing, since no row's raw status is ever literally APPROVED.
+      valueGetter: (value) => recommendationStatusLabel(value),
       renderCell: (params) => (
-        <Chip label={recommendationStatusLabel(params.value)} size="small" color={recommendationChipColor(params.value)} />
+        <Chip label={params.value} size="small" color={recommendationChipColor(params.row.recommendationStatus)} />
       ),
     },
     {
@@ -73,11 +78,10 @@ export default function LeadHistoryTab() {
       headerName: "Promotion Status",
       flex: 0.9,
       minWidth: 150,
-      renderCell: (params) => {
-        const isActiveCycle = cycle.cycle?.id === params.row.promotionCycleId;
-        const label = promotionRequestStatusLabel(params.value, isActiveCycle);
-        return <Chip label={label} size="small" color={promotionRequestChipColor(label)} />;
-      },
+      valueGetter: (value, row) => promotionRequestStatusLabel(value, cycle.cycle?.id === row.promotionCycleId),
+      renderCell: (params) => (
+        <Chip label={params.value} size="small" color={promotionRequestChipColor(params.value)} />
+      ),
     },
     {
       field: "action",

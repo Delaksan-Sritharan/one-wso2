@@ -14,20 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Standalone /me/promotion — ports promotion-app's own employee route
-// ("Self Promotion History", route.ts, allowRoles: [EMPLOYEE]): view/promotion/
-// promotion.tsx + panels/promotionHistory.tsx + component/promotion/timeline.tsx.
+// Standalone /me/promotion — an employee's own full promotion history,
+// restricted to the EMPLOYEE role.
 //
-// This app's usual bare-title page (same shape as LeaveShell/EmailGroupsShell)
-// rather than source's own outlined-card + icon-header + tab strip. Source
-// itself defines two more tabs (Promotion Status, Applications History) but
-// both are commented out in its own render AND routing
-// (promotion.tsx:116-135) — dead code, not merely hidden — so this port
-// doesn't resurrect them either, and with only one live tab a tab strip has
-// nothing left to navigate between.
+// Promotion History shows a page title, summary statistics, and a timeline.
+// A tab strip is unnecessary because this page has no sibling views.
 //
-// This is the fuller, dedicated equivalent of promotion-app's own screen.
-// It reads the same two endpoints as the My-page profile card's "Last
+// This is the fuller, dedicated view of an employee's promotion record. It
+// reads the same two endpoints as the My-page profile card's "Last
 // promotion" line + history dialog (features/my/components/
 // ConnectedServices.tsx, PromotionHistoryDialog.tsx), which stays as its
 // own, separately-designed summary widget rather than being replaced by
@@ -50,7 +44,8 @@ function monthsSince(dateStr: string | null | undefined): number | null {
   const then = new Date(dateStr);
   if (Number.isNaN(then.getTime())) return null;
   const now = new Date();
-  const months = (now.getFullYear() - then.getFullYear()) * 12 + (now.getMonth() - then.getMonth());
+  let months = (now.getFullYear() - then.getFullYear()) * 12 + (now.getMonth() - then.getMonth());
+  if (now.getDate() < then.getDate()) months -= 1;
   return Math.max(0, months);
 }
 
