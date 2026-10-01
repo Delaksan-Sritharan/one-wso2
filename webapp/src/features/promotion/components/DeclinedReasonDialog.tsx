@@ -98,7 +98,7 @@ function DeclinedReasonDialogContent({
           />
         ) : (
           <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1 }}>
-            <Typography sx={{ fontSize: 14, whiteSpace: "pre-wrap" }}>
+            <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
               {original || "No additional comment provided."}
             </Typography>
             <Tooltip title="Edit">

@@ -56,10 +56,10 @@ export default function WithdrawalRequestCard({
     >
       <Grid container spacing={2} sx={{ width: "100%", alignItems: "center", p: 2 }}>
         <Grid size={3}>
-          <Typography sx={{ fontWeight: 600, fontSize: 15 }}>{request.employeeEmail}</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{request.employeeEmail}</Typography>
         </Grid>
         <Grid size={2}>
-          <Typography sx={{ fontSize: 14 }}>{request.promotionCycle}</Typography>
+          <Typography variant="body2">{request.promotionCycle}</Typography>
         </Grid>
         <Grid size={2}>
           <JobBandTransitionChips currentJobBand={request.currentJobBand} nextJobBand={request.nextJobBand} />
@@ -92,18 +92,18 @@ export default function WithdrawalRequestCard({
       </Grid>
       <Collapse in={expanded}>
         <Box sx={{ px: 2.5, pb: 2.5 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 0.5 }}>Request</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Request</Typography>
           <Box sx={{ mb: 1.5 }}>
             <PromotionRichTextContent content={decodePromotionText(request.promotionStatement)} />
           </Box>
           {request.recommendations.length > 0 && (
             <>
-              <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 0.5 }}>Recommendations</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Recommendations</Typography>
               {request.recommendations.map((r) => (
                 <Box key={r.recommendationID} sx={{ mb: 1.5 }}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.25 }}>{r.leadEmail}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.25 }}>{r.leadEmail}</Typography>
                   <PromotionRichTextContent content={decodePromotionText(r.recommendationStatement)} />
-                  <Typography sx={{ fontSize: 12.5, fontWeight: 700, mt: 0.5 }}>
+                  <Typography variant="caption" sx={{ display: "block", fontWeight: 700, mt: 0.5 }}>
                     {r.recommendationStatus}
                   </Typography>
                 </Box>

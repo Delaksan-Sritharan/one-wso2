@@ -183,7 +183,7 @@ export default function PeopleHrArchiveTab() {
         />
       ) : (
         <>
-          <Typography sx={{ fontSize: 13, color: "text.secondary", mb: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             {rows.length === 0
               ? "0 records"
               : `${rows.length} record${rows.length === 1 ? "" : "s"} · ${people} employee${people === 1 ? "" : "s"}`}
@@ -259,10 +259,10 @@ export default function PeopleHrArchiveTab() {
                           )}
                         </Box>
                         <Box sx={{ pb: 2.5 }}>
-                          <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                          <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
                             {row.promotionEffectiveDate}
                           </Typography>
-                          <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{row.promotedDesignation}</Typography>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{row.promotedDesignation}</Typography>
                           <Box sx={{ mt: 0.5 }}>
                             <TypeChip inBand={row.inBand} />
                           </Box>

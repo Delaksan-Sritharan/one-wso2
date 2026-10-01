@@ -65,16 +65,16 @@ export default function RecommendationCard({
     >
       <Grid container spacing={2} sx={{ width: "100%", alignItems: "center" }}>
         <Grid size={4} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Typography sx={{ fontWeight: 600, fontSize: 16 }}>{recommendation.employeeName}</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{recommendation.employeeName}</Typography>
           {recommendation.promotionType === "TIME_BASED" && (
             <Chip label="Time Based" size="small" sx={{ bgcolor: "#36B37E", color: "white" }} />
           )}
         </Grid>
         <Grid size={2}>
-          <Typography sx={{ fontWeight: 600, fontSize: 16 }}>{recommendation.promotionCycle}</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{recommendation.promotionCycle}</Typography>
         </Grid>
         <Grid size={4}>
-          <Typography sx={{ fontWeight: 600, fontSize: 16 }}>{recommendation.employeeEmail}</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{recommendation.employeeEmail}</Typography>
         </Grid>
         <Grid size={2} sx={{ display: "flex", justifyContent: "flex-end" }}>
           {recommendation.recommendationStatus === "REQUESTED" && (
@@ -107,7 +107,7 @@ export default function RecommendationCard({
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                   />
-                  <Typography sx={{ fontSize: 12, color: "text.secondary", mt: 0.5 }}>
+                  <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 0.5 }}>
                     {comment.length}/250
                   </Typography>
                   <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 1 }}>

@@ -258,7 +258,7 @@ export default function AdminTimeBasedPromotionsTab() {
         // admin can currently click, but confirming it is deliberately a
         // no-op, matching source exactly.
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, py: 4 }}>
-          <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             No time-based promotions exist for this cycle yet
           </Typography>
           <Grid container spacing={2} sx={{ maxWidth: 640 }}>
@@ -268,7 +268,7 @@ export default function AdminTimeBasedPromotionsTab() {
                   <Radio checked={source === "par-app"} />
                   <Box>
                     <Typography sx={{ fontWeight: 600 }}>PAR App</Typography>
-                    <Typography sx={{ fontSize: 12.5, color: "text.secondary" }}>
+                    <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
                       Import employees who have 3 consecutive successful ratings or above
                     </Typography>
                   </Box>
@@ -281,7 +281,7 @@ export default function AdminTimeBasedPromotionsTab() {
                   <Radio checked={source === "sheet"} />
                   <Box>
                     <Typography sx={{ fontWeight: 600 }}>Google Sheet</Typography>
-                    <Typography sx={{ fontSize: 12.5, color: "text.secondary" }}>
+                    <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
                       Import list of employees from a Google Sheet
                     </Typography>
                   </Box>

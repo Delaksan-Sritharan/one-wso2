@@ -132,7 +132,7 @@ export default function RecommendationEditForm({
               />
             </Field>
             {employeeInfo.isError && (
-              <Typography sx={{ fontSize: 12.5, color: "error.main" }}>
+              <Typography variant="caption" sx={{ display: "block", color: "error.main" }}>
                 Couldn&apos;t load the applicant&apos;s record. {humanizeHttpError(employeeInfo.error)}
               </Typography>
             )}
@@ -179,7 +179,7 @@ export default function RecommendationEditForm({
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Box>
-      <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>{label}</Typography>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>{label}</Typography>
       {children}
     </Box>
   );

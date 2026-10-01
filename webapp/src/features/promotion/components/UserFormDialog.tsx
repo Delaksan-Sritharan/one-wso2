@@ -121,7 +121,7 @@ function UserFormDialogContent({
       <DialogContent dividers>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 0.5 }}>
           <Box>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>Employee *</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>Employee *</Typography>
             {isEdit ? (
               <TextField fullWidth size="small" disabled value={email} />
             ) : (
@@ -137,7 +137,7 @@ function UserFormDialogContent({
             )}
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>Roles *</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>Roles *</Typography>
             <Select
               fullWidth
               size="small"
@@ -161,14 +161,14 @@ function UserFormDialogContent({
           </Box>
           <Collapse in={needsAcl}>
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>Functional Lead Access Levels *</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>Functional Lead Access Levels *</Typography>
               <FunctionalLeadAclSelector
                 businessUnits={businessUnits}
                 selection={aclSelection}
                 onChange={setAclSelection}
               />
               {aclSelection.size === 0 && (
-                <Typography sx={{ fontSize: 12, color: "warning.main", mt: 0.5 }}>
+                <Typography variant="caption" sx={{ display: "block", color: "warning.main", mt: 0.5 }}>
                   Please configure functional lead access levels
                 </Typography>
               )}

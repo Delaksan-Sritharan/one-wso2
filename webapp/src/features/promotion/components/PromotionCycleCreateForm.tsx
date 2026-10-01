@@ -113,7 +113,7 @@ export default function PromotionCycleCreateForm({
       <Stack spacing={2}>
         <Grid container spacing={2}>
           <Grid size={6}>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>Year</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>Year</Typography>
             <Select fullWidth size="small" value={year} onChange={(e) => setYear(e.target.value as string)} displayEmpty>
               <MenuItem value="" disabled>
                 Select year
@@ -126,7 +126,7 @@ export default function PromotionCycleCreateForm({
             </Select>
           </Grid>
           <Grid size={6}>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>Cycle</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>Cycle</Typography>
             <Select fullWidth size="small" value={half} onChange={(e) => setHalf(e.target.value as string)} displayEmpty>
               <MenuItem value="" disabled>
                 Select cycle

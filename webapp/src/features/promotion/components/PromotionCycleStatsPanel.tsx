@@ -36,8 +36,8 @@ function Tile({ icon: Icon, color, value, label }: { icon: LucideIcon; color: st
     <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flex: 1, minWidth: 0 }}>
       <Icon size={22} color={color} />
       <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontSize: 20, fontWeight: 700, color, lineHeight: 1.1 }}>{value}</Typography>
-        <Typography sx={{ fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>{label}</Typography>
+        <Typography variant="h6" sx={{ fontWeight: 700, color, lineHeight: 1.1 }}>{value}</Typography>
+        <Typography variant="caption" sx={{ color: "text.secondary", whiteSpace: "nowrap" }}>{label}</Typography>
       </Box>
     </Box>
   );
@@ -46,7 +46,7 @@ function Tile({ icon: Icon, color, value, label }: { icon: LucideIcon; color: st
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Box sx={{ mb: 3 }}>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1.5, color: "text.secondary" }}>{title}</Typography>
+      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.secondary" }}>{title}</Typography>
       <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>{children}</Box>
     </Box>
   );

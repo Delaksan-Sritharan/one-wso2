@@ -48,9 +48,9 @@ export default function PromotionRequestDetailPanel({ request }: { request: Prom
       </Avatar>
 
       <Box sx={{ flex: 1, minWidth: 0, mt: isRejected ? 6 : 0 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: 15, mb: 1 }}>Lead Recommendations</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Lead Recommendations</Typography>
         {request.recommendations.length === 0 ? (
-          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+          <Typography variant="body2" color="text.secondary">
             There are no lead recommendations.
           </Typography>
         ) : (
@@ -58,7 +58,7 @@ export default function PromotionRequestDetailPanel({ request }: { request: Prom
             {request.recommendations.map((rec) => (
               <Box key={rec.recommendationID} sx={{ borderTop: 1, borderColor: "divider", pt: 1.5 }}>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{rec.leadEmail}</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{rec.leadEmail}</Typography>
                   {/* Show the raw status, not recommendationStatusLabel's
                       SUBMITTED→"APPROVED" remap. That remap applies only to the
                       Lead Portal History tab. */}
@@ -71,7 +71,7 @@ export default function PromotionRequestDetailPanel({ request }: { request: Prom
                 <PromotionRichTextContent content={decodePromotionText(rec.recommendationStatement)} />
                 {rec.recommendationAdditionalComment && (
                   <>
-                    <Typography sx={{ fontSize: 11.5, fontWeight: 600, color: "text.secondary", mt: 0.5 }}>
+                    <Typography variant="caption" sx={{ display: "block", fontWeight: 600, color: "text.secondary", mt: 0.5 }}>
                       Additional Comment
                     </Typography>
                     <PromotionRichTextContent content={decodePromotionText(rec.recommendationAdditionalComment)} />
@@ -86,7 +86,7 @@ export default function PromotionRequestDetailPanel({ request }: { request: Prom
       <Divider orientation="vertical" flexItem />
 
       <Box sx={{ flex: 1, minWidth: 0, mt: isRejected ? 6 : 0 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: 15, mb: 1 }}>Promotion History</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Promotion History</Typography>
         <Box sx={{ maxHeight: 350, overflow: "auto" }}>
           {info.isPending || history.isPending ? (
             <Skeleton variant="rectangular" height={160} sx={{ borderRadius: 1 }} />

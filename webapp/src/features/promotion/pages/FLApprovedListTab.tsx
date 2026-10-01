@@ -106,11 +106,11 @@ export default function FLApprovedListTab() {
         </Tooltip>
         {rows.length > 0 && (
           <Stack direction="row" spacing={2} divider={<Divider orientation="vertical" flexItem />} alignItems="center">
-            <Typography sx={{ fontSize: 13, fontWeight: 600 }}>All Count: {rows.length}</Typography>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "success.main" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>All Count: {rows.length}</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "success.main" }}>
               Promotion Board Approved Count: {boardApprovedCount}
             </Typography>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "error.main" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "error.main" }}>
               Promotion Board Rejected Count: {boardRejectedCount}
             </Typography>
           </Stack>

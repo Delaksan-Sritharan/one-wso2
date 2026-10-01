@@ -48,13 +48,13 @@ export default function RecommendationHistoryCard({
       <Box sx={{ display: "flex", p: 2 }}>
         <Grid container spacing={2} sx={{ width: "100%", alignItems: "center" }}>
           <Grid size={2}>
-            <Typography sx={{ fontWeight: 600, fontSize: 15 }}>{recommendation.employeeName}</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{recommendation.employeeName}</Typography>
           </Grid>
           <Grid size={2} sx={{ display: "flex", justifyContent: "center" }}>
-            <Typography sx={{ fontWeight: 600, fontSize: 15 }}>{recommendation.employeeEmail}</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{recommendation.employeeEmail}</Typography>
           </Grid>
           <Grid size={2} sx={{ display: "flex", justifyContent: "center" }}>
-            <Typography sx={{ fontWeight: 600, fontSize: 15 }}>{recommendation.promotionCycle}</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{recommendation.promotionCycle}</Typography>
           </Grid>
           <Grid size={2} sx={{ display: "flex", justifyContent: "center" }}>
             <Chip
@@ -91,11 +91,11 @@ export default function RecommendationHistoryCard({
         <Box sx={{ px: 2.5, pb: 2.5 }}>
           {recommendation.recommendationStatus === "SUBMITTED" && (
             <>
-              <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 0.5 }}>Your Recommendation</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Your Recommendation</Typography>
               <Box sx={{ mb: 1.5 }}>
                 <PromotionRichTextContent content={decodePromotionText(recommendation.recommendationStatement)} />
               </Box>
-              <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 0.5 }}>Additional Comment</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Additional Comment</Typography>
               <Box sx={{ mb: 1.5 }}>
                 <PromotionRichTextContent
                   content={decodePromotionText(recommendation.recommendationAdditionalComment)}
@@ -104,7 +104,7 @@ export default function RecommendationHistoryCard({
               {(recommendation.promotionRequestStatus === "REJECTED" ||
                 recommendation.promotionRequestStatus === "FL_REJECTED") && (
                 <>
-                  <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 0.5 }}>Reason for the Rejection</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Reason for the Rejection</Typography>
                   <PromotionRichTextContent content={decodePromotionText(recommendation.reasonForRejection)} />
                 </>
               )}
@@ -112,7 +112,7 @@ export default function RecommendationHistoryCard({
           )}
           {recommendation.recommendationStatus === "DECLINED" && (
             <>
-              <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 0.5 }}>Reason for Decline</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Reason for Decline</Typography>
               <PromotionRichTextContent
                 content={decodePromotionText(recommendation.recommendationAdditionalComment)}
               />

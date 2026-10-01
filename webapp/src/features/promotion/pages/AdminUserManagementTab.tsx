@@ -142,7 +142,7 @@ export default function AdminUserManagementTab() {
           message={`Unable to load user information. ${humanizeHttpError(users.error)}`}
         />
       ) : filtered.length === 0 ? (
-        <Typography sx={{ fontSize: 14, color: "text.secondary", textAlign: "center", py: 4 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
           No users found
         </Typography>
       ) : (

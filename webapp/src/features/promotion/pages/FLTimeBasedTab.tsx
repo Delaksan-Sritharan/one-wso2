@@ -98,7 +98,7 @@ export default function FLTimeBasedTab() {
             >
               <Grid container spacing={2} sx={{ width: "100%", alignItems: "center" }}>
                 <Grid size={3}>
-                  <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{request.employeeEmail}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{request.employeeEmail}</Typography>
                 </Grid>
                 <Grid size={2}>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
@@ -123,7 +123,7 @@ export default function FLTimeBasedTab() {
                   </Box>
                 </Grid>
                 <Grid size={2}>
-                  <Typography sx={{ fontSize: 14 }}>{request.team}</Typography>
+                  <Typography variant="body2">{request.team}</Typography>
                 </Grid>
                 <Grid size={2} sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 0.5 }}>
                   <Chip label={`JB ${request.currentJobBand}`} size="small" variant="outlined" />

@@ -148,28 +148,28 @@ export default function CycleHistoryTab() {
         <>
           <Grid container spacing={3} sx={{ p: 2.5, mb: 2, border: 1, borderColor: "divider", borderRadius: 1 }}>
             <Grid size={{ xs: 6, md: 2 }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: "text.secondary" }}>Cycle Name</Typography>
-              <Typography sx={{ fontSize: 14 }}>{selectedCycle.name}</Typography>
+              <Typography variant="caption" sx={{ display: "block", fontWeight: 600, color: "text.secondary" }}>Cycle Name</Typography>
+              <Typography variant="body2">{selectedCycle.name}</Typography>
             </Grid>
             <Grid size={{ xs: 6, md: 2 }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: "text.secondary" }}>Start Date</Typography>
-              <Typography sx={{ fontSize: 14 }}>{selectedCycle.startDate}</Typography>
+              <Typography variant="caption" sx={{ display: "block", fontWeight: 600, color: "text.secondary" }}>Start Date</Typography>
+              <Typography variant="body2">{selectedCycle.startDate}</Typography>
             </Grid>
             <Grid size={{ xs: 6, md: 2 }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: "text.secondary" }}>End Date</Typography>
-              <Typography sx={{ fontSize: 14 }}>{selectedCycle.endDate}</Typography>
+              <Typography variant="caption" sx={{ display: "block", fontWeight: 600, color: "text.secondary" }}>End Date</Typography>
+              <Typography variant="body2">{selectedCycle.endDate}</Typography>
             </Grid>
             <Grid size={{ xs: 6, md: 2 }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: "text.secondary" }}>Lead Deadline</Typography>
-              <Typography sx={{ fontSize: 14 }}>{selectedCycle.leadDeadline}</Typography>
+              <Typography variant="caption" sx={{ display: "block", fontWeight: 600, color: "text.secondary" }}>Lead Deadline</Typography>
+              <Typography variant="body2">{selectedCycle.leadDeadline}</Typography>
             </Grid>
             <Grid size={{ xs: 6, md: 2 }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: "text.secondary" }}>FL Deadline</Typography>
-              <Typography sx={{ fontSize: 14 }}>{selectedCycle.functionalLeadDeadline}</Typography>
+              <Typography variant="caption" sx={{ display: "block", fontWeight: 600, color: "text.secondary" }}>FL Deadline</Typography>
+              <Typography variant="body2">{selectedCycle.functionalLeadDeadline}</Typography>
             </Grid>
             <Grid size={{ xs: 6, md: 2 }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: "text.secondary" }}>Board Deadline</Typography>
-              <Typography sx={{ fontSize: 14 }}>{selectedCycle.promotionBoardDeadline}</Typography>
+              <Typography variant="caption" sx={{ display: "block", fontWeight: 600, color: "text.secondary" }}>Board Deadline</Typography>
+              <Typography variant="body2">{selectedCycle.promotionBoardDeadline}</Typography>
             </Grid>
           </Grid>
 

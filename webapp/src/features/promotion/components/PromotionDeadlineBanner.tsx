@@ -39,7 +39,7 @@ export default function PromotionDeadlineBanner({ children }: { children: ReactN
       }}
     >
       <TriangleAlertIcon size={20} />
-      <Typography sx={{ fontWeight: 500, fontSize: 14 }}>{children}</Typography>
+      <Typography variant="body2" sx={{ fontWeight: 500 }}>{children}</Typography>
     </Box>
   );
 }
