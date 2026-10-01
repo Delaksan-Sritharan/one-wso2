@@ -119,7 +119,7 @@ export default function SalesMeetingsPage() {
 
   return (
     <SalesShell
-      title="Sales"
+      title="Meetings"
       subtitle="Meetings recorded across the sales team."
       configured={configured}
       configKey="ONE_WSO2_REVOPS_BACKEND_URL"
