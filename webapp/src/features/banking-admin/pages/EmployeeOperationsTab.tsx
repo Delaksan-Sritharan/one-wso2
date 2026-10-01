@@ -100,7 +100,7 @@ export default function EmployeeOperationsTab() {
       title: "Confirm Resignation",
       text: "Are you sure you want to resign this employee? This will deactivate employee's all active bank accounts !",
       confirmAction: () => {
-        if (!selectedEmployee) return;
+        if (!selectedEmployee || !accountsQuery.isSuccess) return;
         const employeeEmail = selectedEmployee.workEmail;
         void (async () => {
           // Resign has no dedicated backend endpoint — every currently-Active
@@ -211,7 +211,13 @@ export default function EmployeeOperationsTab() {
             <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
               Employee Details
             </Typography>
-            <Button variant="contained" color="error" disabled={submitting} loading={submitting} onClick={requestResign}>
+            <Button
+              variant="contained"
+              color="error"
+              disabled={submitting || !accountsQuery.isSuccess}
+              loading={submitting}
+              onClick={requestResign}
+            >
               Resign Employee
             </Button>
           </Stack>

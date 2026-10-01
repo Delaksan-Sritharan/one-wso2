@@ -29,7 +29,7 @@ import type { BankAccount, BankingEmployee } from "@features/my/api/types";
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
 
 const employees = vi.hoisted(() => ({ data: [] as BankingEmployee[] }));
-const accounts = vi.hoisted(() => ({ data: [] as BankAccount[] }));
+const accounts = vi.hoisted(() => ({ data: [] as BankAccount[], isLoading: false, isError: false }));
 const bankAccountsSpy = vi.hoisted(() => vi.fn());
 const deactivateAccount = vi.hoisted(() => ({
   mutate: vi.fn(),
@@ -59,8 +59,9 @@ vi.mock("@features/my/api/useBankAccounts", () => ({
     bankAccountsSpy(workEmail);
     return {
       data: { bankAccounts: accounts.data, count: accounts.data.length },
-      isLoading: false,
-      isError: false,
+      isLoading: accounts.isLoading,
+      isError: accounts.isError,
+      isSuccess: !accounts.isLoading && !accounts.isError,
       refetch: vi.fn(),
     };
   },
@@ -140,6 +141,8 @@ async function selectEmployee(user: ReturnType<typeof userEvent.setup>, label = 
 beforeEach(() => {
   employees.data = [employee()];
   accounts.data = [];
+  accounts.isLoading = false;
+  accounts.isError = false;
   bankAccountsSpy.mockReset();
   deactivateAccount.mutate.mockReset();
   deactivateAccount.mutateAsync.mockReset().mockResolvedValue(undefined);
@@ -218,6 +221,22 @@ describe("EmployeeOperationsTab", () => {
       expect(showError).toHaveBeenCalledWith(expect.stringMatching(/account 1.*jane@wso2\.com.*http 500/i)),
     );
     expect(showSuccess).not.toHaveBeenCalled();
+  });
+
+  it("disables Resign Employee while the account query is still loading, instead of treating it as no accounts", async () => {
+    const user = userEvent.setup();
+    accounts.isLoading = true;
+    render(<EmployeeOperationsTab />);
+    await selectEmployee(user);
+    expect(screen.getByRole("button", { name: "Resign Employee" })).toBeDisabled();
+  });
+
+  it("disables Resign Employee when the account query has failed", async () => {
+    const user = userEvent.setup();
+    accounts.isError = true;
+    render(<EmployeeOperationsTab />);
+    await selectEmployee(user);
+    expect(screen.getByRole("button", { name: "Resign Employee" })).toBeDisabled();
   });
 
   it("disables Deactivate and Resign Employee while a deactivate mutation is already in flight", async () => {
