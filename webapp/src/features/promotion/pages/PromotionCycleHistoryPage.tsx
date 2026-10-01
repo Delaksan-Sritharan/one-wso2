@@ -36,6 +36,9 @@ export default function PromotionCycleHistoryPage() {
       <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
         Promotion Cycle History
       </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
+        Look back at closed promotion cycles and the full People HR promotion archive.
+      </Typography>
       <RoutedTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Promotion cycle history" />
       <Outlet />
     </Box>

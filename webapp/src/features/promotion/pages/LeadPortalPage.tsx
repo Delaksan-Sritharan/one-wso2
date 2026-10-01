@@ -37,6 +37,9 @@ export default function LeadPortalPage() {
       <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
         Time Based Promotions
       </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
+        Review and act on your direct reports' time-based promotion requests, and track them once decided.
+      </Typography>
       <RoutedTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Time based promotions" />
       <Outlet />
     </Box>

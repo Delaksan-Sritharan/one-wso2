@@ -38,6 +38,9 @@ export default function PromotionBoardPortalPage() {
       <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
         Promotion Board Portal
       </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
+        Make the final call on promotion requests that have cleared functional lead review.
+      </Typography>
       <RoutedTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Promotion board portal" />
       <Outlet />
     </Box>

@@ -36,6 +36,9 @@ export default function TeamPromotionHistoryPage() {
       <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
         Team Promotion History
       </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
+        See every promotion your direct and indirect reports have received, past and present.
+      </Typography>
       <RoutedTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Team promotion history" />
       <Outlet />
     </Box>

@@ -39,6 +39,10 @@ export default function PromotionAdminPortalPage() {
       <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
         Admin Portal
       </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
+        Manage promotion cycles, time-based and individual contributor promotions, withdrawal requests, and
+        system users.
+      </Typography>
       <RoutedTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Promotion admin portal" />
       <Outlet />
     </Box>

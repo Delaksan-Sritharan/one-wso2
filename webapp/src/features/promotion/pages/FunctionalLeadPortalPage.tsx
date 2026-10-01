@@ -38,6 +38,10 @@ export default function FunctionalLeadPortalPage() {
       <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
         Functional Lead Portal
       </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
+        Review promotion requests from your business unit, and track them through approval, rejection, and
+        time-based promotions.
+      </Typography>
       <RoutedTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Functional lead portal" />
       <Outlet />
     </Box>
