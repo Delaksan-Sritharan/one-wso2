@@ -54,7 +54,10 @@ export default function AuthGuard() {
   const renewing = useSyncExternalStore(subscribeRenewal, getRenewalInFlightSnapshot);
   // Whether this page load is the return from a sign-in this tab started moments
   // ago. Read once, before this page can record a redirect of its own.
-  const [returnedFromRecentSignIn] = useState(signInRedirectIsRecent);
+  const [returnedFromRecentSignIn, setReturnedFromRecentSignIn] = useState(signInRedirectIsRecent);
+  // That sign-in worked, so losing the session later on this page load (a
+  // refresh token revoked hours on, say) is not a loop and gets its redirect.
+  if (returnedFromRecentSignIn && isSignedIn) setReturnedFromRecentSignIn(false);
   const reportedLoopRef = useRef(false);
   const signInLooped = returnedFromRecentSignIn && !isLoading && !isSignedIn;
 
