@@ -21,26 +21,28 @@
 // reviewing/deciding on other people's promotions is People-Ops-team work,
 // the same split PAR's own Lead Portal already applies.
 import { Navigate, Outlet } from "react-router";
-import { ClipboardCheckIcon, ClipboardListIcon, UsersRoundIcon } from "@wso2/oxygen-ui-icons-react";
-import PromotionPageShell from "../components/PromotionPageShell";
-import PromotionTabs, { type PromotionTabDef } from "../components/PromotionTabs";
+import { Box, Typography } from "@wso2/oxygen-ui";
+import RoutedTabs, { type RoutedTabDef } from "@components/routed-tabs/RoutedTabs";
 
 const BASE_PATH = "/people-ops/promotion/lead";
 
-const TABS: PromotionTabDef[] = [
-  { segment: "pending", label: "Pending Requests", icon: <ClipboardListIcon size={18} /> },
-  { segment: "history", label: "History", icon: <ClipboardCheckIcon size={18} /> },
+const TABS: RoutedTabDef[] = [
+  { segment: "pending", label: "Pending Requests" },
+  { segment: "history", label: "History" },
 ];
 
 export default function LeadPortalPage() {
   return (
-    <PromotionPageShell
-      icon={<UsersRoundIcon size={34} strokeWidth={1.5} />}
-      title="Time Based Promotions"
-      tabs={<PromotionTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Time based promotions" />}
-    >
+    <Box>
+      <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
+        Time Based Promotions
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
+        Review and act on your direct reports' time-based promotion requests, and track them once decided.
+      </Typography>
+      <RoutedTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Time based promotions" />
       <Outlet />
-    </PromotionPageShell>
+    </Box>
   );
 }
 

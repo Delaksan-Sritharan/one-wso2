@@ -16,7 +16,7 @@
 
 import { Avatar, Box, Chip, IconButton, Stack, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { ArrowRightLeftIcon, PencilIcon, Trash2Icon } from "@wso2/oxygen-ui-icons-react";
-import { promotionRoleColor } from "../util/promotionRoleColors";
+import { promotionRoleChipColor } from "../util/promotionRoleColors";
 import type { PromotionUser } from "../api/types";
 
 // Ports promotion-app's own component/user/userLine.tsx. The Access Levels
@@ -57,12 +57,12 @@ export default function UserRow({
         {user.firstName?.[0]}
       </Avatar>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontSize: 14, fontWeight: isSelf ? 700 : 500 }} noWrap>
+        <Typography variant="body2" sx={{ fontWeight: isSelf ? 700 : 500 }} noWrap>
           {user.firstName} {user.lastName} ({user.email})
         </Typography>
         <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: "wrap" }}>
           {user.roles.map((role) => (
-            <Chip key={role} label={role} size="small" sx={{ bgcolor: promotionRoleColor(role), color: "white" }} />
+            <Chip key={role} label={role} size="small" color={promotionRoleChipColor(role)} />
           ))}
         </Stack>
       </Box>

@@ -14,33 +14,121 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Standalone /me/promotion — ports promotion-app's own employee route
-// ("Self Promotion History", route.ts, allowRoles: [EMPLOYEE]): view/promotion/
-// promotion.tsx + panels/promotionHistory.tsx + component/promotion/timeline.tsx.
+// Standalone /me/promotion — an employee's own full promotion history,
+// restricted to the EMPLOYEE role.
 //
-// Kept visually close to source rather than reshaped into this app's usual
-// bare-title page: PromotionPageShell reproduces the outlined card + header
-// icon + tab strip from source's own promotion.tsx — right down to the tab
-// strip showing only one tab. Source itself defines two more tabs
-// (Promotion Status, Applications History) but both are commented out in
-// its own render AND routing (promotion.tsx:116-135) — dead code, not
-// merely hidden — so this port doesn't resurrect them either.
+// Promotion History shows a page title, summary statistics, and a timeline.
+// A tab strip is unnecessary because this page has no sibling views.
 //
-// This is the fuller, dedicated equivalent of promotion-app's own screen.
-// It reads the same two endpoints as the My-page profile card's "Last
+// This is the fuller, dedicated view of an employee's promotion record. It
+// reads the same two endpoints as the My-page profile card's "Last
 // promotion" line + history dialog (features/my/components/
 // ConnectedServices.tsx, PromotionHistoryDialog.tsx), which stays as its
 // own, separately-designed summary widget rather than being replaced by
 // this page.
-import { Alert, Box, Skeleton, Tab, Tabs } from "@wso2/oxygen-ui";
-import { HistoryIcon, UserCircleIcon } from "@wso2/oxygen-ui-icons-react";
+import type { ReactNode } from "react";
+import { Alert, Box, Paper, Skeleton, Stack, Typography } from "@wso2/oxygen-ui";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { humanizeHttpError } from "@api/http";
 import { isPromotionBackendConfigured, usePromotionEmployeeInfo } from "../api/usePromotionEmployeeInfo";
 import { usePromotionHistory } from "../api/usePromotionHistory";
 import PromotionTimeline from "../components/PromotionTimeline";
-import PromotionPageShell from "../components/PromotionPageShell";
+import {
+  formatDate,
+  formatJobBand,
+  joinedBand,
+  latestPromotion,
+  monthsSince,
+  sortPromotionsByBand,
+} from "../util/promotionHistory";
+import type { PromotionEmployeeInfoWithLead, PromotionHistoryEntry } from "../api/types";
+
+function formatDuration(months: number): ReactNode {
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  if (years === 0) return <>{months}<Typography component="span" variant="body2" sx={{ ml: 0.5 }}>mo</Typography></>;
+  return (
+    <>
+      {years}<Typography component="span" variant="body2" sx={{ ml: 0.5, mr: rest ? 1 : 0 }}>yr</Typography>
+      {rest > 0 && <>{rest}<Typography component="span" variant="body2" sx={{ ml: 0.5 }}>mo</Typography></>}
+    </>
+  );
+}
+
+// A small stat row above the timeline — without it, someone with only one
+// or two entries (or none at all) sees a single lonely row on an otherwise
+// empty page. Gives every record, however short, something substantial at
+// the top regardless of how many promotions it holds.
+function StatCard({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: ReactNode;
+  sub?: string;
+  accent?: string;
+}) {
+  return (
+    <Paper variant="outlined" sx={{ p: 2.25, flex: 1, minWidth: { xs: 140, sm: 160 } }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: "block", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 600 }}
+      >
+        {label}
+      </Typography>
+      <Typography variant="h4" fontWeight={700} sx={{ mt: 0.25, color: accent ?? "text.primary" }}>
+        {value}
+      </Typography>
+      {sub && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+          {sub}
+        </Typography>
+      )}
+    </Paper>
+  );
+}
+
+function PromotionStats({
+  employeeInfo,
+  requests,
+}: {
+  employeeInfo: PromotionEmployeeInfoWithLead;
+  requests: PromotionHistoryEntry[];
+}) {
+  const sorted = sortPromotionsByBand(requests);
+  const latest = latestPromotion(requests);
+  const specialCount = requests.filter((r) => r.promotionType === "SPECIAL").length;
+  // The band held before any promotion on record — same fallback
+  // PromotionTimeline's own "Joined" node uses.
+  const bandAtJoining = joinedBand(sorted, employeeInfo.jobBand);
+  const monthsInBand = monthsSince(latest ? employeeInfo.lastPromotedDate : employeeInfo.startDate);
+
+  return (
+    <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
+      <StatCard
+        label="Current Band"
+        value={formatJobBand(employeeInfo.jobBand)}
+        sub={latest ? `since ${latest.promotionCycle}` : "since joining"}
+        accent="primary.main"
+      />
+      <StatCard
+        label="Promotions"
+        value={requests.length}
+        sub={specialCount > 0 ? `${specialCount} special` : undefined}
+      />
+      <StatCard
+        label="Time in Band"
+        value={monthsInBand !== null ? formatDuration(monthsInBand) : "—"}
+        sub={latest ? "since last move" : "since joining"}
+      />
+      <StatCard label="Joined At" value={formatJobBand(bandAtJoining)} sub={formatDate(employeeInfo.startDate)} />
+    </Stack>
+  );
+}
 
 export default function PromotionHistoryPage() {
   const userInfo = useUserInfo();
@@ -54,19 +142,14 @@ export default function PromotionHistoryPage() {
   const history = usePromotionHistory(workEmail, true);
 
   return (
-    <PromotionPageShell
-      icon={<UserCircleIcon size={34} strokeWidth={1.5} />}
-      title="Promotion History"
-      tabs={
-        // One tab, matching source's own live tab bar exactly — see the
-        // file header for why the other two source tabs aren't here. A
-        // static Tabs (not PromotionTabs) since there's nowhere else to
-        // navigate to.
-        <Tabs value={0} aria-label="promotion history tabs">
-          <Tab icon={<HistoryIcon size={18} />} iconPosition="start" label="Promotion History" />
-        </Tabs>
-      }
-    >
+    <Box>
+      <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
+        Promotion History
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Every promotion you've been approved for, from the job band you joined at to where you are today.
+      </Typography>
+
       {!configured ? (
         <Alert severity="info">
           This app isn&apos;t connected yet. Set <code>ONE_WSO2_PROMOTION_BACKEND_URL</code> in{" "}
@@ -87,11 +170,17 @@ export default function PromotionHistoryPage() {
       ) : history.isError ? (
         <Alert severity="error">Couldn&apos;t load your promotion history. {humanizeHttpError(history.error)}</Alert>
       ) : info.data ? (
-        <PromotionTimeline
-          employeeInfo={info.data.employeeInfo}
-          requests={history.data?.promotionRequests ?? []}
-        />
+        <>
+          <PromotionStats
+            employeeInfo={info.data.employeeInfo}
+            requests={history.data?.promotionRequests ?? []}
+          />
+          <PromotionTimeline
+            employeeInfo={info.data.employeeInfo}
+            requests={history.data?.promotionRequests ?? []}
+          />
+        </>
       ) : null}
-    </PromotionPageShell>
+    </Box>
   );
 }

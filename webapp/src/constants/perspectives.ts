@@ -233,13 +233,14 @@ export const PEOPLE_OPS_SECTIONS: PerspectiveSection[] = [
           children: [
             {
               id: "promotion-lead-portal",
-              label: "Lead View",
+              label: "Time Based Promotions",
               path: "/people-ops/promotion/lead",
             },
-            // A separate Lead-role screen from Lead View above (source's own
-            // /lead-employee-history route, distinct from /time-based-promotions)
-            // — same Role.LEAD gate, same PROMOTION_LEAD_PORTAL_ITEM_ID-style
-            // treatment, its own id (PROMOTION_TEAM_HISTORY_ITEM_ID below).
+            // A separate Lead-role screen from Time Based Promotions above
+            // (source's own /lead-employee-history route, distinct from
+            // /time-based-promotions) — same Role.LEAD gate, same
+            // PROMOTION_LEAD_PORTAL_ITEM_ID-style treatment, its own id
+            // (PROMOTION_TEAM_HISTORY_ITEM_ID below).
             {
               id: "promotion-team-history",
               label: "Team Promotion History",

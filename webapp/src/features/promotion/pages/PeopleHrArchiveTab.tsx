@@ -40,7 +40,7 @@ import {
   TextField,
   Typography,
 } from "@wso2/oxygen-ui";
-import { ArchiveIcon, TrendingUpIcon, TriangleAlertIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArchiveIcon, TrendingUpIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { usePromotionArchive } from "../api/usePromotionArchive";
 import PromotionEmptyState from "../components/PromotionEmptyState";
@@ -169,7 +169,6 @@ export default function PeopleHrArchiveTab() {
         // Skeleton, rather than leaving the "'To' is before 'from'" field-level
         // helper text as the only explanation for a permanently-loading panel.
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="warning"
           message="'To' is before 'from' — fix the date range to see results."
         />
@@ -177,20 +176,19 @@ export default function PeopleHrArchiveTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : archive.isError ? (
         <PromotionEmptyState
-          icon={<ArchiveIcon size={28} />}
           tone="error"
           message={`Unable to load the archived promotions. ${humanizeHttpError(archive.error)}`}
         />
       ) : (
         <>
-          <Typography sx={{ fontSize: 13, color: "text.secondary", mb: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             {rows.length === 0
               ? "0 records"
               : `${rows.length} record${rows.length === 1 ? "" : "s"} · ${people} employee${people === 1 ? "" : "s"}`}
             {filtered && " (filtered)"}
           </Typography>
           {rows.length === 0 ? (
-            <PromotionEmptyState icon={<ArchiveIcon size={28} />} message="No archived promotions match these filters." />
+            <PromotionEmptyState message="No archived promotions match these filters." />
           ) : (
             <DataGrid.DataGrid
               rows={rows}
@@ -259,10 +257,10 @@ export default function PeopleHrArchiveTab() {
                           )}
                         </Box>
                         <Box sx={{ pb: 2.5 }}>
-                          <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                          <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
                             {row.promotionEffectiveDate}
                           </Typography>
-                          <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{row.promotedDesignation}</Typography>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{row.promotedDesignation}</Typography>
                           <Box sx={{ mt: 0.5 }}>
                             <TypeChip inBand={row.inBand} />
                           </Box>

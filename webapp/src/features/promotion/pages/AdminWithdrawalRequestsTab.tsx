@@ -21,7 +21,7 @@
 // approve/reject on WITHDRAW rows only.
 import { useState } from "react";
 import { Box, Divider, IconButton, Skeleton, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { InboxIcon, RefreshCwIcon, TriangleAlertIcon } from "@wso2/oxygen-ui-icons-react";
+import { RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useApproveWithdrawal, useRejectWithdrawal, useWithdrawalRequests } from "../api/useWithdrawalRequests";
@@ -50,11 +50,11 @@ export default function AdminWithdrawalRequestsTab() {
         </Tooltip>
         {rows.length > 0 && (
           <Stack direction="row" spacing={2} divider={<Divider orientation="vertical" flexItem />} alignItems="center">
-            <Typography sx={{ fontSize: 13, fontWeight: 600 }}>All Count: {rows.length}</Typography>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "success.main" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>All Count: {rows.length}</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "success.main" }}>
               Withdrawal Count: {withdrawalCount}
             </Typography>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "error.main" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "error.main" }}>
               Approved Withdrawal Count: {approvedCount}
             </Typography>
           </Stack>
@@ -65,12 +65,11 @@ export default function AdminWithdrawalRequestsTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : requests.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load withdrawal requests. ${humanizeHttpError(requests.error)}`}
         />
       ) : rows.length === 0 ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no pending withdrawal requests" />
+        <PromotionEmptyState message="There are no pending withdrawal requests" />
       ) : (
         rows.map((request) => (
           <WithdrawalRequestCard

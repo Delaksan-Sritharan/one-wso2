@@ -42,7 +42,7 @@ export default function PromotionTableHeader({ columns }: { columns: PromotionTa
       <Grid container spacing={2} sx={{ width: "100%" }}>
         {columns.map((column, i) => (
           <Grid key={i} size={column.size} sx={{ display: "flex", justifyContent: column.align }}>
-            <Typography sx={{ fontWeight: 700, fontSize: 15 }}>{column.title}</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{column.title}</Typography>
           </Grid>
         ))}
       </Grid>

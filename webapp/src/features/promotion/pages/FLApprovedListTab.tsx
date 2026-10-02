@@ -22,7 +22,7 @@
 // off on, not re-litigating it). Read-only — no bulk actions, no edit.
 import { useState } from "react";
 import { Box, DataGrid, Divider, IconButton, Skeleton, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { ChevronDownIcon, InboxIcon, RefreshCwIcon, TriangleAlertIcon } from "@wso2/oxygen-ui-icons-react";
+import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests } from "../api/usePromotionRequests";
@@ -106,11 +106,11 @@ export default function FLApprovedListTab() {
         </Tooltip>
         {rows.length > 0 && (
           <Stack direction="row" spacing={2} divider={<Divider orientation="vertical" flexItem />} alignItems="center">
-            <Typography sx={{ fontSize: 13, fontWeight: 600 }}>All Count: {rows.length}</Typography>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "success.main" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>All Count: {rows.length}</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "success.main" }}>
               Promotion Board Approved Count: {boardApprovedCount}
             </Typography>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "error.main" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "error.main" }}>
               Promotion Board Rejected Count: {boardRejectedCount}
             </Typography>
           </Stack>
@@ -121,18 +121,16 @@ export default function FLApprovedListTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : cycle.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
         />
       ) : requests.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load promotion requests. ${humanizeHttpError(requests.error)}`}
         />
       ) : rows.length === 0 ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no pending promotion requests" />
+        <PromotionEmptyState message="There are no pending promotion requests" />
       ) : (
         <DataGrid.DataGrid
           rows={rows}

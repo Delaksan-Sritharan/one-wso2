@@ -22,7 +22,7 @@
 // tab, not a linkable top-level tab the way the portal's own five tabs are.
 import { useState } from "react";
 import { Box, Breadcrumbs, Button, Grid, IconButton, Link, Skeleton, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { BellIcon, RefreshCwIcon, TriangleAlertIcon, XCircleIcon } from "@wso2/oxygen-ui-icons-react";
+import { BellIcon, RefreshCwIcon, XCircleIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
@@ -49,7 +49,6 @@ export default function AdminPromotionCycleTab() {
   if (cycle.isError) {
     return (
       <PromotionEmptyState
-        icon={<TriangleAlertIcon size={28} />}
         tone="error"
         message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
       />
@@ -110,16 +109,16 @@ export default function AdminPromotionCycleTab() {
             </Typography>
             {cycle.cycle.status === "OPEN" && (
               <Box sx={{ mb: 3 }}>
-                <Typography sx={{ fontSize: 14 }}>
+                <Typography variant="body2">
                   {cycle.cycle.startDate} to {cycle.cycle.endDate}
                 </Typography>
-                <Typography sx={{ fontSize: 13, color: "text.secondary", mt: 0.5 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   Lead Deadline: {formatDate(cycle.cycle.leadDeadline)}
                 </Typography>
-                <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                <Typography variant="body2" color="text.secondary">
                   Functional Lead Deadline: {formatDate(cycle.cycle.functionalLeadDeadline)}
                 </Typography>
-                <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                <Typography variant="body2" color="text.secondary">
                   Promotion Board Deadline: {formatDate(cycle.cycle.promotionBoardDeadline)}
                 </Typography>
               </Box>

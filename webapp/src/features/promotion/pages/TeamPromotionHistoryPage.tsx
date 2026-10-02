@@ -20,26 +20,28 @@
 // from the Lead Portal (lead.tsx, "Time Based Promotions") in source, kept
 // separate here too rather than folded into it as a third tab.
 import { Navigate, Outlet } from "react-router";
-import { ArrowLeftRightIcon, IdCardIcon, NavigationIcon } from "@wso2/oxygen-ui-icons-react";
-import PromotionPageShell from "../components/PromotionPageShell";
-import PromotionTabs, { type PromotionTabDef } from "../components/PromotionTabs";
+import { Box, Typography } from "@wso2/oxygen-ui";
+import RoutedTabs, { type RoutedTabDef } from "@components/routed-tabs/RoutedTabs";
 
 const BASE_PATH = "/people-ops/promotion/team-history";
 
-const TABS: PromotionTabDef[] = [
-  { segment: "direct-reports", label: "Direct Reportings", icon: <NavigationIcon size={18} /> },
-  { segment: "indirect-reports", label: "Indirect Reportings", icon: <ArrowLeftRightIcon size={18} /> },
+const TABS: RoutedTabDef[] = [
+  { segment: "direct-reports", label: "Direct Reportings" },
+  { segment: "indirect-reports", label: "Indirect Reportings" },
 ];
 
 export default function TeamPromotionHistoryPage() {
   return (
-    <PromotionPageShell
-      icon={<IdCardIcon size={34} strokeWidth={1.5} />}
-      title="Team Promotion History"
-      tabs={<PromotionTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Team promotion history" />}
-    >
+    <Box>
+      <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
+        Team Promotion History
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
+        See every promotion your direct and indirect reports have received, past and present.
+      </Typography>
+      <RoutedTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Team promotion history" />
       <Outlet />
-    </PromotionPageShell>
+    </Box>
   );
 }
 

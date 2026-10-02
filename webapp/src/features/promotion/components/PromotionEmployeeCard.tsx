@@ -58,8 +58,8 @@ export default function PromotionEmployeeCard({
 function Field({ size, label, value }: { size: number; label: string; value: string }) {
   return (
     <Grid size={{ xs: 12, sm: 6, md: size }}>
-      <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: "text.secondary" }}>{label}:</Typography>
-      <Typography sx={{ fontSize: 14 }}>{value}</Typography>
+      <Typography variant="caption" sx={{ display: "block", fontWeight: 600, color: "text.secondary" }}>{label}:</Typography>
+      <Typography variant="body2">{value}</Typography>
     </Grid>
   );
 }

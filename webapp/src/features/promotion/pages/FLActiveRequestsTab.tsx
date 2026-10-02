@@ -20,7 +20,7 @@
 // plus a job-band edit dialog.
 import { useState } from "react";
 import { Alert, Box, Button, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
-import { CalendarOffIcon, CheckIcon, ChevronDownIcon, InboxIcon, PencilIcon, RefreshCwIcon, TriangleAlertIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
+import { CheckIcon, ChevronDownIcon, PencilIcon, RefreshCwIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useUserInfo } from "@api/useUserInfo";
@@ -205,20 +205,18 @@ export default function FLActiveRequestsTab() {
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />
       ) : cycle.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load the promotion cycle. ${humanizeHttpError(cycle.error)}`}
         />
       ) : deadlinePast ? (
-        <PromotionEmptyState icon={<CalendarOffIcon size={28} />} message="The Functional Lead Deadline has passed." />
+        <PromotionEmptyState message="The Functional Lead Deadline has passed." />
       ) : requests.isError ? (
         <PromotionEmptyState
-          icon={<TriangleAlertIcon size={28} />}
           tone="error"
           message={`Unable to load promotion requests. ${humanizeHttpError(requests.error)}`}
         />
       ) : rows.length === 0 ? (
-        <PromotionEmptyState icon={<InboxIcon size={28} />} message="There are no pending promotion requests" />
+        <PromotionEmptyState message="There are no pending promotion requests" />
       ) : (
         <DataGrid.DataGrid
           rows={rows}
