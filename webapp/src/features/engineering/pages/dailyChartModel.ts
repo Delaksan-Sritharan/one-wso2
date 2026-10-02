@@ -25,7 +25,7 @@ export interface DailyChartLine {
 
 // Distinct strokes so two products are not the same line. The list repeats
 // only after it is exhausted.
-const SERIES_STROKES = [
+export const SERIES_STROKES = [
   "#3E6FA3",
   "#4FA39B",
   "#6FA96B",
@@ -36,6 +36,10 @@ const SERIES_STROKES = [
   "#B7894C",
   "#A98DA0",
 ];
+
+export function seriesStroke(index: number): string {
+  return SERIES_STROKES[index % SERIES_STROKES.length];
+}
 
 export interface DailyChartModel {
   data: Record<string, string | number | null>[];
@@ -57,7 +61,7 @@ export function dailyChartModel(
     repoId: item.repoId,
     dataKey: `repo-${item.repoId}`,
     name: names.get(item.repoId) ?? item.repoName,
-    stroke: SERIES_STROKES[index % SERIES_STROKES.length],
+    stroke: seriesStroke(index),
   }));
   const data = dates.map((date) => {
     const row: Record<string, string | number | null> = { date };

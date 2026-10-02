@@ -244,6 +244,97 @@ describe("Versions", () => {
     expect(screen.getAllByText("v1.6")).toHaveLength(1);
   });
 
+  it("uses the last cumulative point as the release total", async () => {
+    window.config = configured();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/repositories")) {
+          return json({
+            repositories: [{ id: 3, repoName: "product-is", productName: "Identity Server", isActive: true }],
+          });
+        }
+        if (url.includes("/series")) {
+          return json({
+            series: [
+              {
+                releaseTag: "v1.0",
+                releaseName: "v1.0",
+                points: [
+                  { date: "2026-09-01", value: 10 },
+                  { date: "2026-09-02", value: 20 },
+                ],
+              },
+            ],
+          });
+        }
+        return json({ assets: [] });
+      }),
+    );
+    renderVersions("/engineering/versions?interval=cumulative");
+    expect((await screen.findAllByText("20")).length).toBeGreaterThan(0);
+    expect(screen.queryByText("30")).not.toBeInTheDocument();
+    expect(screen.getByText("100.0%")).toBeInTheDocument();
+  });
+
+  it("gives each release its own chart colour", async () => {
+    window.config = configured();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/repositories")) {
+          return json({
+            repositories: [{ id: 3, repoName: "product-is", productName: "Identity Server", isActive: true }],
+          });
+        }
+        if (url.includes("/series")) {
+          return json({
+            series: ["v1.0", "v1.1"].map((tag) => ({
+              releaseTag: tag,
+              releaseName: tag,
+              points: [{ date: "2026-09-28", value: 1 }],
+            })),
+          });
+        }
+        return json({ assets: [] });
+      }),
+    );
+    renderVersions();
+    expect(await screen.findByRole("button", { name: "v1.0" })).toBeInTheDocument();
+    const strokes = [...document.querySelectorAll("[stroke]")].map((node) => node.getAttribute("stroke"));
+    expect(strokes).toContain("#3E6FA3");
+    expect(strokes).toContain("#4FA39B");
+  });
+
+  it("draws monthly release downloads as bars", async () => {
+    window.config = configured();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/repositories")) {
+          return json({
+            repositories: [{ id: 3, repoName: "product-is", productName: "Identity Server", isActive: true }],
+          });
+        }
+        if (url.includes("/series")) {
+          expect(new URL(url).searchParams.get("interval")).toBe("month");
+          return json({
+            series: [
+              { releaseTag: "v1.0", releaseName: "v1.0", points: [{ date: "2026-09", value: 4 }] },
+              { releaseTag: "v1.1", releaseName: "v1.1", points: [{ date: "2026-09", value: 6 }] },
+            ],
+          });
+        }
+        return json({ assets: [] });
+      }),
+    );
+    renderVersions("/engineering/versions?interval=month");
+    expect(await screen.findByRole("button", { name: "v1.0" })).toBeInTheDocument();
+    const fills = [...document.querySelectorAll("[fill]")].map((node) => node.getAttribute("fill"));
+    expect(fills).toContain("#3E6FA3");
+    expect(fills).toContain("#4FA39B");
+  });
+
   it("shows an error when the product list fails", async () => {
     window.config = configured();
     const fetchMock = vi.fn(async (url: string) => {

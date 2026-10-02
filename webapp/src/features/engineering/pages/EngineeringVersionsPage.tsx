@@ -46,6 +46,7 @@ import {
   type VersionSeriesItem,
 } from "@features/engineering/api/productDownloadStats";
 import { formatCount, productLabel } from "./display";
+import { seriesStroke } from "./dailyChartModel";
 
 const CHART_LIMIT = 5;
 
@@ -58,7 +59,12 @@ function releaseName(item: VersionSeriesItem): string {
   return item.releaseName && item.releaseName.trim() !== "" ? item.releaseName : item.releaseTag;
 }
 
-function releaseTotal(item: VersionSeriesItem): number {
+function releaseTotal(item: VersionSeriesItem, interval: ReleaseDownloadGrain): number {
+  if (item.points.length === 0) return 0;
+  if (interval === "cumulative") {
+    const latest = [...item.points].sort((a, b) => a.date.localeCompare(b.date)).at(-1);
+    return latest?.value ?? 0;
+  }
   return item.points.reduce((sum, point) => sum + point.value, 0);
 }
 
@@ -157,14 +163,18 @@ export default function EngineeringVersionsPage(): JSX.Element {
   };
 
   const series = versions.data?.series ?? [];
+  const matched =
+    chosen == null || chosen.length === 0
+      ? []
+      : series.filter((item) => chosen.includes(item.releaseTag));
   const chartSeries =
-    chosen == null
+    chosen == null || (chosen.length > 0 && matched.length === 0)
       ? mostRecent(series, CHART_LIMIT)
       : chosen.length === 0
         ? series
-        : series.filter((item) => chosen.includes(item.releaseTag));
-  const rows = [...series].sort((a, b) => releaseTotal(b) - releaseTotal(a));
-  const whole = rows.reduce((sum, item) => sum + releaseTotal(item), 0);
+        : matched;
+  const rows = [...series].sort((a, b) => releaseTotal(b, interval) - releaseTotal(a, interval));
+  const whole = rows.reduce((sum, item) => sum + releaseTotal(item, interval), 0);
   const needle = search.trim().toLowerCase();
   const visibleRows = needle
     ? rows.filter((item) => releaseName(item).toLowerCase().includes(needle) || item.releaseTag.toLowerCase().includes(needle))
@@ -296,9 +306,9 @@ export default function EngineeringVersionsPage(): JSX.Element {
                             {releaseName(item)}
                           </Button>
                         </ListingTable.Cell>
-                        <ListingTable.Cell align="right">{formatCount(releaseTotal(item))}</ListingTable.Cell>
+                        <ListingTable.Cell align="right">{formatCount(releaseTotal(item, interval))}</ListingTable.Cell>
                         <ListingTable.Cell align="right">
-                          {shareLabel(releaseTotal(item), whole)}
+                          {shareLabel(releaseTotal(item, interval), whole)}
                         </ListingTable.Cell>
                       </ListingTable.Row>
                     ))}
@@ -375,6 +385,7 @@ function VersionChart({
   const lines = series.map((item, index) => ({
     key: `rel-${index}`,
     name: releaseName(item),
+    stroke: seriesStroke(index),
   }));
   return (
     <Box sx={{ width: "100%", height: 280 }}>
@@ -386,7 +397,7 @@ function VersionChart({
             <Tooltip />
             <Legend />
             {lines.map((line) => (
-              <Bar key={line.key} name={line.name} dataKey={line.key} />
+              <Bar key={line.key} name={line.name} dataKey={line.key} fill={line.stroke} />
             ))}
           </BarChart>
         ) : (
@@ -396,7 +407,15 @@ function VersionChart({
             <Tooltip />
             <Legend />
             {lines.map((line) => (
-              <Line key={line.key} name={line.name} dataKey={line.key} type="monotone" dot={{ r: 3 }} connectNulls={false} />
+              <Line
+                key={line.key}
+                name={line.name}
+                dataKey={line.key}
+                type="monotone"
+                stroke={line.stroke}
+                dot={{ r: 3 }}
+                connectNulls={false}
+              />
             ))}
           </LineChart>
         )}
