@@ -276,6 +276,7 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
     clones.isError ||
     clones.data == null ||
     tableQueries.some((query) => query.isError || query.data == null);
+  const statsError = [metric, clones, ...tableQueries].find((query) => query.error != null)?.error;
 
   const retry = () => {
     void repositories.refetch();
@@ -389,7 +390,7 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
       ) : chartPending || tablePending ? (
         <Loading label="Loading repository stats…" />
       ) : chartFailed || tableFailed ? (
-        <ErrorNotice onRetry={retry} error={metric.error ?? clones.error}>
+        <ErrorNotice onRetry={retry} error={statsError}>
           Couldn't load repository stats.
         </ErrorNotice>
       ) : (

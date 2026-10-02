@@ -297,6 +297,20 @@ describe("Repository Stats", () => {
     expect(await screen.findByText("No data for the selected range")).toBeInTheDocument();
   });
 
+  it("names a failed table query when the chart request succeeded", async () => {
+    window.config = configured();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/repositories")) return json({ repositories: [] });
+        if (url.includes("metric=forks")) return json({ message: "forks unavailable" }, 500);
+        return json({ series: [] });
+      }),
+    );
+    renderStats("/engineering/repository-stats?interval=month");
+    expect(await screen.findByText(/forks unavailable/i)).toBeInTheDocument();
+  });
+
   it("shows an error the person can retry", async () => {
     window.config = configured();
     const fetchMock = vi.fn(async (url: string) => {
