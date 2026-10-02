@@ -217,6 +217,7 @@ import UmtUpdateView from "@features/umt/pages/UmtUpdateView";
 import UmtUpdatesPage from "@features/umt/pages/UmtUpdatesPage";
 import EngineeringDownloadsPage from "@features/engineering/pages/EngineeringDownloadsPage";
 import EngineeringVersionsPage from "@features/engineering/pages/EngineeringVersionsPage";
+import EngineeringPackagesPage from "@features/engineering/pages/EngineeringPackagesPage";
 import EngineeringOverviewPage from "@features/engineering/pages/EngineeringOverviewPage";
 import InfraHomePage from "@features/infra/pages/InfraHomePage";
 import InfraNewRepositoryPage from "@features/infra/pages/InfraNewRepositoryPage";
@@ -252,6 +253,7 @@ export default function App() {
           <Route path="engineering" element={<EngineeringOverviewPage />} />
           <Route path="engineering/downloads" element={<EngineeringDownloadsPage />} />
           <Route path="engineering/versions" element={<EngineeringVersionsPage />} />
+          <Route path="engineering/packages" element={<EngineeringPackagesPage />} />
           {isPreviewEnabled("infra") && (
             <>
               <Route path="infra" element={<InfraHomePage />} />
