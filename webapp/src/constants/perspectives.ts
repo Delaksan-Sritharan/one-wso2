@@ -736,6 +736,11 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
                   label: "Packages",
                   path: "/engineering/packages",
                 },
+                {
+                  id: "engineering-download-stats-repository-stats",
+                  label: "Repository Stats",
+                  path: "/engineering/repository-stats",
+                },
               ],
             },
           ],
