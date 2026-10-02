@@ -93,14 +93,20 @@ function buildHeaders(extraHeaders?: Record<string, string>, withJsonBody?: bool
 // specifically — never other statuses — try one renewal (dedup'd across
 // concurrent callers in @api/authBridge).
 //
-// Only GET is safe to replay ourselves. A 401 doesn't prove a POST/PATCH/
-// DELETE never reached business logic — each backend has its own
-// JwtInterceptor in addition to the gateway's, and none of the ~15
-// backends this app talks to support a client-supplied idempotency key —
-// so resubmitting a mutation risks a duplicate submit/approve/claim if
-// that assumption is ever wrong for one of them. For those, still refresh
-// (heals the session for the user's *next* attempt) but surface the
-// original 401 rather than replaying it.
+// A GET is always safe to replay ourselves. Anything else is replayed only
+// when the token had already expired when the request was SENT: the gateway
+// refuses an expired token before forwarding, so no backend ran the request
+// and there is nothing to duplicate. Judged at send time, not at the 401 — a
+// token that lapsed while the backend was working may have let the work
+// happen first.
+//
+// Otherwise a 401 doesn't prove a POST/PATCH/DELETE never reached business
+// logic — each backend has its own JwtInterceptor in addition to the
+// gateway's, and none of the ~15 backends this app talks to support a
+// client-supplied idempotency key — so resubmitting a mutation risks a
+// duplicate submit/approve/claim if that assumption is ever wrong for one of
+// them. For those, still refresh (heals the session for the user's *next*
+// attempt) but surface the original 401 rather than replaying it.
 //
 // If there's no way to refresh (accessors not registered yet, or the
 // renewal itself fails — e.g. no live Asgardeo session at all),
@@ -117,6 +123,7 @@ export async function fetchWithReauth(url: string, init: RequestInit, accessToke
     ...init,
     headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${token}` },
   });
+  const sentAt = Date.now();
   const first = await fetch(url, withAuth(accessToken));
   if (first.status !== 401) return first;
 
@@ -153,7 +160,9 @@ export async function fetchWithReauth(url: string, init: RequestInit, accessToke
     return first;
   }
 
-  const isReplaySafe = (init.method ?? "GET").toUpperCase() === "GET";
+  const isReplaySafe =
+    (init.method ?? "GET").toUpperCase() === "GET" ||
+    classifyToken(accessToken, sentAt).kind === "expired";
   let freshToken: string;
   try {
     // The rejected token goes along so the bridge cannot count it as renewed:
