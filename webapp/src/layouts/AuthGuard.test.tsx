@@ -142,7 +142,7 @@ describe("AuthGuard and the sign-in loop", () => {
     redirectedAgo(2_000);
     renderAt();
 
-    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(auth.signIn).toHaveBeenCalledTimes(1);
   });
 
