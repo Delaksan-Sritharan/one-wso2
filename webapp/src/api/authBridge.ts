@@ -351,6 +351,28 @@ export async function rawIdToken(): Promise<string> {
   return (await getIdTokenAccessor()) ?? "";
 }
 
+/**
+ * Whether the SDK holds a usable session, once any renewal it is running has
+ * finished.
+ *
+ * The React context can report signed-out while the SDK is still exchanging a
+ * refresh token for an expired session — the provider only catches up on its own
+ * next check. Asking for the token waits on that exchange, so this answers for
+ * the session as it will be, not as the context last saw it.
+ *
+ * Deliberately does not wait for registration: a caller that is about to
+ * redirect must never hang on a bridge that is not mounted. Unregistered reads
+ * as "no session", which is simply the redirect it would have done anyway.
+ */
+export async function sdkHasSession(): Promise<boolean> {
+  if (!getAccessTokenAccessor) return false;
+  try {
+    return Boolean(await getAccessTokenAccessor());
+  } catch {
+    return false;
+  }
+}
+
 export async function refreshIdToken(): Promise<string> {
   await refreshSession(holdsLiveIdToken);
   if (!getIdTokenAccessor) throw new Error("Auth accessors not registered yet");

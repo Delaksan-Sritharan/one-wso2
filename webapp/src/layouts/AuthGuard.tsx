@@ -18,7 +18,7 @@ import { useAsgardeo } from "@asgardeo/react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { Box, CircularProgress } from "@wso2/oxygen-ui";
-import { getRenewalInFlightSnapshot, subscribeRenewal } from "@api/authBridge";
+import { getRenewalInFlightSnapshot, sdkHasSession, subscribeRenewal } from "@api/authBridge";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import {
   forgetSignInRedirect,
@@ -43,7 +43,8 @@ export default function AuthGuard() {
   const navigate = useNavigate();
   // Prevents a second signIn() from firing under StrictMode's double-render
   // or on any incidental re-run of this effect before the browser has left
-  // the page. Reset only when the SDK reports the user as signed in.
+  // the page. Reset when the SDK reports the user as signed in, or when a
+  // pre-redirect check ends without redirecting.
   const startedSignInRef = useRef(false);
   const renewing = useSyncExternalStore(subscribeRenewal, getRenewalInFlightSnapshot);
   // Whether this page load is the return from a sign-in this tab started moments
@@ -83,12 +84,31 @@ export default function AuthGuard() {
         return;
       }
       startedSignInRef.current = true;
-      if (isRestorableTarget(location.pathname, location.search)) {
-        rememberPostLoginTarget(currentHref);
-      }
-      rememberSignInRedirect();
-      signIn();
-      return;
+      // The context says signed out, but the SDK may be exchanging a refresh
+      // token for an expired session right now. Redirecting before that settles
+      // is a needless round trip to the IdP — one that lands on its login page if
+      // the IdP session has ended while the refresh token has not.
+      let cancelled = false;
+      let redirected = false;
+      void sdkHasSession().then((held) => {
+        if (cancelled) return;
+        if (held) {
+          // The provider sees it on its next check, and this effect runs again
+          // signed in. Reset so a later, real sign-out still redirects.
+          startedSignInRef.current = false;
+          return;
+        }
+        redirected = true;
+        if (isRestorableTarget(location.pathname, location.search)) {
+          rememberPostLoginTarget(currentHref);
+        }
+        rememberSignInRedirect();
+        signIn();
+      });
+      return () => {
+        cancelled = true;
+        if (!redirected) startedSignInRef.current = false;
+      };
     }
 
     // Signed in: consume any stashed redirect and let React Router own the
