@@ -82,9 +82,11 @@ export default function EngineeringPackagesPage(): JSX.Element {
   const to = params.get("to") || defaults.to;
   const interval = readGrain(params.get("interval"));
   const enabled = preview && configured && allowed;
-  const [chosenPackage, setChosenPackage] = useState<string | null>(null);
-  const [chosenChart, setChosenChart] = useState<string[] | null>(null);
-  const [selectionRepo, setSelectionRepo] = useState<number | null>(null);
+  const [selection, setSelection] = useState<{
+    repoId: number;
+    packageName: string | null;
+    chart: string[] | null;
+  }>({ repoId: -1, packageName: null, chart: null });
 
   const products = useQuery({
     queryKey: ["product-download-stats", "package-products", base],
@@ -96,23 +98,27 @@ export default function EngineeringPackagesPage(): JSX.Element {
   const requestedIsOffered = offered.some((product) => product.repoId === requested);
   const firstId = offered[0]?.repoId;
   const repoId = requestedIsOffered ? requested : (firstId ?? 0);
-  const selectionReady = selectionRepo === repoId;
-  const packageForRepo = selectionReady ? chosenPackage : null;
-  const chartForRepo = selectionReady ? chosenChart : null;
+  const rangeInverted = from > to;
+  const selectionReady = selection.repoId === repoId;
+  if (!selectionReady) {
+    setSelection({ repoId, packageName: null, chart: null });
+  }
+  const packageForRepo = selectionReady ? selection.packageName : null;
+  const chartForRepo = selectionReady ? selection.chart : null;
 
   const breakdown = useQuery({
     queryKey: ["product-download-stats", "packages", base, repoId, from, to],
-    enabled: enabled && repoId > 0,
+    enabled: enabled && repoId > 0 && !rangeInverted,
     queryFn: async () => getPackageBreakdown(await getToken(), { repoId, from, to }),
   });
   const series = useQuery({
     queryKey: ["product-download-stats", "package-series", base, repoId, from, to, interval],
-    enabled: enabled && repoId > 0,
+    enabled: enabled && repoId > 0 && !rangeInverted,
     queryFn: async () => getPackageSeries(await getToken(), { repoId, from, to, interval }),
   });
   const versions = useQuery({
-    queryKey: ["product-download-stats", "package-versions", base, repoId, from, to, chosenPackage],
-    enabled: enabled && selectionReady && repoId > 0 && packageForRepo != null,
+    queryKey: ["product-download-stats", "package-versions", base, repoId, from, to, packageForRepo],
+    enabled: enabled && selectionReady && repoId > 0 && packageForRepo != null && !rangeInverted,
     queryFn: async () =>
       getPackageVersions(await getToken(), {
         repoId,
@@ -128,13 +134,6 @@ export default function EngineeringPackagesPage(): JSX.Element {
     next.set("repo", String(firstId));
     setParams(next, { replace: true });
   }, [enabled, products.isSuccess, params, firstId, requestedIsOffered, setParams]);
-
-  useEffect(() => {
-    if (selectionReady) return;
-    setSelectionRepo(repoId);
-    setChosenPackage(null);
-    setChosenChart(null);
-  }, [repoId, selectionReady]);
 
   if (!preview) {
     return <Typography>Engineering isn't available yet.</Typography>;
@@ -220,8 +219,6 @@ export default function EngineeringPackagesPage(): JSX.Element {
           inputProps={{ "aria-label": "Product" }}
           value={repoId > 0 ? String(repoId) : ""}
           onChange={(event) => {
-            setChosenPackage(null);
-            setChosenChart(null);
             replace({ repo: event.target.value });
           }}
         >
@@ -239,7 +236,10 @@ export default function EngineeringPackagesPage(): JSX.Element {
           value={chartForRepo ?? chartRows.map((item) => item.packageName)}
           onChange={(event) => {
             const value = event.target.value;
-            setChosenChart(typeof value === "string" ? value.split(",") : value);
+            setSelection((current) => ({
+              ...current,
+              chart: typeof value === "string" ? value.split(",") : value,
+            }));
           }}
           renderValue={(selected) =>
             chartForRepo == null
@@ -255,7 +255,7 @@ export default function EngineeringPackagesPage(): JSX.Element {
             </MenuItem>
           ))}
         </Select>
-        <Button size="small" onClick={() => setChosenChart([])}>
+        <Button size="small" onClick={() => setSelection((current) => ({ ...current, chart: [] }))}>
           Every package
         </Button>
       </Stack>
@@ -266,6 +266,8 @@ export default function EngineeringPackagesPage(): JSX.Element {
         </ErrorNotice>
       ) : products.isSuccess && offered.length === 0 ? (
         <Typography>No products have package downloads</Typography>
+      ) : rangeInverted ? (
+        <Typography>From is after To.</Typography>
       ) : breakdown.isPending || series.isPending ? (
         <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
           <CircularProgress size={16} />
@@ -300,7 +302,12 @@ export default function EngineeringPackagesPage(): JSX.Element {
                     {rows.map((item) => (
                       <ListingTable.Row key={item.packageName}>
                         <ListingTable.Cell>
-                          <Button size="small" onClick={() => setChosenPackage(item.packageName)}>
+                          <Button
+                            size="small"
+                            onClick={() =>
+                              setSelection((current) => ({ ...current, packageName: item.packageName }))
+                            }
+                          >
                             {item.packageName}
                           </Button>
                         </ListingTable.Cell>
@@ -318,9 +325,12 @@ export default function EngineeringPackagesPage(): JSX.Element {
             <Card sx={{ p: 2, mt: 2 }}>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1 }}>
                 <Typography component="h2" variant="h6">
-                  Versions of {chosenPackage}
+                  Versions of {packageForRepo}
                 </Typography>
-                <Button size="small" onClick={() => setChosenPackage(null)}>
+                <Button
+                  size="small"
+                  onClick={() => setSelection((current) => ({ ...current, packageName: null }))}
+                >
                   Clear package
                 </Button>
               </Stack>

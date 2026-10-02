@@ -192,6 +192,23 @@ describe("Packages", () => {
     ).toBe(false);
   });
 
+  it("does not request packages when From is after To", async () => {
+    window.config = configured();
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/stats/packages/repos")) {
+        return json({
+          count: 1,
+          repos: [{ repoId: 3, repoName: "product-is", productName: "Identity Server", packageCount: 1 }],
+        });
+      }
+      return json({ packages: [], series: [] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderPackages("/engineering/packages?from=2026-09-10&to=2026-09-01&repo=3");
+    expect(await screen.findByText("From is after To.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => /\/stats\/packages\/3/.test(String(call[0])))).toBe(false);
+  });
+
   it("says when no product has package downloads", async () => {
     window.config = configured();
     vi.stubGlobal("fetch", vi.fn(async () => json({ count: 0, repos: [] })));
