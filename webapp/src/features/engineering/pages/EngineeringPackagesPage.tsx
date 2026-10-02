@@ -84,6 +84,7 @@ export default function EngineeringPackagesPage(): JSX.Element {
   const enabled = preview && configured && allowed;
   const [chosenPackage, setChosenPackage] = useState<string | null>(null);
   const [chosenChart, setChosenChart] = useState<string[] | null>(null);
+  const [selectionRepo, setSelectionRepo] = useState<number | null>(null);
 
   const products = useQuery({
     queryKey: ["product-download-stats", "package-products", base],
@@ -95,6 +96,9 @@ export default function EngineeringPackagesPage(): JSX.Element {
   const requestedIsOffered = offered.some((product) => product.repoId === requested);
   const firstId = offered[0]?.repoId;
   const repoId = requestedIsOffered ? requested : (firstId ?? 0);
+  const selectionReady = selectionRepo === repoId;
+  const packageForRepo = selectionReady ? chosenPackage : null;
+  const chartForRepo = selectionReady ? chosenChart : null;
 
   const breakdown = useQuery({
     queryKey: ["product-download-stats", "packages", base, repoId, from, to],
@@ -108,13 +112,13 @@ export default function EngineeringPackagesPage(): JSX.Element {
   });
   const versions = useQuery({
     queryKey: ["product-download-stats", "package-versions", base, repoId, from, to, chosenPackage],
-    enabled: enabled && repoId > 0 && chosenPackage != null,
+    enabled: enabled && selectionReady && repoId > 0 && packageForRepo != null,
     queryFn: async () =>
       getPackageVersions(await getToken(), {
         repoId,
         from,
         to,
-        packageName: chosenPackage ?? "",
+        packageName: packageForRepo ?? "",
       }),
   });
 
@@ -124,6 +128,13 @@ export default function EngineeringPackagesPage(): JSX.Element {
     next.set("repo", String(firstId));
     setParams(next, { replace: true });
   }, [enabled, products.isSuccess, params, firstId, requestedIsOffered, setParams]);
+
+  useEffect(() => {
+    if (selectionReady) return;
+    setSelectionRepo(repoId);
+    setChosenPackage(null);
+    setChosenChart(null);
+  }, [repoId, selectionReady]);
 
   if (!preview) {
     return <Typography>Engineering isn't available yet.</Typography>;
@@ -160,13 +171,13 @@ export default function EngineeringPackagesPage(): JSX.Element {
 
   const rows = [...(breakdown.data?.packages ?? [])].sort(byActivity);
   const matched =
-    chosenChart == null || chosenChart.length === 0
+    chartForRepo == null || chartForRepo.length === 0
       ? []
-      : rows.filter((item) => chosenChart.includes(item.packageName));
+      : rows.filter((item) => chartForRepo.includes(item.packageName));
   const chartRows =
-    chosenChart == null || (chosenChart.length > 0 && matched.length === 0)
+    chartForRepo == null || (chartForRepo.length > 0 && matched.length === 0)
       ? rows.slice(0, CHART_LIMIT)
-      : chosenChart.length === 0
+      : chartForRepo.length === 0
         ? rows
         : matched;
   const chartNames = new Set(chartRows.map((item) => item.packageName));
@@ -225,13 +236,13 @@ export default function EngineeringPackagesPage(): JSX.Element {
           multiple
           displayEmpty
           inputProps={{ "aria-label": "Chart packages" }}
-          value={chosenChart ?? chartRows.map((item) => item.packageName)}
+          value={chartForRepo ?? chartRows.map((item) => item.packageName)}
           onChange={(event) => {
             const value = event.target.value;
             setChosenChart(typeof value === "string" ? value.split(",") : value);
           }}
           renderValue={(selected) =>
-            chosenChart == null
+            chartForRepo == null
               ? "5 most active"
               : selected.length === 0
                 ? "All packages"
@@ -303,7 +314,7 @@ export default function EngineeringPackagesPage(): JSX.Element {
               </ListingTable.Container>
             </ListingTable.Provider>
           </Card>
-          {chosenPackage != null && (
+          {selectionReady && packageForRepo != null && (
             <Card sx={{ p: 2, mt: 2 }}>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1 }}>
                 <Typography component="h2" variant="h6">

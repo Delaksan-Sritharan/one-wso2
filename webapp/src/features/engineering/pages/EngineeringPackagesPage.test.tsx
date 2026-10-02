@@ -148,6 +148,50 @@ describe("Packages", () => {
     expect(versions.searchParams.get("package")).toBe("helm-f");
   });
 
+  it("drops the chosen package when the product changes", async () => {
+    window.config = configured();
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/stats/packages/repos")) {
+        return json({
+          count: 2,
+          repos: [
+            { repoId: 3, repoName: "product-is", productName: "Identity Server", packageCount: 1 },
+            { repoId: 4, repoName: "product-apim", productName: "API Manager", packageCount: 1 },
+          ],
+        });
+      }
+      if (url.includes("/stats/packages/3/versions")) {
+        return json({ versions: [{ versionId: 9, tags: "1.2.3", periodDownloads: 4, totalDownloads: 9 }] });
+      }
+      if (url.includes("/stats/packages/3/series") || url.includes("/stats/packages/4/series")) {
+        return json({ series: [] });
+      }
+      if (url.match(/\/stats\/packages\/3(\?|$)/)) {
+        return json({
+          packages: [{ packageName: "helm-f", periodDownloads: 10, totalDownloads: 10, versionCount: 1 }],
+        });
+      }
+      if (url.match(/\/stats\/packages\/4(\?|$)/)) {
+        return json({
+          packages: [{ packageName: "apim", periodDownloads: 3, totalDownloads: 3, versionCount: 1 }],
+        });
+      }
+      return json({ versions: [] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderPackages();
+    await userEvent.click(await screen.findByRole("button", { name: "helm-f" }));
+    expect(await screen.findByText("Versions of helm-f")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("combobox", { name: "Product" }));
+    await userEvent.click(await screen.findByRole("option", { name: "API Manager" }));
+    expect(screen.queryByText("Versions of helm-f")).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(
+        (call) => String(call[0]).includes("/stats/packages/4/versions") && String(call[0]).includes("helm-f"),
+      ),
+    ).toBe(false);
+  });
+
   it("says when no product has package downloads", async () => {
     window.config = configured();
     vi.stubGlobal("fetch", vi.fn(async () => json({ count: 0, repos: [] })));
