@@ -34,20 +34,15 @@ import { humanizeHttpError } from "@api/http";
 import { isPromotionBackendConfigured, usePromotionEmployeeInfo } from "../api/usePromotionEmployeeInfo";
 import { usePromotionHistory } from "../api/usePromotionHistory";
 import PromotionTimeline from "../components/PromotionTimeline";
-import { formatDate, latestPromotion, sortPromotionsByBand } from "../util/promotionHistory";
+import {
+  formatDate,
+  formatJobBand,
+  joinedBand,
+  latestPromotion,
+  monthsSince,
+  sortPromotionsByBand,
+} from "../util/promotionHistory";
 import type { PromotionEmployeeInfoWithLead, PromotionHistoryEntry } from "../api/types";
-
-// Whole months between a plain "YYYY-MM-DD"-ish date and today — enough
-// precision for "time in band", not a general-purpose duration util.
-function monthsSince(dateStr: string | null | undefined): number | null {
-  if (!dateStr) return null;
-  const then = new Date(dateStr);
-  if (Number.isNaN(then.getTime())) return null;
-  const now = new Date();
-  let months = (now.getFullYear() - then.getFullYear()) * 12 + (now.getMonth() - then.getMonth());
-  if (now.getDate() < then.getDate()) months -= 1;
-  return Math.max(0, months);
-}
 
 function formatDuration(months: number): ReactNode {
   const years = Math.floor(months / 12);
@@ -109,14 +104,14 @@ function PromotionStats({
   const specialCount = requests.filter((r) => r.promotionType === "SPECIAL").length;
   // The band held before any promotion on record — same fallback
   // PromotionTimeline's own "Joined" node uses.
-  const joinedBand = sorted.length > 0 ? sorted[sorted.length - 1].currentJobBand : employeeInfo.jobBand;
+  const bandAtJoining = joinedBand(sorted, employeeInfo.jobBand);
   const monthsInBand = monthsSince(latest ? employeeInfo.lastPromotedDate : employeeInfo.startDate);
 
   return (
     <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
       <StatCard
         label="Current Band"
-        value={`JB${employeeInfo.jobBand ?? "—"}`}
+        value={formatJobBand(employeeInfo.jobBand)}
         sub={latest ? `since ${latest.promotionCycle}` : "since joining"}
         accent="primary.main"
       />
@@ -130,7 +125,7 @@ function PromotionStats({
         value={monthsInBand !== null ? formatDuration(monthsInBand) : "—"}
         sub={latest ? "since last move" : "since joining"}
       />
-      <StatCard label="Joined At" value={`JB${joinedBand ?? "—"}`} sub={formatDate(employeeInfo.startDate)} />
+      <StatCard label="Joined At" value={formatJobBand(bandAtJoining)} sub={formatDate(employeeInfo.startDate)} />
     </Stack>
   );
 }

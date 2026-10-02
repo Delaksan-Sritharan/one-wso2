@@ -14,13 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Every REQUESTED recommendation for the open cycle. A data grid, not a
-// hand-rolled column-header-plus-dashed-card list, matching the grid
-// convention every other portal in this app (Admin/Functional Lead/
-// Promotion Board) already uses. "Start" opens the edit form in a dialog
-// instead of swapping it in for the whole list — MUI X DataGrid Community
-// has no inline row-expansion to grow a form into, the same reason every
-// other grid in this app opens a dialog on its own row actions.
+// Every REQUESTED recommendation for the open cycle, as a data grid —
+// matching the convention every other portal in this app (Admin/Functional
+// Lead/Promotion Board) already uses. "Start" opens the edit form in a
+// dialog, the same "dialog on row action" pattern every other grid in this
+// app uses, since MUI X DataGrid Community has no inline row-expansion.
 import { useState } from "react";
 import { Box, Card, Chip, DataGrid, IconButton, Popover, Skeleton, TextField, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { CheckIcon, PlayIcon, XIcon } from "@wso2/oxygen-ui-icons-react";

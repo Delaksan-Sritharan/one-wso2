@@ -16,7 +16,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router";
@@ -356,7 +356,7 @@ describe("Engineering Overview", () => {
     expect(fetchMock.mock.calls.length).toBeGreaterThan(3);
   });
 
-  it("sends someone who is not signed in to sign in before Overview loads", () => {
+  it("sends someone who is not signed in to sign in before Overview loads", async () => {
     window.config = {
       ...(window.config ?? {}),
       ONE_WSO2_PREVIEW_FEATURES: { engineering: true },
@@ -366,7 +366,8 @@ describe("Engineering Overview", () => {
 
     renderOverview({ signedIn: false });
 
-    expect(auth.signIn).toHaveBeenCalled();
+    // AuthGuard asks the SDK whether it still holds a session before redirecting.
+    await waitFor(() => expect(auth.signIn).toHaveBeenCalled());
     expect(screen.queryByRole("heading", { name: "Overview" })).not.toBeInTheDocument();
   });
 });

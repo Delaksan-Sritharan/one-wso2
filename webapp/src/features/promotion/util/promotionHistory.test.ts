@@ -14,9 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { describe, expect, it } from "vitest";
-import { latestPromotion, promotionSummary, sortPromotionsByBand } from "./promotionHistory";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  formatJobBand,
+  joinedBand,
+  latestPromotion,
+  monthsSince,
+  promotionSummary,
+  sortPromotionsByBand,
+} from "./promotionHistory";
 import type { PromotionHistoryEntry } from "../api/types";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 // Minimal approved-request fixture; only the fields the ordering and the
 // summary line read are meaningful.
@@ -98,5 +109,59 @@ describe("promotionSummary", () => {
     expect(
       promotionSummary(entry({ promotionCycle: "2023-H2", currentJobBand: 5, nextJobBand: 6 })),
     ).toBe("2023-H2 · JB 5 → 6");
+  });
+});
+
+describe("monthsSince", () => {
+  it("excludes the incomplete month", () => {
+    // The bug this pins: a promotion dated yesterday should not already
+    // read as "1 mo" just because the calendar month ticked over.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-01T12:00:00"));
+    expect(monthsSince("2026-09-30")).toBe(0);
+  });
+
+  it("counts whole months once the day has passed", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-01T12:00:00"));
+    expect(monthsSince("2026-07-01")).toBe(3);
+  });
+
+  it("returns null for a missing or unparseable date", () => {
+    expect(monthsSince(null)).toBeNull();
+    expect(monthsSince(undefined)).toBeNull();
+    expect(monthsSince("not-a-date")).toBeNull();
+  });
+
+  it("never goes negative for a future date", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T12:00:00"));
+    expect(monthsSince("2026-06-01")).toBe(0);
+  });
+});
+
+describe("formatJobBand", () => {
+  it("prefixes a real band with JB", () => {
+    expect(formatJobBand(5)).toBe("JB5");
+  });
+
+  it("shows a plain dash for a missing band, never \"JB—\"", () => {
+    expect(formatJobBand(null)).toBe("—");
+    expect(formatJobBand(undefined)).toBe("—");
+  });
+});
+
+describe("joinedBand", () => {
+  it("reads the lowest band off the (highest-first sorted) history", () => {
+    const sorted = sortPromotionsByBand([
+      entry({ currentJobBand: 4, nextJobBand: 5 }),
+      entry({ currentJobBand: 5, nextJobBand: 6 }),
+    ]);
+    expect(joinedBand(sorted, 99)).toBe(4);
+  });
+
+  it("falls back to the current band when there is no promotion history", () => {
+    expect(joinedBand([], 3)).toBe(3);
+    expect(joinedBand([], null)).toBeNull();
   });
 });
