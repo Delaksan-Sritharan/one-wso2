@@ -22,10 +22,11 @@
 // CustomTable (this is the one FL tab source itself didn't build on that
 // component).
 import { Box, Chip, Grid, IconButton, Skeleton, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { ArrowRightIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
+import { RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests } from "../api/usePromotionRequests";
+import JobBandTransitionChips from "../components/JobBandTransitionChips";
 import PromotionDeadlineBanner from "../components/PromotionDeadlineBanner";
 import PromotionEmptyState from "../components/PromotionEmptyState";
 import PromotionTableHeader from "../components/PromotionTableHeader";
@@ -122,10 +123,8 @@ export default function FLTimeBasedTab() {
                 <Grid size={2}>
                   <Typography variant="body2">{request.team}</Typography>
                 </Grid>
-                <Grid size={2} sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 0.5 }}>
-                  <Chip label={`JB ${request.currentJobBand}`} size="small" variant="outlined" />
-                  <ArrowRightIcon size={16} />
-                  <Chip label={`JB ${request.nextJobBand}`} size="small" variant="outlined" />
+                <Grid size={2} sx={{ display: "flex", justifyContent: "flex-end" }}>
+                  <JobBandTransitionChips currentJobBand={request.currentJobBand} nextJobBand={request.nextJobBand} />
                 </Grid>
               </Grid>
             </Box>

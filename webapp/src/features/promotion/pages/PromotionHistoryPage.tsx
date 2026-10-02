@@ -113,7 +113,7 @@ function PromotionStats({
   const monthsInBand = monthsSince(latest ? employeeInfo.lastPromotedDate : employeeInfo.startDate);
 
   return (
-    <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: "wrap", rowGap: 2 }}>
+    <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
       <StatCard
         label="Current Band"
         value={`JB${employeeInfo.jobBand ?? "—"}`}

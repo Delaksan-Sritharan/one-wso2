@@ -21,7 +21,7 @@
 // tab filters the SAME `requests` list client-side (no separate fetch per
 // tab, matching source) rather than issuing three separate queries.
 import { useState } from "react";
-import { Box, Button, DataGrid, IconButton, Skeleton, Tab, Tabs, Tooltip } from "@wso2/oxygen-ui";
+import { Box, Button, Card, DataGrid, IconButton, Skeleton, Tab, Tabs, Tooltip } from "@wso2/oxygen-ui";
 import { CheckIcon, MailCheckIcon, SendIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { useNotifyPromotionRequest } from "../api/usePromotionRequests";
 import { basePromotionRequestColumns } from "../components/promotionRequestColumns";
@@ -173,18 +173,20 @@ function NotifyGrid({
               </span>
             </Tooltip>
           </Box>
-          <DataGrid.DataGrid
-            rows={rows}
-            columns={columns}
-            checkboxSelection
-            rowSelectionModel={{ type: "include", ids: new Set(selectedIds) }}
-            onRowSelectionModelChange={(model) => setSelectedIds(resolveGridSelectedIds(model, rows))}
-            showToolbar
-            slots={{ toolbar: PromotionGridToolbar }}
-            sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-            pageSizeOptions={[10, 25, 50]}
-          />
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <DataGrid.DataGrid
+              rows={rows}
+              columns={columns}
+              checkboxSelection
+              rowSelectionModel={{ type: "include", ids: new Set(selectedIds) }}
+              onRowSelectionModelChange={(model) => setSelectedIds(resolveGridSelectedIds(model, rows))}
+              showToolbar
+              slots={{ toolbar: PromotionGridToolbar }}
+              sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+              initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+              pageSizeOptions={[10, 25, 50]}
+            />
+          </Card>
         </>
       )}
     </>
@@ -207,14 +209,16 @@ function SentGrid({ rows }: { rows: PromotionRequestFull[] }) {
   return rows.length === 0 ? (
     <PromotionEmptyState message="No records found" />
   ) : (
-    <DataGrid.DataGrid
-      rows={rows}
-      columns={columns}
-      showToolbar
-      slots={{ toolbar: PromotionGridToolbar }}
-      sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
-      initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-      pageSizeOptions={[10, 25, 50]}
-    />
+    <Card variant="outlined" sx={{ p: 2 }}>
+      <DataGrid.DataGrid
+        rows={rows}
+        columns={columns}
+        showToolbar
+        slots={{ toolbar: PromotionGridToolbar }}
+        sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+        initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+        pageSizeOptions={[10, 25, 50]}
+      />
+    </Card>
   );
 }
