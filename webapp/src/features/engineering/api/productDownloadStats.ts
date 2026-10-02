@@ -203,3 +203,87 @@ export function getReleaseFiles(
     accessToken,
   );
 }
+
+export interface PackageProduct {
+  repoId: number;
+  repoName: string;
+  productName: string | null;
+  packageCount: number;
+}
+
+export interface PackageProductsResponse {
+  count: number;
+  repos: PackageProduct[];
+}
+
+export interface PackageBreakdownItem {
+  packageName: string;
+  periodDownloads: number;
+  totalDownloads: number;
+  versionCount: number | null;
+}
+
+export interface PackageBreakdownResponse {
+  packages: PackageBreakdownItem[];
+}
+
+export interface PackageSeriesItem {
+  packageName: string;
+  points: VersionPoint[];
+}
+
+export interface PackageSeriesResponse {
+  series: PackageSeriesItem[];
+}
+
+export interface PackageVersionItem {
+  versionId: number;
+  tags: string | null;
+  periodDownloads: number;
+  totalDownloads: number;
+}
+
+export interface PackageVersionsResponse {
+  versions: PackageVersionItem[];
+}
+
+export function getPackageProducts(accessToken: string): Promise<PackageProductsResponse> {
+  return authedGet(`${credentialedBase()}/api/v1/stats/packages/repos`, accessToken);
+}
+
+export function getPackageBreakdown(
+  accessToken: string,
+  query: { repoId: number; from: string; to: string },
+): Promise<PackageBreakdownResponse> {
+  const params = new URLSearchParams({ from: query.from, to: query.to });
+  return authedGet(
+    `${credentialedBase()}/api/v1/stats/packages/${query.repoId}?${params}`,
+    accessToken,
+  );
+}
+
+export function getPackageSeries(
+  accessToken: string,
+  query: { repoId: number; from: string; to: string; interval: ReleaseDownloadGrain },
+): Promise<PackageSeriesResponse> {
+  const params = new URLSearchParams({ from: query.from, to: query.to, interval: query.interval });
+  return authedGet(
+    `${credentialedBase()}/api/v1/stats/packages/${query.repoId}/series?${params}`,
+    accessToken,
+  );
+}
+
+export function getPackageVersions(
+  accessToken: string,
+  query: { repoId: number; from: string; to: string; packageName: string },
+): Promise<PackageVersionsResponse> {
+  const params = new URLSearchParams({
+    from: query.from,
+    to: query.to,
+    package: query.packageName,
+  });
+  return authedGet(
+    `${credentialedBase()}/api/v1/stats/packages/${query.repoId}/versions?${params}`,
+    accessToken,
+  );
+}
