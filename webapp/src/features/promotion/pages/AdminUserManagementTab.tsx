@@ -296,7 +296,13 @@ export default function AdminUserManagementTab() {
             getRowHeight={() => "auto"}
             showToolbar
             slots={{ toolbar: PromotionGridToolbar }}
-            sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+            sx={{
+              border: "none",
+              ...GRID_NO_POINTER_FOCUS_SX,
+              // Auto row height needs its own vertical padding; without it
+              // the chips sit flush against the row divider.
+              "& .MuiDataGrid-cell": { py: 1, alignItems: "center" },
+            }}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             pageSizeOptions={[10, 25, 50]}
           />

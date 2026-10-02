@@ -75,7 +75,9 @@ export default function AdminWithdrawalRequestsTab() {
       minWidth: 180,
       renderCell: (params) => (
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          {params.row.status === "REMOVED" && <Chip label="Withdrawal Approved" size="small" color="error" />}
+          {params.row.status === "REMOVED" && (
+            <Chip label="Withdrawal Approved" size="small" variant="outlined" color="error" />
+          )}
           {params.row.status === "WITHDRAW" && (
             <>
               <Tooltip title="Approve withdrawal">

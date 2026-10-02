@@ -102,13 +102,16 @@ export default function AdminTimeBasedPromotionsTab() {
   const rows = requests.data?.promotionRequests ?? [];
 
   const columns: DataGrid.GridColDef<PromotionRequestFull>[] = [
-    { field: "employeeEmail", headerName: "Employee Email", flex: 1.3, minWidth: 180 },
+    // Only Employee Email and Lead Email carry genuinely variable-length
+    // content, so only they use `flex` (sharing out any leftover space) —
+    // everything else is a fixed `width`, so a short value like "Core
+    // Services" doesn't balloon and push Promote to past the visible edge.
+    { field: "employeeEmail", headerName: "Employee Email", flex: 1.4, minWidth: 220 },
     {
       display: "flex",
       field: "status",
       headerName: "Promotion Status",
-      flex: 0.9,
-      minWidth: 120,
+      width: 150,
       renderCell: (params) => (
         <Chip label={params.value} size="small" variant="outlined" color={promotionRequestChipColor(params.value)} />
       ),
@@ -117,12 +120,11 @@ export default function AdminTimeBasedPromotionsTab() {
       display: "flex",
       field: "recommendations",
       headerName: "Lead Status",
-      flex: 1.2,
-      minWidth: 130,
+      width: 170,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
           {params.row.recommendations.map((r) => (
             <Chip
               key={r.recommendationID}
@@ -139,12 +141,12 @@ export default function AdminTimeBasedPromotionsTab() {
       display: "flex",
       field: "leadEmail",
       headerName: "Lead Email",
-      flex: 1.3,
-      minWidth: 160,
+      flex: 1.2,
+      minWidth: 200,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
           {params.row.recommendations.map((r) => (
             <Chip key={r.recommendationID} label={`Lead: ${r.leadEmail}`} size="small" variant="outlined" />
           ))}
@@ -154,37 +156,32 @@ export default function AdminTimeBasedPromotionsTab() {
     {
       field: "businessUnit",
       headerName: "Business Unit",
-      flex: 0.8,
-      minWidth: 110,
+      width: 140,
       valueFormatter: (value: string) => capitalizeWords(value),
     },
     {
       field: "department",
       headerName: "Department",
-      flex: 0.8,
-      minWidth: 110,
+      width: 150,
       valueFormatter: (value: string) => capitalizeWords(value),
     },
     {
       field: "team",
       headerName: "Team",
-      flex: 0.8,
-      minWidth: 100,
+      width: 130,
       valueFormatter: (value: string) => capitalizeWords(value),
     },
     {
       field: "subTeam",
       headerName: "Sub Team",
-      flex: 0.8,
-      minWidth: 100,
+      width: 120,
       valueFormatter: (value: string | null) => capitalizeWords(value),
     },
     {
       display: "flex",
       field: "promoteTo",
       headerName: "Promote to",
-      flex: 0.7,
-      minWidth: 130,
+      width: 150,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
@@ -359,6 +356,7 @@ export default function AdminTimeBasedPromotionsTab() {
           </Grid>
           <Button
             variant="contained"
+            color="primary"
             startIcon={<UploadIcon size={16} />}
             onClick={() =>
               setConfirmImport({
@@ -378,7 +376,13 @@ export default function AdminTimeBasedPromotionsTab() {
       ) : (
         <>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-            <Button size="small" startIcon={<UploadIcon size={16} />} onClick={() => setSheetDialogOpen(true)}>
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              startIcon={<UploadIcon size={16} />}
+              onClick={() => setSheetDialogOpen(true)}
+            >
               Sync from sheet
             </Button>
             <Tooltip title="Refresh">
@@ -391,9 +395,19 @@ export default function AdminTimeBasedPromotionsTab() {
             <DataGrid.DataGrid
               rows={rows}
               columns={columns}
+              // The Lead Status/Lead Email columns wrap onto a second line
+              // for any row with more than one recommendation — a fixed
+              // row height would clip it, so let the row grow to fit.
+              getRowHeight={() => "auto"}
               showToolbar
               slots={{ toolbar: PromotionGridToolbar }}
-              sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+              sx={{
+                border: "none",
+                ...GRID_NO_POINTER_FOCUS_SX,
+                // Auto row height needs its own vertical padding; without it
+                // the chips sit flush against the row divider.
+                "& .MuiDataGrid-cell": { py: 1, alignItems: "center" },
+              }}
               initialState={{
                 pagination: { paginationModel: { pageSize: 10 } },
                 columns: { columnVisibilityModel: HIDDEN_BY_DEFAULT },

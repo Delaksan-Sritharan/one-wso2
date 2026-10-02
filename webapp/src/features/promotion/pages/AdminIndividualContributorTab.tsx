@@ -52,13 +52,16 @@ export default function AdminIndividualContributorTab() {
   const rows = allRows.filter((r) => r.employeeEmail.toLowerCase().includes(search.trim().toLowerCase()));
 
   const columns: DataGrid.GridColDef<PromotionRequestFull>[] = [
-    { field: "employeeEmail", headerName: "Employee Email", flex: 1.3, minWidth: 190 },
+    // Only Employee Email and Lead Email carry genuinely variable-length
+    // content, so only they use `flex` (sharing out any leftover space) —
+    // everything else is a fixed `width`, so a short value like "Core
+    // Services" doesn't balloon and push Promote to past the visible edge.
+    { field: "employeeEmail", headerName: "Employee Email", flex: 1.4, minWidth: 220 },
     {
       display: "flex",
       field: "status",
       headerName: "Promotion Status",
-      flex: 0.9,
-      minWidth: 130,
+      width: 150,
       renderCell: (params) => (
         <Chip label={params.value} size="small" variant="outlined" color={promotionRequestChipColor(params.value)} />
       ),
@@ -67,8 +70,7 @@ export default function AdminIndividualContributorTab() {
       display: "flex",
       field: "reasonForRejection",
       headerName: "Declined Reason",
-      flex: 0.7,
-      minWidth: 120,
+      width: 140,
       sortable: false,
       filterable: false,
       disableExport: true,
@@ -92,32 +94,30 @@ export default function AdminIndividualContributorTab() {
       display: "flex",
       field: "recommendations",
       headerName: "Lead Email",
-      flex: 1.3,
-      minWidth: 170,
+      flex: 1.2,
+      minWidth: 200,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
           {params.row.recommendations.map((r) => (
             <Chip key={r.recommendationID} label={`Lead: ${r.leadEmail}`} size="small" variant="outlined" />
           ))}
         </Stack>
       ),
     },
-    { field: "team", headerName: "Team", flex: 0.8, minWidth: 110, valueFormatter: (value: string) => capitalizeWords(value) },
+    { field: "team", headerName: "Team", width: 130, valueFormatter: (value: string) => capitalizeWords(value) },
     {
       field: "department",
       headerName: "Department",
-      flex: 0.8,
-      minWidth: 110,
+      width: 150,
       valueFormatter: (value: string) => capitalizeWords(value),
     },
     {
       display: "flex",
       field: "promoteTo",
       headerName: "Promote to",
-      flex: 0.7,
-      minWidth: 130,
+      width: 150,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
@@ -188,7 +188,17 @@ export default function AdminIndividualContributorTab() {
           <DataGrid.DataGrid
             rows={rows}
             columns={columns}
-            sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+            // The Lead Email column wraps onto a second line for any
+            // row with more than one recommendation — a fixed row height
+            // would clip it, so let the row grow to fit.
+            getRowHeight={() => "auto"}
+            sx={{
+              border: "none",
+              ...GRID_NO_POINTER_FOCUS_SX,
+              // Auto row height needs its own vertical padding; without it
+              // the chips sit flush against the row divider.
+              "& .MuiDataGrid-cell": { py: 1, alignItems: "center" },
+            }}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             pageSizeOptions={[10, 25, 50]}
           />
