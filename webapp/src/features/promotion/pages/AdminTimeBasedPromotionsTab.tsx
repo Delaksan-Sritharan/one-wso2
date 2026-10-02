@@ -44,7 +44,7 @@ import { usePromotionRequests } from "../api/usePromotionRequests";
 import { useSaveRecommendation } from "../api/useLeadRecommendations";
 import { useImportTimeBasedPromotions } from "../api/useTimeBasedPromotionAdmin";
 import { usePromotionSyncState } from "../api/usePromotionSyncState";
-import { basePromotionRequestColumns } from "../components/promotionRequestColumns";
+import JobBandTransitionChips from "../components/JobBandTransitionChips";
 import PromotionEmptyState from "../components/PromotionEmptyState";
 import { PromotionGridToolbar } from "../components/PromotionGridToolbar";
 import DeclinedReasonDialog, { type DeclinedReasonTarget } from "../components/DeclinedReasonDialog";
@@ -53,6 +53,8 @@ import PromotionFeedbackSnackbar from "../components/PromotionFeedbackSnackbar";
 import { usePromotionFeedback } from "../util/usePromotionFeedback";
 import PromotionSyncStatusLabel from "../components/PromotionSyncStatusLabel";
 import { encodePromotionText } from "../util/promotionRichText";
+import { formatDate } from "../util/promotionHistory";
+import { capitalizeWords } from "../util/promotionText";
 import { promotionRequestChipColor, recommendationChipColor } from "../util/promotionStatus";
 import { GRID_NO_POINTER_FOCUS_SX } from "@utils/dataGridSx";
 import type { PromotionRecommendation, PromotionRequestFull, RecommendationStatus } from "../api/types";
@@ -100,30 +102,35 @@ export default function AdminTimeBasedPromotionsTab() {
   const rows = requests.data?.promotionRequests ?? [];
 
   const columns: DataGrid.GridColDef<PromotionRequestFull>[] = [
-    ...basePromotionRequestColumns(),
+    // Only Employee Email and Lead Email carry genuinely variable-length
+    // content, so only they use `flex` (sharing out any leftover space) —
+    // everything else is a fixed `width`, so a short value like "Core
+    // Services" doesn't balloon and push Promote to past the visible edge.
+    { field: "employeeEmail", headerName: "Employee Email", flex: 1.4, minWidth: 220 },
     {
+      display: "flex",
       field: "status",
       headerName: "Promotion Status",
-      flex: 1,
-      minWidth: 150,
+      width: 150,
       renderCell: (params) => (
-        <Chip label={params.value} size="small" color={promotionRequestChipColor(params.value)} />
+        <Chip label={params.value} size="small" variant="outlined" color={promotionRequestChipColor(params.value)} />
       ),
     },
     {
+      display: "flex",
       field: "recommendations",
       headerName: "Lead Status",
-      flex: 1,
-      minWidth: 150,
+      width: 170,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ py: 0.5 }}>
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
           {params.row.recommendations.map((r) => (
             <Chip
               key={r.recommendationID}
               label={LEAD_STATUS_LABEL[r.recommendationStatus] ?? r.recommendationStatus}
               size="small"
+              variant="outlined"
               color={recommendationChipColor(r.recommendationStatus)}
             />
           ))}
@@ -131,14 +138,15 @@ export default function AdminTimeBasedPromotionsTab() {
       ),
     },
     {
+      display: "flex",
       field: "leadEmail",
       headerName: "Lead Email",
-      flex: 1.4,
+      flex: 1.2,
       minWidth: 200,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ py: 0.5 }}>
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
           {params.row.recommendations.map((r) => (
             <Chip key={r.recommendationID} label={`Lead: ${r.leadEmail}`} size="small" variant="outlined" />
           ))}
@@ -146,9 +154,48 @@ export default function AdminTimeBasedPromotionsTab() {
       ),
     },
     {
+      field: "businessUnit",
+      headerName: "Business Unit",
+      width: 140,
+      valueFormatter: (value: string) => capitalizeWords(value),
+    },
+    {
+      field: "department",
+      headerName: "Department",
+      width: 150,
+      valueFormatter: (value: string) => capitalizeWords(value),
+    },
+    {
+      field: "team",
+      headerName: "Team",
+      width: 130,
+      valueFormatter: (value: string) => capitalizeWords(value),
+    },
+    {
+      field: "subTeam",
+      headerName: "Sub Team",
+      width: 120,
+      valueFormatter: (value: string | null) => capitalizeWords(value),
+    },
+    {
+      display: "flex",
+      field: "promoteTo",
+      headerName: "Promote to",
+      width: 150,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <JobBandTransitionChips currentJobBand={params.row.currentJobBand} nextJobBand={params.row.nextJobBand} />
+      ),
+    },
+    // Hidden by default (toggle via the toolbar's Columns panel) — kept out
+    // of the way instead of widening the grid for data most admins don't
+    // need daily.
+    {
+      display: "flex",
       field: "declinedReason",
       headerName: "Declined Reason",
-      flex: 0.6,
+      flex: 0.8,
       minWidth: 120,
       sortable: false,
       filterable: false,
@@ -176,7 +223,25 @@ export default function AdminTimeBasedPromotionsTab() {
         );
       },
     },
+    { field: "currentJobRole", headerName: "Current Job Role", flex: 0.9, minWidth: 140 },
+    { field: "promotionType", headerName: "Promotion Type", flex: 0.8, minWidth: 130 },
+    { field: "promotionCycle", headerName: "Promotion Cycle", flex: 0.8, minWidth: 130 },
+    { field: "createdBy", headerName: "Created By", flex: 0.8, minWidth: 130 },
+    { field: "createdOn", headerName: "Created On", flex: 0.7, minWidth: 110, valueFormatter: (value: string) => formatDate(value) },
+    { field: "updatedBy", headerName: "Updated By", flex: 0.8, minWidth: 130 },
+    { field: "updatedOn", headerName: "Updated On", flex: 0.7, minWidth: 110, valueFormatter: (value: string) => formatDate(value) },
   ];
+
+  const HIDDEN_BY_DEFAULT = {
+    declinedReason: false,
+    currentJobRole: false,
+    promotionType: false,
+    promotionCycle: false,
+    createdBy: false,
+    createdOn: false,
+    updatedBy: false,
+    updatedOn: false,
+  };
 
   if (cycle.isPending) return <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />;
   if (cycle.isError) {
@@ -291,6 +356,7 @@ export default function AdminTimeBasedPromotionsTab() {
           </Grid>
           <Button
             variant="contained"
+            color="primary"
             startIcon={<UploadIcon size={16} />}
             onClick={() =>
               setConfirmImport({
@@ -310,7 +376,13 @@ export default function AdminTimeBasedPromotionsTab() {
       ) : (
         <>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-            <Button size="small" startIcon={<UploadIcon size={16} />} onClick={() => setSheetDialogOpen(true)}>
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              startIcon={<UploadIcon size={16} />}
+              onClick={() => setSheetDialogOpen(true)}
+            >
               Sync from sheet
             </Button>
             <Tooltip title="Refresh">
@@ -319,15 +391,30 @@ export default function AdminTimeBasedPromotionsTab() {
               </IconButton>
             </Tooltip>
           </Box>
-          <DataGrid.DataGrid
-            rows={rows}
-            columns={columns}
-            showToolbar
-            slots={{ toolbar: PromotionGridToolbar }}
-            sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-            pageSizeOptions={[10, 25, 50]}
-          />
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <DataGrid.DataGrid
+              rows={rows}
+              columns={columns}
+              // The Lead Status/Lead Email columns wrap onto a second line
+              // for any row with more than one recommendation — a fixed
+              // row height would clip it, so let the row grow to fit.
+              getRowHeight={() => "auto"}
+              showToolbar
+              slots={{ toolbar: PromotionGridToolbar }}
+              sx={{
+                border: "none",
+                ...GRID_NO_POINTER_FOCUS_SX,
+                // Auto row height needs its own vertical padding; without it
+                // the chips sit flush against the row divider.
+                "& .MuiDataGrid-cell": { py: 1, alignItems: "center" },
+              }}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 10 } },
+                columns: { columnVisibilityModel: HIDDEN_BY_DEFAULT },
+              }}
+              pageSizeOptions={[10, 25, 50]}
+            />
+          </Card>
         </>
       )}
     </>

@@ -27,6 +27,7 @@ import {
   Alert,
   Box,
   Button,
+  Card,
   Chip,
   DataGrid,
   DatePickers,
@@ -91,6 +92,7 @@ export default function PeopleHrArchiveTab() {
 
   const columns: DataGrid.GridColDef<ArchivedPromotion>[] = [
     {
+      display: "flex",
       field: "firstName",
       headerName: "Employee",
       flex: 1,
@@ -104,6 +106,7 @@ export default function PeopleHrArchiveTab() {
     { field: "email", headerName: "Email", flex: 1.2, minWidth: 200 },
     { field: "promotedDesignation", headerName: "Promoted Designation", flex: 1.2, minWidth: 200 },
     {
+      display: "flex",
       field: "inBand",
       headerName: "Type",
       flex: 0.6,
@@ -190,16 +193,18 @@ export default function PeopleHrArchiveTab() {
           {rows.length === 0 ? (
             <PromotionEmptyState message="No archived promotions match these filters." />
           ) : (
-            <DataGrid.DataGrid
-              rows={rows}
-              getRowId={(row) => `${row.email}-${row.promotionEffectiveDate}-${row.promotedDesignation}`}
-              columns={columns}
-              showToolbar
-              slots={{ toolbar: PromotionGridToolbar }}
-              sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
-              initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
-              pageSizeOptions={[25, 50, 100]}
-            />
+            <Card variant="outlined" sx={{ p: 2 }}>
+              <DataGrid.DataGrid
+                rows={rows}
+                getRowId={(row) => `${row.email}-${row.promotionEffectiveDate}-${row.promotedDesignation}`}
+                columns={columns}
+                showToolbar
+                slots={{ toolbar: PromotionGridToolbar }}
+                sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX }}
+                initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+                pageSizeOptions={[25, 50, 100]}
+              />
+            </Card>
           )}
         </>
       )}

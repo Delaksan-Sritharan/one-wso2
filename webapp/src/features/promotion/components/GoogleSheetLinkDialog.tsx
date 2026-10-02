@@ -65,6 +65,8 @@ export default function GoogleSheetLinkDialog({
       <DialogActions>
         <Button onClick={handleClose}>Cancel</Button>
         <Button
+          variant="contained"
+          color="primary"
           disabled={!valid}
           onClick={() => {
             onSubmit(url.trim());

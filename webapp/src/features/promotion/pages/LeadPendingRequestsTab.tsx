@@ -118,6 +118,7 @@ export default function LeadPendingRequestsTab() {
 
   const columns: DataGrid.GridColDef<PromotionRecommendation>[] = [
     {
+      display: "flex",
       field: "employeeName",
       headerName: "Employee Name",
       flex: 1.3,
@@ -134,6 +135,7 @@ export default function LeadPendingRequestsTab() {
     { field: "employeeEmail", headerName: "Employee Email", flex: 1.4, minWidth: 200 },
     { field: "promotionCycle", headerName: "Promotion Cycle", flex: 1, minWidth: 140 },
     {
+      display: "flex",
       field: "action",
       headerName: "Actions",
       sortable: false,

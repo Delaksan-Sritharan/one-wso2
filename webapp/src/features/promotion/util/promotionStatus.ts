@@ -43,12 +43,17 @@ export function promotionRequestStatusLabel(
   return status;
 }
 
+// Same semantic convention ParStatusChip already established for this app's
+// other status chips: pending/in-progress reads as warning, draft reads as
+// info (not a muted/neutral default — a draft is still something live, just
+// not submitted yet), completed as success, rejected as error.
 export function promotionRequestChipColor(status: PromotionRequestStatus): PromotionChipColor {
   switch (status) {
     case "APPROVED":
       return "success";
     case "IN_PROGRESS":
     case "FL_APPROVED":
+    case "WITHDRAW":
       return "warning";
     case "DECLINED":
     case "FL_REJECTED":
@@ -56,9 +61,9 @@ export function promotionRequestChipColor(status: PromotionRequestStatus): Promo
     case "REMOVED":
       return "error";
     case "SUBMITTED":
-      return "secondary";
+      return "primary";
     case "DRAFT":
-    case "WITHDRAW":
+      return "info";
     case "EXPIRED":
       return "default";
     default:
@@ -75,7 +80,7 @@ export function recommendationChipColor(status: RecommendationStatus): Promotion
     case "EXPIRED":
       return "default";
     default:
-      return "info"; // REQUESTED
+      return "warning"; // REQUESTED — shown as "Pending", same as ParStatusChip's own Pending
   }
 }
 

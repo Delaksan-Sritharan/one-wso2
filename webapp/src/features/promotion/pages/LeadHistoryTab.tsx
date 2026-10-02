@@ -59,6 +59,7 @@ export default function LeadHistoryTab() {
     { field: "employeeEmail", headerName: "Employee Email", flex: 1.3, minWidth: 190 },
     { field: "promotionCycle", headerName: "Promotion Cycle", flex: 0.9, minWidth: 130 },
     {
+      display: "flex",
       field: "recommendationStatus",
       headerName: "Lead Status",
       flex: 0.9,
@@ -69,20 +70,22 @@ export default function LeadHistoryTab() {
       // match nothing, since no row's raw status is ever literally APPROVED.
       valueGetter: (value) => recommendationStatusLabel(value),
       renderCell: (params) => (
-        <Chip label={params.value} size="small" color={recommendationChipColor(params.row.recommendationStatus)} />
+        <Chip label={params.value} size="small" variant="outlined" color={recommendationChipColor(params.row.recommendationStatus)} />
       ),
     },
     {
+      display: "flex",
       field: "promotionRequestStatus",
       headerName: "Promotion Status",
       flex: 0.9,
       minWidth: 150,
       valueGetter: (value, row) => promotionRequestStatusLabel(value, cycle.cycle?.id === row.promotionCycleId),
       renderCell: (params) => (
-        <Chip label={params.value} size="small" color={promotionRequestChipColor(params.value)} />
+        <Chip label={params.value} size="small" variant="outlined" color={promotionRequestChipColor(params.value)} />
       ),
     },
     {
+      display: "flex",
       field: "action",
       headerName: "",
       sortable: false,

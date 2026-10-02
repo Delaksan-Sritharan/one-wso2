@@ -65,7 +65,7 @@ export default function RejectReasonDialog({
       <DialogActions>
         <Button onClick={handleClose}>No</Button>
         <Button
-          color="secondary"
+          color="error"
           variant="contained"
           disabled={reason.trim() === ""}
           onClick={() => {

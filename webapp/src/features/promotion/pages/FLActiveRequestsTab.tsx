@@ -19,7 +19,7 @@
 // unit scope (enableBuFilter=true), with per-row and bulk Approve/Reject
 // plus a job-band edit dialog.
 import { useState } from "react";
-import { Alert, Box, Button, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
+import { Alert, Box, Button, Card, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
 import { CheckIcon, ChevronDownIcon, PencilIcon, RefreshCwIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
@@ -98,6 +98,7 @@ export default function FLActiveRequestsTab() {
   const columns: DataGrid.GridColDef<PromotionRequestFull>[] = [
     ...basePromotionRequestColumns(),
     {
+      display: "flex",
       field: "action",
       headerName: "Action",
       sortable: false,
@@ -112,12 +113,12 @@ export default function FLActiveRequestsTab() {
             </IconButton>
           </Tooltip>
           <Tooltip title="Approve">
-            <IconButton size="small" onClick={() => confirmApprove([params.row.id])}>
+            <IconButton size="small" color="success" onClick={() => confirmApprove([params.row.id])}>
               <CheckIcon size={16} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Reject">
-            <IconButton size="small" onClick={() => setRejectTarget([params.row.id])}>
+            <IconButton size="small" color="error" onClick={() => setRejectTarget([params.row.id])}>
               <XIcon size={16} />
             </IconButton>
           </Tooltip>
@@ -170,23 +171,34 @@ export default function FLActiveRequestsTab() {
 
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
         <Stack direction="row" spacing={1}>
-          <Button
-            size="small"
-            startIcon={<CheckIcon size={16} />}
-            disabled={selectedIds.length === 0}
-            onClick={() => confirmApprove(selectedIds)}
-          >
-            Approve
-          </Button>
-          <Button
-            size="small"
-            color="error"
-            startIcon={<XIcon size={16} />}
-            disabled={selectedIds.length === 0}
-            onClick={() => setRejectTarget(selectedIds)}
-          >
-            Reject
-          </Button>
+          <Tooltip title={selectedIds.length === 0 ? "Select requests to approve" : "Approve selected requests"}>
+            <span>
+              <Button
+                size="small"
+                variant="contained"
+                color="success"
+                startIcon={<CheckIcon size={16} />}
+                disabled={selectedIds.length === 0}
+                onClick={() => confirmApprove(selectedIds)}
+              >
+                {`Approve ${selectedIds.length || ""}`.trim()}
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip title={selectedIds.length === 0 ? "Select requests to reject" : "Reject selected requests"}>
+            <span>
+              <Button
+                size="small"
+                variant="contained"
+                color="error"
+                startIcon={<XIcon size={16} />}
+                disabled={selectedIds.length === 0}
+                onClick={() => setRejectTarget(selectedIds)}
+              >
+                {`Reject ${selectedIds.length || ""}`.trim()}
+              </Button>
+            </span>
+          </Tooltip>
         </Stack>
         <Tooltip title="Refresh">
           <IconButton
@@ -218,21 +230,23 @@ export default function FLActiveRequestsTab() {
       ) : rows.length === 0 ? (
         <PromotionEmptyState message="There are no pending promotion requests" />
       ) : (
-        <DataGrid.DataGrid
-          rows={rows}
-          columns={columns}
-          checkboxSelection
-          rowSelectionModel={{ type: "include", ids: new Set(selectedIds) }}
-          onRowSelectionModelChange={(model) =>
-            setSelectedIds(resolveGridSelectedIds(model, rows))
-          }
-          getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? "row-stripe" : "")}
-          showToolbar
-          slots={{ toolbar: PromotionGridToolbar }}
-          sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX, ...STRIPE_SX }}
-          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-          pageSizeOptions={[10, 25, 50]}
-        />
+        <Card variant="outlined" sx={{ p: 2 }}>
+          <DataGrid.DataGrid
+            rows={rows}
+            columns={columns}
+            checkboxSelection
+            rowSelectionModel={{ type: "include", ids: new Set(selectedIds) }}
+            onRowSelectionModelChange={(model) =>
+              setSelectedIds(resolveGridSelectedIds(model, rows))
+            }
+            getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? "row-stripe" : "")}
+            showToolbar
+            slots={{ toolbar: PromotionGridToolbar }}
+            sx={{ border: "none", ...GRID_NO_POINTER_FOCUS_SX, ...STRIPE_SX }}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            pageSizeOptions={[10, 25, 50]}
+          />
+        </Card>
       )}
     </>
   );

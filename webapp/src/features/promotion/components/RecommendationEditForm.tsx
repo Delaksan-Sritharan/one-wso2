@@ -157,6 +157,7 @@ export default function RecommendationEditForm({
         <Button
           size="large"
           variant="contained"
+          color="primary"
           disabled={!isValidContent || !isModified || busy}
           onClick={handleSave}
         >
