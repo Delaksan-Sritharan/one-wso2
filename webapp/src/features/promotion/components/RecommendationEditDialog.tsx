@@ -19,10 +19,9 @@ import RecommendationEditForm from "./RecommendationEditForm";
 import type { PromotionRecommendation } from "../api/types";
 
 // Wraps RecommendationEditForm in a Dialog for the Lead Portal's Pending
-// Requests grid — "Start" used to swap the whole list for this form inline;
-// now that the list is a data grid, a dialog on the same action is the
-// closest equivalent, the same "Dialog replaces inline expand" pattern
-// every other grid in this app already uses for its own row actions.
+// Requests grid's own "Start" row action — the same "Dialog replaces inline
+// expand" pattern every other grid in this app already uses for its own row
+// actions, since MUI X DataGrid Community has no inline row-detail expand.
 export default function RecommendationEditDialog({
   recommendation,
   leadEmail,

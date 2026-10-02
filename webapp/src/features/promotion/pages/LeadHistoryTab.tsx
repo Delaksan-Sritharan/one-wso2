@@ -17,8 +17,7 @@
 // Every SUBMITTED/DECLINED/EXPIRED recommendation this lead has ever made,
 // across every cycle (not scoped to the open one), narrowed to TIME_BASED.
 // A data grid, matching the convention every other portal in this app
-// already uses, instead of a hand-rolled column-header-plus-dashed-card
-// list.
+// already uses.
 import { useState } from "react";
 import { Box, Card, Chip, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
 import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
