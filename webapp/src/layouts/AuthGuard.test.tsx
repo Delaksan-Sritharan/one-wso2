@@ -16,13 +16,13 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mutable so each test sets the SDK state it needs before rendering.
 const auth = vi.hoisted(() => ({ isSignedIn: false, isLoading: false, signIn: vi.fn() }));
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => auth }));
 
-import { registerAuthAccessors } from "@api/authBridge";
+import { registerAuthAccessors, SDK_SESSION_PICKUP_MS } from "@api/authBridge";
 import AuthGuard from "./AuthGuard";
 import { SIGN_IN_LOOP_WINDOW_MS, SIGN_IN_REDIRECT_KEY } from "./signInLoopGuard";
 
@@ -60,6 +60,10 @@ beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("AuthGuard before it redirects", () => {
   // On reload with an expired access token the SDK renews it with the refresh
   // token, and the context says signed out until that finishes. Redirecting in
@@ -83,6 +87,36 @@ describe("AuthGuard before it redirects", () => {
     renderAt();
 
     await waitFor(() => expect(auth.signIn).toHaveBeenCalledTimes(1));
+  });
+
+  // The SDK and the provider disagreeing for good must not leave the spinner
+  // up forever. The redirect still goes through the loop guard.
+  it("redirects anyway if the provider never picks that session up", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    sdkGetAccessToken.mockResolvedValue("renewed-token");
+    renderAt();
+
+    await vi.advanceTimersByTimeAsync(SDK_SESSION_PICKUP_MS - 1);
+    expect(auth.signIn).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(auth.signIn).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem(SIGN_IN_REDIRECT_KEY)).not.toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("never picked up"));
+  });
+
+  it("does not redirect when the provider picks the session up within the wait", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    sdkGetAccessToken.mockResolvedValue("renewed-token");
+    const { rerender } = renderAt();
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    auth.isSignedIn = true;
+    rerender(guarded());
+    await vi.advanceTimersByTimeAsync(SDK_SESSION_PICKUP_MS);
+
+    expect(auth.signIn).not.toHaveBeenCalled();
+    expect(screen.getByText("the app")).toBeInTheDocument();
   });
 });
 

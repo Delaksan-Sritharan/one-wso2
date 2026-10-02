@@ -373,6 +373,13 @@ export async function sdkHasSession(): Promise<boolean> {
   }
 }
 
+/**
+ * How long the React context gets to catch up with a session `sdkHasSession`
+ * reported, before a caller stops trusting that answer. The provider re-checks
+ * every second while signed out, so this is many checks' worth of slack.
+ */
+export const SDK_SESSION_PICKUP_MS = 10_000;
+
 export async function refreshIdToken(): Promise<string> {
   await refreshSession(holdsLiveIdToken);
   if (!getIdTokenAccessor) throw new Error("Auth accessors not registered yet");

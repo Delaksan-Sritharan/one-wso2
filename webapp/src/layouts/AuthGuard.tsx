@@ -18,7 +18,12 @@ import { useAsgardeo } from "@asgardeo/react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { Box, CircularProgress } from "@wso2/oxygen-ui";
-import { getRenewalInFlightSnapshot, sdkHasSession, subscribeRenewal } from "@api/authBridge";
+import {
+  getRenewalInFlightSnapshot,
+  SDK_SESSION_PICKUP_MS,
+  sdkHasSession,
+  subscribeRenewal,
+} from "@api/authBridge";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import {
   forgetSignInRedirect,
@@ -90,23 +95,32 @@ export default function AuthGuard() {
       // the IdP session has ended while the refresh token has not.
       let cancelled = false;
       let redirected = false;
-      void sdkHasSession().then((held) => {
-        if (cancelled) return;
-        if (held) {
-          // The provider sees it on its next check, and this effect runs again
-          // signed in. Reset so a later, real sign-out still redirects.
-          startedSignInRef.current = false;
-          return;
-        }
+      let pickupTimer: ReturnType<typeof setTimeout> | undefined;
+      const redirect = () => {
         redirected = true;
         if (isRestorableTarget(location.pathname, location.search)) {
           rememberPostLoginTarget(currentHref);
         }
         rememberSignInRedirect();
         signIn();
+      };
+      void sdkHasSession().then((held) => {
+        if (cancelled) return;
+        if (!held) {
+          redirect();
+          return;
+        }
+        // The provider sees it on its next check, and this effect runs again
+        // signed in, cancelling the timer. Should it never catch up, redirect
+        // after a bounded wait rather than leave the spinner up for good.
+        pickupTimer = setTimeout(() => {
+          console.warn("[auth] The SDK reported a session the provider never picked up, so signing in again.");
+          redirect();
+        }, SDK_SESSION_PICKUP_MS);
       });
       return () => {
         cancelled = true;
+        clearTimeout(pickupTimer);
         if (!redirected) startedSignInRef.current = false;
       };
     }
