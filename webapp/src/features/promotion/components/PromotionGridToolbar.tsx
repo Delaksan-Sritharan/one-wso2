@@ -26,9 +26,9 @@ import { DataGrid } from "@wso2/oxygen-ui";
 //
 // Columns/Filters render the same icon+label button Density/Export already
 // use (both render DataGrid's own `baseButton` slot, a plain Button, not an
-// icon-only one) — wrapping them in a bare `ToolbarButton` instead, as a
-// prior version of this file did, is icon-only and reads as a different,
-// less finished control sitting next to the other two.
+// icon-only one) — wrapping them in a bare `ToolbarButton` instead is
+// icon-only and reads as a different, less finished control sitting next
+// to the other two.
 export function PromotionGridToolbar() {
   return (
     <DataGrid.Toolbar>
