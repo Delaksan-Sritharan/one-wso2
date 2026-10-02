@@ -72,6 +72,7 @@ export interface Summary {
   totalClonesLast14d: number;
   todayDownloads: number;
   todayDeltaPct: number | null;
+  asOfDate?: string | null;
   monthDownloads: number;
   topProducts: TopProduct[];
 }
@@ -95,6 +96,7 @@ export interface TrackedRepository {
   id: number;
   repoName: string;
   productName: string | null;
+  isActive?: boolean;
 }
 
 export interface RepositoriesResponse {
@@ -138,4 +140,19 @@ export function getDaily(accessToken: string, now = new Date()): Promise<DailyRe
 
 export function getRepositories(accessToken: string): Promise<RepositoriesResponse> {
   return authedGet(`${credentialedBase()}/api/v1/repositories`, accessToken);
+}
+
+export type ReleaseDownloadGrain = "day" | "month" | "cumulative";
+
+export function getReleaseDownloads(
+  accessToken: string,
+  query: { from: string; to: string; interval: ReleaseDownloadGrain; repos: number[] },
+): Promise<DailyResponse> {
+  const params = new URLSearchParams({ from: query.from, to: query.to });
+  if (query.repos.length > 0) params.set("repos", query.repos.join(","));
+  if (query.interval === "cumulative") {
+    return authedGet(`${credentialedBase()}/api/v1/stats/total?${params}`, accessToken);
+  }
+  params.set("interval", query.interval);
+  return authedGet(`${credentialedBase()}/api/v1/stats/daily?${params}`, accessToken);
 }

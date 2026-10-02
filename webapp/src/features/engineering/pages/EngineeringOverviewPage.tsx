@@ -25,6 +25,7 @@ import {
 } from "@wso2/oxygen-ui";
 import { Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { JSX } from "react";
+import { Link as RouterLink } from "react-router";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import { useAccessToken } from "@hooks/useAccessToken";
@@ -39,16 +40,7 @@ import {
   type DailySeries,
 } from "@features/engineering/api/productDownloadStats";
 import { dailyChartModel } from "./dailyChartModel";
-
-const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
-
-function formatCount(value: number): string {
-  return compact.format(value);
-}
-
-function productLabel(productName: string | null, repoName: string): string {
-  return productName && productName.trim() !== "" ? productName : repoName;
-}
+import { activityDate, formatCount, productLabel } from "./display";
 
 export default function EngineeringOverviewPage(): JSX.Element {
   const preview = isPreviewEnabled("engineering");
@@ -143,9 +135,18 @@ export default function EngineeringOverviewPage(): JSX.Element {
           label="Yesterday's Downloads"
           value={formatCount(totals.todayDownloads)}
           trend={totals.todayDeltaPct}
+          to={dayDownloadsPath(totals.asOfDate)}
         />
-        <Figure label="This Month's Downloads" value={formatCount(totals.monthDownloads)} />
-        <Figure label="Total Downloads" value={formatCount(totals.totalDownloads)} />
+        <Figure
+          label="This Month's Downloads"
+          value={formatCount(totals.monthDownloads)}
+          to={monthDownloadsPath(totals.asOfDate)}
+        />
+        <Figure
+          label="Total Downloads"
+          value={formatCount(totals.totalDownloads)}
+          to="/engineering/downloads?interval=cumulative"
+        />
         <Figure label="Products Tracked" value={formatCount(totals.trackedRepositories)} />
         <Figure label="Clones (14d)" value={formatCount(totals.totalClonesLast14d)} />
       </Box>
@@ -204,16 +205,30 @@ export default function EngineeringOverviewPage(): JSX.Element {
   );
 }
 
+function dayDownloadsPath(asOfDate: string | null | undefined): string | undefined {
+  const day = activityDate(asOfDate);
+  if (!day) return undefined;
+  return `/engineering/downloads?interval=day&from=${day}&to=${day}`;
+}
+
+function monthDownloadsPath(asOfDate: string | null | undefined): string {
+  const to = activityDate(asOfDate) ?? new Date().toISOString().slice(0, 10);
+  const from = `${to.slice(0, 7)}-01`;
+  return `/engineering/downloads?interval=month&from=${from}&to=${to}`;
+}
+
 function Figure({
   label,
   value,
   trend,
+  to,
 }: {
   label: string;
   value: string;
   trend?: number | null;
+  to?: string;
 }): JSX.Element {
-  return (
+  const body = (
     <Card sx={{ p: 2 }}>
       <Typography variant="body2" color="text.secondary">
         {label}
@@ -230,6 +245,12 @@ function Figure({
         )}
       </Box>
     </Card>
+  );
+  if (!to) return body;
+  return (
+    <RouterLink to={to} style={{ textDecoration: "none", color: "inherit" }}>
+      {body}
+    </RouterLink>
   );
 }
 
