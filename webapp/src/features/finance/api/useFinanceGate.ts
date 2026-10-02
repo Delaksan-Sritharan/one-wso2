@@ -14,10 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useState } from "react";
 import type { VisibilityAnswer } from "@components/side-rail/visibilityFold";
+import {
+  isCcBackendConfigured,
+  isExpenseBackendConfigured,
+  isOpdBackendConfigured,
+} from "@config/apiConfig";
 import { FINANCE_APPS } from "@constants/financeApps";
-import { isPreviewEnabled } from "@config/previewFeatures";
 import type { Capability } from "@constants/appMenu";
 import { useCcUserInfo } from "../cc/useCc";
 import { ccHasAccess } from "../cc/ccTypes";
@@ -45,20 +48,18 @@ const RESTRICTED_IDS = new Set(
  * master-data case's own comment), so a route guard built on the full
  * `useFinanceGate` was blocking on THEIR `isLoading` — a slow or erroring
  * CC/OPD/Expense backend in some environment held the page on a blank
- * screen for a reader who was always going to be let in, once the two
- * things that actually decide this (identity + the preview flag) resolve.
- * Exported so both the switch case and the route call the same check —
- * two independent copies of `isPreviewEnabled(...) && caps.has("admin")`
- * is how one of them quietly drifts from the other.
+ * screen for a reader who was always going to be let in, once identity
+ * resolves. Exported so both the switch case and the route call the same
+ * check — two independent copies of `caps.has("admin")` is how one of them
+ * quietly drifts from the other.
  *
- * Two gates answering two different questions, and BOTH have to say yes:
- * the preview flag is "does this environment have the feature yet"
- * (absent means off, so production stays untouched by this merging), and
- * `admin` is the actual per-reader permission. Turning the flag on in an
- * environment does not hand the tables to every employee in it.
+ * `admin` is the whole rule. These tables were briefly held behind a
+ * "finance-master-data" preview flag as well, so an environment had to opt
+ * in before the rows appeared; the feature has shipped, so the flag is gone
+ * and the per-reader permission is all that is left to check.
  */
 export function canSeeMasterData(caps: ReadonlySet<Capability> | undefined): boolean {
-  return isPreviewEnabled("finance-master-data") && (caps?.has("admin") ?? false);
+  return caps?.has("admin") ?? false;
 }
 
 // Role-gates the Finance menu items (surfaced under Me) against each app's
@@ -143,27 +144,29 @@ export function useFinanceGate(enabled = true, caps?: ReadonlySet<Capability>): 
       // reader with only one of the two still opens straight onto that tab's
       // content; there is no per-tab hiding inside the page.
       //
-      // `opdErrored` counts as a yes, same reasoning as `claim-approval`
-      // above: a failed lookup is not the same answer as "no role", and
-      // hiding Overview because OPD's backend had a bad minute would be
-      // worse than showing a screen whose OPD tab can't load yet.
-      // `FinanceOverviewPage` reads this same flag to land the default tab
-      // on OPD when it's the reason Overview is visible at all — see
-      // `opdErrored` on `FinanceGate` above.
+      // A FAILED lookup is not a yes. This used to read `|| opdErrored`, on
+      // the reasoning that a bad minute from OPD's backend should not hide a
+      // screen an approver is entitled to. The cost of that was the bug this
+      // entry was reported for: `foldIdentityError` reports EVERY one of
+      // these queries as `isError` whenever identity itself fails to resolve
+      // (a token-refresh hiccup is enough), so `opdErrored` went true for
+      // readers who hold no OPD role at all — the row appeared for them — and
+      // went false again the moment identity recovered, so it appeared and
+      // vanished and appeared again. An entry that shows itself to the wrong
+      // people whenever a request fails is worse than one that stays hidden
+      // until a backend can actually answer for it: a role is the only thing
+      // that opens this now.
       case "finance-overview":
-        return ccHasOwnCard || opdFinance || opdErrored;
+        return ccHasOwnCard || opdFinance;
       // The four master-data tables. Finance reference data that the other
       // apps read and only finance writes, so all four answer the same way —
       // listed individually rather than as a prefix match so that a new tab
       // has to be named here before it appears, the same fail-closed rule
       // the default case enforces.
       //
-      // Gated on BOTH the preview flag and `admin`, not either alone: the
-      // flag answers "does this environment have it yet" (off by default —
-      // see previewFeatures.ts — so prod stays untouched by this merging),
-      // while `admin` is the actual per-reader permission, same shape as
-      // every other restricted item here. Turning the flag on in an
-      // environment does not hand the tables to every employee in it.
+      // Gated on `admin` alone now that the feature has shipped — the
+      // "finance-master-data" preview flag that used to sit in front of it
+      // is gone, along with the entry in previewFeatures.ts.
       case "master-data-subsidiaries":
       case "master-data-departments":
       case "master-data-expense-types":
@@ -179,32 +182,43 @@ export function useFinanceGate(enabled = true, caps?: ReadonlySet<Capability>): 
 
   // `isResolving` is the one answer here that can go BACKWARDS, and it is the
   // one every caller renders nothing on: `FinanceOverviewPage` returns null,
-  // `ClaimApprovalPage` drops its tabs and its <Outlet />, the rail hides the
-  // row. So an answer that un-settles is not a slower answer — it is a screen
-  // blanking and coming back, which is the flickering.
+  // `ClaimApprovalPage` drops its tabs and its <Outlet />. So an answer that
+  // un-settles is not a slower answer — it is a screen blanking and coming
+  // back, which is the flickering.
   //
-  // The roles beside it cannot go backwards: they read `cc.data` / `opd.data`
-  // / `expense.data`, and React Query keeps a query's data once it has any.
-  // The raw loading flags can, and for reasons that have nothing to do with
-  // this reader — a query disabled because its backend isn't configured in
-  // this environment stays `isPending` forever, so `foldIdentityError` reports
-  // it as loading AGAIN every time identity re-checks. (useAsgardeoSub no
-  // longer re-checks needlessly, which fixes that at the source; this is the
-  // second line of defence, and it is the one that holds whatever else
-  // upstream does.)
+  // Monotonic by construction rather than by a latch. `isLoading` is the
+  // wrong question: it is `isPending && isFetching`, so it reads FALSE in the
+  // gap between a failed attempt and its retry, and TRUE again when the retry
+  // fires — settled, unsettled, settled, with nothing about this reader
+  // having changed. A latch over the top of that only froze whichever answer
+  // happened to land first, which could be the half-loaded one.
   //
-  // Hence a one-way latch: resolving until the first settled answer, never
-  // again after it. Only settled answers while `enabled` count — a gate
-  // switched off, as the rail's is on every other perspective, has answered
-  // nothing, and treating that as settled would latch a wrong answer.
-  // Set during render, not from an effect: React supports a component
-  // adjusting its own state while rendering (it re-runs the render before
-  // committing anything), and that is what this needs — an effect would let
-  // one render escape with `isResolving` already wrong.
-  const [everSettled, setEverSettled] = useState(false);
-  const stillAnswering = enabled && (cc.isLoading || opd.isLoading || expense.isLoading);
-  if (enabled && !stillAnswering && !everSettled) setEverSettled(true);
-  const isResolving = stillAnswering && !everSettled;
+  // `hasAnswered` asks the question that actually has a stable answer: has
+  // this backend finished having its say, FOR THE IDENTITY IT WAS ASKED
+  // ABOUT? `isSuccess` and `isError` are terminal in React Query — a refetch
+  // of an errored query keeps `status: "error"` until it succeeds — so
+  // neither ever goes back to false for a given query, and a backend this
+  // environment has no URL for is counted as answered because it is never
+  // going to be asked.
+  //
+  // That makes `isResolving` monotonic per identity, not for the life of the
+  // mount outright: `userSub` is part of every query key here, so an identity
+  // retry (a decode failure moving `useAsgardeoSub` from "error" back to
+  // "loading") or a different account signing in in the same tab both point
+  // these queries at a key that has never answered, and `isResolving` goes
+  // back to true — correctly, since that identity genuinely has not. What it
+  // cannot do is flicker for a reason that has nothing to do with the
+  // reader, which is the bug this replaced.
+  const hasAnswered = (q: { isSuccess: boolean; isError: boolean }, configured: boolean) =>
+    !configured || q.isSuccess || q.isError;
+
+  const isResolving =
+    enabled &&
+    !(
+      hasAnswered(cc, isCcBackendConfigured()) &&
+      hasAnswered(opd, isOpdBackendConfigured()) &&
+      hasAnswered(expense, isExpenseBackendConfigured())
+    );
 
   return { canSee, isResolving, ccHasOwnCard, opdFinance, opdErrored };
 }

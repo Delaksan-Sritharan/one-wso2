@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import type { Capability } from "@constants/appMenu";
 
@@ -34,20 +34,53 @@ const roles = {
   expenseLead: false,
   expenseFinance: false,
   cc: [] as string[],
+  /** Nothing has answered yet. */
   loading: false,
+  /**
+   * The gap between a failed attempt and its retry: React Query reports
+   * `isLoading: false` there (it is `isPending && isFetching`, and nothing is
+   * in flight) while the query has still produced no answer. Reading
+   * `isLoading` treated this as settled; `isSuccess || isError` does not.
+   */
+  betweenRetries: false,
+  /** The OPD lookup came back a failure rather than a role. */
+  opdErrored: false,
 };
 
+// `isSuccess`/`isError` are what the gate reads to decide whether a backend
+// has finished having its say. Neither ever goes back to false in React Query
+// — a refetch of an errored query keeps `status: "error"` until it succeeds —
+// so this fixture does not let them either.
+const answered = () => ({
+  isLoading: roles.loading && !roles.betweenRetries,
+  isError: false,
+  isSuccess: !roles.loading && !roles.betweenRetries,
+});
+
 vi.mock("../cc/useCc", () => ({
-  useCcUserInfo: () => ({ data: { privileges: roles.cc }, isLoading: roles.loading }),
+  useCcUserInfo: () => ({ data: { privileges: roles.cc }, ...answered() }),
 }));
 vi.mock("../opd/useOpd", () => ({
-  useOpdUserInfo: () => ({ data: { userRoles: roles.opd }, isLoading: roles.loading, isError: false }),
+  useOpdUserInfo: () => ({
+    data: { userRoles: roles.opd },
+    isLoading: answered().isLoading,
+    isError: roles.opdErrored,
+    isSuccess: answered().isSuccess && !roles.opdErrored,
+  }),
 }));
 vi.mock("../expense/useExpense", () => ({
   useExpenseAppData: () => ({
     data: { enableLeadView: roles.expenseLead, enableFinanceView: roles.expenseFinance },
-    isLoading: roles.loading,
+    ...answered(),
   }),
+}));
+
+// Every backend has a URL in this suite unless a test says otherwise; the
+// gate treats an unconfigured one as having already answered.
+vi.mock("@config/apiConfig", () => ({
+  isCcBackendConfigured: () => true,
+  isOpdBackendConfigured: () => true,
+  isExpenseBackendConfigured: () => true,
 }));
 
 const { useFinanceGate, canSeeMasterData } = await import("./useFinanceGate");
@@ -61,6 +94,8 @@ beforeEach(() => {
   roles.expenseFinance = false;
   roles.cc = [];
   roles.loading = false;
+  roles.betweenRetries = false;
+  roles.opdErrored = false;
 });
 
 // The entry appears when ANY claim is approvable. Requiring all three would
@@ -173,6 +208,31 @@ describe("the Finance Overview entry", () => {
     roles.opd = [555];
     expect(gate().canSee("finance-overview")).toBe(true);
   });
+
+  // THE regression this entry was reported for. `foldIdentityError` reports
+  // EVERY one of these queries as `isError` whenever identity itself fails to
+  // resolve — a token-refresh hiccup is enough — so an entry that opened on a
+  // failed lookup opened for readers holding no role at all, and closed again
+  // the moment identity recovered: the row appearing, vanishing, appearing.
+  // A role is the only thing that opens this.
+  it("stays hidden when the OPD lookup fails and the reader holds no role", () => {
+    roles.opdErrored = true;
+    expect(gate().canSee("finance-overview")).toBe(false);
+  });
+
+  it("is not opened by a failed lookup even alongside a submit-only OPD role", () => {
+    roles.opd = [444];
+    roles.opdErrored = true;
+    expect(gate().canSee("finance-overview")).toBe(false);
+  });
+
+  // The flip side, so the fix above cannot be read as "errors hide things":
+  // a real role still opens it while its backend is having a bad minute.
+  it("still opens for a real approver whose lookup happened to fail", () => {
+    roles.opd = [555];
+    roles.opdErrored = true;
+    expect(gate().canSee("finance-overview")).toBe(true);
+  });
 });
 
 // Pending Submissions, Pending Approvals and History are each the reader's
@@ -211,38 +271,36 @@ describe("the Master Data tables", () => {
   const admin = new Set<Capability>(["employee", "admin"]);
   const employee = new Set<Capability>(["employee"]);
 
-  function previewFlag(on: boolean): void {
-    window.config = {
-      ...window.config,
-      ONE_WSO2_PREVIEW_FEATURES: { "finance-master-data": on },
-    };
-  }
-
-  afterEach(() => {
-    delete window.config?.ONE_WSO2_PREVIEW_FEATURES;
-  });
-
-  it("opens for an admin in an environment that has the feature", () => {
-    previewFlag(true);
+  it("opens for an admin", () => {
     expect(canSeeMasterData(admin)).toBe(true);
   });
 
-  // The flag is the reason production is safe while this sits in `main`.
-  it("stays shut for an admin where the flag is off", () => {
-    previewFlag(false);
-    expect(canSeeMasterData(admin)).toBe(false);
-  });
-
-  // Absent means off — prod is safe because nobody touched its config, not
-  // because somebody remembered to write `false`.
-  it("stays shut where no flag was ever set", () => {
-    expect(canSeeMasterData(admin)).toBe(false);
-  });
-
-  it("stays shut for a non-admin even where the flag is on", () => {
-    previewFlag(true);
+  // `admin` is the whole rule now that the "finance-master-data" preview flag
+  // has been removed — so this is the only thing standing between finance's
+  // reference tables and everyone else.
+  it("stays shut for a non-admin", () => {
     expect(canSeeMasterData(employee)).toBe(false);
+  });
+
+  // Capabilities read as undefined until the identity query answers, and a
+  // restricted entry must fail closed while it does.
+  it("stays shut while capabilities are still unknown", () => {
     expect(canSeeMasterData(undefined)).toBe(false);
+  });
+
+  // The four tabs answer as one — listed individually in the switch so a new
+  // table has to be named there before it appears, rather than matching a
+  // prefix and going open by accident.
+  it("answers the same for all four tables", () => {
+    for (const id of [
+      "master-data-subsidiaries",
+      "master-data-departments",
+      "master-data-expense-types",
+      "master-data-credit-cards",
+    ]) {
+      expect(renderHook(() => useFinanceGate(true, employee)).result.current.canSee(id)).toBe(false);
+      expect(renderHook(() => useFinanceGate(true, admin)).result.current.canSee(id)).toBe(true);
+    }
   });
 });
 
@@ -252,12 +310,11 @@ describe("the Master Data tables", () => {
 // answer: it is a screen that was there blanking and coming back, which is
 // what the Finance section flickering was.
 //
-// It can go back on its own, for reasons that say nothing about this reader: a
-// query disabled because its backend is not configured in an environment stays
-// `isPending` for good, so `foldIdentityError` reports it as loading again
-// every time identity re-checks. Hence a one-way latch, pinned here.
+// It is monotonic by construction rather than by a latch: it reads
+// `isSuccess || isError`, which React Query never walks back, instead of
+// `isLoading`, which drops to false between a failed attempt and its retry.
 describe("settling, and staying settled", () => {
-  function latching(enabled = true) {
+  function settling(enabled = true) {
     const { result, rerender } = renderHook(({ on }) => useFinanceGate(on), {
       initialProps: { on: enabled },
     });
@@ -266,33 +323,35 @@ describe("settling, and staying settled", () => {
 
   it("reports resolving until the backends have answered", () => {
     roles.loading = true;
-    expect(latching().result.current.isResolving).toBe(true);
+    expect(settling().result.current.isResolving).toBe(true);
   });
 
-  // THE regression.
-  it("never reports resolving again once they have", () => {
+  it("stops resolving once they have", () => {
     roles.loading = true;
-    const { result, rerender } = latching();
+    const { result, rerender } = settling();
     expect(result.current.isResolving).toBe(true);
 
     roles.loading = false;
     rerender({ on: true });
     expect(result.current.isResolving).toBe(false);
-
-    // A backend going back to loading — an identity re-check reaching a query
-    // that never ran, a refetch — must not un-settle the gate.
-    roles.loading = true;
-    rerender({ on: true });
-    expect(result.current.isResolving).toBe(false);
   });
 
-  // A gate switched off has answered nothing, so its all-false reading is not
-  // a settled answer to latch. The rail's gate is off on every perspective but
-  // Me and Finance, and latching there would have it report "settled, no
-  // access" the moment someone switched to Finance.
+  // THE regression. `isLoading` is false in the gap between a failed attempt
+  // and its retry, so reading it called this settled — and the screens keyed
+  // off it drew their answer from half-loaded data, then redrew it when the
+  // retry landed. Nothing about the reader changed in between.
+  it("keeps resolving through the gap between an attempt and its retry", () => {
+    roles.loading = true;
+    roles.betweenRetries = true;
+    expect(settling().result.current.isResolving).toBe(true);
+  });
+
+  // A gate switched off has answered nothing. The rail's is off on every
+  // perspective but Me and Finance, and counting that as settled would have
+  // it report "no access" the moment someone switched to Finance.
   it("does not count a switched-off gate as having answered", () => {
     roles.loading = true;
-    const { result, rerender } = latching(false);
+    const { result, rerender } = settling(false);
     expect(result.current.isResolving).toBe(false);
 
     rerender({ on: true });

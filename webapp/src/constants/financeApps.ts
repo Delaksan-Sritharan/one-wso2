@@ -140,6 +140,18 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
       { id: "cc-settings", label: "Settings", desc: "Upload and reconcile bank statements (finance).", requires: ["admin"], path: `${CC_PATH}/settings` },
     ],
   },
+];
+
+/**
+ * Master Data, on its own so the rail can place it last.
+ *
+ * Split out of `FINANCE_PERSPECTIVE_APPS` rather than reordered inside it:
+ * that registry is spread high up the Finance rail, next to the screens
+ * people open all day, and this is reference data an administrator edits
+ * occasionally. It belongs under everything else — see the `finance`
+ * perspective, which spreads this after MIS.
+ */
+export const FINANCE_MASTER_DATA_APPS: readonly MenuApp[] = [
   {
     // The reference data the other finance apps are keyed against. Its own
     // entry rather than a Settings tab inside one of them: all four tables
@@ -151,10 +163,7 @@ export const FINANCE_PERSPECTIVE_APPS: readonly MenuApp[] = [
     purpose: "Maintain the subsidiaries, departments, expense types and cards the finance apps refer to.",
     // `requires: ["admin"]` on all four: this is finance-maintained reference
     // data, same gate as cc Settings. It only forces useFinanceGate to answer
-    // for the id — see its master-data case, which also checks the
-    // "finance-master-data" preview flag (previewFeatures.ts) before `admin`,
-    // so this stays hidden in an environment until that flag is turned on
-    // there.
+    // for the id — see its master-data case.
     items: [
       { id: "master-data-subsidiaries", label: "Subsidiaries", desc: "WSO2 legal entities and their tax codes.", requires: ["admin"], path: masterDataPaths.subsidiaries },
       { id: "master-data-departments", label: "Departments", desc: "Departments, engagement codes and their GL codes.", requires: ["admin"], path: masterDataPaths.departments },
@@ -169,6 +178,7 @@ export const FINANCE_APPS: readonly MenuApp[] = [
   ...ME_FINANCE_APPS,
   ...FINANCE_OVERVIEW_APPS,
   ...FINANCE_PERSPECTIVE_APPS,
+  ...FINANCE_MASTER_DATA_APPS,
 ];
 
 export const FINANCE_ITEM_IDS: ReadonlySet<string> = new Set([

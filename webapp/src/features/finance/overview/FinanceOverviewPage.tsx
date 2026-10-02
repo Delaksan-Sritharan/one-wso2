@@ -68,16 +68,14 @@ export default function FinanceOverviewPage() {
   // Hooks — every hook has to run on every render, so this can't follow an
   // early return.
   //
-  // `opdErrored` belongs in this same check, not just `opdFinance`: it's
-  // exactly why `useFinanceGate`'s `finance-overview` case treats a failed
-  // OPD lookup as a reason to show Overview at all (a no-card reader with an
-  // erroring OPD lookup has nothing else that would put them here) — landing
-  // that reader on the empty CC tab instead of the OPD tab with its own
-  // retry would make the rail entry's whole reason for being reachable
-  // invisible.
+  // Roles only — a failed OPD lookup no longer counts for anything here, the
+  // same as in `useFinanceGate`'s `finance-overview` case. Treating an error
+  // as a reason to open this screen is what showed the whole entry to readers
+  // holding no OPD role whenever identity hiccuped, and took it away again
+  // when identity recovered.
   const [picked, setPicked] = useState<OverviewTab | null>(null);
   const section: OverviewTab =
-    picked ?? (!gate.ccHasOwnCard && (gate.opdFinance || gate.opdErrored) ? "opd" : "cc");
+    picked ?? (!gate.ccHasOwnCard && gate.opdFinance ? "opd" : "cc");
 
   // Nothing rendered while resolving — not even a skeleton. The rail already
   // shows no row for this entry until its gate settles (SideRail fails
@@ -112,7 +110,7 @@ export default function FinanceOverviewPage() {
   // above already returned for anyone who fails both branches of this same
   // filter, so by this line at least one of them is guaranteed true.
   const visibleSections = OVERVIEW_SECTIONS.filter((s) =>
-    s.value === "cc" ? gate.ccHasOwnCard : gate.opdFinance || gate.opdErrored,
+    s.value === "cc" ? gate.ccHasOwnCard : gate.opdFinance,
   );
 
   const switcher = (
