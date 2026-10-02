@@ -181,8 +181,10 @@ export default function AdminIndividualContributorTab() {
           tone="error"
           message={`Unable to load promotion requests. ${humanizeHttpError(requests.error)}`}
         />
-      ) : rows.length === 0 ? (
+      ) : allRows.length === 0 ? (
         <PromotionEmptyState message="There are no promotion requests for the active cycle" />
+      ) : rows.length === 0 ? (
+        <PromotionEmptyState message="No promotion requests match the search" />
       ) : (
         <Card variant="outlined" sx={{ p: 2 }}>
           <DataGrid.DataGrid

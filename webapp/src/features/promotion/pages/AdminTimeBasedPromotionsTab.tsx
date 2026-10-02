@@ -188,9 +188,9 @@ export default function AdminTimeBasedPromotionsTab() {
         <JobBandTransitionChips currentJobBand={params.row.currentJobBand} nextJobBand={params.row.nextJobBand} />
       ),
     },
-    // Hidden by default (toggle via the toolbar's Columns panel) — matches
-    // source's own `defaultVisible: false` columns, kept out of the way
-    // instead of widening the grid for data most admins don't need daily.
+    // Hidden by default (toggle via the toolbar's Columns panel) — kept out
+    // of the way instead of widening the grid for data most admins don't
+    // need daily.
     {
       display: "flex",
       field: "declinedReason",
