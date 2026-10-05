@@ -16,7 +16,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
@@ -212,12 +212,22 @@ describe("Repository Stats", () => {
 
     expect(await screen.findByRole("cell", { name: "120" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Monthly" }));
+    expect(await screen.findByRole("heading", { name: "Change in 2026-09" })).toBeInTheDocument();
     expect(screen.getAllByRole("cell", { name: "8" })).toHaveLength(4);
     expect(screen.queryByRole("cell", { name: "120" })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Daily" }));
-    expect(screen.queryByRole("cell", { name: "8" })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("cell", { name: "0" }).length).toBeGreaterThan(0);
+    expect(await screen.findByRole("heading", { name: "Change on 2026-09-29" })).toBeInTheDocument();
+    expect(screen.queryByRole("cell", { name: "0" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("cell", { name: "120" })).not.toBeInTheDocument();
+    const day = screen.getByLabelText("Day") as HTMLInputElement;
+    expect(day.value).toBe("2026-09-29");
+    expect(day.min).toBe("2026-08-31");
+    expect(day.max).toBe("2026-09-30");
+
+    fireEvent.change(day, { target: { value: "" } });
+    expect(screen.queryByRole("cell", { name: "120" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("cell", { name: "—" }).length).toBeGreaterThan(0);
   });
 
   it("keeps the grain in the address and asks the metric series for it", async () => {
@@ -230,9 +240,13 @@ describe("Repository Stats", () => {
     expect(screen.queryByRole("group", { name: "Chart type" })).not.toBeInTheDocument();
     expect(screen.getByTestId("where")).toHaveTextContent("interval=month");
     const monthCall = fetchMock.mock.calls.find((call) => String(call[0]).includes("interval=month"));
-    const dayCall = fetchMock.mock.calls.find((call) => String(call[0]).includes("interval=day"));
     expect(monthCall).toBeTruthy();
-    expect(dayCall).toBeTruthy();
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("interval=day"))).toBe(false);
+
+    await userEvent.click(screen.getByRole("button", { name: "Monthly" }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("interval=day"))).toBe(true),
+    );
   });
 
   it("limits the table and the request to the products in the address", async () => {
@@ -308,7 +322,9 @@ describe("Repository Stats", () => {
       }),
     );
     renderStats("/engineering/repository-stats?interval=month");
+    await userEvent.click(await screen.findByRole("button", { name: "Monthly" }));
     expect(await screen.findByText(/forks unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText("No data for the selected range")).toBeInTheDocument();
   });
 
   it("shows an error the person can retry", async () => {

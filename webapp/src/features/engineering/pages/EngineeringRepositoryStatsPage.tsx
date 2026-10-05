@@ -81,10 +81,34 @@ function readRepos(value: string | null): number[] {
     .filter((id) => Number.isInteger(id) && id > 0);
 }
 
-function defaultTableDate(mode: TableMode, to: string): string {
-  if (mode === "day") return to;
-  if (mode === "month") return to.slice(0, 7);
-  return "";
+const MISSING = "—";
+
+function tableCaption(mode: TableMode, date: string): string {
+  if (mode === "day" && date !== "") return `Change on ${date}`;
+  if (mode === "month" && date !== "") return `Change in ${date}`;
+  if (mode === "day") return "Change on the selected day";
+  if (mode === "month") return "Change in the selected month";
+  return "Latest counts; clones over the range";
+}
+
+function latestActivityDate(
+  metricSeries: readonly (readonly DailySeries[] | undefined)[],
+  clones: readonly CloneSeriesItem[] | undefined,
+): string | null {
+  let latest: string | null = null;
+  for (const series of metricSeries) {
+    for (const item of series ?? []) {
+      for (const point of item.points) {
+        if (latest == null || point.date > latest) latest = point.date;
+      }
+    }
+  }
+  for (const item of clones ?? []) {
+    for (const point of item.points) {
+      if (latest == null || point.date > latest) latest = point.date;
+    }
+  }
+  return latest;
 }
 
 function isGithubMeasure(stat: StatKey): stat is RepositoryMeasure {
@@ -101,11 +125,13 @@ function changeAt(
 ): number | null {
   if (mode === "total" || series == null || date === "") return null;
   const item = series.find((candidate) => candidate.repoId === repoId);
-  if (!item) return 0;
-  if (mode === "day") return item.points.find((point) => point.date === date)?.value ?? 0;
-  return item.points
-    .filter((point) => point.date.startsWith(date))
-    .reduce((sum, point) => sum + point.value, 0);
+  if (!item) return null;
+  if (mode === "day") {
+    return item.points.find((point) => point.date === date)?.value ?? null;
+  }
+  const points = item.points.filter((point) => point.date.startsWith(date));
+  if (points.length === 0) return null;
+  return points.reduce((sum, point) => sum + point.value, 0);
 }
 
 function snapshotCount(
@@ -115,25 +141,28 @@ function snapshotCount(
   return snapshot?.[field] ?? 0;
 }
 
-function cloneTotals(
+function cloneFigure(
   series: readonly CloneSeriesItem[],
+  repoId: number,
   mode: TableMode,
   date: string,
-): Map<number, { count: number; uniques: number }> {
-  const totals = new Map<number, { count: number; uniques: number }>();
-  for (const item of series) {
-    let points = item.points;
-    if (mode === "month" && date !== "") {
-      points = item.points.filter((point) => point.date.startsWith(date));
-    } else if (mode === "day" && date !== "") {
-      points = item.points.filter((point) => point.date === date);
-    }
-    totals.set(item.repoId, {
-      count: points.reduce((sum, point) => sum + point.count, 0),
-      uniques: points.reduce((sum, point) => sum + point.uniques, 0),
-    });
+  field: "count" | "uniques",
+): number | null {
+  const item = series.find((candidate) => candidate.repoId === repoId);
+  if (mode === "total") {
+    return (item?.points ?? []).reduce((sum, point) => sum + point[field], 0);
   }
-  return totals;
+  if (item == null || date === "") return null;
+  const points =
+    mode === "day"
+      ? item.points.filter((point) => point.date === date)
+      : item.points.filter((point) => point.date.startsWith(date));
+  if (points.length === 0) return null;
+  return points.reduce((sum, point) => sum + point[field], 0);
+}
+
+function showCount(value: number | null): string {
+  return value == null ? MISSING : formatCount(value);
 }
 
 // Clone history has no grain of its own. Month sums the days, and cumulative
@@ -192,7 +221,7 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
   const queryEnabled = enabled && !rangeInverted;
   const repoKey = repos.join(",");
   const [tableMode, setTableMode] = useState<TableMode>("total");
-  const [tableDate, setTableDate] = useState("");
+  const [pickedDate, setPickedDate] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [chart, setChart] = useState<"line" | "bar">("line");
 
@@ -210,19 +239,18 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
   const metric = useQuery({
     queryKey: ["product-download-stats", "metric", base, chartMeasure, from, to, interval, repoKey],
     enabled: queryEnabled && chartMeasure != null,
-    queryFn: async () =>
-      getMetricSeries(await getToken(), {
-        metric: chartMeasure ?? "stars",
-        from,
-        to,
-        interval,
-        repos,
-      }),
+    queryFn: async () => {
+      if (chartMeasure == null) throw new Error("Repository stats has no GitHub measure");
+      return getMetricSeries(await getToken(), { metric: chartMeasure, from, to, interval, repos });
+    },
   });
-  const starsTable = useDayMetric("stars", { base, from, to, repoKey, repos, queryEnabled, getToken });
-  const forksTable = useDayMetric("forks", { base, from, to, repoKey, repos, queryEnabled, getToken });
-  const watchersTable = useDayMetric("watchers", { base, from, to, repoKey, repos, queryEnabled, getToken });
-  const issuesTable = useDayMetric("openIssues", { base, from, to, repoKey, repos, queryEnabled, getToken });
+  const dailyTable = tableMode !== "total";
+  const dayEnabled = (measure: RepositoryMeasure) =>
+    queryEnabled && dailyTable && !(interval === "day" && chartMeasure === measure);
+  const starsTable = useDayMetric("stars", { base, from, to, repoKey, repos, enabled: dayEnabled("stars"), getToken });
+  const forksTable = useDayMetric("forks", { base, from, to, repoKey, repos, enabled: dayEnabled("forks"), getToken });
+  const watchersTable = useDayMetric("watchers", { base, from, to, repoKey, repos, enabled: dayEnabled("watchers"), getToken });
+  const issuesTable = useDayMetric("openIssues", { base, from, to, repoKey, repos, enabled: dayEnabled("openIssues"), getToken });
 
   if (!preview) {
     return <Typography>Engineering isn't available yet.</Typography>;
@@ -268,24 +296,49 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
     return productSearch === "" || label.toLowerCase().includes(productSearch.toLowerCase());
   });
 
-  const chartPending = chartMeasure == null ? clones.isPending : metric.isPending;
-  const chartFailed = chartMeasure == null ? clones.isError || clones.data == null : metric.isError || metric.data == null;
-  const tableQueries = [starsTable, forksTable, watchersTable, issuesTable];
-  const tablePending = tableQueries.some((query) => query.isPending) || clones.isPending;
-  const tableFailed =
-    clones.isError ||
-    clones.data == null ||
-    tableQueries.some((query) => query.isError || query.data == null);
-  const statsError = [metric, clones, ...tableQueries].find((query) => query.error != null)?.error;
+  const daySeries = (measure: RepositoryMeasure, query: UseQueryResult<{ series: DailySeries[] }, Error>) =>
+    interval === "day" && chartMeasure === measure ? metric.data?.series : query.data?.series;
+  const starsSeries = daySeries("stars", starsTable);
+  const forksSeries = daySeries("forks", forksTable);
+  const watchersSeries = daySeries("watchers", watchersTable);
+  const issuesSeries = daySeries("openIssues", issuesTable);
+  const latest = latestActivityDate(
+    [starsSeries, forksSeries, watchersSeries, issuesSeries],
+    clones.data?.series,
+  );
+  const tableDate =
+    tableMode === "total"
+      ? ""
+      : pickedDate !== null
+        ? pickedDate
+        : latest == null
+          ? ""
+          : tableMode === "month"
+            ? latest.slice(0, 7)
+            : latest;
 
-  const retry = () => {
+  const chartPending = chartMeasure == null ? clones.isPending : metric.isPending;
+  const chartFailed =
+    chartMeasure == null ? clones.isError || clones.data == null : metric.isError || metric.data == null;
+  const tableQueries = [starsTable, forksTable, watchersTable, issuesTable];
+  const tableLoading = clones.isLoading || tableQueries.some((query) => query.isLoading);
+  const tableError =
+    chartMeasure != null && clones.error != null
+      ? clones.error
+      : tableQueries.find((query) => query.error != null)?.error;
+  const chartError = chartMeasure == null ? clones.error : metric.error;
+
+  const refetchIfFetched = (query: { isFetched: boolean; isFetching: boolean; refetch: () => Promise<unknown> }) => {
+    if (query.isFetched || query.isFetching) void query.refetch();
+  };
+  const retryChart = () => {
     void repositories.refetch();
+    if (chartMeasure == null) void clones.refetch();
+    else void metric.refetch();
+  };
+  const retryTable = () => {
     void clones.refetch();
-    void starsTable.refetch();
-    void forksTable.refetch();
-    void watchersTable.refetch();
-    void issuesTable.refetch();
-    void metric.refetch();
+    for (const query of tableQueries) refetchIfFetched(query);
   };
 
   const chartSeries =
@@ -293,7 +346,7 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
       ? cloneChartSeries(clones.data?.series ?? [], stat === "uniqueCloners" ? "uniques" : "count", interval)
       : (metric.data?.series ?? []);
   const label = STAT_OPTIONS.find((option) => option.value === stat)?.label ?? "Stars";
-  const totals = cloneTotals(clones.data?.series ?? [], tableMode, tableDate);
+  const cloneSeries = clones.data?.series ?? [];
 
   return (
     <Box>
@@ -384,18 +437,18 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
       ) : repositories.isPending ? (
         <Loading label="Loading products…" />
       ) : repositories.isError || repositories.data == null ? (
-        <ErrorNotice onRetry={retry} error={repositories.error}>
+        <ErrorNotice onRetry={() => void repositories.refetch()} error={repositories.error}>
           Couldn't load products.
-        </ErrorNotice>
-      ) : chartPending || tablePending ? (
-        <Loading label="Loading repository stats…" />
-      ) : chartFailed || tableFailed ? (
-        <ErrorNotice onRetry={retry} error={statsError}>
-          Couldn't load repository stats.
         </ErrorNotice>
       ) : (
         <>
-          {chartSeries.every((item) => item.points.length === 0) ? (
+          {chartPending ? (
+            <Loading label="Loading repository stats…" />
+          ) : chartFailed ? (
+            <ErrorNotice onRetry={retryChart} error={chartError}>
+              Couldn't load repository stats.
+            </ErrorNotice>
+          ) : chartSeries.every((item) => item.points.length === 0) ? (
             <Typography>No data for the selected range</Typography>
           ) : (
             <StatsChart
@@ -406,7 +459,6 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
               title={`${label} over time`}
             />
           )}
-          {active.length === 0 ? null : (
           <Card sx={{ p: 2, mt: 2 }}>
             <Stack
               direction={{ xs: "column", sm: "row" }}
@@ -414,7 +466,7 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
               sx={{ mb: 2, justifyContent: "space-between", alignItems: { sm: "center" } }}
             >
               <Typography component="h2" variant="h6">
-                Current stats
+                {tableCaption(tableMode, tableDate)}
               </Typography>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 {tableMode !== "total" && (
@@ -423,8 +475,14 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
                     type={tableMode === "month" ? "month" : "date"}
                     size="small"
                     value={tableDate}
-                    onChange={(event) => setTableDate(event.target.value)}
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    onChange={(event) => setPickedDate(event.target.value)}
+                    slotProps={{
+                      inputLabel: { shrink: true },
+                      htmlInput: {
+                        min: tableMode === "month" ? from.slice(0, 7) : from,
+                        max: tableMode === "month" ? to.slice(0, 7) : to,
+                      },
+                    }}
                   />
                 )}
                 <ToggleButtonGroup
@@ -435,7 +493,7 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
                   onChange={(_event, value: TableMode | null) => {
                     if (!value) return;
                     setTableMode(value);
-                    setTableDate(defaultTableDate(value, to));
+                    setPickedDate(null);
                   }}
                 >
                   <ToggleButton value="total">Total</ToggleButton>
@@ -444,18 +502,18 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
                 </ToggleButtonGroup>
               </Stack>
             </Stack>
-            <TextField
-              label="Search products"
-              size="small"
-              value={productSearch}
-              onChange={(event) => setProductSearch(event.target.value)}
-              sx={{ mb: 2 }}
-            />
-            {listed.length === 0 ? (
+            {tableLoading ? (
+              <Loading label="Loading repository stats…" />
+            ) : !chartFailed && tableError != null ? (
+              <ErrorNotice onRetry={retryTable} error={tableError}>
+                Couldn't load repository stats.
+              </ErrorNotice>
+            ) : active.length === 0 ? null : listed.length === 0 ? (
               <Typography>No products match your search</Typography>
             ) : (
-              <ListingTable.Provider>
+              <ListingTable.Provider searchValue={productSearch} onSearchChange={setProductSearch}>
                 <ListingTable.Container>
+                  <ListingTable.Toolbar showSearch searchPlaceholder="Search products" />
                   <ListingTable bordered>
                     <ListingTable.Head>
                       <ListingTable.Row>
@@ -471,33 +529,36 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
                     <ListingTable.Body>
                       {listed.map((repository) => {
                         const snapshot = repository.latestSnapshot;
-                        const clonesForRepo = totals.get(repository.id);
                         const stars =
-                          changeAt(starsTable.data?.series, repository.id, tableMode, tableDate) ??
-                          snapshotCount(snapshot, "stargazersCount");
+                          tableMode === "total"
+                            ? snapshotCount(snapshot, "stargazersCount")
+                            : changeAt(starsSeries, repository.id, tableMode, tableDate);
                         const forks =
-                          changeAt(forksTable.data?.series, repository.id, tableMode, tableDate) ??
-                          snapshotCount(snapshot, "forksCount");
+                          tableMode === "total"
+                            ? snapshotCount(snapshot, "forksCount")
+                            : changeAt(forksSeries, repository.id, tableMode, tableDate);
                         const watchers =
-                          changeAt(watchersTable.data?.series, repository.id, tableMode, tableDate) ??
-                          snapshotCount(snapshot, "watchersCount");
+                          tableMode === "total"
+                            ? snapshotCount(snapshot, "watchersCount")
+                            : changeAt(watchersSeries, repository.id, tableMode, tableDate);
                         const issues =
-                          changeAt(issuesTable.data?.series, repository.id, tableMode, tableDate) ??
-                          snapshotCount(snapshot, "openIssuesCount");
+                          tableMode === "total"
+                            ? snapshotCount(snapshot, "openIssuesCount")
+                            : changeAt(issuesSeries, repository.id, tableMode, tableDate);
                         return (
                           <ListingTable.Row key={repository.id}>
                             <ListingTable.Cell>
                               {productLabel(repository.productName, repository.repoName)}
                             </ListingTable.Cell>
-                            <ListingTable.Cell align="right">{formatCount(stars)}</ListingTable.Cell>
-                            <ListingTable.Cell align="right">{formatCount(forks)}</ListingTable.Cell>
-                            <ListingTable.Cell align="right">{formatCount(watchers)}</ListingTable.Cell>
-                            <ListingTable.Cell align="right">{formatCount(issues)}</ListingTable.Cell>
+                            <ListingTable.Cell align="right">{showCount(stars)}</ListingTable.Cell>
+                            <ListingTable.Cell align="right">{showCount(forks)}</ListingTable.Cell>
+                            <ListingTable.Cell align="right">{showCount(watchers)}</ListingTable.Cell>
+                            <ListingTable.Cell align="right">{showCount(issues)}</ListingTable.Cell>
                             <ListingTable.Cell align="right">
-                              {formatCount(clonesForRepo?.count ?? 0)}
+                              {showCount(cloneFigure(cloneSeries, repository.id, tableMode, tableDate, "count"))}
                             </ListingTable.Cell>
                             <ListingTable.Cell align="right">
-                              {formatCount(clonesForRepo?.uniques ?? 0)}
+                              {showCount(cloneFigure(cloneSeries, repository.id, tableMode, tableDate, "uniques"))}
                             </ListingTable.Cell>
                           </ListingTable.Row>
                         );
@@ -508,7 +569,6 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
               </ListingTable.Provider>
             )}
           </Card>
-          )}
         </>
       )}
     </Box>
@@ -523,13 +583,13 @@ function useDayMetric(
     to: string;
     repoKey: string;
     repos: number[];
-    queryEnabled: boolean;
+    enabled: boolean;
     getToken: () => Promise<string>;
   },
 ): UseQueryResult<{ series: DailySeries[] }, Error> {
   return useQuery({
     queryKey: ["product-download-stats", "metric", "day", args.base, metric, args.from, args.to, args.repoKey],
-    enabled: args.queryEnabled,
+    enabled: args.enabled,
     queryFn: async () =>
       getMetricSeries(await args.getToken(), {
         metric,
