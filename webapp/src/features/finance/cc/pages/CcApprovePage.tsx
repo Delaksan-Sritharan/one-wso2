@@ -14,30 +14,24 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useMemo, useState } from "react";
-import { Alert, Box, Button, MenuItem, Skeleton, Stack, TextField, Typography } from "@wso2/oxygen-ui";
-import { useNotifications } from "@context/notifications/NotificationsContext";
+import { useState } from "react";
+import { ToggleButton, ToggleButtonGroup } from "@wso2/oxygen-ui";
 import { isCcBackendConfigured } from "@config/apiConfig";
-import FinanceShell from "../../components/FinanceShell";
-import { describeError } from "../../util/financeError";
-import { CcTxnTable } from "../CcTxnTable";
-import { useCcApprove, useCcSaveEdit } from "../useCcMutations";
-import { CcEditDialog } from "../CcEditDialog";
-import { CcPickOne } from "../CcPickOne";
-import { CC_SNACK } from "../ccCopy";
-import { useCcTransactions, useCcUserInfo } from "../useCc";
-import { ccHasAccess, type CcTransaction } from "../ccTypes";
-
-// FILTER_ALL in approve-submissions/index.tsx.
-const ALL = "all";
 import { FINANCE_EYEBROW } from "@constants/financeApps";
-
-type ApproveRole = "lead" | "finance";
+import FinanceShell from "../../components/FinanceShell";
+import { ApproveBody, type ApproveRole } from "./CcApproveBody";
+import { useCcUserInfo } from "../useCc";
+import { ccHasAccess } from "../ccTypes";
 
 // approve-submissions/index.tsx:192-194 capitalises the role for the heading.
 const ROLE_TITLE: Record<ApproveRole, string> = { lead: "Lead", finance: "Finance" };
 
 /**
+ * Credit Card Expenses' own approval queue. The one place this app's
+ * submissions are decided on — approving is work done for other people, so
+ * it sits under Finance rather than under Me with the things you do for
+ * yourself.
+ *
  * Approving is a mode, not a per-row decision.
  *
  * The source derives one `approveRole` from the user's own roles with finance
@@ -55,8 +49,11 @@ export default function CcApprovePage() {
   const isFinance = ccHasAccess(userInfo.data, "finance");
   const isLead = ccHasAccess(userInfo.data, "lead");
   const [picked, setPicked] = useState<ApproveRole | null>(null);
-  const role: ApproveRole | null =
-    picked ?? (isFinance ? "finance" : isLead ? "lead" : null);
+  const role: ApproveRole | null = picked ?? (isFinance ? "finance" : isLead ? "lead" : null);
+  // Owned here rather than inside ApproveBody: the row ticked a moment ago
+  // may not even be actionable in the mode being switched to, so a role
+  // change has to clear it at this same point, not react to it afterwards.
+  const [checked, setChecked] = useState<Set<number>>(new Set());
 
   return (
     <FinanceShell
@@ -64,235 +61,48 @@ export default function CcApprovePage() {
       // No suffix until the roles have loaded — the source renders no heading
       // at all until then, so there is nothing to be faithful to mid-flight.
       title={
-        role
-          ? `Approve Expense Submissions (${ROLE_TITLE[role]})`
-          : "Approve Expense Submissions"
+        role ? `Approve Expense Submissions (${ROLE_TITLE[role]})` : "Approve Expense Submissions"
       }
       subtitle="Review and approve card transactions submitted by your team. Leads approve pending-lead items; finance gives the final approval."
       configured={isCcBackendConfigured()}
       configKey="ONE_WSO2_CC_EXPENSES_BACKEND_URL"
+      fill
     >
+      {/* index.tsx:198-210 — offered only to someone who holds both roles;
+          everyone else has one mode and the heading already names it. */}
+      {isLead && isFinance && role && (
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          value={role}
+          onChange={(_e, v) => {
+            if (!v) return;
+            setChecked(new Set());
+            setPicked(v as ApproveRole);
+          }}
+          sx={{ mb: 2, alignSelf: "flex-start" }}
+        >
+          <ToggleButton value="lead" sx={{ textTransform: "none" }}>
+            As lead
+          </ToggleButton>
+          <ToggleButton value="finance" sx={{ textTransform: "none" }}>
+            As finance
+          </ToggleButton>
+        </ToggleButtonGroup>
+      )}
       <ApproveBody
+        // Remounts on a role change, so ApproveBody's own filter state (user,
+        // card, and finance's stage filter) resets with it — otherwise a
+        // stage picked as finance silently narrows the queue again on
+        // switching back to it, after a detour through lead.
+        key={role}
         userInfo={userInfo}
         isLead={isLead}
         isFinance={isFinance}
         role={role}
-        onPickRole={setPicked}
+        checked={checked}
+        setChecked={setChecked}
       />
     </FinanceShell>
-  );
-}
-
-function ApproveBody({
-  userInfo,
-  isLead,
-  isFinance,
-  role,
-  onPickRole,
-}: {
-  userInfo: ReturnType<typeof useCcUserInfo>;
-  isLead: boolean;
-  isFinance: boolean;
-  role: ApproveRole | null;
-  onPickRole: (r: ApproveRole) => void;
-}) {
-  const txns = useCcTransactions();
-  const { showSuccess, showError } = useNotifications();
-  const [checked, setChecked] = useState<Set<number>>(new Set());
-
-  const email = userInfo.data?.workEmail;
-  // ApproveFilterPopover.tsx — the source narrows this queue by user, by card
-  // and, for finance only, by stage. Without the stage filter finance reads a
-  // list of both stages mixed together with no way to see just its own; the
-  // port had none of the three.
-  const [user, setUser] = useState(ALL);
-  const [card, setCard] = useState(ALL);
-  const [stage, setStage] = useState(ALL);
-  const [editing, setEditing] = useState<CcTransaction | null>(null);
-  const saveEdit = useCcSaveEdit();
-  const leadApprove = useCcApprove("lead");
-  const financeApprove = useCcApprove("finance");
-
-  const isUserLeadOf = (t: CcTransaction) => {
-    const leads = (t.leadEmail ?? "").split(",").map((s) => s.trim());
-    return email != null && leads.includes(email);
-  };
-
-  // ApproveTransactionsDataGrid.tsx:157-166 — actionable is decided by the mode
-  // alone: finance acts on pending_finance, a lead on pending_lead. Nothing is
-  // actionable before the mode is known.
-  const isSelectable = (t: CcTransaction) =>
-    role === "finance"
-      ? t.status === "pending_finance"
-      : role === "lead"
-        ? t.status === "pending_lead"
-        : false;
-
-  // index.tsx:116-127 — what the queue contains, per mode. As a lead you see
-  // only your own reports' first-stage rows; as finance you see both stages,
-  // anyone's, so what is still upstream is visible rather than absent.
-  const isVisible = (t: CcTransaction) =>
-    role === "finance"
-      ? t.status === "pending_lead" || t.status === "pending_finance"
-      : role === "lead"
-        ? t.status === "pending_lead" && isUserLeadOf(t)
-        : false;
-
-  const inMode = useMemo(
-    () => (txns.data ?? []).filter(isVisible),
-    // isVisible closes over role and email
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [txns.data, role, email],
-  );
-
-  // Built from what the mode already put on screen, so a filter never offers
-  // a person or card with nothing behind it.
-  const users = useMemo(() => [...new Set(inMode.map((t) => t.employeeEmail))].sort(), [inMode]);
-  const cards = useMemo(() => [...new Set(inMode.map((t) => t.ccNumber))].sort(), [inMode]);
-
-  const rows = useMemo(() => {
-    let list = inMode;
-    if (user !== ALL) list = list.filter((t) => t.employeeEmail === user);
-    if (card !== ALL) list = list.filter((t) => t.ccNumber === card);
-    // index.tsx:91-95 resets the stage filter whenever the mode is Lead — a
-    // lead's queue is one stage by definition, so the control is finance-only.
-    if (role === "finance" && stage !== ALL) list = list.filter((t) => t.status === stage);
-    return list;
-  }, [inMode, user, card, stage, role]);
-
-  // One stage per mode, so one endpoint — the source approves as the selected
-  // role (handleApproveSelection, ApproveTransactionsDataGrid.tsx:171-180).
-  const selected = useMemo(
-    () => rows.filter((t) => checked.has(t.id) && isSelectable(t)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, checked, role],
-  );
-  const selectedIds = selected.map((t) => t.id);
-  const selectedCount = selectedIds.length;
-  const approving = leadApprove.isPending || financeApprove.isPending;
-  // An edit saved from this screen is a separate request. Approving before it
-  // lands would book the row as it was before the correction, so the button
-  // waits for it. (The source does not guard this; see the spec.)
-  const busy = approving || saveEdit.isPending;
-
-  const toggle = (id: number) =>
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
-  const handleApprove = () => {
-    if (selectedCount === 0 || !role) return;
-    const approve = role === "finance" ? financeApprove : leadApprove;
-    approve
-      .mutateAsync(selectedIds)
-      .then(() => {
-        showSuccess(CC_SNACK.success.approveSubmission);
-        setChecked(new Set());
-      })
-      .catch((err) => showError(describeError(err)));
-  };
-
-  if (userInfo.isLoading) {
-    return <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1.5 }} />;
-  }
-  if (userInfo.isError) {
-    return <Alert severity="error">Couldn't load your finance profile. {describeError(userInfo.error)}</Alert>;
-  }
-  if (!isFinance && !isLead) {
-    return <Alert severity="info">Approvals are limited to leads and finance approvers.</Alert>;
-  }
-
-  return (
-    <Box>
-      {/* index.tsx:198-210 — offered only to someone who holds both roles;
-          everyone else has one mode and the heading already names it. */}
-      {isLead && isFinance && role && (
-        <Box sx={{ width: 220, mb: 2 }}>
-          <TextField
-            select
-            size="small"
-            fullWidth
-            label="Approve Role"
-            value={role}
-            onChange={(e) => onPickRole(e.target.value as ApproveRole)}
-          >
-            {/* FilterMenu.tsx:51-60 — the source's own option wording. */}
-            <MenuItem value="lead">Approve as Lead</MenuItem>
-            <MenuItem value="finance">Approve as Finance</MenuItem>
-          </TextField>
-        </Box>
-      )}
-
-      {/* FilterMenu.tsx:79-88 for the stage labels. */}
-      <Stack direction="row" spacing={1.5} sx={{ mb: 2, flexWrap: "wrap" }}>
-        <CcPickOne label="User" value={user} onChange={setUser} options={users} />
-        <CcPickOne label="Card" value={card} onChange={setCard} options={cards} />
-        {role === "finance" && (
-          <CcPickOne
-            label="Status"
-            value={stage}
-            onChange={setStage}
-            options={["pending_lead", "pending_finance"]}
-            optionLabel={(o) => (o === "pending_lead" ? "Pending Lead" : "Pending Finance")}
-          />
-        )}
-      </Stack>
-
-      {txns.isLoading ? (
-        <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1.5 }} />
-      ) : txns.isError ? (
-        <Alert severity="error">Couldn't load transactions. {describeError(txns.error)}</Alert>
-      ) : rows.length === 0 ? (
-        <Typography sx={{ fontSize: 13, color: "text.secondary", py: 3 }}>
-          Nothing to approve right now.
-        </Typography>
-      ) : (
-        <Stack spacing={2}>
-          <CcTxnTable
-            txns={rows}
-            showUser
-            showCard
-            selection={{ checked, onToggle: toggle, isSelectable }}
-            // ApproveTransactionsDataGrid.tsx:372 — enableEdit is finance-only,
-            // and EditPane.tsx:659-665 locks the fields while a row is still
-            // with the lead, so finance corrects only what has reached them.
-            edit={
-              isFinance
-                ? {
-                    canEdit: (t) => t.status === "pending_finance",
-                    onEdit: (t) => setEditing(t),
-                  }
-                : undefined
-            }
-          />
-          <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-            <Button
-              variant="contained"
-              color="success"
-              onClick={handleApprove}
-              disabled={selectedCount === 0 || busy}
-              sx={{ fontWeight: 600 }}
-            >
-              {approving ? "Approving…" : `Approve ${selectedCount || ""}`.trim()}
-            </Button>
-          </Box>
-        </Stack>
-      )}
-
-      <CcEditDialog
-        txn={editing}
-        onClose={() => setEditing(null)}
-        onSave={(patched) => {
-          setEditing(null);
-          saveEdit.mutate([patched], {
-            onSuccess: () => showSuccess(CC_SNACK.success.saveEdit),
-            onError: (err) => showError(describeError(err)),
-          });
-        }}
-      />
-    </Box>
   );
 }

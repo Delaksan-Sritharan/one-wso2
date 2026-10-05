@@ -147,4 +147,5 @@ describe("per-user preference", () => {
     setLandingPreference("csm");
     expect(landingPreference()).toBeUndefined();
   });
+
 });

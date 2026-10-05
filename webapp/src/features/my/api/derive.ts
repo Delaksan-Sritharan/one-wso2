@@ -14,13 +14,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import type { Employee, EmployeePersonalInfo, UserInfo } from "./types";
+import type {
+  AccountType,
+  Employee,
+  EmployeePersonalInfo,
+  UserInfo,
+} from "./types";
 
 // Small helpers for turning wire-format DTOs into what the profile UI
 // actually renders. Kept next to the types so field-format quirks live in
 // one place instead of being sprinkled across components.
 
 export const DASH = "—";
+
+// One shared label per Account Type — the card, the panel, and the
+// edit/add dialog all name the same three types and previously each kept
+// their own byte-identical copy of this map.
+export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
+  SALARY: "Salary",
+  CONSULTANCY: "Consultancy",
+  REIMBURSEMENT: "Reimbursement",
+};
 
 export function display(v: string | number | null | undefined): string {
   if (v === null || v === undefined) return DASH;

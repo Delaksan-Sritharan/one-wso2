@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import type { OxygenTheme } from "@wso2/oxygen-ui/styles/Themes/OxygenThemeBase";
+import type { OxygenTheme } from "@wso2/oxygen-ui/styles/OxygenThemeBase";
 import { pickAccessibleText } from "@utils/contrastText";
 
 /**
@@ -23,20 +23,23 @@ import { pickAccessibleText } from "@utils/contrastText";
  * Without it, every text/outlined `color="primary"` control fails WCAG AA in
  * light mode.
  *
- * The brand accent passes as orange-on-dark, but as *text or border on a light
- * surface* it fails AA: measured, `#F14E23` is 3.59:1 on white — enough for
- * large text, short of the 4.5:1 small-text floor. Rather than darken the brand
- * fill or patch each call site, shift only the text/border colour of text &
- * outlined primary controls to `primary.dark` (`#B93816`, 5.77:1), and only in
- * the light colour scheme via `applyStyles("light", …)`; dark mode is untouched.
+ * The accent passes as orange-on-dark, but as *text or border on a light
+ * surface* it fails: with the default WSO2 theme, `primary.main` `#FF7300` is
+ * 2.73:1 on white — under even the 3:1 non-text floor. Rather than patch each
+ * call site, shift only the text/border colour of text & outlined primary
+ * controls to `primary.dark`, and only in the light colour scheme via
+ * `applyStyles("light", …)`; dark mode is untouched. WSO2Theme declares no
+ * `dark`, so MUI derives `#CC5C00` at tonalOffset 0.2 — 4.12:1, which clears
+ * the 3:1 non-text floor and large text, but is still short of the 4.5:1
+ * small-text floor.
  *
  * What this does NOT fix: white-on-orange in *contained* primary controls,
- * which measures the same 3.59:1 and so fails AA for label text. This overlay
- * deliberately leaves it alone, because both remedies change the brand rather
- * than the code — near-black labels reach 5.52:1 but look unlike any other WSO2
- * product, and keeping white labels needs the fill darkened to about `#C93D18`
- * (5.04:1), which abandons the brand hex. That is a brand-owner decision and is
- * tracked as one; it is not an oversight here.
+ * which measures 2.73:1 and fails AA outright for label text. This overlay
+ * deliberately leaves it alone, because both remedies change Oxygen's theme
+ * rather than this code — near-black labels reach 7.13:1 but look unlike any
+ * other WSO2 product, and keeping white labels needs the fill darkened, which
+ * abandons the hex Oxygen ships. Since these themes are now used as shipped,
+ * that is an upstream Oxygen decision, not one to make here.
  *
  * Kept theme-agnostic — it reads `primary.dark` from whatever theme is active,
  * so it survives a theme swap rather than being a separate named theme.

@@ -18,8 +18,7 @@
 
 import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router";
-import { Alert, Box, Chip, Skeleton, Typography } from "@wso2/oxygen-ui";
-import { CheckCheckIcon } from "@wso2/oxygen-ui-icons-react";
+import { Alert, Box, Typography } from "@wso2/oxygen-ui";
 import RoutedTabs from "@components/routed-tabs/RoutedTabs";
 import { useFinanceGate } from "../api/useFinanceGate";
 import {
@@ -28,6 +27,20 @@ import {
   firstAllowedClaimTab,
   type ClaimApprovalGateId,
 } from "./claimApprovalTabs";
+
+// FinanceShell's own fillColumn, verbatim.
+const fillColumn = { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" } as const;
+
+// `useFillHeight` (the OPD and Expense review screens, and this tab's own
+// Needs You review) measures against the nearest scrolling ANCESTOR. Without
+// one of its own, that search climbs past this page entirely and lands on
+// whatever AppLayout happens to scroll — which grows with the page instead of
+// staying inside it, an external scrollbar on the whole screen instead of an
+// internal one on the panel. `overflowY: "auto"` here is what gives it one to
+// find, the same way the Me-side claims tabs scroll their own list instead of
+// the page. Every tab needs this, not only the one that happens to hold a
+// DataGrid.
+const scrollBoundary = { ...fillColumn, overflowY: "auto" } as const;
 
 // One frame for every claim-approval view: the header, the tab bar, and an
 // <Outlet /> for whichever tab the URL names.
@@ -40,36 +53,40 @@ export default function ClaimApprovalPage() {
   const visible = CLAIM_APPROVAL_TABS.filter((t) => gate.canSee(t.gateId));
 
   return (
-    <Box>
-      <Chip
-        icon={<CheckCheckIcon size={14} />}
-        label="Finance"
-        color="primary"
-        size="small"
-        variant="outlined"
-        sx={{ mb: 0.5 }}
-      />
-      <Typography variant="h5" sx={{ mb: 0.5 }}>
-        Claim approval
+    <Box sx={fillColumn}>
+      {/* No chip. This is a bare section under the Finance perspective, not a
+          screen inside an app, so there is no app name to put above the title —
+          the chip said "Finance", which is the perspective the rail already
+          shows. "Claim approval" identifies itself. */}
+      <Typography variant="h5" sx={{ mb: 0.5, flexShrink: 0 }}>
+        Claim Approval
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25, maxWidth: "70ch" }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25, maxWidth: "70ch", flexShrink: 0 }}>
         Claims waiting on your decision, and the ones already decided. Submitting a claim and looking
         up your own stay under Me.
       </Typography>
 
-      {gate.isResolving ? (
-        <Skeleton variant="rectangular" height={420} sx={{ borderRadius: 1.5 }} />
-      ) : visible.length === 0 ? (
+      {/* Nothing rendered while resolving — not even a skeleton. The rail
+          already shows no row for this entry until its gate settles, so the
+          content pane matches it: a placeholder here would be the one thing
+          left to blink on the way to a final answer, and this screen's
+          answer flips between "tabs" and "nothing here" rather than filling
+          a fixed shape. */}
+      {gate.isResolving ? null : visible.length === 0 ? (
         <Alert severity="info">You don&apos;t approve claims, so there is nothing here.</Alert>
       ) : (
-        <>
-          <RoutedTabs
-            basePath={CLAIM_APPROVAL_PATH}
-            tabs={visible}
-            ariaLabel="Claim approval sections"
-          />
-          <Outlet />
-        </>
+        <Box sx={fillColumn}>
+          <Box sx={{ flexShrink: 0 }}>
+            <RoutedTabs
+              basePath={CLAIM_APPROVAL_PATH}
+              tabs={visible}
+              ariaLabel="Claim approval sections"
+            />
+          </Box>
+          <Box sx={scrollBoundary}>
+            <Outlet />
+          </Box>
+        </Box>
       )}
     </Box>
   );
@@ -78,11 +95,17 @@ export default function ClaimApprovalPage() {
 /**
  * The index route: sends the visitor to the first tab they may open.
  *
- * No `isResolving` branch — the page above holds the <Outlet /> behind its own,
- * so nothing here renders until the three backends have answered.
+ * Its own `isResolving` branch, despite the page above holding the <Outlet />
+ * behind one already. That is a DIFFERENT `useFinanceGate()` — a hook call has
+ * state of its own, and identity resolution starts over for each one — so this
+ * component mounts fresh, the instant the page's gate settles, with its own
+ * still unsettled. For the render or two that takes, `canSee` answers no to
+ * everything and this redirected an approver away from the tab they were
+ * entitled to. A redirect is not undone when the answer arrives.
  */
 export function ClaimApprovalIndex() {
   const gate = useFinanceGate();
+  if (gate.isResolving) return null;
   const first = firstAllowedClaimTab(gate.canSee);
   if (!first) return null; // the page already explains this case
   return <Navigate to={`${CLAIM_APPROVAL_PATH}/${first.segment}`} replace />;
@@ -101,6 +124,20 @@ export function ClaimApprovalTabRoute({
   children: ReactNode;
 }) {
   const gate = useFinanceGate();
+
+  // An unresolved gate reports no roles, and this component decides between
+  // "your tab" and "not available for your role" with no third answer — so
+  // without this it announced the refusal first and the tab a moment later.
+  // That is the flicker on this screen: the approver DID get in, they were
+  // just told they hadn't on the way.
+  //
+  // This gate is not the page's above but a fresh one, mounted the moment the
+  // page's own settled and unsettled again for its first render or two — which
+  // is why the page's guard never covered this one. Nothing rendered while it
+  // resolves, matching the page: a refusal withdrawn a moment later is worse
+  // than a beat of nothing, and the refusal here is the load-bearing one — it
+  // is what a non-approver is left with.
+  if (gate.isResolving) return null;
 
   if (!gate.canSee(gateId)) {
     const first = firstAllowedClaimTab(gate.canSee);

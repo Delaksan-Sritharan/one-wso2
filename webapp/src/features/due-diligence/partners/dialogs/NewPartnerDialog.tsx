@@ -45,7 +45,7 @@ const EMAIL_RE =
 // email-shaped field anyway — it just ignores the hint. This overrides the
 // forced `-webkit-autofill` background WebKit paints regardless, using the
 // live CSS variables (not `theme.palette.*`, which is frozen at first paint
-// under this app's CssVarsProvider setup — see brandTheme.ts) so it still
+// under this app's CssVarsProvider setup) so it still
 // matches the field's real background/text color in both themes.
 const AUTOFILL_SELECTORS = [
   "& input:-webkit-autofill",

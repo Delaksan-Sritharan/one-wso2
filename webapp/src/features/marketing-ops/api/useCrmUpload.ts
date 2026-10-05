@@ -39,7 +39,6 @@ import {
   isMarketingOpsBackendConfigured,
   marketingOpsServiceUrls as urls,
 } from "@config/apiConfig";
-import { devBypassAuth } from "@config/authConfig";
 import type {
   DuplicateReview,
   ExistingRecord,
@@ -68,7 +67,7 @@ const KEY = {
 function useBase() {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
-  const ready = (isSignedIn || devBypassAuth) && isMarketingOpsBackendConfigured();
+  const ready = isSignedIn && isMarketingOpsBackendConfigured();
   return { getAccessToken, ready };
 }
 

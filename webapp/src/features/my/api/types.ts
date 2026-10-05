@@ -129,9 +129,8 @@ export interface EmployeePersonalInfo {
   emergencyContacts: EmergencyContact[] | null;
 }
 
-// Banking app types. Mirrors digiops-hr/apps/banking backend types —
-// AccountType + AccountStatus enums, and the subset of EmployeeBankAccount
-// fields we render.
+// Banking backend types — AccountType + AccountStatus enums, and the
+// subset of EmployeeBankAccount fields we render.
 
 export type AccountType = "SALARY" | "REIMBURSEMENT" | "CONSULTANCY";
 export type AccountStatus = "ACTIVE" | "INACTIVE" | "REQUESTED" | "REJECTED";
@@ -149,8 +148,21 @@ export interface BankAccount {
   bankLocation: string | null;
   branchCode: string | null;
   branchName: string | null;
+  // Non-null on the wire (db:EmployeeBankAccount), but every Bank Account
+  // rendered here comes through the same optional-chaining path as the
+  // nullable fields, so nullable is the safer type to declare.
+  beneficiaryAddress: string | null;
+  bankAddress: string | null;
+  // Only meaningful for CONSULTANCY; null for SALARY/REIMBURSEMENT.
+  paymentMethod: string | null;
   effectiveFrom: string;
   createdOn: string | null;
+  // NetSuite identifiers, only ever populated once an account has been
+  // through NetSuite — null until then. Only the Change Requests tab's
+  // detail view renders these; every other Banking screen ignores them.
+  netSuiteInternalId: string | null;
+  netSuiteVendorId: string | null;
+  netSuitePaymentFileFormat: string | null;
 }
 
 export interface BankAccountsResponse {
@@ -158,103 +170,117 @@ export interface BankAccountsResponse {
   count: number;
 }
 
-// PAR (Performance Appraisal Review) app types. Subset of
-// digiops-hr/apps/par-app backend modules/types/types.bal — only fields
-// we render in the Connected apps' review row today.
-
-export type ParCycleStatus =
-  | "PENDING"
-  | "PENDING_QUOTA"
-  | "OPEN"
-  | "CLOSED"
-  | "FAILED";
-
-export type ParEmployeeStatus = "PENDING" | "DRAFT" | "SHARED" | "SHARED_BLOCKED";
-export type ParLeadStatus = "PENDING" | "DRAFT" | "SHARED";
-export type ParF2fStatus = "PENDING" | "SCHEDULED" | "COMPLETED";
-export type ParEmployeeAcceptanceStatus = "PENDING" | "ACCEPTED" | "REJECTED";
-
-export interface ParCycle {
-  parCycleId: number;
-  parCycleName: string;
-  parCycleStartDate: string;
-  parCycleEndDate: string;
-  parEvaluationStartDate: string;
-  parEvaluationEndDate: string;
-  // Per-stage deadlines. Matches the four stages the employee moves
-  // through (self-eval → 360 → lead → F2F).
-  parEmployeeDeadline: string;
-  parThreeSixtyRatingDeadline: string;
-  parLeadDeadline: string;
-  parF2FDeadline: string;
-  parSpecialRatingDeadline?: string;
-  parCycleStatus: ParCycleStatus;
+// GET /employee/accounts admin filters (Report tab). `createdFrom`/
+// `createdTo` are "" when unset, never undefined, so a component can
+// always bind them to a controlled input.
+export interface ReportFilters {
+  createdFrom: string;
+  createdTo: string;
+  accountTypesArray: AccountType[];
+  statusArray: AccountStatus[];
 }
 
-// ParRating carries many fields (self-eval content, lead comments, F2F
-// status, 360 reviewers, etc.); we only pick the ones the four-stage
-// Performance & growth block surfaces. Additional fields can be added
-// on demand when a detail view lands.
-export interface ParRating {
-  parRatingId: number;
-  parCycleId: number;
-  parEmployeeEmail: string;
-  parEmployeeStatus: ParEmployeeStatus;
-  parLeadStatus: ParLeadStatus;
-  parF2fStatus: ParF2fStatus;
-  parF2fDate?: string;
-  parEmployeeAcceptanceStatus?: ParEmployeeAcceptanceStatus;
-}
-
-// Promotion-app /employee-info response. Mirrors digiops-hr/apps/promotion
-// backend/types.bal EmployeeInfo (outer) + EmployeeInfoWithLead (inner).
-// All string? fields default to "" server-side, so treat "" the same as
-// null when rendering.
-export interface PromotionEmployeeInfoWithLead {
+// GET /employees on the banking backend (ONE_WSO2_BANKING_BACKEND_URL) —
+// its OWN employee directory. Deliberately distinct from the `Employee`
+// interface above, which is a different record with a different field set:
+// this data comes from the banking backend only, never borrowed from
+// another backend's, even when the other backend already has an equivalent
+// record.
+export interface BankingEmployee {
+  employeeId: string | null;
+  firstName: string;
+  lastName: string;
   workEmail: string;
-  startDate: string;
-  jobBand: number | null;
-  joinedJobRole: string | null;
-  joinedBusinessUnit: string | null;
-  joinedDepartment: string | null;
-  joinedTeam: string | null;
-  joinedLocation: string | null;
-  lastPromotedDate: string | null;
+  department: string | null;
+  team: string | null;
   employeeThumbnail: string | null;
-  reportingLead: string;
-  reportingLeadThumbnail: string;
+  jobRole: string;
+  epf: string | null;
+  location: string;
 }
 
-export interface PromotionEmployeeInfoResponse {
-  employeeInfo: PromotionEmployeeInfoWithLead;
+// GET /employee-info on the banking backend — only what the Banking page
+// reads from it: the employee's HR location (drives the Reimbursement gate
+// and the Bank Location options).
+export interface BankingEmployeeInfo {
+  location: string;
 }
 
-// Approved promotion request from GET /promotion/requests. Subset of the
-// backend's FullPromotionRequest — only the fields we render in the
-// history dialog. Recommendations, notification flags, and drafts are
-// intentionally omitted.
-export type PromotionType = "NORMAL" | "SPECIAL" | "TIME_BASED";
+// GET /employee-privileges on the banking backend — what the caller may do,
+// decided server-side by the same roles the backend enforces.
+export interface BankingPrivileges {
+  isEmployee: boolean;
+  isPeopleOperationsAdmin: boolean;
+  isFinanceAdmin: boolean;
+}
 
-export interface PromotionHistoryEntry {
-  id: number;
+// One `customLocationMap` entry: for an employee whose work location is
+// `location`, the Consultancy Bank Location dropdown offers `customMap`.
+export interface CustomLocationMapEntry {
+  location: string;
+  customMap: string[];
+}
+
+// GET /app-config on the banking backend: the day-of-month cutoffs,
+// work-location allow-list, restricted-role list, the full country list the
+// edit/add dialog's Account Holder's Country step picks from, and the
+// customLocationMap that narrows Consultancy's Bank Location options.
+export interface BankingAppConfig {
+  salaryThreshold: number;
+  consultancyThreshold: number;
+  reimbursementsAllowedCountries: string[];
+  consultancyRestrictedRoles: string[];
+  allCountries: string[];
+  customLocationMap: CustomLocationMapEntry[];
+}
+
+// GET /banks on the banking backend — the lookup list backing the bank
+// autocomplete in the edit/add flow.
+export interface Bank {
+  bankCode: string;
+  bankLocation: string;
+  bankName: string;
+  swiftCode: string;
+}
+
+export interface BanksResponse {
+  banks: Bank[];
+  count: number;
+}
+
+// PATCH /threshold body — the backend's own db:ThresholdTypes enum member
+// names, sent verbatim as strings. Each key is owned by a different admin:
+// People Ops owns SALARY_THRESHOLD, Finance owns CONSULTANCY_THRESHOLD.
+export type ThresholdKey = "SALARY_THRESHOLD" | "CONSULTANCY_THRESHOLD";
+
+export interface UpdateThresholdPayload {
+  key: ThresholdKey;
+  value: number;
+}
+
+// POST /employee/accounts body. Every Account Type sends the same shape —
+// branchName/branchCode are simply empty for CONSULTANCY rather than a
+// different payload shape.
+export interface CreateBankAccountRequestPayload {
   employeeEmail: string;
-  currentJobBand: number;
-  currentJobRole: string;
-  nextJobBand: number;
-  promotionCycle: string;
-  promotionStatement: string | null;
-  businessUnit: string;
-  department: string;
-  team: string;
-  subTeam: string | null;
-  promotionType: PromotionType;
-  status: string;
-  createdOn: string;
-  updatedOn: string;
+  accountType: AccountType;
+  accountName: string;
+  accountNumber: string;
+  beneficiaryAddress: string;
+  bankName: string;
+  bankSwiftCode: string;
+  bankCode: string;
+  bankLocation: string;
+  bankAddress: string;
+  branchName: string;
+  branchCode: string;
+  effectiveFrom: string;
+  /** Required by the backend's request record (note the plural); Consultancy also builds the vendor address from it. */
+  accountHoldersCountry: string;
 }
 
-export interface PromotionHistoryResponse {
-  promotionRequests: PromotionHistoryEntry[];
+export interface CreateBankAccountRequestResponse {
+  applicationID: number;
 }
 
 // Body for PATCH /employees/{employeeId}/personal-info. Mirrors

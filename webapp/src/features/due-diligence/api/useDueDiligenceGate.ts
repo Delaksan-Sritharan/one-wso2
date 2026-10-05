@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import type { VisibilityAnswer } from "@components/side-rail/visibilityFold";
 import { describeError } from "@api/errors";
 import { isDueDiligenceBackendConfigured } from "@config/apiConfig";
 import { useDueDiligenceMe } from "./useDueDiligenceMe";
@@ -66,7 +67,15 @@ export function useDueDiligenceGate(enabled = true): DueDiligenceGate {
   const me = useDueDiligenceMe(enabled);
 
   const hasRole = (role: DueDiligenceRole): boolean => hasDueDiligenceRole(me.data, role);
-  const isAuthorized = Boolean(me.data && me.data.roles.length > 0);
+  // "some role other than employeeRole", not just "some role": the backend's
+  // Config.toml maps employeeRole to "wso2-everyone" — the baseline group
+  // every authenticated WSO2 employee is in, used as the minimum privilege
+  // for "All Requests" (see modules/authorisation/constants.bal). It isn't a
+  // due-diligence-specific role at all, so treating it as sufficient to
+  // unlock the app (as a plain `roles.length > 0` does) meant every employee
+  // could see and open Due Diligence under Finance/Legal, regardless of
+  // whether they held any of the actual admin/finance/legal groups.
+  const isAuthorized = Boolean(me.data && me.data.roles.some((r) => r !== "employeeRole"));
   const isAdmin = hasRole("adminRole");
 
   const canSee = (itemId: string): boolean => {
@@ -89,12 +98,18 @@ export function useDueDiligenceGate(enabled = true): DueDiligenceGate {
     // useDueDiligenceMe's query stays permanently disabled (and therefore
     // permanently `isPending`) when the backend URL isn't set, so without
     // this an unconfigured deployment never stops "resolving" — and
-    // FinancePage ORs this straight into its own loading branch, which would
-    // otherwise hide Claim approval/CC Expenses/Expense Claims behind a
-    // skeleton forever.
+    // usePerspectiveVisibility ORs this straight into the aggregate the rail
+    // and the Finance/Legal landing both read, which would otherwise hold
+    // those two perspectives on a spinner forever.
     isResolving: enabled && isDueDiligenceBackendConfigured() && me.isPending,
     isError: me.isError,
     errorMessage: me.isError ? describeError(me.error) : undefined,
     retry: () => void me.refetch(),
   };
+}
+
+export function dueDiligenceVisibility(gate: DueDiligenceGate): VisibilityAnswer {
+  return gate.isError
+    ? { canSee: gate.canSee, resolving: gate.isResolving, error: gate.errorMessage, retry: gate.retry }
+    : { canSee: gate.canSee, resolving: gate.isResolving, retry: () => undefined };
 }

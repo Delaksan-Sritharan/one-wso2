@@ -34,7 +34,7 @@ function section(id: string) {
 describe("People Ops rail sections", () => {
   it("points the Active employees entry at the report route", () => {
     expect(section("people-active-employee-report")).toMatchObject({
-      label: "Active employees",
+      label: "Active Employees",
       path: ACTIVE_EMPLOYEES_REPORT_PATH,
       requires: ["admin"],
     });
@@ -56,7 +56,7 @@ describe("People Ops rail sections", () => {
     expect(masterData?.path).toBeUndefined();
     expect(masterData?.children).toHaveLength(1);
     expect(masterData?.children?.[0]).toMatchObject({
-      label: "Org structure",
+      label: "Org Structure",
       path: ORG_STRUCTURE_PATH,
       requires: ["admin"],
     });
@@ -71,7 +71,7 @@ describe("People Ops rail sections", () => {
     // Org Chart is one deliberate exception — same people-app backend, a
     // different endpoint with its own access model (any employee in that
     // endpoint's configured group, not a people-app admin privilege). See
-    // the comment above PEOPLE_OPS_SECTIONS and docs/ported-apps/org-chart.md §4.
+    // the comment above PEOPLE_OPS_SECTIONS.
     //
     // The two Subscriptions screens are the others, and for a different
     // reason worth keeping straight from Org Chart's. They do not talk to
@@ -81,15 +81,55 @@ describe("People Ops rail sections", () => {
     // admin is not a commute or LaaS admin, so it would advertise the manage
     // screen to the wrong people AND hide it from the right ones. The rail and
     // the overview card both route these ids through useSubscriptionGate
-    // instead; see SUBSCRIPTION_ITEM_IDS and docs/ported-apps/subscription-app.md §5.
+    // instead; see SUBSCRIPTION_ITEM_IDS.
     //
     // Note what this leaves unguarded: nothing checks here that those two ids
     // ARE in SUBSCRIPTION_ITEM_IDS, so the next assertion does that — dropping
     // an id from both places would otherwise look like a passing test.
+    //
+    // The two PAR entries are a third kind of exception: par-app has its own
+    // role model (team lead / admin), unrelated to people-app's generic
+    // "admin" capability. `requires: ["admin"]` would be wrong here the same
+    // way it would on Subscriptions — a People Ops admin isn't necessarily a
+    // PAR admin or a team lead, and vice versa. The rail routes these two
+    // through ParRequiresTeamLeadRoute/ParRequiresAdminRoute instead (see
+    // perspectives.ts's own comment above the PAR group) — that each one
+    // actually reaches its gate and redirects a non-lead/non-admin away is
+    // asserted in ParLeadTabRouting.test.tsx/ParAdminTabRouting.test.tsx,
+    // not here.
+    //
+    // promotion-lead-portal and promotion-team-history are the same shape
+    // of exception as the two PAR ones: promotion-app has its own
+    // Role.LEAD, read back from its own GET /employee-privileges, unrelated
+    // to people-app's "admin" capability. Gated via PromotionRequiresLeadRoute
+    // + PROMOTION_LEAD_PORTAL_ITEM_ID/PROMOTION_TEAM_HISTORY_ITEM_ID (see
+    // perspectives.ts's own comment above the Promotion section) rather
+    // than `requires`. promotion-functional-lead-portal,
+    // promotion-board-portal, and promotion-admin-portal are the same shape
+    // again, on Role.FUNCTIONAL_LEAD, Role.PROMOTION_BOARD_MEMBER, and
+    // Role.HR_ADMIN respectively. promotion-cycle-history is the odd one
+    // out: gated on isHrAdmin OR isFunctionalLead, the only two-role gate
+    // among this section's children (see perspectives.ts's own comment
+    // above it).
+    //
+    // banking-admin is the same shape of exception as the PAR/Promotion ones
+    // above: gated on the banking backend's own GET /employee-privileges via
+    // useBankingAdminAccess (dispatched in usePerspectiveVisibility), unrelated
+    // to people-app's "admin" capability — see perspectives.ts's own comment
+    // above BANKING_ADMIN_SECTION.
     const NOT_ADMIN_GATED = new Set([
       "people-org-chart",
       "people-subscriptions-mine",
       "people-subscriptions-manage",
+      "par-lead-portal",
+      "par-admin-portal",
+      "promotion-lead-portal",
+      "promotion-team-history",
+      "promotion-functional-lead-portal",
+      "promotion-board-portal",
+      "promotion-admin-portal",
+      "promotion-cycle-history",
+      "banking-admin",
     ]);
     const live = PEOPLE_OPS_SECTIONS.flatMap((s) => [s, ...(s.children ?? [])]).filter(
       (s) => s.path,

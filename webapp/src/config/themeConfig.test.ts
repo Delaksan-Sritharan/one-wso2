@@ -38,14 +38,22 @@ function primaryOf(key: string | undefined): string {
   return theme.colorSchemes.light.palette.primary.main;
 }
 
+/** A theme's dark-mode canvas — what separates WSO2's blue from the neutrals. */
+function darkBgOf(key: string | undefined): string {
+  const theme = resolveTheme(key) as unknown as {
+    colorSchemes: { dark: { palette: { background: { default: string } } } };
+  };
+  return theme.colorSchemes.dark.palette.background.default;
+}
+
 beforeEach(() => {
   // configThemeKey reads window.config, which the SDK populates at runtime.
   delete (window as { config?: unknown }).config;
 });
 
 describe("theme registry", () => {
-  it("offers five themes in the picker", () => {
-    expect(THEME_OPTIONS).toHaveLength(5);
+  it("offers seven themes in the picker", () => {
+    expect(THEME_OPTIONS).toHaveLength(7);
   });
 
   it("only offers keys that actually resolve", () => {
@@ -87,8 +95,8 @@ describe("theme registry", () => {
   });
 
   it("takes the deployment default from config, ignoring a bad value", () => {
-    (window as { config?: Record<string, unknown> }).config = { ONE_WSO2_THEME: "choreo" };
-    expect(configThemeKey()).toBe("choreo");
+    (window as { config?: Record<string, unknown> }).config = { ONE_WSO2_THEME: "acrylicPurple" };
+    expect(configThemeKey()).toBe("acrylicPurple");
 
     (window as { config?: Record<string, unknown> }).config = { ONE_WSO2_THEME: "bogus" };
     expect(configThemeKey()).toBe(DEFAULT_THEME_KEY);
@@ -97,12 +105,18 @@ describe("theme registry", () => {
     expect(configThemeKey()).toBe(DEFAULT_THEME_KEY);
   });
 
-  it("offers five visibly different themes, not aliases of one", () => {
-    // The point of a picker is that the options look different. Measured on the
-    // light primary: brand orange, indigo, Oxygen orange, blue, violet.
-    const primaries = THEME_OPTIONS.map((o) => primaryOf(o.key));
-    expect(new Set(primaries).size).toBe(THEME_OPTIONS.length);
-    expect(primaryOf("acrylicOrange")).toBe("#F14E23");
+  it("offers seven visibly different themes, not aliases of one", () => {
+    // The point of a picker is that the options look different. The light
+    // primary alone no longer separates them: Classic is #ff7300 and WSO2 is
+    // #FF7300 — the same colour in different case, so comparing raw strings
+    // would "pass" by accident. They are genuinely different themes (different
+    // secondary, surfaces, and dark mode), so the signature includes the dark
+    // background, which is where WSO2's blue (#0f172a) distinguishes itself.
+    const sigs = THEME_OPTIONS.map((o) => `${primaryOf(o.key).toLowerCase()}|${darkBgOf(o.key).toLowerCase()}`);
+    expect(new Set(sigs).size).toBe(THEME_OPTIONS.length);
+    expect(primaryOf("acrylicOrange")).toBe("#fa7b3f");
+    // The reason WSO2 is the default: it is the only dark mode that is not neutral.
+    expect(darkBgOf("wso2").toLowerCase()).toBe("#0f172a");
   });
 
   it("registers more themes than it offers, and every offer is registered", () => {

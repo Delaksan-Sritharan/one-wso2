@@ -19,18 +19,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The expense app is behind a preview flag, so the registry is no longer a
- * constant — it depends on `window.config`. Everything here therefore imports
- * it fresh per state rather than at the top of the file.
+ * `umt`/`infra` elsewhere still gate on `window.config`, so tests across this
+ * area import fresh per state rather than at the top of the file. Nothing
+ * left in this particular registry reads the flag anymore, but the helper
+ * costs nothing to keep.
  */
 type FinanceApps = typeof import("./financeApps");
 
-async function load(preview: { expenseSubmitter?: boolean } = {}): Promise<FinanceApps> {
+async function load(): Promise<FinanceApps> {
   vi.resetModules();
-  window.config = {
-    ...(window.config ?? {}),
-    ONE_WSO2_PREVIEW_FEATURES: preview,
-  } as Window["config"];
   return import("./financeApps");
 }
 
@@ -53,82 +50,111 @@ describe("where each finance app lives", () => {
   // Everyone files claims. Not everyone has a corporate card, which is why the
   // card app is not part of the set every employee needs.
   //
-  // "expense" covers the same ground as "claims" → Expense under Me, but with
-  // its own screens (expense/submitter, expense/history) rather than the Me
-  // ones — the Finance side can file for another employee, which the Me side
-  // cannot. It keeps its own registry key, distinct from "claims", which is
-  // what the other invariants below actually depend on.
-  it("keeps claims with the person, and both the card and expense claims with finance", async () => {
-    const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load();
+  // Expense Claims used to have its own Finance-perspective entry here, the
+  // way "expense" once did — New Claim, Claim History, and both Approvals
+  // stages, each on its own screens under expense/submitter, expense/history
+  // and expense/approvals. Retired item by item as each moved elsewhere, until
+  // nothing was left of the group itself.
+  it("keeps claims with the person, and the card with finance", async () => {
+    const {
+      ME_FINANCE_APPS,
+      FINANCE_OVERVIEW_APPS,
+      FINANCE_PERSPECTIVE_APPS,
+      FINANCE_MASTER_DATA_APPS,
+    } = await load();
     expect(keys(ME_FINANCE_APPS)).toEqual(["claims"]);
-    expect(keys(FINANCE_PERSPECTIVE_APPS)).toEqual(["expense", "cc"]);
+    expect(keys(FINANCE_PERSPECTIVE_APPS)).toEqual(["cc"]);
+    // Master data is on the finance side too — reference data the finance
+    // team maintains for everyone else's apps to read, not something an
+    // employee does for themself — but in a registry of its own, so the rail
+    // can place it last. See the `finance` perspective, which spreads it
+    // after MIS rather than next to the screens people open all day.
+    expect(keys(FINANCE_MASTER_DATA_APPS)).toEqual(["finance-master-data"]);
+    // Reading how the allowance is spent is a different job from filing or
+    // approving a claim, so the dashboards sit in their own section above the
+    // apps rather than one inside each of them.
+    expect(keys(FINANCE_OVERVIEW_APPS)).toEqual(["finance-overview"]);
   });
 
-  // The preview flag holds back New Claim, which duplicates Me → Claims. It
-  // does not hold back the app, because Claim History has no such duplicate.
-  it("adds New Claim only when the preview flag is on", async () => {
-    const off = await load({ expenseSubmitter: false });
-    expect(itemIds(off.FINANCE_PERSPECTIVE_APPS)).not.toContain("expense-new");
-
-    const on = await load({ expenseSubmitter: true });
-    expect(itemIds(on.FINANCE_PERSPECTIVE_APPS)).toContain("expense-new");
-  });
-
-  it("hides New Claim on an absent flag, not only on an explicit false", async () => {
-    // Production ships no entry at all; safety must not depend on remembering
-    // to write `false`.
+  // New Claim and Claim History both moved out from under this app entirely —
+  // they live at Me → Claims now, on-behalf filing and all. Lead/Finance
+  // Approvals moved to Claim Approval earlier still. Nothing is left of the
+  // group, so it no longer appears in the registry at all.
+  it("no longer carries the Expense Claims group or any of its items", async () => {
     const { FINANCE_PERSPECTIVE_APPS } = await load();
-    expect(itemIds(FINANCE_PERSPECTIVE_APPS)).not.toContain("expense-new");
-  });
-
-  it("keeps Claim History whatever the flag says", async () => {
-    for (const preview of [{}, { expenseSubmitter: true }]) {
-      const { FINANCE_PERSPECTIVE_APPS } = await load(preview);
-      expect(itemIds(FINANCE_PERSPECTIVE_APPS)).toContain("expense-history");
+    expect(keys(FINANCE_PERSPECTIVE_APPS)).not.toContain("expense");
+    for (const retired of [
+      "expense-new",
+      "expense-history",
+      "expense-lead-approvals",
+      "expense-finance-approvals",
+    ]) {
+      expect(itemIds(FINANCE_PERSPECTIVE_APPS)).not.toContain(retired);
     }
   });
 
   it("puts every app KEY in exactly one of the two", async () => {
-    for (const preview of [{}, { expenseSubmitter: true }]) {
-      const { FINANCE_APPS, ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load(preview);
-      const overlap = keys(ME_FINANCE_APPS).filter((k) =>
-        keys(FINANCE_PERSPECTIVE_APPS).includes(k),
-      );
-      expect(overlap).toEqual([]);
-      expect(keys(FINANCE_APPS).sort()).toEqual(["cc", "claims", "expense"]);
-    }
+    const {
+      FINANCE_APPS,
+      ME_FINANCE_APPS,
+      FINANCE_OVERVIEW_APPS,
+      FINANCE_PERSPECTIVE_APPS,
+      FINANCE_MASTER_DATA_APPS,
+    } = await load();
+    const financeSide = [
+      ...keys(FINANCE_OVERVIEW_APPS),
+      ...keys(FINANCE_PERSPECTIVE_APPS),
+      ...keys(FINANCE_MASTER_DATA_APPS),
+    ];
+    const overlap = keys(ME_FINANCE_APPS).filter((k) => financeSide.includes(k));
+    expect(overlap).toEqual([]);
+    expect(keys(FINANCE_APPS).sort()).toEqual([
+      "cc",
+      "claims",
+      "finance-master-data",
+      "finance-overview",
+    ]);
   });
 
   // A path under the wrong perspective is a rail entry that navigates out of
   // the perspective it was clicked in.
   it("gives each app paths under the perspective it is surfaced in", async () => {
-    for (const preview of [{}, { expenseSubmitter: true }]) {
-      const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load(preview);
-      for (const path of paths(ME_FINANCE_APPS)) expect(path.startsWith("/me/")).toBe(true);
-      for (const path of paths(FINANCE_PERSPECTIVE_APPS)) {
-        expect(path.startsWith("/finance/")).toBe(true);
+    const { ME_FINANCE_APPS, FINANCE_PERSPECTIVE_APPS } = await load();
+    for (const path of paths(ME_FINANCE_APPS)) expect(path.startsWith("/me/")).toBe(true);
+    for (const path of paths(FINANCE_PERSPECTIVE_APPS)) {
+      expect(path.startsWith("/finance/")).toBe(true);
+    }
+  });
+
+  it("routes every finance item through the finance gate", async () => {
+    const { FINANCE_APPS, FINANCE_ITEM_IDS } = await load();
+    for (const app of FINANCE_APPS) {
+      for (const item of app.items) {
+        expect(FINANCE_ITEM_IDS.has(item.id), `${item.id} bypasses the gate`).toBe(true);
       }
     }
   });
 
-  it("routes every finance item through the finance gate, in both states", async () => {
-    for (const preview of [{}, { expenseSubmitter: true }]) {
-      const { FINANCE_APPS, FINANCE_ITEM_IDS } = await load(preview);
-      for (const app of FINANCE_APPS) {
-        for (const item of app.items) {
-          expect(FINANCE_ITEM_IDS.has(item.id), `${item.id} bypasses the gate`).toBe(true);
-        }
-      }
-    }
-  });
-
-  // Hiding the entry must not take the whole app down: FINANCE_EYEBROW is built
-  // at module load by looking apps up in the registry, and an absent app used to
-  // throw there before anything rendered.
-  it("still builds its eyebrows when the expense app is hidden", async () => {
+  // Hiding an app must not take the whole registry down. FINANCE_EYEBROW.claims
+  // and .cc are built by looking their app up in the registry — an absent app
+  // used to throw there before anything rendered. .opd is a literal precisely
+  // because it CAN be hidden by a flag while its route stays reachable by URL,
+  // so it must keep a real label either way.
+  it("still builds every eyebrow when opd is hidden", async () => {
     const { FINANCE_EYEBROW } = await load();
     expect(FINANCE_EYEBROW.claims.label).toBeTruthy();
     expect(FINANCE_EYEBROW.cc.label).toBeTruthy();
-    expect(FINANCE_EYEBROW.expense.label).toBeTruthy();
+    expect(FINANCE_EYEBROW.opd.label).toBeTruthy();
+  });
+});
+
+// Finance Overview shipped out of preview — a Credit Card Expenses dashboard
+// moved out of its own app, and an OPD Claims dashboard. The group is always
+// present now, no flag involved.
+describe("the Finance Overview group", () => {
+  it("is always present", async () => {
+    const { FINANCE_OVERVIEW_APPS, FINANCE_APPS } = await load();
+    expect(keys(FINANCE_OVERVIEW_APPS)).toEqual(["finance-overview"]);
+    expect(keys(FINANCE_APPS)).toContain("finance-overview");
   });
 });

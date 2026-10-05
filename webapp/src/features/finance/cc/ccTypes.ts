@@ -160,6 +160,16 @@ export function ccHasAccess(user: CcEmployee | undefined, level: CcAccessLevel):
   return Boolean(user?.privileges?.includes(level));
 }
 
+/**
+ * What to call a card: its label if it has been given one, otherwise its
+ * position in the list — `Card 1`, `Card 2` (`CardMenu.tsx:113-120`). The
+ * numbering is the position in the list SHOWN, not anything stored, so it
+ * renumbers if a card is deactivated.
+ */
+export function ccCardName(label: string | null | undefined, index: number): string {
+  return label || `Card ${index + 1}`;
+}
+
 // A transaction is ready to submit once its required categorisation fields
 // are set (mirrors the backend's validateRequiredFields).
 export function ccTxnComplete(t: CcTransaction): boolean {
@@ -215,3 +225,35 @@ export interface CcCardHolderCompliance {
   bucket30Plus: number;
 }
 
+
+/**
+ * One lead's approval backlog — `leadCompliance.ts:17-27`.
+ *
+ * The Lead view's top table for finance: who is sitting on how much, and how
+ * old it is. The four buckets are counts, matching the age buckets the rest of
+ * the dashboard already speaks in.
+ */
+export interface CcLeadApprovalSummary {
+  leadEmail: string;
+  leadName: string;
+  submitterCount: number;
+  transactionCount: number;
+  pendingAmount: number;
+  bucket0To7: number;
+  bucket8To14: number;
+  bucket15To30: number;
+  bucket30Plus: number;
+}
+
+/** One card holder inside a lead's team — `leadCompliance.ts:29-39`. */
+export interface CcLeadTeamCardHolder {
+  employeeEmail: string;
+  cardHolderName: string;
+  transactionCount: number;
+  pendingAmount: number;
+  oldestPendingDays: number;
+  bucket0To7: number;
+  bucket8To14: number;
+  bucket15To30: number;
+  bucket30Plus: number;
+}

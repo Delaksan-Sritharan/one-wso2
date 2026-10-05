@@ -15,7 +15,6 @@
 // under the License.
 
 import { Alert, Box } from "@wso2/oxygen-ui";
-import { TicketIcon } from "@wso2/oxygen-ui-icons-react";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { SERVICES } from "../api/subscriptionTypes";
 import { useSubscriptionGate } from "../api/useSubscriptionGate";
@@ -27,10 +26,7 @@ import SubscriptionsShell from "../components/SubscriptionsShell";
 // Opt yourself in and out of the two paid staff services.
 //
 // Ported from the digiops-hr subscription-app, which until now existed only as
-// a mobile microapp — this is its first web view. The functional spec, the API
-// contract and the deliberate differences from the original are in
-// docs/ported-apps/subscription-app.md; read that rather than reconstructing
-// the rules from this file.
+// a mobile microapp — this is its first web view.
 //
 // Two things worth knowing here specifically:
 //
@@ -54,7 +50,6 @@ export default function MySubscriptionsPage() {
 
   return (
     <SubscriptionsShell
-      eyebrow={{ icon: TicketIcon, label: "Subscriptions" }}
       title="My subscriptions"
       subtitle="Opt in and out of PickMe Commute and LaaS. Each has a monthly window — the card tells you which one applies and when it's open."
       gate={gate}

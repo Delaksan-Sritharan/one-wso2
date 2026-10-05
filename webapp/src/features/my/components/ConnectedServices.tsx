@@ -16,14 +16,15 @@
 
 import { useState } from "react";
 import { Box, Button, Card, Skeleton, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
+import { Link as RouterLink } from "react-router";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
+import { useParEmployeeItemVisible } from "@features/par/api/useParData";
 import VehiclesCard from "./VehiclesCard";
-import {
-  isPromotionBackendConfigured,
-  usePromotionEmployeeInfo,
-} from "../api/usePromotionEmployeeInfo";
-import { formatDate } from "../api/derive";
+import { isPromotionBackendConfigured } from "@features/promotion/api/usePromotionEmployeeInfo";
+import { usePromotionHistory } from "@features/promotion/api/usePromotionHistory";
+import { latestPromotion, promotionSummary } from "@features/promotion/util/promotionHistory";
+import { useMeProfile } from "../api/useMeProfile";
 import PromotionHistoryDialog from "./PromotionHistoryDialog";
 import PerformanceStages from "./PerformanceStages";
 import BankAccountsCard from "./BankAccountsCard";
@@ -39,9 +40,24 @@ export default function ConnectedServices() {
   // /user-info's workEmail (canonical), fall back to the id_token email
   // claim.
   const ownerEmail = userInfo.data?.workEmail ?? asgardeoUser.email;
-  const promotionInfo = usePromotionEmployeeInfo(ownerEmail);
+  // Sourced from the approved promotion requests, not /employee-info's
+  // lastPromotedDate column — that column goes stale (the promotion
+  // backend's own eligibility check overrides it for the same reason),
+  // which showed "Never promoted" for people with approved promotions.
+  // enabled: true because this line renders on load; the dialog's lazy
+  // query shares the cache key, so opening it costs no extra request.
+  const promotionInfo = usePromotionHistory(ownerEmail, true);
+  const lastPromotion = latestPromotion(promotionInfo.data?.promotionRequests);
   const promotionConfigured = isPromotionBackendConfigured();
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Same query key as MyProfilePage's own useMeProfile() call, so this
+  // shares its cache rather than firing a second request. Gates the "Open
+  // employee feedback" button below with the exact same check that hides
+  // the PAR menu item and redirects away from /me/performance — without
+  // it, someone the menu is hiding PAR from would see this button anyway,
+  // click it, and land right back here (ParRequiresSomethingToShowRoute).
+  const meProfile = useMeProfile();
+  const parGate = useParEmployeeItemVisible(meProfile.data?.employee?.employmentType, meProfile.isPending);
 
   return (
     <>
@@ -54,31 +70,42 @@ export default function ConnectedServices() {
           </Typography>
           <Stack direction="row" spacing={1.25} sx={{ py: 1.125, alignItems: "center", borderBottom: 1, borderColor: "divider" }}>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 500, fontSize: 13 }}>Last promoted date</Typography>
-              <PromotedDateValue
+              <Typography sx={{ fontWeight: 500, fontSize: 13 }}>Last promotion</Typography>
+              <LastPromotionValue
                 configured={promotionConfigured}
-                isLoading={promotionInfo.isLoading}
+                // isPaused covers a retry held back while the tab is in the
+                // background — still loading, not an empty result.
+                isLoading={promotionInfo.isLoading || promotionInfo.isPaused}
                 isError={promotionInfo.isError}
-                date={promotionInfo.data?.employeeInfo?.lastPromotedDate ?? null}
+                summary={lastPromotion ? promotionSummary(lastPromotion) : null}
               />
             </Box>
-            <Tooltip
-              title={promotionConfigured ? "" : "Set ONE_WSO2_PROMOTION_BACKEND_URL to enable this."}
-              placement="top"
-            >
-              <span>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  disabled={!promotionConfigured || !ownerEmail}
-                  onClick={() => setHistoryOpen(true)}
-                >
-                  View promotion history
-                </Button>
-              </span>
-            </Tooltip>
+            {/* History is only offered when there is something to show —
+                with no approved promotions (or while loading, or when the
+                backend isn't configured) the dialog would be empty. A failed
+                load gets a retry instead, since nothing else re-fetches. */}
+            {lastPromotion ? (
+              <Button variant="outlined" size="small" onClick={() => setHistoryOpen(true)}>
+                View promotion history
+              </Button>
+            ) : promotionInfo.isError ? (
+              <Button
+                size="small"
+                disabled={promotionInfo.isFetching}
+                onClick={() => void promotionInfo.refetch()}
+              >
+                Retry
+              </Button>
+            ) : null}
           </Stack>
           <PerformanceStages workEmail={ownerEmail} />
+          {!parGate.isLoading && parGate.canSee && (
+            <Box sx={{ mt: 1.25 }}>
+              <Button variant="outlined" size="small" component={RouterLink} to="/me/performance" fullWidth>
+                Open employee feedback
+              </Button>
+            </Box>
+          )}
         </Card>
 
         <BankAccountsCard ownerEmail={ownerEmail} />
@@ -95,22 +122,24 @@ export default function ConnectedServices() {
   );
 }
 
-// Sub-line under the "Last promoted date" label. Renders one of:
+// Sub-line under the "Last promotion" label. Renders one of:
 //   - not configured hint (promotion backend URL absent)
 //   - skeleton (loading)
 //   - error dash (fetch failed; hover for reason)
-//   - "Never promoted" (no date on record — new joiner / no promotion yet)
-//   - formatted date (happy path)
-function PromotedDateValue({
+//   - "No promotions" (nothing approved on record — new joiner, or every
+//     request still in flight; states what the data shows rather than
+//     asserting the person has never been promoted)
+//   - cycle + band jump (happy path)
+function LastPromotionValue({
   configured,
   isLoading,
   isError,
-  date,
+  summary,
 }: {
   configured: boolean;
   isLoading: boolean;
   isError: boolean;
-  date: string | null;
+  summary: string | null;
 }) {
   const base = { fontSize: 12, color: "text.secondary" as const };
   if (!configured) {
@@ -132,13 +161,13 @@ function PromotedDateValue({
       </Tooltip>
     );
   }
-  if (!date || date.trim() === "") {
-    return <Typography sx={{ ...base, color: "text.disabled" }}>Never promoted</Typography>;
+  if (!summary) {
+    return (
+      <Typography sx={{ ...base, color: "text.disabled" }}>No promotions</Typography>
+    );
   }
   return (
-    <Typography sx={{ ...base, fontVariantNumeric: "tabular-nums" }}>
-      {formatDate(date)}
-    </Typography>
+    <Typography sx={{ ...base, fontVariantNumeric: "tabular-nums" }}>{summary}</Typography>
   );
 }
 

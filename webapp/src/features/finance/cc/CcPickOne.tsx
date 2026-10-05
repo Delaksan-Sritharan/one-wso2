@@ -31,6 +31,7 @@ export function CcPickOne({
   onChange,
   options,
   optionLabel,
+  emptyLabel,
 }: {
   label: string;
   value: string;
@@ -43,8 +44,16 @@ export function CcPickOne({
    * which is what the user and card filters want.
    */
   optionLabel?: (value: string) => string;
+  /**
+   * What the "no narrowing" option is called. The source's approve popover says
+   * **No Filter** (`FilterMenu.tsx`), which is clearer inside a Filter panel
+   * than "All" — there it reads as a value rather than as the absence of one.
+   * Defaults to "All", which is what History's inline selects still say.
+   */
+  emptyLabel?: string;
 }) {
-  const labelId = `cc-filter-${label.toLowerCase()}`;
+  // Spaces are not valid in an id, and the source's labels have them.
+  const labelId = `cc-filter-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <FormControl size="small">
       <InputLabel id={labelId}>{label}</InputLabel>
@@ -55,7 +64,7 @@ export function CcPickOne({
         onChange={(e) => onChange(String(e.target.value))}
         sx={{ minWidth: 170 }}
       >
-        <MenuItem value="all">All</MenuItem>
+        <MenuItem value="all">{emptyLabel ?? "All"}</MenuItem>
         {options.map((o) => (
           <MenuItem key={o} value={o}>
             {optionLabel ? optionLabel(o) : o}

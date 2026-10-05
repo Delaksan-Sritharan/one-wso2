@@ -14,14 +14,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { ME_APPS } from "@constants/meApps";
 
 // Both flags, as React Query reports them: a query that is fetching is pending
 // AND loading; a DISABLED query is pending but not loading, because it never
 // fetches. The gate has to read the second one, or a caller that switched it
 // off would be told forever that it is mid-flight.
-const userInfo: { data?: unknown; isPending?: boolean; isLoading?: boolean } = {};
+const userInfo: { data?: unknown; isPending?: boolean; isLoading?: boolean; errorUpdateCount: number } = {
+  errorUpdateCount: 0,
+};
 vi.mock("./useLeaveData", () => ({ useLeaveUserInfo: () => userInfo }));
 
 const { useLeaveGate } = await import("./useLeaveGate");
@@ -162,40 +165,45 @@ describe("who can see My History", () => {
 });
 
 // A rail entry is offered when the person may open any tab inside it — not when
-// they may take that kind of leave. People Ops cannot hold a sabbatical, but the
-// sabbatical Report is theirs (route.ts:143-148). Gating the entry on the
-// sabbatical permission alone hid a screen they are entitled to and left it
-// reachable only by typing the URL.
-describe("which leave entries the rail offers", () => {
-  it("offers Sabbatical to People Ops, who get its Report but cannot apply", () => {
+// they may open a tab, NOT whether they may take some kind of leave. People Ops
+// cannot hold a sabbatical, but the sabbatical Report is theirs
+// (route.ts:143-148). Gating the entry on the sabbatical permission alone hid a
+// screen they are entitled to and left it reachable only by typing the URL.
+describe("whether the rail offers Leave at all", () => {
+  it("offers it to People Ops, who get both reports but can hold no leave", () => {
     const gate = gateFor({ privileges: [P.PEOPLE_OPS_TEAM] });
-    expect(gate.canSee("leave-sabbatical")).toBe(true);
+    expect(gate.canSee("leave-home")).toBe(true);
     expect(gate.canSee("leave-sabbatical-own")).toBe(false);
     expect(gate.canSee("leave-reports")).toBe(true);
   });
 
-  it("offers Sabbatical to someone who may take one", () => {
-    expect(gateFor({ privileges: [P.EMPLOYEE] }).canSee("leave-sabbatical")).toBe(true);
-  });
-
-  it("offers a lead both entries", () => {
-    const gate = gateFor({ privileges: [P.EMPLOYEE, P.LEAD] });
-    expect(gate.canSee("leave-general")).toBe(true);
-    expect(gate.canSee("leave-sabbatical")).toBe(true);
-  });
-
-  // An intern may take general leave but never a sabbatical, cannot approve,
-  // and gets no reports — so the whole entry goes.
-  it("withholds Sabbatical entirely from an intern", () => {
-    const gate = gateFor({ privileges: [P.EMPLOYEE, P.INTERN] });
-    expect(gate.canSee("leave-sabbatical")).toBe(false);
-    expect(gate.canSee("leave-general")).toBe(true);
-  });
-
-  it("always offers General, since applying is open to everyone", () => {
+  // Applying is open to everyone, so there is no role that sees nothing —
+  // which is exactly why one entry works where two did not: the second entry
+  // could go empty, this one never does.
+  it("offers it to every role, since applying is open to all of them", () => {
     for (const p of [P.EMPLOYEE, P.INTERN, P.LEAD, P.PEOPLE_OPS_TEAM]) {
-      expect(gateFor({ privileges: [p] }).canSee("leave-general")).toBe(true);
+      expect(gateFor({ privileges: [p] }).canSee("leave-home")).toBe(true);
     }
+  });
+
+  // An intern may take general leave but never a sabbatical. The entry stays;
+  // what disappears is the toggle inside the tabs.
+  it("still offers it to an intern, who simply gets no sabbatical", () => {
+    const gate = gateFor({ privileges: [P.EMPLOYEE, P.INTERN] });
+    expect(gate.canSee("leave-home")).toBe(true);
+    expect(gate.canSee("leave-sabbatical-own")).toBe(false);
+  });
+
+  // The retired ids. Re-adding one to a registry without a case here would
+  // fall through to RESTRICTED_IDS, which only fails closed for items that
+  // declare `requires` — these declare none, so it would read as OPEN.
+  it("keeps the two retired rail ids absent", () => {
+    const gate = gateFor({ privileges: [P.EMPLOYEE, P.LEAD] });
+    const items = ME_APPS.find((app) => app.key === "leave")?.items ?? [];
+    const ids = items.map((i) => i.id);
+    expect(ids).not.toContain("leave-general");
+    expect(ids).not.toContain("leave-sabbatical");
+    expect(gate.canSee("leave-home")).toBe(true);
   });
 });
 
@@ -229,5 +237,24 @@ describe("while identity is still resolving", () => {
     const gate = renderHook(() => useLeaveGate()).result.current;
     expect(gate.isResolving).toBe(true);
     expect(gate.canSee("leave-reports")).toBe(false);
+  });
+});
+
+// A query with no data goes back to pending on every refetch. Reading that as
+// "resolving" after /user-info had failed made LeavePage swap its routes for a
+// skeleton, and the remounted routes refetched the failed query — a loop at the
+// speed of the error response.
+describe("after /user-info has failed", () => {
+  afterEach(() => {
+    userInfo.errorUpdateCount = 0;
+  });
+
+  it("is not reported as resolving while it is fetched again", () => {
+    userInfo.data = undefined;
+    userInfo.isPending = true;
+    userInfo.isLoading = true;
+    userInfo.errorUpdateCount = 1;
+    const gate = renderHook(() => useLeaveGate()).result.current;
+    expect(gate.isResolving).toBe(false);
   });
 });

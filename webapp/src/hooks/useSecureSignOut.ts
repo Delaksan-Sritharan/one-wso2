@@ -18,6 +18,8 @@ import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAsgardeo } from "@asgardeo/react";
 import { SIGNING_OUT_EVENT } from "@constants/appEvents";
+import { resetUnauthorizedOrigins } from "@api/tokenExpiry";
+import { forgetResolvedSubOnSignOut } from "@hooks/useAsgardeoSub";
 
 // Sign out AND purge client-held state. React Query keeps fetched profile /
 // leave / finance data in memory; Asgardeo signOut() alone leaves it there
@@ -29,11 +31,24 @@ export function useSecureSignOut(): () => void {
   const { signOut } = useAsgardeo();
   const qc = useQueryClient();
   return useCallback(() => {
+    // Origins that refused the OLD token must not corroborate a doubt about
+    // the next one.
+    resetUnauthorizedOrigins();
     try {
       qc.clear();
     } catch {
       // best effort — never block sign-out on a cache-clear failure
     }
+    // `useAsgardeoSub` shares the resolved `sub` across every mounted
+    // instance so a fresh screen does not re-decode the token behind a
+    // skeleton (see its own file) — which means the clear on `isSignedIn`
+    // going false, inside that hook's own effect, can miss entirely:
+    // `AuthGuard` unmounts every consumer of it in the same render that flips
+    // `isSignedIn`, before any of them re-renders to observe the change. This
+    // is the reliable boundary instead — every sign-out reaches here,
+    // mounted consumer or not — so the next account to sign in in the same
+    // tab cannot be seeded with this one's identity.
+    forgetResolvedSubOnSignOut();
     try {
       window.dispatchEvent(new CustomEvent(SIGNING_OUT_EVENT));
     } catch {

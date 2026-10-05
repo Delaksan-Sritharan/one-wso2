@@ -20,16 +20,16 @@ import type {
   ParEmployeeStatus,
   ParF2fStatus,
   ParLeadStatus,
-} from "../api/types";
-import { formatDate } from "../api/derive";
+} from "@features/par/api/types";
 import {
   isParBackendConfigured,
   useLatestReviewCycle,
   useParRating,
-} from "../api/useActiveReview";
+} from "@features/par/api/useParData";
+import { formatDate } from "../api/derive";
 
 // Compact horizontal 4-stage breadcrumb for the Performance & growth
-// card, rendered below the "Last promoted date" row. Stages are the ones
+// card, rendered below the "Last promotion" row. Stages are the ones
 // the employee moves through in a cycle:
 //
 //   1. Employee PAR submission  — parEmployeeStatus

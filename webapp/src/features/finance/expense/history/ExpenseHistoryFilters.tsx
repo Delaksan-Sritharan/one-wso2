@@ -143,7 +143,7 @@ export function ExpenseHistoryFilters({
             // The background has to be the CSS variable rather than
             // `background.paper` — under CssVarsProvider the palette accessor
             // freezes the light scheme's hex and the box would stay white in
-            // dark mode (see `brandTheme.ts`).
+            // dark mode.
             borderRadius: "8px",
             backgroundColor: "var(--oxygen-palette-background-paper)",
             color: "text.secondary",
