@@ -22,7 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 type Perspectives = typeof import("./perspectives");
 
 async function load(
-  preview: { umt?: boolean; infra?: boolean; engineering?: boolean; mis?: boolean } = {},
+  preview: { umt?: boolean; infra?: boolean; engineering?: boolean; mis?: boolean; cado2?: boolean } = {},
 ): Promise<Perspectives> {
   vi.resetModules();
   window.config = {
@@ -103,6 +103,37 @@ describe("the Sales perspective", () => {
     expect(findPerspectiveByKey("sales")?.sections?.map((section) => section.id)).toContain(
       "sales-meetings",
     );
+  });
+});
+
+// CadO2 lands behind its own flag, as a whole, inside the Sales perspective.
+describe("CadO2's rail entries", () => {
+  const salesIdsIn = (perspectives: Perspectives) =>
+    (perspectives.findPerspectiveByKey("sales")?.sections ?? [])
+      .flatMap((section) => [section, ...(section.children ?? [])])
+      .map((section) => section.id);
+
+  it("are a CadO2 group under Sales once the flag is on", async () => {
+    const perspectives = await load({ cado2: true });
+    const group = perspectives.findPerspectiveByKey("sales")?.sections?.find((s) => s.id === "sec-app-cado2");
+    expect(group?.label).toBe("CadO2");
+    expect(group?.alwaysGroup).toBe(true);
+    expect(group?.children?.map((c) => [c.label, c.path])).toEqual([
+      ["My Quotes", "/sales/cado2/quotes"],
+      ["My Approvals", "/sales/cado2/approvals"],
+      ["Admin", "/sales/cado2/admin"],
+    ]);
+  });
+
+  it("are gone when the flag is off, or never mentioned", async () => {
+    for (const preview of [{ cado2: false }, {}]) {
+      expect(salesIdsIn(await load(preview))).toEqual(["sales-meetings"]);
+    }
+  });
+
+  it("never join the Meetings gate's ids", async () => {
+    const { SALES_ITEM_IDS } = await load({ cado2: true });
+    expect([...SALES_ITEM_IDS]).toEqual(["sales-meetings"]);
   });
 });
 

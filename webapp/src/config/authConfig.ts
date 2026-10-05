@@ -57,6 +57,10 @@ declare global {
       // Sales app shows a not-connected state and makes no requests.
       // The key keeps its original "REVOPS" name deliberately -- see salesBackendUrl.
       ONE_WSO2_REVOPS_BACKEND_URL?: string;
+      // Base URL for the CadO2 quote tool backend, version segment included.
+      // Optional — when absent (and the `cado2` preview flag is on) CadO2's
+      // pages show a not-connected state and make no requests.
+      ONE_WSO2_CADO2_BACKEND_URL?: string;
       // Base URL for the digiops-hr promotion-app backend. Optional — when
       // absent, ConnectedServices' "Last promotion" row falls back to a
       // "not configured" state and doesn't fire a request.

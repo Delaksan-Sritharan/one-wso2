@@ -31,6 +31,7 @@ import { marketingVisibility, useMarketingOpsGate } from "@features/marketing-op
 import { dueDiligenceVisibility, useDueDiligenceGate } from "@features/due-diligence/api/useDueDiligenceGate";
 import { securityVisibility, useSecurityGate } from "@features/security/api/useSecurityGate";
 import { salesVisibility, useSalesRailGate } from "@features/sales/api/useSalesGate";
+import { cado2Visibility, useCado2RailGate } from "@features/sales/cado2/api/useCado2RailGate";
 import { subscriptionVisibility, useSubscriptionGate } from "@features/subscriptions/api/useSubscriptionGate";
 import { parVisibility } from "@features/par/api/parVisibility";
 import { useParCanSeeLeadPortal, useParEmployeeItemVisible } from "@features/par/api/useParData";
@@ -174,6 +175,9 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   const securityGate = useSecurityGate(active.key === "security");
   // Sales: rows hidden when meet-app refuses the caller outright (403) -- see useSalesRailGate.
   const salesGate = useSalesRailGate(active.key === "sales");
+  // CadO2, also under Sales: rows decided by CadO2's own /me, and only while
+  // its preview flag is on -- see useCado2RailGate.
+  const cado2Gate = useCado2RailGate(active.key === "sales" && isPreviewEnabled("cado2"));
 
   // Subscriptions (PickMe Commute / LaaS) is the same shape of problem once
   // more, with one extra wrinkle worth naming: its backend publishes the
@@ -283,6 +287,8 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
         return infraVisibility(infraGate);
       case "sales":
         return salesVisibility(salesGate);
+      case "cado2":
+        return cado2Visibility(cado2Gate);
       case "promotion":
         return promotionVisibility(promotionLeadPortalGate);
       case "security":

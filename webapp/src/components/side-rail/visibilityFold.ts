@@ -38,6 +38,7 @@ import {
   type PerspectiveSection,
 } from "@constants/perspectives";
 import { SECURITY_ITEM_IDS } from "@constants/securityApps";
+import { CADO2_ITEM_IDS } from "@constants/cado2Apps";
 
 /**
  * The four facts every feature presents to the fold.
@@ -71,6 +72,7 @@ export type AdapterName =
   | "banking-admin"
   | "infra"
   | "sales"
+  | "cado2"
   | "promotion"
   | "security"
   | "umt"
@@ -87,6 +89,7 @@ const ADAPTER_NAMES: readonly AdapterName[] = [
   "banking-admin",
   "infra",
   "sales",
+  "cado2",
   "promotion",
   "security",
   "umt",
@@ -164,6 +167,8 @@ export function claimOf(name: AdapterName): SectionClaim {
       return { kind: "sections", ids: INFRA_ITEM_IDS };
     case "sales":
       return { kind: "sections", ids: SALES_ITEM_IDS };
+    case "cado2":
+      return { kind: "sections", ids: CADO2_ITEM_IDS };
     case "promotion":
       return { kind: "sections", ids: PROMOTION_SECTION_IDS };
     case "security":
@@ -201,6 +206,9 @@ export function claimsForPerspective(perspectiveKey: string): AdapterName[] {
   if (perspectiveKey === "people" || perspectiveKey === "finance") names.push("banking-admin");
   if (perspectiveKey === "infra") names.push("infra");
   if (perspectiveKey === "sales") names.push("sales");
+  // CadO2's rows exist only while its preview flag is on. Asking its /me when
+  // they are absent would hold the Sales landing on a backend with nothing to show.
+  if (perspectiveKey === "sales" && isPreviewEnabled("cado2")) names.push("cado2");
   // The promotion sections exist only while the preview flag is on. Asking
   // for privileges when they are absent holds the People Ops landing on a
   // backend that has nothing to show.
