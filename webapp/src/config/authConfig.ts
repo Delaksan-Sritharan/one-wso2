@@ -61,6 +61,10 @@ declare global {
       // Optional — when absent (and the `cado2` preview flag is on) CadO2's
       // pages show a not-connected state and make no requests.
       ONE_WSO2_CADO2_BACKEND_URL?: string;
+      // Base URL for the MEDDPICC backend (digiops-sales echo-backend), which
+      // powers the Deals tab and the MEDDPICC column under Sales. Optional —
+      // when absent those screens run on built-in demo data instead.
+      ONE_WSO2_ECHO_BACKEND_URL?: string;
       // Base URL for the digiops-hr promotion-app backend. Optional — when
       // absent, ConnectedServices' "Last promotion" row falls back to a
       // "not configured" state and doesn't fire a request.
