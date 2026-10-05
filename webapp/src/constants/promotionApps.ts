@@ -20,14 +20,14 @@
 // parApps.ts) and Leave. The Lead/Functional Lead/Promotion Board/Admin
 // portals are People Ops work and, once ported, will live there instead.
 
-import { AwardIcon } from "@wso2/oxygen-ui-icons-react";
+import { CircleUserIcon } from "@wso2/oxygen-ui-icons-react";
 import type { MenuApp } from "@constants/appMenu";
 
 export const ME_PROMOTION_APPS: readonly MenuApp[] = [
   {
     key: "promotion",
     name: "Promotion",
-    icon: AwardIcon,
+    icon: CircleUserIcon,
     purpose: "View your promotion history.",
     items: [
       {
