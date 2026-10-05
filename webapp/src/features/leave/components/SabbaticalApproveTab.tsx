@@ -214,20 +214,24 @@ function DecisionDialog({
             ? SABBATICAL.approve.confirmApproveBody(leave.email, dateRange, teamShare)
             : SABBATICAL.approve.confirmRejectBody(leave.email, dateRange)}
         </Typography>
+        {/* Set apart from the message in an outlined box, the way other One WSO2
+            dialogs frame a secondary block, so it reads as its own step. */}
         {approving && (
-          <FormControlLabel
-            control={
-              <Checkbox
-                size="small"
-                checked={planConfirmed}
-                onChange={(e) => setPlanConfirmed(e.target.checked)}
-              />
-            }
-            label={
-              <Typography sx={{ fontSize: 12.5 }}>{SABBATICAL.approve.confirmApproveAck}</Typography>
-            }
-            sx={{ mt: 1.5, alignItems: "flex-start", "& .MuiCheckbox-root": { pt: 0.25 } }}
-          />
+          <Box sx={{ mt: 2, px: 1.5, py: 1, border: 1, borderColor: "divider", borderRadius: 1 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={planConfirmed}
+                  onChange={(e) => setPlanConfirmed(e.target.checked)}
+                />
+              }
+              label={
+                <Typography sx={{ fontSize: 12.5 }}>{SABBATICAL.approve.confirmApproveAck}</Typography>
+              }
+              sx={{ m: 0, alignItems: "flex-start", "& .MuiCheckbox-root": { pt: 0.25 } }}
+            />
+          </Box>
         )}
       </DialogContent>
       <DialogActions>
