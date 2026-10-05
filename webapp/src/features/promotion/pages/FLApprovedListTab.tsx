@@ -22,7 +22,7 @@
 // off on, not re-litigating it). Read-only — no bulk actions, no edit.
 import { useState } from "react";
 import { alpha, Box, Card, DataGrid, Divider, IconButton, Skeleton, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
+import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests } from "../api/usePromotionRequests";
@@ -98,18 +98,7 @@ export default function FLApprovedListTab() {
     <>
       <PromotionRequestDetailDialog request={viewingRequest} onClose={() => setViewingRequest(null)} />
 
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-        <Tooltip title="Refresh">
-          <IconButton
-            size="small"
-            onClick={() => {
-              if (!cycle.isError && cycle.cycle) void requests.refetch();
-              else void cycle.refetch();
-            }}
-          >
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 1.5 }}>
         {rows.length > 0 && (
           <Stack direction="row" spacing={2} divider={<Divider orientation="vertical" flexItem />} alignItems="center">
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>All Count: {rows.length}</Typography>

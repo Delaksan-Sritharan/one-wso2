@@ -21,8 +21,7 @@
 // plain card list, matching the Lead Portal's own row style rather than
 // CustomTable (this is the one FL tab source itself didn't build on that
 // component).
-import { Box, Chip, Grid, IconButton, Skeleton, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
+import { Box, Chip, Grid, Skeleton, Typography } from "@wso2/oxygen-ui";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests } from "../api/usePromotionRequests";
@@ -63,14 +62,6 @@ export default function FLTimeBasedTab() {
           status here. No action is required; this is for information purposes only.
         </PromotionDeadlineBanner>
       )}
-
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1.5 }}>
-        <Tooltip title="Refresh">
-          <IconButton size="small" onClick={() => void requests.refetch()}>
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
-      </Box>
 
       {cycle.isPending || (requests.isPending && Boolean(cycle.cycle)) ? (
         <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 1 }} />

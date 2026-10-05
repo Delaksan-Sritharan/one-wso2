@@ -43,7 +43,7 @@ import {
   Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
-import { ArrowRightLeftIcon, PencilIcon, PlusIcon, RefreshCwIcon, SearchIcon, Trash2Icon, UploadIcon } from "@wso2/oxygen-ui-icons-react";
+import { ArrowRightLeftIcon, PencilIcon, PlusIcon, SearchIcon, Trash2Icon, UploadIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useUserInfo } from "@api/useUserInfo";
@@ -245,11 +245,6 @@ export default function AdminUserManagementTab() {
 
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, gap: 1.5, flexWrap: "wrap" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Tooltip title="Refresh">
-            <IconButton size="small" onClick={() => void users.refetch()}>
-              <RefreshCwIcon size={16} />
-            </IconButton>
-          </Tooltip>
           {sync.state === "IN_PROGRESS" && <PromotionSyncStatusLabel message="Synchronizing user data..." />}
         </Box>
         <TextField

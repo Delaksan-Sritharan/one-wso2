@@ -21,8 +21,8 @@
 // param; this uses local state instead — a two-pane drill-down within one
 // tab, not a linkable top-level tab the way the portal's own five tabs are.
 import { useState } from "react";
-import { Box, Breadcrumbs, Button, Chip, IconButton, Link, Paper, Skeleton, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { BellIcon, RefreshCwIcon, XCircleIcon } from "@wso2/oxygen-ui-icons-react";
+import { Box, Breadcrumbs, Button, Chip, Link, Paper, Skeleton, Stack, Typography } from "@wso2/oxygen-ui";
+import { BellIcon, XCircleIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { isPromotionDeadlinePast, useActivePromotionCycle } from "../api/usePromotionCycle";
@@ -118,17 +118,6 @@ export default function AdminPromotionCycleTab() {
       <PromotionFeedbackSnackbar feedback={feedback} onClose={close} />
 
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-        <Tooltip title="Refresh">
-          <IconButton
-            size="small"
-            onClick={() => {
-              void cycle.refetch();
-              void requests.refetch();
-            }}
-          >
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
         {view === "notifications" && (
           <Breadcrumbs>
             <Link component="button" onClick={() => setView("home")} sx={{ color: "primary.main" }}>

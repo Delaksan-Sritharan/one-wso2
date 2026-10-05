@@ -22,8 +22,8 @@
 // reached them at all. Read-only, structurally identical to
 // PBApprovedListTab/PBRejectedListTab.
 import { useState } from "react";
-import { Box, Card, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
-import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
+import { Card, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
+import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests } from "../api/usePromotionRequests";
@@ -71,20 +71,6 @@ export default function PBFLRejectedListTab() {
   return (
     <>
       <PromotionRequestDetailDialog request={viewingRequest} onClose={() => setViewingRequest(null)} />
-
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1.5 }}>
-        <Tooltip title="Refresh">
-          <IconButton
-            size="small"
-            onClick={() => {
-              if (!cycle.isError && cycle.cycle) void requests.refetch();
-              else void cycle.refetch();
-            }}
-          >
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
-      </Box>
 
       {cycle.isPending || (Boolean(cycle.cycle) && requests.isPending) ? (
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />

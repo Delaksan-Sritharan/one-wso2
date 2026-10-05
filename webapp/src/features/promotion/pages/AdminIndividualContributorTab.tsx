@@ -22,7 +22,7 @@
 // mutation is editing a rejected request's own reason after the fact.
 import { useState } from "react";
 import { Box, Card, Chip, DataGrid, IconButton, InputAdornment, Skeleton, Stack, TextField, Tooltip } from "@wso2/oxygen-ui";
-import { EyeIcon, RefreshCwIcon, SearchIcon } from "@wso2/oxygen-ui-icons-react";
+import { EyeIcon, SearchIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
 import { usePromotionRequests, useUpdatePromotionRequestRejectionReason } from "../api/usePromotionRequests";
@@ -149,12 +149,7 @@ export default function AdminIndividualContributorTab() {
         }}
       />
 
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5, gap: 1.5 }}>
-        <Tooltip title="Refresh">
-          <IconButton size="small" onClick={() => void requests.refetch()}>
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 1.5, gap: 1.5 }}>
         <TextField
           size="small"
           placeholder="Search by employee email"

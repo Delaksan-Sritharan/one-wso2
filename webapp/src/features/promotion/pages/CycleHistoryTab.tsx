@@ -25,7 +25,7 @@
 // separate endpoints.
 import { useState } from "react";
 import { alpha, Box, Card, Chip, DataGrid, Grid, IconButton, MenuItem, Select, Skeleton, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
+import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
@@ -106,18 +106,7 @@ export default function CycleHistoryTab() {
     <>
       <PromotionRequestDetailDialog request={viewingRequest} onClose={() => setViewingRequest(null)} />
 
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, gap: 1.5 }}>
-        <Tooltip title="Refresh">
-          <IconButton
-            size="small"
-            onClick={() => {
-              void cycles.refetch();
-              if (selectedCycleId !== "") void requests.refetch();
-            }}
-          >
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 2, gap: 1.5 }}>
         <Select
           size="small"
           displayEmpty

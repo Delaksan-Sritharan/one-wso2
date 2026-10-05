@@ -15,8 +15,8 @@
 // under the License.
 
 import { useMemo, useState } from "react";
-import { Box, IconButton, Skeleton, TextField, Tooltip, InputAdornment } from "@wso2/oxygen-ui";
-import { RefreshCwIcon, SearchIcon } from "@wso2/oxygen-ui-icons-react";
+import { Box, Skeleton, TextField, InputAdornment } from "@wso2/oxygen-ui";
+import { SearchIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import { usePromotionTeam } from "../api/usePromotionTeam";
 import PromotionEmptyState from "./PromotionEmptyState";
@@ -46,18 +46,7 @@ export default function PromotionTeamRoster({ kind, email }: { kind: "direct" | 
     <>
       <PromotionEmployeeHistoryDialog workEmail={viewingEmail} onClose={() => setViewingEmail(null)} />
 
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-        <Tooltip title="Refresh">
-          <IconButton
-            size="small"
-            onClick={() => {
-              setSearchKey("");
-              void team.refetch();
-            }}
-          >
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 1.5 }}>
         <TextField
           size="small"
           placeholder="Search"
