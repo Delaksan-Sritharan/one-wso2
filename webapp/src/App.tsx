@@ -220,6 +220,7 @@ import EngineeringDownloadsPage from "@features/engineering/pages/EngineeringDow
 import EngineeringVersionsPage from "@features/engineering/pages/EngineeringVersionsPage";
 import EngineeringPackagesPage from "@features/engineering/pages/EngineeringPackagesPage";
 import EngineeringRepositoryStatsPage from "@features/engineering/pages/EngineeringRepositoryStatsPage";
+import EngineeringAdminPage from "@features/engineering/pages/EngineeringAdminPage";
 import EngineeringOverviewPage from "@features/engineering/pages/EngineeringOverviewPage";
 import InfraHomePage from "@features/infra/pages/InfraHomePage";
 import InfraNewRepositoryPage from "@features/infra/pages/InfraNewRepositoryPage";
@@ -257,6 +258,7 @@ export default function App() {
           <Route path="engineering/versions" element={<EngineeringVersionsPage />} />
           <Route path="engineering/packages" element={<EngineeringPackagesPage />} />
           <Route path="engineering/repository-stats" element={<EngineeringRepositoryStatsPage />} />
+          <Route path="engineering/admin" element={<EngineeringAdminPage />} />
           {isPreviewEnabled("infra") && (
             <>
               <Route path="infra" element={<InfraHomePage />} />

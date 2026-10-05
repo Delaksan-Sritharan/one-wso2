@@ -38,6 +38,10 @@ import { useParCanSeeLeadPortal, useParEmployeeItemVisible } from "@features/par
 import { useParIsAdmin } from "@features/par/api/useParIsAdmin";
 import { promotionVisibility, usePromotionPrivileges } from "@features/promotion/api/usePromotionRoles";
 import { umtVisibility, useUmtGate } from "@features/umt/api/useUmtGate";
+import {
+  engineeringAdminVisibility,
+  useEngineeringAdminGate,
+} from "@features/engineering/api/engineeringAdminVisibility";
 import { isSriLankaWorkLocation } from "@utils/locationGate";
 import { visibleLeavesOf } from "./railActive";
 import {
@@ -235,6 +239,9 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
   // Only fetched while UMT is the active perspective.
   const isUmt = active.key === "umt";
   const umtGate = useUmtGate(isUmt);
+  const engineeringAdminGate = useEngineeringAdminGate(
+    active.key === "engineering" && isPreviewEnabled("engineering"),
+  );
 
   // Both services are a Colombo-office perk, so both screens are Sri-Lanka-only
   // — see isSriLankaWorkLocation. They now sit in different perspectives (self
@@ -299,6 +306,11 @@ export function usePerspectiveVisibility(): PerspectiveVisibility {
         return subscriptionVisibility(subscriptionGate);
       case "mis":
         return misVisibility(misGate);
+      case "engineering":
+        return engineeringAdminVisibility({
+          isAdmin: engineeringAdminGate.isAdmin,
+          resolving: engineeringAdminGate.isResolving,
+        });
       default: {
         const neverName: never = name;
         return neverName;

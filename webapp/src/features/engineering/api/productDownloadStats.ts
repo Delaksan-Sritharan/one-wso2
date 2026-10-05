@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { authedGet } from "@api/http";
+import { authedDelete, authedGet, authedPatch, authedPost } from "@api/http";
 
 // Read at call time, not at import. The preview switch works the same way:
 // a test (and a config.js edit) has to be able to change the answer without
@@ -294,6 +294,89 @@ export function getPackageVersions(
     `${credentialedBase()}/api/v1/stats/packages/${query.repoId}/versions?${params}`,
     accessToken,
   );
+}
+
+export interface ProductDownloadStatsUser {
+  email: string;
+  isAdmin: boolean;
+}
+
+export function getProductDownloadStatsUser(accessToken: string): Promise<ProductDownloadStatsUser> {
+  return authedGet(`${credentialedBase()}/api/v1/user-info`, accessToken);
+}
+
+export interface AdminTrackedRepository {
+  id: number;
+  orgName: string;
+  repoName: string;
+  productName: string | null;
+  assetPrefixes: string[];
+  isActive: boolean;
+  trackPackages: boolean;
+}
+
+export interface AdminRepositoriesResponse {
+  count: number;
+  repositories: AdminTrackedRepository[];
+}
+
+export interface NewTrackedRepository {
+  orgName: string;
+  repoName: string;
+  productName: string | null;
+  assetPrefixes: string[];
+  isActive: boolean;
+  trackPackages: boolean;
+}
+
+export interface TrackedRepositoryUpdate {
+  productName: string | null;
+  assetPrefixes: string[];
+  isActive: boolean;
+  trackPackages: boolean;
+}
+
+export interface SyncJobLog {
+  id: number;
+  source: string;
+  status: string;
+  reposSynced: number;
+  reposFailed: number;
+  errorMessage: string | null;
+  startedAt: string;
+  completedAt: string | null;
+}
+
+export interface SyncLogsResponse {
+  count: number;
+  logs: SyncJobLog[];
+}
+
+export function getAdminRepositories(accessToken: string): Promise<AdminRepositoriesResponse> {
+  return authedGet(`${credentialedBase()}/api/v1/admin/repositories`, accessToken);
+}
+
+export function createTrackedRepository(
+  accessToken: string,
+  body: NewTrackedRepository,
+): Promise<{ id: number } | null> {
+  return authedPost(`${credentialedBase()}/api/v1/admin/repositories`, accessToken, body);
+}
+
+export function updateTrackedRepository(
+  accessToken: string,
+  id: number,
+  body: TrackedRepositoryUpdate,
+): Promise<unknown> {
+  return authedPatch(`${credentialedBase()}/api/v1/admin/repositories/${id}`, accessToken, body);
+}
+
+export function deactivateTrackedRepository(accessToken: string, id: number): Promise<void> {
+  return authedDelete(`${credentialedBase()}/api/v1/admin/repositories/${id}`, accessToken);
+}
+
+export function getSyncLogs(accessToken: string): Promise<SyncLogsResponse> {
+  return authedGet(`${credentialedBase()}/api/v1/admin/sync/logs`, accessToken);
 }
 
 export type RepositoryMeasure = "stars" | "forks" | "watchers" | "openIssues";

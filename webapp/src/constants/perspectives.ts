@@ -138,6 +138,8 @@ function appsToSections(apps: readonly MenuApp[]): PerspectiveSection[] {
 // live outside Finance/Legal: a screen reached from two rails can't itself
 // live under either rail's own path prefix.
 export const BANKING_ADMIN_ITEM_ID = "banking-admin";
+
+export const ENGINEERING_ADMIN_ITEM_ID = "engineering-download-stats-admin";
 const BANKING_ADMIN_SECTION: PerspectiveSection = {
   id: BANKING_ADMIN_ITEM_ID,
   label: "Banking",
@@ -740,6 +742,11 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
                   id: "engineering-download-stats-repository-stats",
                   label: "Repository Stats",
                   path: "/engineering/repository-stats",
+                },
+                {
+                  id: ENGINEERING_ADMIN_ITEM_ID,
+                  label: "Admin",
+                  path: "/engineering/admin",
                 },
               ],
             },

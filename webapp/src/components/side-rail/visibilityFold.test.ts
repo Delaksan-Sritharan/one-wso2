@@ -371,6 +371,7 @@ describe("claimOf", () => {
       "security",
       "umt",
       "subscriptions",
+      "engineering",
     ];
     for (const name of names) {
       expect(claimOf(name)).toBeTruthy();
