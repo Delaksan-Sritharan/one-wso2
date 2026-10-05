@@ -19,8 +19,10 @@
 // History", route.ts: allowRoles: [Role.LEAD]). A separate top-level screen
 // from the Lead Portal (lead.tsx, "Time Based Promotions") in source, kept
 // separate here too rather than folded into it as a third tab.
+import { useState } from "react";
 import { Navigate, Outlet } from "react-router";
-import { Box, Typography } from "@wso2/oxygen-ui";
+import { Box, InputAdornment, TextField, Typography } from "@wso2/oxygen-ui";
+import { SearchIcon } from "@wso2/oxygen-ui-icons-react";
 import RoutedTabs, { type RoutedTabDef } from "@components/routed-tabs/RoutedTabs";
 
 const BASE_PATH = "/people-ops/promotion/team-history";
@@ -31,16 +33,38 @@ const TABS: RoutedTabDef[] = [
 ];
 
 export default function TeamPromotionHistoryPage() {
+  const [searchKey, setSearchKey] = useState("");
+
   return (
     <Box>
-      <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
-        Team Promotion History
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
-        See every promotion your direct and indirect reports have received, past and present.
-      </Typography>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2, flexWrap: "wrap", mb: 2.25 }}>
+        <Box>
+          <Typography component="h1" variant="h5" sx={{ mb: 0.5 }}>
+            Team Promotion History
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            See every promotion your direct and indirect reports have received, past and present.
+          </Typography>
+        </Box>
+        <TextField
+          size="small"
+          placeholder="Search"
+          value={searchKey}
+          onChange={(e) => setSearchKey(e.target.value)}
+          sx={{ width: 280 }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon size={16} />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+      </Box>
       <RoutedTabs basePath={BASE_PATH} tabs={TABS} ariaLabel="Team promotion history" />
-      <Outlet />
+      <Outlet context={searchKey} />
     </Box>
   );
 }
