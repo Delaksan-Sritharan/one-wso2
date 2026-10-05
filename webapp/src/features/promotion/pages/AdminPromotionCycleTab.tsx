@@ -117,16 +117,16 @@ export default function AdminPromotionCycleTab() {
       <ConfirmationDialog content={confirmEnd} onClose={() => setConfirmEnd(null)} />
       <PromotionFeedbackSnackbar feedback={feedback} onClose={close} />
 
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-        {view === "notifications" && (
+      {view === "notifications" && (
+        <Box sx={{ mb: 2 }}>
           <Breadcrumbs>
             <Link component="button" onClick={() => setView("home")} sx={{ color: "primary.main" }}>
               Home
             </Link>
             <Typography sx={{ color: "text.secondary" }}>Notification Hub</Typography>
           </Breadcrumbs>
-        )}
-      </Box>
+        </Box>
+      )}
 
       {view === "notifications" ? (
         <NotificationHubPanel cycle={cycle.cycle ?? null} requests={rows} loading={requests.isPending} />

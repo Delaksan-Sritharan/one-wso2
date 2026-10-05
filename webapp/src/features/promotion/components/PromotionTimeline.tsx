@@ -26,8 +26,7 @@
 // result — column split, dot colours, connector, alternating sides — matches
 // source; only the implementation is different.
 import type { ReactNode } from "react";
-import { Box, Chip, Typography } from "@wso2/oxygen-ui";
-import SvgIcon from "@mui/material/SvgIcon";
+import { Box, Chip, SvgIcon, Typography } from "@wso2/oxygen-ui";
 import type { PromotionEmployeeInfoWithLead, PromotionHistoryEntry } from "../api/types";
 import { formatDate, sortPromotionsByBand } from "../util/promotionHistory";
 

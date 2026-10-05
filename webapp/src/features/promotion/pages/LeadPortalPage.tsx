@@ -49,7 +49,9 @@ export default function LeadPortalPage() {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25 }}>
         Review and act on your direct reports' time-based promotion requests, and track them once decided.
       </Typography>
-      <RoutedTabs basePath={BASE_PATH} tabs={noActiveCycle ? HISTORY_ONLY_TABS : TABS} ariaLabel="Time based promotions" />
+      {!cycle.isPending && (
+        <RoutedTabs basePath={BASE_PATH} tabs={noActiveCycle ? HISTORY_ONLY_TABS : TABS} ariaLabel="Time based promotions" />
+      )}
       {noActiveCycle && pathname.startsWith(`${BASE_PATH}/pending`) ? (
         <Navigate to={`${BASE_PATH}/history`} replace />
       ) : (
