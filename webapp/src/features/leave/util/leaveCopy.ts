@@ -263,6 +263,14 @@ export const SABBATICAL = {
       "currently not set in the people management system. Please contact the People " +
       "Operations team to update your profile before applying.",
 
+    /** Policy V2.6. Shown INSTEAD of the form, like the missing-lead block. */
+    jobBandTitle: "Not eligible for sabbatical leave",
+    jobBandBelow: (minJobBand: number) =>
+      `Sabbatical leave is available for job band ${minJobBand} and above.`,
+    jobBandMissing:
+      "Your job band is not recorded in the people management system. Please contact the " +
+      "People Operations team to apply for sabbatical leave.",
+
     employmentStartDate: "Employment Start date", // :343 — always read-only
     lastSabbaticalEndDate: "Last sabbatical leave end date", // :350
     startDate: "Leave request start date*", // :371
@@ -310,6 +318,11 @@ export const SABBATICAL = {
     confirmBody: (dateRange: string, leadEmail: string | null) =>
       `This will submit your sabbatical leave request for ${dateRange} and send it` +
       `${leadEmail ? ` to ${leadEmail}` : ""} for approval.`,
+    /** Policy V2.6 — required in the confirmation before the request is sent. */
+    confirmAck:
+      "I acknowledge that sabbatical leave is subject to appropriate planning and handover " +
+      "between myself and my Lead. I am responsible for ensuring that my responsibilities, " +
+      "objectives and work commitments are appropriately managed during my absence.",
     confirmOk: "Yes",
     confirmCancel: "No",
   },
@@ -330,6 +343,11 @@ export const SABBATICAL = {
     /** :63 — leading space is deliberate; it follows a full stop. */
     teamShare: (percent: number) =>
       ` ${percent}% of your team will be on sabbatical during this period.`,
+    /** Policy V2.6 — required before approving; rejecting needs none. */
+    confirmApproveAck:
+      "I confirm that I have reviewed and approved this sabbatical leave request and that " +
+      "appropriate plans are in place to manage the employee's responsibilities, objectives " +
+      "and work commitments during the leave period.",
     confirmApproveOk: "Yes, Approve", // :86
     confirmRejectOk: "Yes, Reject", // :86
     confirmCancel: "Cancel", // :87

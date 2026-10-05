@@ -46,6 +46,7 @@ import {
   eligibilityGapDays,
   eligibilityYears,
   exceedsMaxDuration,
+  jobBandBlock,
   maxDurationWeeks,
 } from "../util/sabbatical";
 import { useNavigate } from "react-router";
@@ -128,6 +129,10 @@ function SabbaticalApply() {
   const [ackResignationError, setAckResignationError] = useState(false);
 
   const [confirming, setConfirming] = useState(false);
+  // Policy V2.6 — the handover acknowledgement inside the confirmation. It
+  // starts unticked each time the dialog opens, so one tick cannot carry over
+  // to a request the user has since changed.
+  const [handoverAck, setHandoverAck] = useState(false);
 
   const config = appConfig.data;
   const eligibilityDays = config?.sabbaticalLeaveEligibilityDuration ?? 0;
@@ -207,6 +212,7 @@ function SabbaticalApply() {
       return;
     }
 
+    setHandoverAck(false);
     setConfirming(true);
   };
 
@@ -274,6 +280,10 @@ function SabbaticalApply() {
     return <Alert severity="info">{SABBATICAL.featureOff}</Alert>;
   }
 
+  // Policy V2.6 — band 5 and above, mirroring the backend's check on POST
+  // /leaves. Read after the flag check, so the config is known to be there.
+  const bandBlock = jobBandBlock(userInfo.data?.jobBand ?? null, config.sabbaticalLeaveMinJobBand);
+
   const guideUrl = config?.sabbaticalLeaveUserGuideUrl;
   const policyUrl = config?.sabbaticalLeavePolicyUrl;
 
@@ -303,6 +313,14 @@ function SabbaticalApply() {
           <Alert severity="warning" variant="outlined">
             <AlertTitle>{SABBATICAL.apply.noLeadTitle}</AlertTitle>
             {SABBATICAL.apply.noLeadBody}
+          </Alert>
+        ) : bandBlock ? (
+          // The same hard block for the job band: nothing on the form can fix it.
+          <Alert severity="warning" variant="outlined">
+            <AlertTitle>{SABBATICAL.apply.jobBandTitle}</AlertTitle>
+            {bandBlock === "missing"
+              ? SABBATICAL.apply.jobBandMissing
+              : SABBATICAL.apply.jobBandBelow(config.sabbaticalLeaveMinJobBand)}
           </Alert>
         ) : (
           <Stack spacing={2}>
@@ -450,12 +468,20 @@ function SabbaticalApply() {
               leadEmail,
             )}
           </Typography>
+          <Box sx={{ mt: 1.5 }}>
+            <Acknowledgement
+              checked={handoverAck}
+              error={false}
+              onChange={setHandoverAck}
+              label={SABBATICAL.apply.confirmAck}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button size="small" onClick={() => setConfirming(false)}>
             {SABBATICAL.apply.confirmCancel}
           </Button>
-          <Button size="small" variant="contained" onClick={executeSubmit}>
+          <Button size="small" variant="contained" onClick={executeSubmit} disabled={!handoverAck}>
             {SABBATICAL.apply.confirmOk}
           </Button>
         </DialogActions>
