@@ -59,8 +59,8 @@ export default function LeadPortalPage() {
   );
 }
 
-/** The group's index route — sends straight to Pending Requests, source's
- * own first/default tab — or to History when no cycle is open. */
+/** The group's index route — sends straight to Pending Requests, the first
+ * tab, or to History when no cycle is open. */
 export function LeadPortalIndex() {
   const cycle = useActivePromotionCycle();
   if (cycle.isPending) return null;

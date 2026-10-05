@@ -53,10 +53,11 @@ export default function TeamPromotionHistoryPage() {
           onChange={(e) => setSearchKey(e.target.value)}
           sx={{ width: 280 }}
           slotProps={{
+            htmlInput: { "aria-label": "Search team promotion history" },
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon size={16} />
+                  <SearchIcon size={16} aria-hidden="true" />
                 </InputAdornment>
               ),
             },
