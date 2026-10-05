@@ -46,6 +46,8 @@ vi.mock("../api/useCado2Me", async (importOriginal) => ({
 // The screens themselves have their own tests; here they only need to say where they are.
 vi.mock("../quotes/pages/MyQuotesPage", () => ({ default: () => <h1>My Quotes</h1> }));
 vi.mock("../approvals/pages/MyApprovalsPage", () => ({ default: () => <h1>My Approvals</h1> }));
+vi.mock("../admin/approval-matrix/pages/ApprovalMatrixPage", () => ({ default: () => <h1>Approval matrix page</h1> }));
+vi.mock("../admin/currencies/pages/CurrenciesPage", () => ({ default: () => <h1>Currencies page</h1> }));
 vi.mock("../quotes/pages/QuoteDetailPage", async () => {
   const { useParams } = await import("react-router");
   return {
@@ -145,9 +147,16 @@ describe("CadO2 routing", () => {
     expect(where()).toBe("/sales/cado2/approvals");
   });
 
-  it("opens Admin on its first section", () => {
+  it("opens Admin on its first section, inside the section list", () => {
     state.me.data = me(["ADMIN"]);
     open("/sales/cado2/admin");
+    expect(where()).toBe("/sales/cado2/admin/approval-matrix");
+    expect(screen.getByText("Approval matrix page")).toBeInTheDocument();
+  });
+
+  it("sends an unknown Admin section to the first one", () => {
+    state.me.data = me(["ADMIN"]);
+    open("/sales/cado2/admin/regions");
     expect(where()).toBe("/sales/cado2/admin/approval-matrix");
   });
 

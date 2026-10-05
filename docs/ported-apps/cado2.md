@@ -83,8 +83,10 @@ content.
 | | Currencies | `/admin/currencies` |
 | | Product categories | `/admin/product-categories` |
 
-`/admin` → `/admin/approval-matrix`. Adding a section is one entry in
-`features/sales/cado2/admin/adminSections.ts` and one route.
+`/admin` and any unknown section → `/admin/approval-matrix` (an absolute redirect: a relative one from
+the catch-all route would resolve under itself and loop). Adding a section is one entry in
+`features/sales/cado2/admin/adminSections.ts` and one route. The frame is `Cado2AdminLayout`; each
+section renders its own heading, and the tab title reads "Currencies · CadO2 Admin".
 
 ### 2.5 Routing rules
 
@@ -212,9 +214,8 @@ Tracked with the CadO2 backend, outside the frontend changes.
 - **HTTP and errors.** CadO2's own fetch wrapper and `QueryClient` are replaced by `@api/http` and
   the shared client; messages via `describeError`, never a raw body. 4xx and mutations are not
   retried.
-- **Feedback.** Issues, conflicts and refusals stay inline where the person must read them, and so
-  does the wizard's "Saved" marker beside its Save button. One-off confirmations elsewhere ("Currency
-  added") use `useNotifications`.
+- **Feedback.** Issues, conflicts, refusals and results the person must read ("Saved. 3 quotes were
+  recalled for resubmission.") stay inline, as does the wizard's "Saved" marker beside its Save button.
 - **Wording.** Screens say **CadO2** wherever they named the tool.
 - **New dependency:** `@xyflow/react` 12.12.0 (pinned) for the approval diagram. It is lazy-loaded:
   its own chunk, fetched the first time a graph is shown.

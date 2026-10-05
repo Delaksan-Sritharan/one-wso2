@@ -19,13 +19,19 @@
 // mounts this only while the `cado2` preview flag is on.
 
 import { lazy, Suspense, type ReactNode } from "react";
-import { Navigate, Outlet, Route } from "react-router";
+import { Navigate, Route } from "react-router";
 import { Skeleton } from "@wso2/oxygen-ui";
 import Cado2Shell, { Cado2Landing, Cado2Requires } from "./components/Cado2Shell";
-import Cado2PlaceholderPage from "./pages/Cado2PlaceholderPage";
 import { cado2Paths } from "./cado2Paths";
 import MyQuotesPage from "./quotes/pages/MyQuotesPage";
 import MyApprovalsPage from "./approvals/pages/MyApprovalsPage";
+import Cado2AdminLayout from "./admin/components/Cado2AdminLayout";
+import { FIRST_ADMIN_SECTION } from "./admin/adminSections";
+import ApprovalMatrixPage from "./admin/approval-matrix/pages/ApprovalMatrixPage";
+import ApprovalSlasPage from "./admin/approval-slas/pages/ApprovalSlasPage";
+import LegalEntitiesPage from "./admin/legal-entities/pages/LegalEntitiesPage";
+import CurrenciesPage from "./admin/currencies/pages/CurrenciesPage";
+import ProductCategoriesPage from "./admin/product-categories/pages/ProductCategoriesPage";
 
 // The heavy screens load on first use.
 const QuoteWizardPage = lazy(() => import("./quotes/pages/QuoteWizardPage"));
@@ -70,16 +76,17 @@ export const cado2Routes = (
       path="admin"
       element={
         <Cado2Requires need="admin">
-          <Outlet />
+          <Cado2AdminLayout />
         </Cado2Requires>
       }
     >
-      <Route index element={<Navigate to="approval-matrix" replace />} />
-      <Route path="approval-matrix" element={<Cado2PlaceholderPage title="Approval matrix" />} />
-      <Route path="approval-slas" element={<Cado2PlaceholderPage title="Approval SLAs" />} />
-      <Route path="legal-entities" element={<Cado2PlaceholderPage title="Legal entities" />} />
-      <Route path="currencies" element={<Cado2PlaceholderPage title="Currencies" />} />
-      <Route path="product-categories" element={<Cado2PlaceholderPage title="Product categories" />} />
+      <Route index element={<Navigate to={cado2Paths.adminSection(FIRST_ADMIN_SECTION)} replace />} />
+      <Route path="approval-matrix" element={<ApprovalMatrixPage />} />
+      <Route path="approval-slas" element={<ApprovalSlasPage />} />
+      <Route path="legal-entities" element={<LegalEntitiesPage />} />
+      <Route path="currencies" element={<CurrenciesPage />} />
+      <Route path="product-categories" element={<ProductCategoriesPage />} />
+      <Route path="*" element={<Navigate to={cado2Paths.adminSection(FIRST_ADMIN_SECTION)} replace />} />
     </Route>
     <Route path="*" element={<Navigate to={cado2Paths.home} replace />} />
   </Route>
