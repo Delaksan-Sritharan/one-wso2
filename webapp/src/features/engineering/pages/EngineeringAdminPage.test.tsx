@@ -159,6 +159,28 @@ describe("Admin", () => {
     expect(String(patched?.[0])).toContain("/admin/repositories/7");
   });
 
+  it("clears a failed deactivation before the next repository is confirmed", async () => {
+    window.config = configured();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.includes("/user-info")) return json({ email: "a@wso2.com", isAdmin: true });
+        if (url.includes("/admin/sync/logs")) return json(logs);
+        if (init?.method === "DELETE") return json({ message: "deactivate failed" }, 500);
+        if (url.includes("/admin/repositories")) return json(repositories);
+        return json({}, 404);
+      }),
+    );
+    renderAdmin();
+    await userEvent.click(await screen.findByRole("button", { name: "Deactivate API Manager" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Deactivate$/ }));
+    expect(await screen.findByText(/deactivate failed/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "Deactivate API Manager" }));
+    expect(screen.queryByText(/deactivate failed/i)).not.toBeInTheDocument();
+  });
+
   it("shows an error the person can retry", async () => {
     window.config = configured();
     const fetchMock = vi.fn(async () => json({ message: "no" }, 500));

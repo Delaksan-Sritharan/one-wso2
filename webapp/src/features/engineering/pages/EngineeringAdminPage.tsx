@@ -94,6 +94,7 @@ export default function EngineeringAdminPage(): JSX.Element {
     mutationFn: async (id: number) => deactivateTrackedRepository(await getToken(), id),
     onSuccess: () => {
       refreshTrackedLists(queryClient);
+      deactivate.reset();
       setConfirm(null);
     },
   });
@@ -184,7 +185,13 @@ export default function EngineeringAdminPage(): JSX.Element {
                               Edit {label}
                             </Button>
                             {repository.isActive && (
-                              <Button size="small" onClick={() => setConfirm(repository)}>
+                              <Button
+                                size="small"
+                                onClick={() => {
+                                  deactivate.reset();
+                                  setConfirm(repository);
+                                }}
+                              >
                                 Deactivate {label}
                               </Button>
                             )}
@@ -247,7 +254,13 @@ export default function EngineeringAdminPage(): JSX.Element {
           onClose={() => setDialog(null)}
         />
       )}
-      <Dialog open={confirm != null} onClose={() => setConfirm(null)}>
+      <Dialog
+        open={confirm != null}
+        onClose={() => {
+          deactivate.reset();
+          setConfirm(null);
+        }}
+      >
         <DialogTitle>Deactivate tracked repository</DialogTitle>
         <DialogContent>
           {deactivate.isError && (
@@ -266,7 +279,14 @@ export default function EngineeringAdminPage(): JSX.Element {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirm(null)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              deactivate.reset();
+              setConfirm(null);
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={() => {
               if (confirm) deactivate.mutate(confirm.id);
