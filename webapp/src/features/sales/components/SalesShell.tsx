@@ -47,6 +47,7 @@ export default function SalesShell({
   configured,
   configKey,
   forbidden,
+  skipAccessCheck = false,
   children,
 }: {
   title: string;
@@ -55,11 +56,26 @@ export default function SalesShell({
   configKey: string;
   /** True when the backend has refused this caller outright (403). */
   forbidden?: boolean;
+  /**
+   * Skip meet-app's access check. Only for the MEDDPICC demo when no meet-app
+   * backend is configured: there is nobody to ask, and the demo data it shows
+   * belongs to no one. Anywhere else the check is the page's front door.
+   */
+  skipAccessCheck?: boolean;
   children: ReactNode;
 }) {
   const active = useActivePerspective();
-  const access = useSalesUserInfo();
+  const access = useSalesUserInfo(!skipAccessCheck);
   const { pathname } = useLocation();
+
+  if (skipAccessCheck) {
+    return (
+      <Box>
+        <PerspectiveHeader title={title} subtitle={subtitle} />
+        {children}
+      </Box>
+    );
+  }
 
   if (!configured) {
     return (
