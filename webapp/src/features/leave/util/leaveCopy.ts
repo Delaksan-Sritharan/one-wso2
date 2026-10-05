@@ -279,7 +279,7 @@ export const SABBATICAL = {
     commentPlaceholder: "Add a comment...", // :420 — three dots, not an ellipsis
     submit: "Apply", // :518
 
-    /** The three acknowledgements. All required; the second carries a link. */
+    /** The acknowledgements. All required; the second carries a link. */
     ackManagerApproval:
       "I confirm that I have discussed my sabbatical leave plans with my lead and have " +
       "obtained their approval.", // :441
@@ -291,6 +291,11 @@ export const SABBATICAL = {
       "I acknowledge that I cannot voluntarily resign from my employment for 6 months after " +
       "completing sabbatical leave. If I do, I will be required to reimburse an amount " +
       "equivalent to the salary paid to me during the sabbatical period.",
+    /** Policy V2.6 — a fourth required acknowledgement. */
+    ackHandover:
+      "I acknowledge that sabbatical leave is subject to appropriate planning and handover " +
+      "between myself and my Lead. I am responsible for ensuring that my responsibilities, " +
+      "objectives and work commitments are appropriately managed during my absence.",
 
     /** Inline, on the field itself. */
     startDateRequired: "Start date is required", // :387
@@ -318,11 +323,6 @@ export const SABBATICAL = {
     confirmBody: (dateRange: string, leadEmail: string | null) =>
       `This will submit your sabbatical leave request for ${dateRange} and send it` +
       `${leadEmail ? ` to ${leadEmail}` : ""} for approval.`,
-    /** Policy V2.6 — required in the confirmation before the request is sent. */
-    confirmAck:
-      "I acknowledge that sabbatical leave is subject to appropriate planning and handover " +
-      "between myself and my Lead. I am responsible for ensuring that my responsibilities, " +
-      "objectives and work commitments are appropriately managed during my absence.",
     confirmOk: "Yes",
     confirmCancel: "No",
   },

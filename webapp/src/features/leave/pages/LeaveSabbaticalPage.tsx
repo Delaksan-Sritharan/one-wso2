@@ -121,18 +121,17 @@ function SabbaticalApply() {
   const [ackLead, setAckLead] = useState(false);
   const [ackPolicy, setAckPolicy] = useState(false);
   const [ackResignation, setAckResignation] = useState(false);
+  // Policy V2.6 — the handover acknowledgement, required like the other three.
+  const [ackHandover, setAckHandover] = useState(false);
 
   const [startMissing, setStartMissing] = useState(false);
   const [endMissing, setEndMissing] = useState(false);
   const [ackLeadError, setAckLeadError] = useState(false);
   const [ackPolicyError, setAckPolicyError] = useState(false);
   const [ackResignationError, setAckResignationError] = useState(false);
+  const [ackHandoverError, setAckHandoverError] = useState(false);
 
   const [confirming, setConfirming] = useState(false);
-  // Policy V2.6 — the handover acknowledgement inside the confirmation. It
-  // starts unticked each time the dialog opens, so one tick cannot carry over
-  // to a request the user has since changed.
-  const [handoverAck, setHandoverAck] = useState(false);
 
   const config = appConfig.data;
   const eligibilityDays = config?.sabbaticalLeaveEligibilityDuration ?? 0;
@@ -172,6 +171,7 @@ function SabbaticalApply() {
     setAckLeadError(false);
     setAckPolicyError(false);
     setAckResignationError(false);
+    setAckHandoverError(false);
   };
 
   // ApplyTab.tsx:204-273. The order matters: each rule raises one message and
@@ -207,12 +207,12 @@ function SabbaticalApply() {
     if (!ackLead) setAckLeadError(true);
     if (!ackPolicy) setAckPolicyError(true);
     if (!ackResignation) setAckResignationError(true);
-    if (!ackLead || !ackPolicy || !ackResignation) {
+    if (!ackHandover) setAckHandoverError(true);
+    if (!ackLead || !ackPolicy || !ackResignation || !ackHandover) {
       showError(SABBATICAL.apply.acknowledgeAll);
       return;
     }
 
-    setHandoverAck(false);
     setConfirming(true);
   };
 
@@ -240,14 +240,15 @@ function SabbaticalApply() {
           // everything going through the slice gets SnackMessage's "…successfully".
           // Same event, two strings, and the difference is the source's.
           showSuccess(SnackMessage.success.submitLeaveMessage);
-          // :291-296 — dates, comment and the three boxes clear; the anchor the
-          // user typed is left alone.
+          // :291-296 — dates, comment and the boxes clear; the anchor the user
+          // typed is left alone.
           setStartDate("");
           setEndDate("");
           setComment("");
           setAckLead(false);
           setAckPolicy(false);
           setAckResignation(false);
+          setAckHandover(false);
           // Same as the general form: show them what they just submitted.
           const landing = historyPathAfterSubmit("sabbatical", gate.canSee);
           if (landing) navigate(landing);
@@ -438,6 +439,15 @@ function SabbaticalApply() {
                 }}
                 label={SABBATICAL.apply.ackResignation}
               />
+              <Acknowledgement
+                checked={ackHandover}
+                error={ackHandoverError}
+                onChange={(v) => {
+                  setAckHandover(v);
+                  setAckHandoverError(false);
+                }}
+                label={SABBATICAL.apply.ackHandover}
+              />
             </Stack>
 
             <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
@@ -468,20 +478,12 @@ function SabbaticalApply() {
               leadEmail,
             )}
           </Typography>
-          <Box sx={{ mt: 1.5 }}>
-            <Acknowledgement
-              checked={handoverAck}
-              error={false}
-              onChange={setHandoverAck}
-              label={SABBATICAL.apply.confirmAck}
-            />
-          </Box>
         </DialogContent>
         <DialogActions>
           <Button size="small" onClick={() => setConfirming(false)}>
             {SABBATICAL.apply.confirmCancel}
           </Button>
-          <Button size="small" variant="contained" onClick={executeSubmit} disabled={!handoverAck}>
+          <Button size="small" variant="contained" onClick={executeSubmit}>
             {SABBATICAL.apply.confirmOk}
           </Button>
         </DialogActions>

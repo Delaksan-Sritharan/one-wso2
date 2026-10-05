@@ -181,10 +181,8 @@ async function fillValidRequest() {
 const HANDOVER_ACK = /I acknowledge that sabbatical leave is subject to appropriate planning and handover/;
 const APPROVAL_ACK = /I confirm that I have reviewed and approved this sabbatical leave request/;
 
-// Ticks the confirmation dialog's acknowledgement and confirms.
 async function confirmSubmit() {
   const dialog = await screen.findByRole("dialog");
-  fireEvent.click(within(dialog).getByRole("checkbox", { name: HANDOVER_ACK }));
   fireEvent.click(within(dialog).getByRole("button", { name: "Yes" }));
 }
 
@@ -360,35 +358,32 @@ describe("the job band", () => {
   });
 });
 
-// Policy V2.6: the applicant acknowledges the handover in the confirmation itself.
+// Policy V2.6: the applicant acknowledges the handover. It sits on the form with
+// the other three acknowledgements and is required the same way.
 describe("the handover acknowledgement", () => {
-  it("holds the submit until it is ticked", async () => {
+  it("is on the form", async () => {
+    show();
+    expect(await screen.findByRole("checkbox", { name: HANDOVER_ACK })).toBeInTheDocument();
+  });
+
+  it("is required like the other acknowledgements", async () => {
+    show();
+    await fillValidRequest();
+    fireEvent.click(screen.getByRole("checkbox", { name: HANDOVER_ACK }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(
+      await screen.findByText("Please acknowledge all the required checkboxes"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("leaves the confirmation with nothing to tick", async () => {
     show();
     await fillValidRequest();
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     const dialog = await screen.findByRole("dialog");
-    const yes = within(dialog).getByRole("button", { name: "Yes" });
-    expect(yes).toBeDisabled();
-
-    fireEvent.click(within(dialog).getByRole("checkbox", { name: HANDOVER_ACK }));
-    expect(yes).toBeEnabled();
-    fireEvent.click(yes);
-    await waitFor(() => expect(submitMutate).toHaveBeenCalled());
-  });
-
-  it("starts unticked every time the dialog opens", async () => {
-    show();
-    await fillValidRequest();
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
-    let dialog = await screen.findByRole("dialog");
-    fireEvent.click(within(dialog).getByRole("checkbox", { name: HANDOVER_ACK }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "No" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
-    dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("checkbox", { name: HANDOVER_ACK })).not.toBeChecked();
-    expect(within(dialog).getByRole("button", { name: "Yes" })).toBeDisabled();
+    expect(within(dialog).queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Yes" })).toBeEnabled();
   });
 });
 
