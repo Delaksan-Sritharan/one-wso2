@@ -1629,6 +1629,105 @@ export function isEvidencePortalBackendConfigured(): boolean {
 //
 // The config key keeps its original name, ONE_WSO2_REVOPS_BACKEND_URL, on purpose: it is set in
 // every environment's config.js, and renaming it would need each deployment changed in step.
+// CadO2 — the quote tool under Sales → CadO2. Its own Go backend, configured
+// with the version segment included; every quote, approval and admin call goes
+// here. Unset means "not connected": CadO2's pages say so and make no requests.
+// Gated as a whole by the `cado2` preview flag as well (previewFeatures.ts).
+export const cado2BackendUrl: string = stripTrailingSlashes(window.config?.ONE_WSO2_CADO2_BACKEND_URL ?? "");
+
+export function isCado2BackendConfigured(): boolean {
+  return Boolean(cado2BackendUrl);
+}
+
+const encodeSegment = (value: string | number): string => encodeURIComponent(String(value));
+
+export const cado2ServiceUrls = {
+  // The caller's CadO2 roles (SALES, ADMIN) and approval roles. Decides the rail
+  // and every CadO2 route; the backend re-checks each call on its own.
+  me: `${cado2BackendUrl}/me`,
+  legalEntities: (activeOnly = false): string =>
+    `${cado2BackendUrl}/legal-entities${activeOnly ? "?active=true" : ""}`,
+  legalEntity: (id: number): string => `${cado2BackendUrl}/legal-entities/${encodeSegment(id)}`,
+  // Salesforce lookups, read live through the backend.
+  accounts: (nameContains: string): string =>
+    `${cado2BackendUrl}/accounts?nameContains=${encodeSegment(nameContains)}&limit=20`,
+  accountOpportunities: (accountId: string): string =>
+    `${cado2BackendUrl}/accounts/${encodeSegment(accountId)}/opportunities`,
+  accountContacts: (accountId: string): string =>
+    `${cado2BackendUrl}/accounts/${encodeSegment(accountId)}/contacts`,
+  // One page of a price book's products in a currency. Paged server-side by
+  // limit/offset (Salesforce stops at offset 2000).
+  products: (
+    currency: string,
+    nameContains: string,
+    page: { pricebookId: string; limit: number; offset: number },
+  ): string => {
+    const q = new URLSearchParams({
+      currency,
+      pricebookId: page.pricebookId,
+      limit: String(page.limit),
+      offset: String(page.offset),
+    });
+    if (nameContains) q.set("nameContains", nameContains);
+    return `${cado2BackendUrl}/products?${q.toString()}`;
+  },
+  pricebooks: (currency: string): string => `${cado2BackendUrl}/pricebooks?currency=${encodeSegment(currency)}`,
+  currencies: `${cado2BackendUrl}/currencies`,
+  quoteSettings: `${cado2BackendUrl}/quote-settings`,
+  pricingPreview: `${cado2BackendUrl}/pricing/preview`,
+  quotes: `${cado2BackendUrl}/quotes`,
+  // My Quotes. `everyone` (scope=all) is answered for CadO2 admins only.
+  quoteList: (status: string, everyone: boolean): string => {
+    const q = new URLSearchParams({ limit: "200" });
+    if (status) q.set("status", status);
+    if (everyone) q.set("scope", "all");
+    return `${cado2BackendUrl}/quotes?${q.toString()}`;
+  },
+  quote: (quoteId: number): string => `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}`,
+  quoteRevise: (quoteId: number): string => `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/revise`,
+  quoteClose: (quoteId: number): string => `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/close`,
+  quoteAuditEvents: (quoteId: number): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/audit-events`,
+  quoteVersion: (quoteId: number, version: number): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}`,
+  quoteSubmit: (quoteId: number, version: number): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/submit`,
+  quoteRecall: (quoteId: number, version: number): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/recall`,
+  // A version's order form documents: GET lists them, POST issues the order form.
+  quoteDocuments: (quoteId: number, version: number): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/documents`,
+  // A PDF rendered on request and never stored. POST, though it changes nothing.
+  quoteOrderFormPreview: (quoteId: number, version: number): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/documents/preview`,
+  quoteDocumentFile: (quoteId: number, documentId: number): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/documents/${encodeSegment(documentId)}/file`,
+  approvalPreview: `${cado2BackendUrl}/approvals/preview`,
+  storedApprovalPreview: (quoteId: number, version: number): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/approval-preview`,
+  approval: (quoteId: number, version: number): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/approval`,
+  approvalDecision: (
+    quoteId: number,
+    version: number,
+    stepId: number,
+    outcome: "approve" | "reject" | "request-changes",
+  ): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/approval/steps/${encodeSegment(stepId)}/${outcome}`,
+  approvalInbox: `${cado2BackendUrl}/approvals/inbox`,
+  approvalMatrix: `${cado2BackendUrl}/admin/approval-matrix`,
+  approvalMatrixChanges: `${cado2BackendUrl}/admin/approval-matrix/changes`,
+  adminCurrencies: `${cado2BackendUrl}/admin/currencies`,
+  adminCurrency: (code: string): string => `${cado2BackendUrl}/admin/currencies/${encodeSegment(code)}`,
+  adminApprovalSlas: `${cado2BackendUrl}/admin/approval-slas`,
+  adminApprovalSlaChanges: `${cado2BackendUrl}/admin/approval-slas/changes`,
+  productCategories: `${cado2BackendUrl}/admin/product-categories`,
+  productCategorySearch: (q: string): string =>
+    `${cado2BackendUrl}/admin/product-categories/search?q=${encodeSegment(q)}`,
+  productCategory: (productId: string): string =>
+    `${cado2BackendUrl}/admin/product-categories/${encodeSegment(productId)}`,
+};
+
 export const salesBackendUrl: string = window.config?.ONE_WSO2_REVOPS_BACKEND_URL ?? "";
 
 export function isSalesBackendConfigured(): boolean {

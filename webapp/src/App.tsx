@@ -197,6 +197,7 @@ import { riskRoutes } from "@features/security/grc/modules/risk/routes";
 import { auditRoutes } from "@features/security/grc/modules/audit/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
 import { evidenceRoutes } from "@features/security/evidence-portal/routes";
+import { cado2Routes } from "@features/sales/cado2/routes";
 import PartnersListPage from "@features/due-diligence/partners/pages/PartnersListPage";
 import PartnerPendingPage from "@features/due-diligence/partners/pages/PartnerPendingPage";
 import PartnerDashboardPage from "@features/due-diligence/partners/pages/PartnerDashboardPage";
@@ -949,6 +950,10 @@ export default function App() {
               has no address — this survives a refresh, a bookmark and a paste into Slack.
               The transcript and smart notes land in its left column. */}
           <Route path="sales/meetings/:meetingId" element={<MeetingDetailPage />} />
+          {/* Sales → CadO2, the quote tool. Its whole route tree, behind the `cado2`
+              preview flag; Cado2Shell resolves access for every page. See
+              @features/sales/cado2/routes and docs/ported-apps/cado2.md. */}
+          {isPreviewEnabled("cado2") && cado2Routes}
           <Route path="settings" element={<SettingsPage />} />
           {/* Me → Menu: the cafeteria screen ported from the standalone
               menu app. One page, as the original was. */}

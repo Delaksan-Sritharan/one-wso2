@@ -101,7 +101,15 @@ export type PreviewFeature =
    * backend roles (`eventplatform`, `eventplatform-shop`) still decide who
    * sees what once this is on. See docs/ported-apps/event-platform.md.
    */
-  | "eventPlatform";
+  | "eventPlatform"
+  /**
+   * Sales → CadO2, the whole quote tool: its rail group (My Quotes, My
+   * Approvals, Admin), every route under `/sales/cado2`, and its backend
+   * calls. Held back as a whole until every screen is in place. CadO2's own
+   * `/me` roles still decide who sees which item once this is on. See
+   * docs/ported-apps/cado2.md.
+   */
+  | "cado2";
 
 /**
  * Whether a preview feature should be shown.

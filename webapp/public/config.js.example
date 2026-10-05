@@ -41,6 +41,13 @@ window.config = {
   // arrive from this backend fully formed; nothing here constructs them.
   // ONE_WSO2_REVOPS_BACKEND_URL: "<your-sales-meetings-backend-url>",
 
+  // CadO2 quote tool backend — powers Sales → CadO2 (quotes, approvals and
+  // their admin). Shown only while `cado2` is on in ONE_WSO2_PREVIEW_FEATURES
+  // below. With the flag on and this unset, CadO2's pages say "not connected"
+  // and make no requests. Salesforce record links use
+  // ONE_WSO2_SALESFORCE_BASE_URL.
+  // ONE_WSO2_CADO2_BACKEND_URL: "<your-cado2-backend-url>",
+
   // Promotion backend. Requests carry the x-user-timezone-offset header.
   // Also powers the Me page's "Last promotion" row.
   // ONE_WSO2_PROMOTION_BACKEND_URL: "<your-promotion-backend-url>",
@@ -171,6 +178,6 @@ window.config = {
   // Each entry is deleted when its feature ships — a list that only grows
   // stops describing anything.
   //
-  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, engineering: false, mis: false, eventPlatform: false },
+  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, engineering: false, mis: false, eventPlatform: false, cado2: false },
 
 };

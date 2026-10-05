@@ -19,6 +19,7 @@
 
 import { csmUrl, isCsmConfigured, isIsacConfigured, isacUrl } from "@config/apiConfig";
 import { isPreviewEnabled } from "@config/previewFeatures";
+import { CADO2_APPS } from "@constants/cado2Apps";
 import {
   AwardIcon,
   Box as BoxIcon,
@@ -489,21 +490,24 @@ const UMT_SECTIONS: PerspectiveSection[] = [
  * ask useUmtGate directly rather than reading `requires` for them.
  */
 export const UMT_ADMIN_ITEM_IDS: ReadonlySet<string> = new Set(["umt-products"]);
-// Sales's rail. One entry today — the meeting history — but a list rather than
-// nothing, because the rail is how you get back to the screen from a deep link
-// and because the detail view for a single recording lands next to it next.
+// Sales's rail: the meeting history, and CadO2 while its preview flag is on.
+const SALES_MEETINGS_SECTION: PerspectiveSection = {
+  id: "sales-meetings",
+  label: "Meetings",
+  // NOT RadioIcon, which belongs to the perspective itself. SideRail renders
+  // the Overview row with `active.icon`, so a section reusing the perspective
+  // icon puts the same glyph on two adjacent rows and the rail stops being
+  // scannable. Video reads as "recorded call" and its solid rectangle is the
+  // strongest silhouette contrast against Radio's arcs at 20px.
+  icon: VideoIcon,
+  path: "/sales",
+};
+
 const SALES_SECTIONS: PerspectiveSection[] = [
-  {
-    id: "sales-meetings",
-    label: "Meetings",
-    // NOT RadioIcon, which belongs to the perspective itself. SideRail renders
-    // the Overview row with `active.icon`, so a section reusing the perspective
-    // icon puts the same glyph on two adjacent rows and the rail stops being
-    // scannable. Video reads as "recorded call" and its solid rectangle is the
-    // strongest silhouette contrast against Radio's arcs at 20px.
-    icon: VideoIcon,
-    path: "/sales",
-  },
+  SALES_MEETINGS_SECTION,
+  // CadO2 answers to its own backend (CADO2_ITEM_IDS, the `cado2` adapter).
+  // With the flag off the group doesn't exist, so nothing asks that backend.
+  ...(isPreviewEnabled("cado2") ? appsToSections(CADO2_APPS) : []),
 ];
 
 /**
@@ -511,8 +515,11 @@ const SALES_SECTIONS: PerspectiveSection[] = [
  * -- the same shape as SECURITY_ITEM_IDS. Access is decided by the meet-app backend's own
  * groups, so the only way to know a caller has none is its 403; until this gate existed the
  * Meetings row stayed in the rail beside a "Nothing here for you yet" card.
+ *
+ * Meetings only: CadO2's rows sit in the same perspective but belong to its own adapter, and
+ * two adapters claiming one id is a test failure (claimConflicts).
  */
-export const SALES_ITEM_IDS: ReadonlySet<string> = new Set(SALES_SECTIONS.map((s) => s.id));
+export const SALES_ITEM_IDS: ReadonlySet<string> = new Set([SALES_MEETINGS_SECTION.id]);
 
 export interface PerspectiveDef {
   key: string;
