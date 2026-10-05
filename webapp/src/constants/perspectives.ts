@@ -26,7 +26,6 @@ import {
   BarChart3,
   CheckCheckIcon,
   ClipboardCheckIcon,
-  ClipboardListIcon,
   DatabaseIcon,
   FileSignatureIcon,
   HouseIcon,
@@ -793,13 +792,6 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     path: "/marketing-ops",
     forwardsToFirstItem: true,
     sections: MARKETING_OPS_SECTIONS,
-  },
-  {
-    key: "tasks",
-    label: "Tasks",
-    icon: ClipboardListIcon,
-    access: true,
-    path: "/tasks",
   },
   // Security and Compliance — the GRC platform's Risk Hub, Audit Hub and Admin
   // Console, lifted from grc-tools rather than rewritten. Its own perspective:
