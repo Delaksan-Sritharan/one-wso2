@@ -216,9 +216,8 @@ Tracked with the CadO2 backend, outside the frontend changes.
   does the wizard's "Saved" marker beside its Save button. One-off confirmations elsewhere ("Currency
   added") use `useNotifications`.
 - **Wording.** Screens say **CadO2** wherever they named the tool.
-- **New dependency:** `@xyflow/react` for the approval diagram, lazy-loaded. Until it lands (phase 3)
-  `LazyApprovalDiagram` shows the step count in the graph's place; the approval panels around it are
-  complete.
+- **New dependency:** `@xyflow/react` 12.12.0 (pinned) for the approval diagram. It is lazy-loaded:
+  its own chunk, fetched the first time a graph is shown.
 
 ---
 

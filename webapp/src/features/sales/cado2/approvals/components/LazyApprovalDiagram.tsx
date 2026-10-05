@@ -14,20 +14,24 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import type { JSX } from "react";
-import { Box, Typography } from "@wso2/oxygen-ui";
+import { lazy, Suspense, type JSX } from "react";
+import { Box, CircularProgress } from "@wso2/oxygen-ui";
 import type { ApprovalStep } from "@features/sales/cado2/approvals/api/approvalTypes";
 
-/**
- * The approval graph's place. The graph itself is drawn in a later change;
- * until then the steps are listed by the surrounding panels.
- */
+// React Flow loads only when a graph is first shown.
+const ApprovalDiagram = lazy(() => import("./ApprovalDiagram"));
+
+/** The approval graph, loaded on first use. */
 export default function LazyApprovalDiagram({ steps }: { steps: readonly ApprovalStep[] }): JSX.Element {
   return (
-    <Box sx={{ p: 2, border: 1, borderColor: "divider", borderRadius: 1 }}>
-      <Typography variant="body2" color="text.secondary">
-        {steps.length} approval step{steps.length === 1 ? "" : "s"}. The approval graph is drawn here.
-      </Typography>
-    </Box>
+    <Suspense
+      fallback={
+        <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+          <CircularProgress size={22} aria-label="Drawing the approvals" />
+        </Box>
+      }
+    >
+      <ApprovalDiagram steps={steps} />
+    </Suspense>
   );
 }

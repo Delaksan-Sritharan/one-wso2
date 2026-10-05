@@ -45,6 +45,7 @@ vi.mock("../api/useCado2Me", async (importOriginal) => ({
 
 // The screens themselves have their own tests; here they only need to say where they are.
 vi.mock("../quotes/pages/MyQuotesPage", () => ({ default: () => <h1>My Quotes</h1> }));
+vi.mock("../approvals/pages/MyApprovalsPage", () => ({ default: () => <h1>My Approvals</h1> }));
 vi.mock("../quotes/pages/QuoteDetailPage", async () => {
   const { useParams } = await import("react-router");
   return {

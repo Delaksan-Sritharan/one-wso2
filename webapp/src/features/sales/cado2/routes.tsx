@@ -25,6 +25,7 @@ import Cado2Shell, { Cado2Landing, Cado2Requires } from "./components/Cado2Shell
 import Cado2PlaceholderPage from "./pages/Cado2PlaceholderPage";
 import { cado2Paths } from "./cado2Paths";
 import MyQuotesPage from "./quotes/pages/MyQuotesPage";
+import MyApprovalsPage from "./approvals/pages/MyApprovalsPage";
 
 // The heavy screens load on first use.
 const QuoteWizardPage = lazy(() => import("./quotes/pages/QuoteWizardPage"));
@@ -61,7 +62,7 @@ export const cado2Routes = (
       path="approvals"
       element={
         <Cado2Requires need="approve">
-          <Cado2PlaceholderPage title="My Approvals" />
+          <MyApprovalsPage />
         </Cado2Requires>
       }
     />
