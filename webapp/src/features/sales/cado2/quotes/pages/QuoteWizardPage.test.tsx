@@ -490,6 +490,32 @@ describe("QuoteWizardPage — unsaved changes when leaving", () => {
     expect(readUnsavedDraft("/sales/cado2/quotes/5/versions/1/edit")?.values.poNumber).toBe("PO-78");
   });
 
+  it("asks before Close throws unsaved edits away, and keeps nothing once you agree", async () => {
+    Object.assign(version, { data: ready });
+    render(
+      <MemoryRouter initialEntries={["/sales/cado2/quotes/5/versions/1/edit"]}>
+        <Routes>
+          <Route path="sales/cado2/quotes/:quoteId/versions/:version/edit" element={<QuoteWizardPage />} />
+          <Route path="sales/cado2/quotes/:quoteId/:tab" element={<p>quote page</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Commercial/ }));
+    await user.type(await screen.findByLabelText(/PO number/), "PO-79");
+
+    const confirm = vi.spyOn(window, "confirm").mockReturnValueOnce(false);
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(confirm).toHaveBeenCalledWith("You have unsaved changes. Leave without saving?");
+    expect(screen.queryByText("quote page")).toBeNull();
+
+    confirm.mockReturnValueOnce(true);
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(await screen.findByText("quote page")).toBeInTheDocument();
+    expect(readUnsavedDraft("/sales/cado2/quotes/5/versions/1/edit")).toBeNull();
+    confirm.mockRestore();
+  });
+
   it("keeps nothing when the wizard is left with nothing unsaved", () => {
     Object.assign(version, { data: ready });
     renderWizard().unmount();

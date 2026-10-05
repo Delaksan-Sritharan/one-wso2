@@ -1,7 +1,8 @@
 # CadO2 — functional specification
 
-**Status:** written before the build (phase 1). It is the reference the later phases are checked
-against, and the record of what is deliberately done differently.
+**Status:** built. Every screen is in place behind the `cado2` preview flag. What remains is switching
+the flag on per environment, and deleting it once CadO2 is released. This document records the
+behaviour and what is deliberately done differently.
 
 **In One WSO2:** a collapsible **CadO2** group under Sales, with **My Quotes**, **My Approvals** and
 **Admin** under `/sales/cado2`. The backend is the CadO2 Go service, unchanged in shape, configured as
@@ -224,15 +225,15 @@ Tracked with the CadO2 backend, outside the frontend changes.
 
 ## 8. Phases
 
-Commits on the fork's `main`; one pull request at the end.
+Built in five steps, in one pull request.
 
 | # | Phase | Lands |
 |---|---|---|
-| 1 | Foundations | this document; `cado2` preview flag; `ONE_WSO2_CADO2_BACKEND_URL` (Window type, `config.js.example`, README, `apiConfig`); rail group; `cado2` adapter + tests; `cado2Paths`; `Cado2Shell` with the gate ladder; route fragment with placeholder pages; data layer (`api/`, `types/`) on `@api/http` |
+| 1 | Foundations | this document; `cado2` preview flag; `ONE_WSO2_CADO2_BACKEND_URL` (Window type, `config.js.example`, README, `apiConfig`); rail group; `cado2` adapter + tests; `cado2Paths`; `Cado2Shell` with the gate ladder; route fragment; data layer on `@api/http` |
 | 2 | Quotes | My Quotes, quote page with routed tabs, wizard, unsaved-changes stash |
-| 3 | Approvals | My Approvals, approval diagram (`@xyflow/react`), approval panels on the quote page |
+| 3 | Approvals | My Approvals, approval graph (`@xyflow/react`) |
 | 4 | Admin | section-list frame and the five sections; on-screen wording |
-| 5 | Finish | full pass in every theme, light and dark, at laptop widths; tests complete; docs final |
+| 5 | Finish | review against the surroundings (theme tokens only, tables in scroll containers, layouts as before beside the rail); remaining tests (Salesforce links, Close with unsaved changes); this document final |
 
 ---
 
