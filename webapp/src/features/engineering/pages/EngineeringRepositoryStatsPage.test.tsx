@@ -203,6 +203,58 @@ describe("Repository Stats", () => {
     expect(screen.getByRole("cell", { name: "Identity Server" })).toBeInTheDocument();
   });
 
+  it("keeps the search field when nothing matches", async () => {
+    window.config = configured();
+    vi.stubGlobal("fetch", vi.fn(statsFetch));
+    renderStats();
+
+    const search = await screen.findByRole("textbox", { name: "Search products" });
+    await userEvent.type(search, "no-such-product");
+    expect(screen.getByText("No products match your search")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Search products" })).toBeInTheDocument();
+    await userEvent.clear(screen.getByRole("textbox", { name: "Search products" }));
+    expect(await screen.findByRole("cell", { name: "API Manager" })).toBeInTheDocument();
+  });
+
+  it("dashes clone columns when clone history fails", async () => {
+    window.config = configured();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/repositories")) return json(repositories);
+        if (url.includes("/stats/clones")) return json({ message: "clones unavailable" }, 500);
+        return json({ series: [] });
+      }),
+    );
+    renderStats("/engineering/repository-stats?stat=uniqueCloners");
+    expect(await screen.findByText(/clones unavailable/i)).toBeInTheDocument();
+    expect(await screen.findByRole("cell", { name: "API Manager" })).toBeInTheDocument();
+    expect(screen.getAllByRole("cell", { name: "—" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("cell", { name: "0" })).not.toBeInTheDocument();
+  });
+
+  it("drops a daily query error when the table returns to Total", async () => {
+    window.config = configured();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/repositories")) return json(repositories);
+        if (url.includes("/stats/clones")) return json(clones);
+        if (url.includes("metric=forks")) return json({ message: "forks unavailable" }, 500);
+        return json({
+          series: [{ repoId: 7, repoName: "product-apim", points: [{ date: "2026-09-28", value: 3 }] }],
+        });
+      }),
+    );
+    renderStats();
+    expect(await screen.findByRole("cell", { name: "120" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Daily" }));
+    expect(await screen.findByText(/forks unavailable/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Total" }));
+    expect(screen.queryByText(/forks unavailable/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "120" })).toBeInTheDocument();
+  });
+
   it("reads a month as the sum of that month's daily changes", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-09-30T12:00:00.000Z"));

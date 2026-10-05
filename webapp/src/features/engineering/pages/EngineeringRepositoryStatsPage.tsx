@@ -142,12 +142,13 @@ function snapshotCount(
 }
 
 function cloneFigure(
-  series: readonly CloneSeriesItem[],
+  series: readonly CloneSeriesItem[] | null,
   repoId: number,
   mode: TableMode,
   date: string,
   field: "count" | "uniques",
 ): number | null {
+  if (series == null) return null;
   const item = series.find((candidate) => candidate.repoId === repoId);
   if (mode === "total") {
     return (item?.points ?? []).reduce((sum, point) => sum + point[field], 0);
@@ -322,10 +323,9 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
     chartMeasure == null ? clones.isError || clones.data == null : metric.isError || metric.data == null;
   const tableQueries = [starsTable, forksTable, watchersTable, issuesTable];
   const tableLoading = clones.isLoading || tableQueries.some((query) => query.isLoading);
-  const tableError =
-    chartMeasure != null && clones.error != null
-      ? clones.error
-      : tableQueries.find((query) => query.error != null)?.error;
+  const dailyError =
+    tableMode === "total" ? undefined : tableQueries.find((query) => query.error != null)?.error;
+  const tableError = chartMeasure != null && clones.error != null ? clones.error : dailyError;
   const chartError = chartMeasure == null ? clones.error : metric.error;
 
   const refetchIfFetched = (query: { isFetched: boolean; isFetching: boolean; refetch: () => Promise<unknown> }) => {
@@ -346,7 +346,7 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
       ? cloneChartSeries(clones.data?.series ?? [], stat === "uniqueCloners" ? "uniques" : "count", interval)
       : (metric.data?.series ?? []);
   const label = STAT_OPTIONS.find((option) => option.value === stat)?.label ?? "Stars";
-  const cloneSeries = clones.data?.series ?? [];
+  const cloneSeries = clones.data == null ? null : clones.data.series;
 
   return (
     <Box>
@@ -508,12 +508,13 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
               <ErrorNotice onRetry={retryTable} error={tableError}>
                 Couldn't load repository stats.
               </ErrorNotice>
-            ) : active.length === 0 ? null : listed.length === 0 ? (
-              <Typography>No products match your search</Typography>
-            ) : (
+            ) : active.length === 0 ? null : (
               <ListingTable.Provider searchValue={productSearch} onSearchChange={setProductSearch}>
                 <ListingTable.Container>
                   <ListingTable.Toolbar showSearch searchPlaceholder="Search products" />
+                  {listed.length === 0 ? (
+                    <Typography>No products match your search</Typography>
+                  ) : (
                   <ListingTable bordered>
                     <ListingTable.Head>
                       <ListingTable.Row>
@@ -565,6 +566,7 @@ export default function EngineeringRepositoryStatsPage(): JSX.Element {
                       })}
                     </ListingTable.Body>
                   </ListingTable>
+                  )}
                 </ListingTable.Container>
               </ListingTable.Provider>
             )}
