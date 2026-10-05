@@ -206,15 +206,19 @@ Tracked with the CadO2 backend, outside the frontend changes.
   screen.
 - **Unsaved changes.** The rail does not know about the wizard's form. When the wizard closes with
   unsaved changes for any reason (rail click, sign-in again after expiry), they are kept in
-  `sessionStorage`, and reopening that draft offers "Restore unsaved changes?". A browser reload or
-  tab close still warns first.
+  `sessionStorage` (`useLeaveGuard`: on unmount and on `pagehide`), and reopening that draft says "You
+  left this draft with unsaved changes. Restore them?". The wizard's own Close asks first, and a browser
+  reload or tab close still warns first.
 - **HTTP and errors.** CadO2's own fetch wrapper and `QueryClient` are replaced by `@api/http` and
   the shared client; messages via `describeError`, never a raw body. 4xx and mutations are not
   retried.
-- **Feedback.** Issues, conflicts and refusals stay inline where the person must read them. Short
-  confirmations ("Draft saved", "Currency added") use `useNotifications`.
+- **Feedback.** Issues, conflicts and refusals stay inline where the person must read them, and so
+  does the wizard's "Saved" marker beside its Save button. One-off confirmations elsewhere ("Currency
+  added") use `useNotifications`.
 - **Wording.** Screens say **CadO2** wherever they named the tool.
-- **New dependency:** `@xyflow/react` for the approval diagram, lazy-loaded.
+- **New dependency:** `@xyflow/react` for the approval diagram, lazy-loaded. Until it lands (phase 3)
+  `LazyApprovalDiagram` shows the step count in the graph's place; the approval panels around it are
+  complete.
 
 ---
 

@@ -18,10 +18,20 @@
 // Cado2Shell, which resolves access before any page asks for data. App.tsx
 // mounts this only while the `cado2` preview flag is on.
 
+import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Outlet, Route } from "react-router";
+import { Skeleton } from "@wso2/oxygen-ui";
 import Cado2Shell, { Cado2Landing, Cado2Requires } from "./components/Cado2Shell";
 import Cado2PlaceholderPage from "./pages/Cado2PlaceholderPage";
 import { cado2Paths } from "./cado2Paths";
+import MyQuotesPage from "./quotes/pages/MyQuotesPage";
+
+// The heavy screens load on first use.
+const QuoteWizardPage = lazy(() => import("./quotes/pages/QuoteWizardPage"));
+const QuoteDetailPage = lazy(() => import("./quotes/pages/QuoteDetailPage"));
+
+const loading = <Skeleton variant="rounded" height={240} />;
+const deferred = (page: ReactNode) => <Suspense fallback={loading}>{page}</Suspense>;
 
 export const cado2Routes = (
   <Route path="sales/cado2" element={<Cado2Shell />}>
@@ -30,35 +40,23 @@ export const cado2Routes = (
       path="quotes"
       element={
         <Cado2Requires need="quote">
-          <Cado2PlaceholderPage title="My Quotes" />
+          <MyQuotesPage />
         </Cado2Requires>
       }
     />
     <Route
       path="quotes/new"
-      element={
-        <Cado2Requires need="quote">
-          <Cado2PlaceholderPage title="New quote" />
-        </Cado2Requires>
-      }
+      element={<Cado2Requires need="quote">{deferred(<QuoteWizardPage />)}</Cado2Requires>}
     />
     <Route
       path="quotes/:quoteId/versions/:version/edit"
-      element={
-        <Cado2Requires need="quote">
-          <Cado2PlaceholderPage title="Edit quote" />
-        </Cado2Requires>
-      }
+      element={<Cado2Requires need="quote">{deferred(<QuoteWizardPage />)}</Cado2Requires>}
     />
     {/* A quote is open to its owner, CadO2 admins and its approvers; the
-        backend decides per quote, so no role guard here. Each tab is a route. */}
-    <Route path="quotes/:quoteId" element={<Outlet />}>
-      <Route index element={<Navigate to="quote" replace />} />
-      <Route path="quote" element={<Cado2PlaceholderPage title="Quote" />} />
-      <Route path="approvals" element={<Cado2PlaceholderPage title="Quote approvals" />} />
-      <Route path="versions" element={<Cado2PlaceholderPage title="Quote versions" />} />
-      <Route path="history" element={<Cado2PlaceholderPage title="Quote history" />} />
-    </Route>
+        backend decides per quote, so no role guard here. Each tab is a route,
+        and the page sends an unknown tab to the Quote tab. */}
+    <Route path="quotes/:quoteId" element={<Navigate to="quote" replace />} />
+    <Route path="quotes/:quoteId/:tab" element={deferred(<QuoteDetailPage />)} />
     <Route
       path="approvals"
       element={

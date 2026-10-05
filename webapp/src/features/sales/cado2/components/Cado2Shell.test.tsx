@@ -43,6 +43,17 @@ vi.mock("../api/useCado2Me", async (importOriginal) => ({
   useCado2Me: () => ({ ...state.me, refetch }),
 }));
 
+// The screens themselves have their own tests; here they only need to say where they are.
+vi.mock("../quotes/pages/MyQuotesPage", () => ({ default: () => <h1>My Quotes</h1> }));
+vi.mock("../quotes/pages/QuoteDetailPage", async () => {
+  const { useParams } = await import("react-router");
+  return {
+    default: function QuoteTab() {
+      return <h1>Quote tab {useParams().tab}</h1>;
+    },
+  };
+});
+
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, useLocation } from "react-router";
 import { cado2Routes } from "../routes";
@@ -139,11 +150,11 @@ describe("CadO2 routing", () => {
     expect(where()).toBe("/sales/cado2/admin/approval-matrix");
   });
 
-  it("opens a quote on its Quote tab, and each tab has its own address", () => {
+  it("opens a quote on its Quote tab, and each tab has its own address", async () => {
     open("/sales/cado2/quotes/42");
     expect(where()).toBe("/sales/cado2/quotes/42/quote");
     open("/sales/cado2/quotes/42/history");
-    expect(screen.getByText("Quote history")).toBeInTheDocument();
+    expect(await screen.findByText("Quote tab history")).toBeInTheDocument();
   });
 
   it("sends an unknown CadO2 address to the landing", () => {
