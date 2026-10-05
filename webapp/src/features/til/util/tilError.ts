@@ -16,8 +16,15 @@
 
 // Shared error helpers for the til feature — same arrangement menu/leave use.
 import { describeError, httpRetry } from "@api/errors";
+import { HttpError } from "@api/http";
 
 export { describeError };
 
 /** No retries on 4xx — a 403 (not in the submitting... group) is a final answer. */
 export const tilRetry = httpRetry;
+
+/** True when a single entry wasn't found (deleted, or a bad/stale link) —
+ * same shape as Sales' own isForbidden, one status code read off HttpError. */
+export function isNotFound(error: unknown): boolean {
+  return error instanceof HttpError && error.status === 404;
+}

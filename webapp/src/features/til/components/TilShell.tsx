@@ -44,7 +44,7 @@ export default function TilShell({
         {configured && action}
       </Stack>
       {subtitle && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2.25, maxWidth: "70ch" }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 4, maxWidth: "70ch" }}>
           {subtitle}
         </Typography>
       )}

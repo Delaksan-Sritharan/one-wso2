@@ -17,7 +17,7 @@
 // Writes to til-backend.
 //
 // No `retry` on either mutation — React Query's mutation default (zero
-// attempts) is what we want, same reasoning as menu: a 400 (What over 500
+// attempts) is what we want, same reasoning as menu: a 400 (What over the max
 // chars) or a 403 (deleting without canModerate) is a final answer, not a
 // transient failure worth retrying.
 

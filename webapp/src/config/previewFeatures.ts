@@ -111,7 +111,8 @@ export type PreviewFeature =
    */
   | "cado2"
   /**
-   * Today I Learned (Me → Today I Learned route/rail item). Waiting on
+   * The whole Knowledge Base perspective — waffle tile, rail, and the
+   * `/knowledge-base` route, currently just Today I Learned. Waiting on
    * til-backend's first real Choreo deployment and the Google Chat App's
    * Space/Dialog registration (outside this codebase) before going live.
    */

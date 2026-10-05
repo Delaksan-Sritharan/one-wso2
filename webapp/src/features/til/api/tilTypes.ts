@@ -19,8 +19,9 @@
 // The backend is the only writer of `submittedByEmail` — it reads it from the
 // caller's id_token, never from the request body, so a submission can never be
 // attributed to someone other than whoever authenticated the call. `who` is a
-// separate, free-text, human-described field ("Jane Doe, Customer Success
-// Engineer") the submitter types themselves; it is NOT the identity check.
+// separate, human-readable byline (the submitter's own name, e.g. "Jane Doe,
+// Customer Success Engineer"), pre-filled by the form from the caller's own
+// signed-in identity rather than freely typed; it is NOT the identity check.
 // Keeping both means a submission can never be anonymous (submittedByEmail is
 // always real) while still letting people describe themselves naturally.
 
@@ -31,7 +32,7 @@ export function isTilWhere(value: string): value is TilWhere {
   return (TIL_WHERE_OPTIONS as readonly string[]).includes(value);
 }
 
-export const TIL_WHAT_MAX_LENGTH = 500;
+export const TIL_WHAT_MAX_LENGTH = 5000;
 
 // --- wire --------------------------------------------------------------
 
@@ -46,6 +47,8 @@ export interface TilSubmissionWire {
   id: string;
   who: string;
   where: TilWhere;
+  /** The customer/partner's name — present when `where` is "Customer" or "Partner". */
+  whereDetail: string | null;
   what: string;
   submittedByEmail: string;
   createdAt: string; // ISO 8601
@@ -63,6 +66,7 @@ export interface TilSubmission {
   id: string;
   who: string;
   where: TilWhere;
+  whereDetail: string | null;
   what: string;
   submittedByEmail: string;
   /** Parsed once here so components never touch `Date` directly (see conventions.md, Time). */
@@ -72,6 +76,8 @@ export interface TilSubmission {
 export interface TilSubmissionPayload {
   who: string;
   where: TilWhere;
+  /** Required by the backend when `where` is "Customer" or "Partner", omitted otherwise. */
+  whereDetail?: string;
   what: string;
 }
 

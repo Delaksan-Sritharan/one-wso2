@@ -16,46 +16,78 @@
 import { Box, Chip, IconButton, Paper, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { TrashIcon } from "@wso2/oxygen-ui-icons-react";
 import type { TilSubmission } from "../api/tilTypes";
+import { tilExcerpt } from "../util/tilRichText";
 
 // One entry in the history feed.
 //
-// `what` is rendered as plain text (JSX text interpolation, not
-// dangerouslySetInnerHTML) — React escapes it automatically, which is the
-// baseline docs/conventions.md asks for on every user-supplied value. There
-// is no rich-text editor here, so DOMPurify doesn't apply; if a formatted
-// version is ever added, sanitize on both write and read per that doc.
+// Shows a plain-text EXCERPT of `what`, not the full rich content — a long
+// multi-paragraph/list entry made the feed itself unreadable (one card
+// could run to a dozen visible lines). The full rich version still renders
+// in full on the entry's own page (TilWhatContent, via onOpen below).
 export default function SubmissionCard({
   submission,
   canDelete,
   onDelete,
   deleting,
+  onOpen,
 }: {
   submission: TilSubmission;
   canDelete: boolean;
   onDelete: () => void;
   deleting: boolean;
+  /** Present only in the feed list — clicking the card opens its own page.
+   * Omitted when SubmissionCard is reused BY that same page (TilEntryPage),
+   * where "open this entry" would just mean reloading the page you're on. */
+  onOpen?: () => void;
 }) {
   return (
-    <Paper variant="outlined" sx={{ p: 2, display: "flex", flexDirection: "column", gap: 0.75 }}>
+    <Paper
+      variant="outlined"
+      onClick={onOpen}
+      sx={{
+        p: 2,
+        display: "flex",
+        flexDirection: "column",
+        gap: 0.75,
+        ...(onOpen && {
+          cursor: "pointer",
+          "&:hover": { borderColor: "text.secondary" },
+        }),
+      }}
+    >
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700 }} noWrap>
             {submission.who}
           </Typography>
-          <Chip label={submission.where} size="small" variant="outlined" />
+          <Chip
+            label={submission.whereDetail ? `${submission.where} — ${submission.whereDetail}` : submission.where}
+            size="small"
+            variant="outlined"
+          />
         </Box>
         {canDelete && (
           <Tooltip title="Delete this entry">
             <span>
-              <IconButton size="small" onClick={onDelete} disabled={deleting} aria-label="Delete entry">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  // The card's own onClick (onOpen) would otherwise also
+                  // fire, navigating to the entry this click just deleted.
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                disabled={deleting}
+                aria-label="Delete entry"
+              >
                 <TrashIcon size={16} />
               </IconButton>
             </span>
           </Tooltip>
         )}
       </Box>
-      <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-        {submission.what}
+      <Typography variant="body2" color="text.secondary" sx={{ wordBreak: "break-word" }}>
+        {tilExcerpt(submission.what)}
       </Typography>
       <Typography variant="caption" color="text.secondary">
         {submission.createdAt.toLocaleString()}

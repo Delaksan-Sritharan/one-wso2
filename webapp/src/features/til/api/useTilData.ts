@@ -28,7 +28,7 @@ import { isTilBackendConfigured, tilServiceUrls } from "@config/apiConfig";
 import { foldIdentityError, useAsgardeoSub } from "@hooks/useAsgardeoSub";
 import { tilRetry } from "../util/tilError";
 import { normalizeSubmission } from "./tilTypes";
-import type { TilSubmission, TilSubmissionsPageWire, TilUserInfoWire } from "./tilTypes";
+import type { TilSubmission, TilSubmissionsPageWire, TilSubmissionWire, TilUserInfoWire } from "./tilTypes";
 
 export { isTilBackendConfigured };
 
@@ -77,6 +77,24 @@ export function useTilSubmissions() {
     },
     staleTime: 30 * 1000,
     refetchOnMount: true,
+    retry: tilRetry,
+  });
+  return foldIdentityError(query, subState, retryIdentity);
+}
+
+/** One entry by id — the detail page a Chat "View entry" link or a feed
+ * card's own link lands on. 404 surfaces as a plain query error; the page
+ * reads `error.status` (see HttpError) to tell "not found" apart from any
+ * other failure. */
+export function useTilSubmission(id: string | undefined) {
+  const { getAccessToken, subState, retryIdentity, userSub, ready } = useTilQueryBasis();
+  const query = useQuery<TilSubmission>({
+    queryKey: ["til-submission", userSub, id],
+    enabled: ready && Boolean(id),
+    queryFn: async () =>
+      normalizeSubmission(
+        await authedGet<TilSubmissionWire>(tilServiceUrls.submission(id as string), await getAccessToken()),
+      ),
     retry: tilRetry,
   });
   return foldIdentityError(query, subState, retryIdentity);
