@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { useState } from "react";
+import { useState, type FocusEvent } from "react";
 import {
   Autocomplete,
   Box,
@@ -269,32 +269,52 @@ export default function SubmitEntryDialog({ open, onClose }: { open: boolean; on
                 // a long result list from growing tall enough to do the same
                 // thing by itself.
                 slotProps={{
-                  paper: { loading: customerSearch.isLoading, empty: customerOptions.length === 0 },
+                  // `loading`/`empty` are CustomerAutocompletePaper's own
+                  // extra props (see its definition above), not part of
+                  // MUI's own PaperProps -- this environment's resolved
+                  // @mui/material type declarations don't infer them back
+                  // from `slots.paper`'s own component type the way some
+                  // other dependency-resolution outcomes do, so the cast is
+                  // bridging a type-only gap, not a real runtime one: MUI
+                  // still passes these straight through to our component.
+                  paper: { loading: customerSearch.isLoading, empty: customerOptions.length === 0 } as PaperProps,
                   popper: { style: { zIndex: 1301 }, placement: "bottom-start", modifiers: [{ name: "flip", enabled: false }] },
                   listbox: { sx: { maxHeight: 240 } },
                 }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={whereDetailCopy(where).placeholder}
-                    error={touched && whereDetailInvalid}
-                    helperText={touched && whereDetailInvalid ? "Required" : whereDetailCopy(where).helper}
-                    // Chained, not replaced: `params.onFocus`/`params.onBlur`
-                    // are MUI's OWN internal handlers (anchor/positioning
-                    // bookkeeping the Popper needs to render at all) --
-                    // overwriting them outright, which an earlier version of
-                    // this did, silently broke the dropdown's own
-                    // positioning even once `open` was correctly true.
-                    onFocus={(e) => {
-                      params.onFocus?.(e);
-                      setCustomerFieldFocused(true);
-                    }}
-                    onBlur={(e) => {
-                      params.onBlur?.(e);
-                      setCustomerFieldFocused(false);
-                    }}
-                  />
-                )}
+                renderInput={(params) => {
+                  // Same story as the cast above: `onFocus`/`onBlur` ARE
+                  // present on the real params object at runtime (MUI's own
+                  // anchor/positioning bookkeeping depends on them existing
+                  // -- confirmed by hand before this fix even existed), this
+                  // environment's resolved type for AutocompleteRenderInputParams
+                  // just doesn't declare them.
+                  const inputProps = params as typeof params & {
+                    onFocus?: (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+                    onBlur?: (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+                  };
+                  return (
+                    <TextField
+                      {...params}
+                      placeholder={whereDetailCopy(where).placeholder}
+                      error={touched && whereDetailInvalid}
+                      helperText={touched && whereDetailInvalid ? "Required" : whereDetailCopy(where).helper}
+                      // Chained, not replaced: these are MUI's OWN internal
+                      // handlers (anchor/positioning bookkeeping the Popper
+                      // needs to render at all) -- overwriting them outright,
+                      // which an earlier version of this did, silently broke
+                      // the dropdown's own positioning even once `open` was
+                      // correctly true.
+                      onFocus={(e) => {
+                        inputProps.onFocus?.(e);
+                        setCustomerFieldFocused(true);
+                      }}
+                      onBlur={(e) => {
+                        inputProps.onBlur?.(e);
+                        setCustomerFieldFocused(false);
+                      }}
+                    />
+                  );
+                }}
                 fullWidth
               />
             </Stack>
