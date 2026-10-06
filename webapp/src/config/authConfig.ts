@@ -63,7 +63,7 @@ declare global {
       ONE_WSO2_CADO2_BACKEND_URL?: string;
       // Base URL for the MEDDPICC backend (digiops-sales echo-backend), which
       // powers the Deals tab and the MEDDPICC column under Sales. Optional —
-      // when absent those screens run on built-in demo data instead.
+      // when absent Deals shows a not-connected state and the column is left out.
       ONE_WSO2_ECHO_BACKEND_URL?: string;
       // Base URL for the digiops-hr promotion-app backend. Optional — when
       // absent, ConnectedServices' "Last promotion" row falls back to a

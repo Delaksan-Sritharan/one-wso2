@@ -22,7 +22,7 @@ import { describeError, isForbidden } from "../util/salesError";
 import DealFilters, { type OwnerOption } from "../meddpicc/components/DealFilters";
 import DealsTable from "../meddpicc/components/DealsTable";
 import DealPanel from "../meddpicc/components/DealPanel";
-import { isEchoMockMode, useDeals, useMeddpiccGates } from "../meddpicc/api/useMeddpiccData";
+import { isEchoBackendConfigured, useDeals, useMeddpiccGates } from "../meddpicc/api/useMeddpiccData";
 import type { DealSummary, LetterKey } from "../meddpicc/types";
 
 /** The owners seen so far, so filtering to one owner doesn't empty the list of owners. */
@@ -43,10 +43,11 @@ function mergeOwners(known: OwnerOption[], deals: DealSummary[] | undefined): Ow
  * Served by the MEDDPICC backend, not meet-app. The Sales shell's access check
  * still asks meet-app, because it is the same sales team either way and the
  * rail already gates on that answer; the MEDDPICC backend enforces its own.
+ * Either URL missing shows the shell's not-connected state for that key.
  */
 export default function SalesDealsPage() {
-  const mock = isEchoMockMode();
   const meetAppConfigured = isSalesBackendConfigured();
+  const echoConfigured = isEchoBackendConfigured();
 
   const [search, setSearch] = useState<string | null>(null);
   const [owner, setOwner] = useState<string | null>(null);
@@ -72,18 +73,12 @@ export default function SalesDealsPage() {
     <SalesShell
       title="Deals"
       subtitle="MEDDPICC for every deal with a recorded call."
-      configured={meetAppConfigured || mock}
-      configKey="ONE_WSO2_REVOPS_BACKEND_URL"
+      configured={meetAppConfigured && echoConfigured}
+      configKey={meetAppConfigured ? "ONE_WSO2_ECHO_BACKEND_URL" : "ONE_WSO2_REVOPS_BACKEND_URL"}
+      configLabel={meetAppConfigured ? "the MEDDPICC backend URL" : undefined}
       forbidden={forbidden}
-      skipAccessCheck={mock && !meetAppConfigured}
     >
       <Box>
-        {mock && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Demo data. These deals are made up, and nothing here is written to Salesforce.
-          </Alert>
-        )}
-
         <DealFilters
           search={search}
           onSearchChange={setSearch}

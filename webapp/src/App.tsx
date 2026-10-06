@@ -957,8 +957,8 @@ export default function App() {
               preview flag; Cado2Shell resolves access for every page. See
               @features/sales/cado2/routes and docs/ported-apps/cado2.md. */}
           {isPreviewEnabled("cado2") && cado2Routes}
-          {/* Deals — MEDDPICC per Opportunity, from the MEDDPICC backend (or its demo
-              data when ONE_WSO2_ECHO_BACKEND_URL is unset or ?echoMock=1 is set). */}
+          {/* Deals — MEDDPICC per Opportunity, from the MEDDPICC backend (shows a
+              not-connected state when ONE_WSO2_ECHO_BACKEND_URL is unset). */}
           <Route path="sales/deals" element={<SalesDealsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           {/* Me → Menu: the cafeteria screen ported from the standalone

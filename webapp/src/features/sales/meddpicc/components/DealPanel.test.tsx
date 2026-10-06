@@ -17,8 +17,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
-// No ONE_WSO2_ECHO_BACKEND_URL under jsdom, so the panel runs on the demo store:
-// the same hooks, cache and mutations as the live screens, against fixtures.
+// The backend is replaced by the in-memory test double in ../mock, behind the
+// same client interface, so the real hooks, cache and mutations run against it.
+vi.mock("@config/apiConfig", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@config/apiConfig")>()),
+  isEchoBackendConfigured: () => true,
+}));
+vi.mock("@features/sales/meddpicc/api/meddpiccClient", async (importOriginal) => {
+  const { mockMeddpiccClient } = await import("@features/sales/meddpicc/mock/mockStore");
+  return {
+    ...(await importOriginal<typeof import("@features/sales/meddpicc/api/meddpiccClient")>()),
+    httpMeddpiccClient: () => mockMeddpiccClient,
+  };
+});
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
 vi.mock("@hooks/useAsgardeoSub", () => ({
   useAsgardeoSub: () => ({ state: { status: "ready", sub: "user-under-test" }, retry: () => {} }),

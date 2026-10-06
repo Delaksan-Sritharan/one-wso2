@@ -1878,9 +1878,8 @@ export const misArrServiceUrls = {
 // AM approves before they are written to Salesforce. See the MEDDPICC
 // contract, §3.6, for every route below.
 //
-// Blank is NOT "not connected" here, unlike every other key in this file: the
-// hooks in features/sales/meddpicc serve demo fixtures instead, so the screens
-// can be shown before the backend is deployed. `?echoMock=1` forces the same.
+// Blank means "not connected", as for every other key in this file: Deals
+// shows the not-connected state and Meetings leaves the MEDDPICC column out.
 export const echoBackendUrl: string = (window.config?.ONE_WSO2_ECHO_BACKEND_URL ?? "").replace(
   /\/+$/,
   "",

@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Writes to the MEDDPICC backend, or to the demo store.
+// Writes to the MEDDPICC backend.
 //
 // No retries, as in useSalesMutations: every refusal here (403 edit rights,
 // 409 Gate incomplete, 422 Salesforce said no) is an answer, not a blip, and a
@@ -60,33 +60,33 @@ async function afterDealChange(
  * `result.error` rather than catching.
  */
 export function useApproveDeal(opportunityId: string) {
-  const { client, mode, userSub } = useMeddpiccBasis();
+  const { client, userSub } = useMeddpiccBasis();
   const qc = useQueryClient();
   return useMutation<ApproveResult, Error, ApproveRequest>({
     mutationFn: (request) => client.approve(opportunityId, request),
     onSuccess: (result) =>
-      afterDealChange(qc, ["meddpicc-deal", mode, userSub, opportunityId], result.deal),
+      afterDealChange(qc, ["meddpicc-deal", userSub, opportunityId], result.deal),
   });
 }
 
 /** POST /deals/{id}/move-stage. Read failures with describeMoveStageError. */
 export function useMoveStage(opportunityId: string) {
-  const { client, mode, userSub } = useMeddpiccBasis();
+  const { client, userSub } = useMeddpiccBasis();
   const qc = useQueryClient();
   return useMutation<MoveStageResult, Error, string>({
     mutationFn: (toStage) => client.moveStage(opportunityId, toStage),
     // The response carries only the new stage, so the deal is fetched again.
-    onSuccess: () => afterDealChange(qc, ["meddpicc-deal", mode, userSub, opportunityId], null),
+    onSuccess: () => afterDealChange(qc, ["meddpicc-deal", userSub, opportunityId], null),
   });
 }
 
 /** POST /deals/{id}/include-calls. Answers the new DealDetail. */
 export function useIncludeCalls(opportunityId: string) {
-  const { client, mode, userSub } = useMeddpiccBasis();
+  const { client, userSub } = useMeddpiccBasis();
   const qc = useQueryClient();
   return useMutation<DealDetail, Error, number[]>({
     mutationFn: (meetingIds) => client.includeCalls(opportunityId, meetingIds),
-    onSuccess: (detail) => afterDealChange(qc, ["meddpicc-deal", mode, userSub, opportunityId], detail),
+    onSuccess: (detail) => afterDealChange(qc, ["meddpicc-deal", userSub, opportunityId], detail),
   });
 }
 

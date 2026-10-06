@@ -14,12 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Reads from the MEDDPICC backend (echo-backend), or from the demo store when
-// demo mode is on — see echoMode.ts.
+// Reads from the MEDDPICC backend (echo-backend). Nothing is fetched while
+// ONE_WSO2_ECHO_BACKEND_URL is unset; the pages show a "not connected" state.
 //
-// Keys are scoped to the signed-in subject, as the meet-app hooks are, and also
-// to the mode: a tab that turns demo mode off must not keep showing fixtures
-// from cache under the same key.
+// Keys are scoped to the signed-in subject, as the meet-app hooks are.
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -27,9 +25,8 @@ import { useAsgardeo } from "@asgardeo/react";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { foldIdentityError, useAsgardeoSub } from "@hooks/useAsgardeoSub";
 import { salesRetry } from "../../util/salesError";
-import { mockMeddpiccClient } from "../mock/mockStore";
 import type { DealDetail, DealList, GatesResponse, MeetingCoverage, MeetingCoverageList } from "../types";
-import { isEchoMockMode } from "./echoMode";
+import { isEchoBackendConfigured } from "@config/apiConfig";
 import {
   COVERAGE_BATCH_LIMIT,
   httpMeddpiccClient,
@@ -37,35 +34,24 @@ import {
   type MeddpiccClient,
 } from "./meddpiccClient";
 
-export { isEchoMockMode };
+export { isEchoBackendConfigured };
 
-/**
- * Everything every MEDDPICC query and mutation needs, gathered once.
- *
- * Demo mode needs no identity to serve fixtures, but still waits for it: the
- * key carries the subject either way, and a demo that behaves like the real
- * screens is the point of having one.
- */
+/** Everything every MEDDPICC query and mutation needs, gathered once. */
 export function useMeddpiccBasis() {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
   const { state: subState, retry: retryIdentity } = useAsgardeoSub();
   const userSub = subState.status === "ready" ? subState.sub : undefined;
-  const mock = isEchoMockMode();
-  const mode = mock ? "mock" : "live";
-  const client: MeddpiccClient = useMemo(
-    () => (mock ? mockMeddpiccClient : httpMeddpiccClient(getAccessToken)),
-    [mock, getAccessToken],
-  );
-  const ready = isSignedIn && Boolean(userSub);
-  return { client, mock, mode, userSub, ready, subState, retryIdentity };
+  const client: MeddpiccClient = useMemo(() => httpMeddpiccClient(getAccessToken), [getAccessToken]);
+  const ready = isEchoBackendConfigured() && isSignedIn && Boolean(userSub);
+  return { client, userSub, ready, subState, retryIdentity };
 }
 
 /** GET /gates — the stage order and the Letters, for the stage filter. */
 export function useMeddpiccGates() {
-  const { client, mode, userSub, ready } = useMeddpiccBasis();
+  const { client, userSub, ready } = useMeddpiccBasis();
   return useQuery<GatesResponse>({
-    queryKey: ["meddpicc-gates", mode, userSub],
+    queryKey: ["meddpicc-gates", userSub],
     enabled: ready,
     queryFn: () => client.gates(),
     // The definitions change with a deploy, not during a visit.
@@ -84,13 +70,13 @@ export function useMeddpiccGates() {
  * Returned as a map by meetingId, since the table looks rows up one at a time.
  */
 export function useMeetingCoverage(meetingIds: number[]) {
-  const { client, mode, userSub, ready } = useMeddpiccBasis();
+  const { client, userSub, ready } = useMeddpiccBasis();
   const ids = useMemo(
     () => [...new Set(meetingIds)].sort((a, b) => a - b).slice(0, COVERAGE_BATCH_LIMIT),
     [meetingIds],
   );
   const query = useQuery<MeetingCoverageList>({
-    queryKey: ["meddpicc-coverage", mode, userSub, ids],
+    queryKey: ["meddpicc-coverage", userSub, ids],
     enabled: ready && ids.length > 0,
     queryFn: () => client.meetingCoverage(ids),
     staleTime: 60 * 1000,
@@ -115,16 +101,16 @@ export function useMeetingCoverage(meetingIds: number[]) {
  * a deal approved in another tab should not stay pending here forever.
  */
 export function useDeals(params: DealsQuery) {
-  const { client, mode, userSub, ready, subState, retryIdentity } = useMeddpiccBasis();
+  const { client, userSub, ready, subState, retryIdentity } = useMeddpiccBasis();
   const { search, owner, stage, hideClosed } = params;
   const query = useQuery<DealList>({
-    queryKey: ["meddpicc-deals", mode, userSub, search, owner, stage, hideClosed],
+    queryKey: ["meddpicc-deals", userSub, search, owner, stage, hideClosed],
     enabled: ready,
     queryFn: () => client.deals({ search, owner, stage, hideClosed }),
     staleTime: 60 * 1000,
     refetchOnMount: true,
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[2] === userSub ? previous : undefined,
+      previousQuery?.queryKey[1] === userSub ? previous : undefined,
     retry: salesRetry,
   });
   return foldIdentityError(query, subState, retryIdentity);
@@ -132,9 +118,9 @@ export function useDeals(params: DealsQuery) {
 
 /** GET /deals/{id}, fetched once a panel is opened for it. */
 export function useDeal(opportunityId: string | null) {
-  const { client, mode, userSub, ready } = useMeddpiccBasis();
+  const { client, userSub, ready } = useMeddpiccBasis();
   return useQuery<DealDetail>({
-    queryKey: ["meddpicc-deal", mode, userSub, opportunityId],
+    queryKey: ["meddpicc-deal", userSub, opportunityId],
     enabled: ready && opportunityId !== null,
     queryFn: () => client.deal(opportunityId as string),
     staleTime: 30 * 1000,

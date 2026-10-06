@@ -14,8 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// DEMO MODE ONLY: an in-memory stand-in for echo-backend, so the screens are
-// clickable before the backend exists. Approve all fills the circles, Move
+// TESTS ONLY: an in-memory stand-in for echo-backend that the page and panel
+// tests put behind the client interface; the app itself never imports it. Approve all fills the circles, Move
 // stage advances the stage, Include pulls a call in.
 //
 // It follows the contract's DESCRIBED rules (§3.4 deal letter state, Gate

@@ -28,7 +28,7 @@ import { useSalesGate } from "../api/useSalesGate";
 import { useCancelMeeting } from "../api/useSalesMutations";
 import { describeError, isForbidden } from "../util/salesError";
 import DealPanel from "../meddpicc/components/DealPanel";
-import { isEchoMockMode, useMeetingCoverage } from "../meddpicc/api/useMeddpiccData";
+import { isEchoBackendConfigured, useMeetingCoverage } from "../meddpicc/api/useMeddpiccData";
 import { useReanalyseMeeting } from "../meddpicc/api/useMeddpiccMutations";
 import type { LetterKey } from "../meddpicc/types";
 
@@ -106,11 +106,12 @@ export default function SalesMeetingsPage() {
   // column blank rather than taking the meeting list down with it.
   const coverageQuery = useMeetingCoverage(meetings.map((meeting) => meeting.meetingId));
   const reanalyse = useReanalyseMeeting();
-  const mock = isEchoMockMode();
+  // Without the MEDDPICC backend the column and its actions are left out.
+  const echoConfigured = isEchoBackendConfigured();
   // Edit rights, as far as this app can tell: an admin or the call's host. The
   // backend also lets the Opportunity owner in, and is the one that decides.
   const canReanalyse = (meeting: Meeting): boolean =>
-    mock || gate.isAdmin || (Boolean(gate.workEmail) && meeting.host === gate.workEmail);
+    gate.isAdmin || (Boolean(gate.workEmail) && meeting.host === gate.workEmail);
   const requestReanalysis = async (meeting: Meeting) => {
     try {
       await reanalyse.mutateAsync(meeting.meetingId);
@@ -184,11 +185,11 @@ export default function SalesMeetingsPage() {
             setCancelTarget(meeting);
           }}
           canCancel={gate.canCancel}
-          coverage={coverageQuery.byId}
+          coverage={echoConfigured ? coverageQuery.byId : undefined}
           coverageLoading={coverageQuery.isLoading}
           onOpenDeal={(id, letter) => setOpenDeal({ id, letter: letter ?? null })}
           canReanalyse={canReanalyse}
-          onReanalyse={(meeting) => void requestReanalysis(meeting)}
+          onReanalyse={echoConfigured ? (meeting) => void requestReanalysis(meeting) : undefined}
           reanalysingId={reanalyse.isPending ? (reanalyse.variables ?? null) : null}
         />
       </Box>

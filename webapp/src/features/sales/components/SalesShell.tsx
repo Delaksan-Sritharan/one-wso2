@@ -46,36 +46,23 @@ export default function SalesShell({
   subtitle,
   configured,
   configKey,
+  configLabel = "the meet-app backend URL",
   forbidden,
-  skipAccessCheck = false,
   children,
 }: {
   title: string;
   subtitle?: string;
   configured: boolean;
   configKey: string;
+  /** What configKey points at, for the not-connected message. */
+  configLabel?: string;
   /** True when the backend has refused this caller outright (403). */
   forbidden?: boolean;
-  /**
-   * Skip meet-app's access check. Only for the MEDDPICC demo when no meet-app
-   * backend is configured: there is nobody to ask, and the demo data it shows
-   * belongs to no one. Anywhere else the check is the page's front door.
-   */
-  skipAccessCheck?: boolean;
   children: ReactNode;
 }) {
   const active = useActivePerspective();
-  const access = useSalesUserInfo(!skipAccessCheck);
+  const access = useSalesUserInfo();
   const { pathname } = useLocation();
-
-  if (skipAccessCheck) {
-    return (
-      <Box>
-        <PerspectiveHeader title={title} subtitle={subtitle} />
-        {children}
-      </Box>
-    );
-  }
 
   if (!configured) {
     return (
@@ -83,7 +70,7 @@ export default function SalesShell({
         <PerspectiveHeader title={title} subtitle={subtitle} />
         <Alert severity="info" sx={{ mt: 1.5 }}>
           Sales isn&apos;t connected yet. Set <code>{configKey}</code> in{" "}
-          <code>public/config.js</code> (the meet-app backend URL) and reload.
+          <code>public/config.js</code> ({configLabel}) and reload.
         </Alert>
       </Box>
     );

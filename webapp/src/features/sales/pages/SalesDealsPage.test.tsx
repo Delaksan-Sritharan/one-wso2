@@ -17,8 +17,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
-// The shell has its own suite; here it only frames the page. No backend URL is
-// configured under jsdom, so the page runs on the demo store.
+// The shell has its own suite; here it only frames the page.
+// The backend is replaced by the in-memory test double in ../mock, behind the
+// same client interface, so the real hooks, cache and mutations run against it.
+vi.mock("@config/apiConfig", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@config/apiConfig")>()),
+  isEchoBackendConfigured: () => true,
+}));
+vi.mock("@features/sales/meddpicc/api/meddpiccClient", async (importOriginal) => {
+  const { mockMeddpiccClient } = await import("@features/sales/meddpicc/mock/mockStore");
+  return {
+    ...(await importOriginal<typeof import("@features/sales/meddpicc/api/meddpiccClient")>()),
+    httpMeddpiccClient: () => mockMeddpiccClient,
+  };
+});
 vi.mock("../components/SalesShell", () => ({
   default: ({ title, children }: { title: string; children: ReactNode }) => (
     <div>
@@ -61,7 +73,6 @@ beforeEach(() => resetMockStore());
 describe("SalesDealsPage", { timeout: 20000 }, () => {
   it("lists the demo deals, one row each, with their stage, circles and pending count", async () => {
     renderPage();
-    expect(screen.getByText(/Demo data/)).toBeInTheDocument();
 
     const brightwater = (await screen.findByRole("button", { name: "Brightwater – API Manager first sale" })).closest("tr");
     expect(brightwater).not.toBeNull();
