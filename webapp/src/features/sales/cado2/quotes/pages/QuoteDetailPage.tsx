@@ -44,6 +44,10 @@ import {
   useStoredApprovalPreview,
 } from "@features/sales/cado2/approvals/api/useApprovalApi";
 import type { ApprovalOutcome, ApprovalStep } from "@features/sales/cado2/approvals/api/approvalTypes";
+import { decisionMessage, myApprovalSteps, showMyApprovals } from "@features/sales/cado2/approvals/model/myApprovals";
+import MyApprovalSteps from "@features/sales/cado2/approvals/components/MyApprovalSteps";
+import { useCado2Me } from "@features/sales/cado2/api/useCado2Me";
+import { useNotifications } from "@context/notifications/NotificationsContext";
 import { cado2Paths, type Cado2QuoteTab } from "@features/sales/cado2/cado2Paths";
 import { useDocumentTitle } from "@hooks/useDocumentTitle";
 
@@ -86,6 +90,8 @@ export default function QuoteDetailPage(): JSX.Element {
   const workflow = useApprovalWorkflow(quoteId, latestNumber, latestStatus !== null && !isDraft);
   const approvalPreview = useStoredApprovalPreview(quoteId, latestNumber, isDraft);
   const decide = useDecideStep();
+  const me = useCado2Me();
+  const { showSuccess } = useNotifications();
   useDocumentTitle(quote.data ? quoteLabel(quote.data.quoteNumber, latest.data?.version.accountName, latest.data?.version.opportunityName) : "Quote");
 
   const openDialog = (d: Dialog) => {
@@ -121,6 +127,9 @@ export default function QuoteDetailPage(): JSX.Element {
   const counts = [null, null, q.versions.length, events.data ? events.data.length : null];
   // Steps the caller may decide now; usually one.
   const actionable = (workflow.data?.steps ?? []).filter((s) => s.canAct);
+  // Someone holding several of the quote's approval roles sees where they are.
+  const approverRoles = me.data?.approverRoles ?? [];
+  const showMine = showMyApprovals(workflow.data?.steps ?? [], approverRoles);
   const approvalProps = { isDraft, workflow, preview: approvalPreview };
   const openDecision = (outcome: ApprovalOutcome, step: ApprovalStep) => {
     decide.reset();
@@ -142,14 +151,15 @@ export default function QuoteDetailPage(): JSX.Element {
           <>
             {actionable.map((s) => (
               <Stack key={s.role} direction="row" spacing={1}>
+                {/* Always named: with several roles, each click visibly acts on a different one. */}
                 <Button variant="contained" color="success" onClick={() => openDecision("approve", s)}>
-                  {actionable.length > 1 ? `Approve as ${s.roleLabel}` : "Approve"}
+                  Approve as {s.roleLabel}
                 </Button>
                 <Button variant="outlined" onClick={() => openDecision("request-changes", s)}>
-                  Request changes
+                  Request changes as {s.roleLabel}
                 </Button>
                 <Button variant="outlined" color="error" onClick={() => openDecision("reject", s)}>
-                  Reject
+                  Reject as {s.roleLabel}
                 </Button>
               </Stack>
             ))}
@@ -181,6 +191,8 @@ export default function QuoteDetailPage(): JSX.Element {
           </>
         }
       />
+
+      {showMine && workflow.data ? <MyApprovalSteps steps={myApprovalSteps(workflow.data.steps, approverRoles)} /> : null}
 
       <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Tabs value={tab} onChange={(_, t: number) => openTab(t)} aria-label="Quote sections">
@@ -229,7 +241,14 @@ export default function QuoteDetailPage(): JSX.Element {
           onConfirm={(comment) =>
             decide.mutate(
               { quoteId: q.id, version: v.versionNumber, stepId: decision.step.stepId as number, outcome: decision.outcome, comment },
-              { onSuccess: () => setDecision(null) },
+              {
+                onSuccess: (after) => {
+                  // Say what was recorded and what's next, so the next step's
+                  // buttons don't look like the same ones again.
+                  showSuccess(decisionMessage(decision.outcome, decision.step, after, approverRoles));
+                  setDecision(null);
+                },
+              },
             )
           }
         >

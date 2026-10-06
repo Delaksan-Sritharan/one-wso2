@@ -45,6 +45,11 @@ vi.mock("@features/sales/cado2/approvals/api/useApprovalApi", () => ({
   useDecideStep: () => decide,
 }));
 
+const me = { data: { sub: "s", email: "approver@wso2.com", roles: [], approverRoles: ["DEAL_DESK"] as string[] } };
+vi.mock("@features/sales/cado2/api/useCado2Me", () => ({ useCado2Me: () => me }));
+const notices = { showSuccess: vi.fn(), showError: vi.fn(), showWarning: vi.fn() };
+vi.mock("@context/notifications/NotificationsContext", () => ({ useNotifications: () => notices }));
+
 const documents = query(undefined as unknown);
 const issue = { ...mutation(), mutateAsync: vi.fn() };
 const files = { preview: vi.fn(), download: vi.fn() };
@@ -90,6 +95,8 @@ function showFrom(from: string | undefined, q: QuoteView, ...vs: DraftResponse[]
 beforeEach(() => {
   Object.assign(decide, mutation());
   workflow.data = null;
+  me.data.approverRoles = ["DEAL_DESK"];
+  notices.showSuccess.mockReset();
   Object.assign(recall, mutation());
   Object.assign(revise, mutation());
   Object.assign(close, mutation());
@@ -228,7 +235,7 @@ describe("QuoteDetailPage — lifecycle", () => {
     expect(within(chain).getByRole("listitem", { name: "Deal Desk" })).toHaveTextContent("Overdue by 2 h"); // its deadline
     expect(within(chain).getByRole("listitem", { name: "Regional Director" })).toHaveTextContent("above the Account Manager's 5% limit");
 
-    await user.click(screen.getByRole("button", { name: "Request changes" }));
+    await user.click(screen.getByRole("button", { name: "Request changes as Deal Desk" }));
     const dialog = screen.getByRole("dialog");
     const send = within(dialog).getByRole("button", { name: "Request changes" });
     expect(send).toBeDisabled();
@@ -238,6 +245,47 @@ describe("QuoteDetailPage — lifecycle", () => {
       { quoteId: 5, version: 1, stepId: 11, outcome: "request-changes", comment: "Use the FY26 price book" },
       expect.anything(),
     );
+  });
+
+  it("walks someone holding CRO, CFO and CEO through their steps one by one", async () => {
+    const user = userEvent.setup();
+    const step = (role: ApprovalStep["role"], stepId: number, over: Partial<ApprovalStep> = {}): ApprovalStep => ({
+      stepId, role, roleLabel: role === "AREA_GM" ? "Area GM" : role, branches: ["DISCOUNT"], dependsOn: [], triggers: [],
+      status: "WAITING", requestedAt: null, actedAt: null, actedByEmail: null, comment: null, canAct: false, cantActReason: null, ...over,
+    });
+    me.data.approverRoles = ["CRO", "CFO", "CEO"];
+    workflow.data = {
+      status: "IN_PROGRESS", createdAt: "2026-10-06T09:00:00Z", completedAt: null,
+      steps: [step("AREA_GM", 1, { status: "APPROVED" }), step("CRO", 2, { status: "PENDING", canAct: true }), step("CFO", 3), step("CEO", 4)],
+    };
+    show({ ...submitted.quote, actions: [] }, submitted);
+
+    // Where they are: CRO now, CFO and CEO later. Area GM isn't theirs.
+    const mine = screen.getByRole("list", { name: "Your approval steps" });
+    expect(within(mine).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["CROYour turn", "CFOLater", "CEOLater"]);
+    // Every button names the role it acts as.
+    expect(screen.getByRole("button", { name: "Reject as CRO" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Approve as CRO" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }));
+    const [vars, opts] = decide.mutate.mock.calls[0] as [unknown, { onSuccess: (wf: ApprovalWorkflow) => void }];
+    expect(vars).toMatchObject({ quoteId: 5, version: 1, stepId: 2, outcome: "approve" });
+
+    // Saved: the confirmation says so, and that CFO is next and theirs.
+    opts.onSuccess({ ...workflow.data, steps: [step("AREA_GM", 1, { status: "APPROVED" }), step("CRO", 2, { status: "APPROVED" }),
+      step("CFO", 3, { status: "PENDING", canAct: true }), step("CEO", 4)] });
+    expect(notices.showSuccess).toHaveBeenCalledWith("Approved as CRO. CFO is also yours and waiting for you now.");
+  });
+
+  it("shows no strip to an approver with one step on the quote", () => {
+    workflow.data = {
+      status: "IN_PROGRESS", createdAt: "2026-10-06T09:00:00Z", completedAt: null,
+      steps: [{ stepId: 11, role: "DEAL_DESK", roleLabel: "Deal Desk", branches: [], dependsOn: [], status: "PENDING", requestedAt: null,
+        actedAt: null, actedByEmail: null, comment: null, canAct: true, cantActReason: null, triggers: [] }],
+    };
+    show({ ...submitted.quote, actions: [] }, submitted);
+    expect(screen.queryByRole("region", { name: "Your approvals" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Approve as Deal Desk" })).toBeInTheDocument();
   });
 
   it("shows Deal Desk the categories the rep chose, and asks them to confirm on approval", async () => {
@@ -264,7 +312,7 @@ describe("QuoteDetailPage — lifecycle", () => {
     expect(notice).toHaveTextContent(first.productName);
     expect(within(screen.getByRole("table", { name: "Products" })).getAllByText("Category chosen by rep")).toHaveLength(1);
 
-    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await user.click(screen.getByRole("button", { name: "Approve as Deal Desk" }));
     const dialog = within(screen.getByRole("dialog"));
     expect(dialog.getByRole("region", { name: "Categories chosen by the rep" })).toHaveTextContent(/By approving, you confirm/);
   });

@@ -121,7 +121,9 @@ Behaviour is kept as it is today unless §7 says otherwise.
   figures, yearly schedule, terms, addresses, justification), status panel with the actions the
   backend allows (`quote.actions`: recall, revise, close, delete draft, approve, request changes,
   reject), documents panel (order form preview, issue, download), and the Approvals, Versions and
-  History tabs.
+  History tabs. Approver buttons always name the role ("Approve as CFO"); each decision is confirmed
+  with a notification saying what's next for the viewer; someone holding two or more of the quote's
+  roles also sees a "Your approvals" strip (Approved / Your turn / Later).
 - **My Approvals** — inbox of steps for the viewer's roles, deadline chips, opens the quote.
 - **Approval diagram** — the approval workflow drawn with React Flow, in the Approvals tab and the
   submit preview.
