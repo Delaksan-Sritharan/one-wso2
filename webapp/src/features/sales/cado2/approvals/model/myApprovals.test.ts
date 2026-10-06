@@ -74,6 +74,14 @@ describe("deskSummary", () => {
     ]);
   });
 
+  it("keeps two discount reasons apart when their wording isn't the usual one", () => {
+    const dd = step("DEAL_DESK", "PENDING", { canAct: true });
+    const steps = [dd,
+      step("CRO", "WAITING", { triggers: [trigger("DISCOUNT", 0, "A first odd discount sentence")] }),
+      step("CFO", "WAITING", { triggers: [trigger("DISCOUNT", 0, "A second odd discount sentence")] })];
+    expect(deskSummary(steps, dd).map((r) => r.detail)).toEqual(["A first odd discount sentence", "A second odd discount sentence"]);
+  });
+
   it("is empty when nothing comes after Deal Desk", () => {
     const dd = step("DEAL_DESK", "PENDING", { canAct: true });
     expect(deskSummary([dd], dd)).toEqual([]);

@@ -126,7 +126,13 @@ function ShortList({ rows, label }: { readonly rows: readonly ReasonRow[]; reado
 function DeskReview({ steps, step }: { readonly steps: readonly ApprovalStep[]; readonly step: ApprovalStep }): JSX.Element {
   const points = deskSummary(steps, step);
   if (!points.length) {
-    return (
+    // No points to show doesn't mean nobody approves after Deal Desk.
+    const more = steps.some((s) => s.role !== step.role && (s.status === "WAITING" || s.status === "PENDING"));
+    return more ? (
+      <Typography variant="body2" color="text.secondary">
+        Further approvals follow, with no specific points recorded. See the Approvals tab.
+      </Typography>
+    ) : (
       <Stack direction="row" spacing={1} alignItems="center" sx={{ color: "success.main" }}>
         <CircleCheckIcon size={16} />
         <Typography variant="body2">Nothing non-standard: no further approvals are needed.</Typography>

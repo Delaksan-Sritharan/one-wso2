@@ -97,7 +97,9 @@ export function deskSummary(steps: readonly ApprovalStep[], current: ApprovalSte
   for (const s of steps) {
     if (s.role === current.role || (s.status !== "WAITING" && s.status !== "PENDING")) continue;
     for (const row of reasonRows(s)) {
-      const key = `${row.kind}|${row.title}|${row.kind === "discount" ? "" : row.detail}`;
+      // A parsed line discount is one point whatever the limit; anything else
+      // (including a discount sentence in an unexpected format) by its text.
+      const key = `${row.kind}|${row.title}|${row.kind === "discount" && row.figure ? "" : row.detail}`;
       const point = points.get(key);
       if (!point) points.set(key, { row, roles: [s.roleLabel] });
       else if (!point.roles.includes(s.roleLabel)) point.roles.push(s.roleLabel);

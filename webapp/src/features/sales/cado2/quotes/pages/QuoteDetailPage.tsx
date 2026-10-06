@@ -91,7 +91,8 @@ export default function QuoteDetailPage(): JSX.Element {
   const decide = useDecideStep();
   const me = useCado2Me();
   // After a decision: what was recorded, shown above the next step (if any).
-  const [decisionNoteText, setDecisionNoteText] = useState<string | null>(null);
+  // Kept with its quote, as the page stays mounted when another quote opens.
+  const [decisionNoteState, setDecisionNoteState] = useState<{ quoteId: number; text: string } | null>(null);
   useDocumentTitle(quote.data ? quoteLabel(quote.data.quoteNumber, latest.data?.version.accountName, latest.data?.version.opportunityName) : "Quote");
 
   const openDialog = (d: Dialog) => {
@@ -203,7 +204,7 @@ export default function QuoteDetailPage(): JSX.Element {
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", lg: "minmax(0,1fr) 320px" }, gap: 3, alignItems: "start" }}>
             <Stack spacing={2} sx={{ minWidth: 0 }}>
               {/* The viewer's turn: which role they act as, and why it's asked. */}
-              <YourApprovalPanel steps={workflow.data?.steps ?? []} actionable={actionable} note={decisionNoteText} />
+              <YourApprovalPanel steps={workflow.data?.steps ?? []} actionable={actionable} note={decisionNoteState?.quoteId === quoteId ? decisionNoteState.text : null} />
               {/* Deal Desk verifies what the rep chose for unmapped products. */}
               <RepCategoriesNotice lines={sheet.lines} />
               <QuoteSheet sheet={sheet} />
@@ -244,7 +245,7 @@ export default function QuoteDetailPage(): JSX.Element {
                 onSuccess: (after) => {
                   // Say what was recorded, so the next step's buttons don't
                   // look like the same ones again.
-                  setDecisionNoteText(decisionNote(decision.outcome, decision.step, after, approverRoles));
+                  setDecisionNoteState({ quoteId: q.id, text: decisionNote(decision.outcome, decision.step, after, approverRoles) });
                   setDecision(null);
                 },
               },
