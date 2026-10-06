@@ -83,7 +83,9 @@ describe("ApprovalMatrixPage", () => {
 
     const dialog = within(screen.getByRole("dialog"));
     expect(dialog.getByText(/alters the approvals of 1 quote in approval/)).toBeInTheDocument();
-    expect(dialog.getByRole("link", { name: "Q-26-00005" })).toHaveAttribute("href", "/sales/cado2/quotes/5/quote");
+    // Plain text: the admin panel gives no access to the quotes themselves.
+    expect(dialog.getByText("Q-26-00005")).toBeInTheDocument();
+    expect(dialog.queryByRole("link", { name: "Q-26-00005" })).toBeNull();
     await user.click(dialog.getByRole("button", { name: "Save and recall" }));
     expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({ confirm: true }), expect.anything());
     expect(await screen.findByText("Saved. 1 quote was recalled for resubmission.")).toBeInTheDocument();

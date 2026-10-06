@@ -1676,11 +1676,10 @@ export const cado2ServiceUrls = {
   quoteSettings: `${cado2BackendUrl}/quote-settings`,
   pricingPreview: `${cado2BackendUrl}/pricing/preview`,
   quotes: `${cado2BackendUrl}/quotes`,
-  // My Quotes. `everyone` (scope=all) is answered for CadO2 admins only.
-  quoteList: (status: string, everyone: boolean): string => {
+  // My Quotes: the caller's own quotes.
+  quoteList: (status: string): string => {
     const q = new URLSearchParams({ limit: "200" });
     if (status) q.set("status", status);
-    if (everyone) q.set("scope", "all");
     return `${cado2BackendUrl}/quotes?${q.toString()}`;
   },
   quote: (quoteId: number): string => `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}`,

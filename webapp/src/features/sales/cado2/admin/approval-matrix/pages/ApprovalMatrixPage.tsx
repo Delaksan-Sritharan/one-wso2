@@ -15,7 +15,6 @@
 // under the License.
 
 import { useState, type JSX } from "react";
-import { Link as RouterLink } from "react-router";
 import {
   Alert,
   Box,
@@ -28,7 +27,6 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
-  Link,
   MenuItem,
   Paper,
   Stack,
@@ -54,7 +52,6 @@ import type {
 } from "@features/sales/cado2/approvals/api/approvalTypes";
 import { roleLabel } from "@features/sales/cado2/approvals/model/approvalText";
 import { formatDate } from "@features/sales/cado2/quotes/form/draftForm";
-import { cado2Paths } from "@features/sales/cado2/cado2Paths";
 
 const TABS = ["Discount groups", "Product mapping", "Commercial rules", "Change log"] as const;
 
@@ -170,11 +167,9 @@ export default function ApprovalMatrixPage(): JSX.Element {
               </Typography>
               <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
                 {impact.map((q) => (
+                  // Plain text: the admin panel gives no access to quotes themselves.
                   <li key={q.quoteId}>
-                    <Link component={RouterLink} to={cado2Paths.quote(q.quoteId)}>
-                      {q.quoteNumber}
-                    </Link>{" "}
-                    · version {q.versionNumber}
+                    <strong>{q.quoteNumber}</strong> · version {q.versionNumber}
                   </li>
                 ))}
               </Box>
