@@ -176,8 +176,8 @@ export function buildBreakdown(
 
 /**
  * Reminder text for a reporting manager about their direct reports' unsubmitted
- * credit card transactions — dashboard/utils.ts's `buildManagerReminderMessage`,
- * behind the manager-compliance table's "Copy Reminder" button.
+ * credit card transactions, copied by the manager-compliance table's
+ * "Copy reminder" button.
  */
 export function buildManagerReminderMessage(manager: CcManagerCompliance, currency: string): string {
   const firstName = manager.managerName.split(" ")[0];

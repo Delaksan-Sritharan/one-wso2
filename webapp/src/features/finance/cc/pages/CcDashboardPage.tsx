@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import {
   Alert,
@@ -718,7 +718,7 @@ function ManagerComplianceTable({
             const isOpen = !!expanded[key];
             const isUnassigned = manager.managerEmail === "";
             return (
-              <Box key={key} component="tbody" sx={{ display: "contents" }}>
+              <Fragment key={key}>
                 <TableRow hover>
                   <Cell>
                     <IconButton
@@ -775,6 +775,13 @@ function ManagerComplianceTable({
                           </TableRow>
                         </TableHead>
                         <TableBody>
+                          {manager.reports.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={8} sx={{ color: "text.secondary" }}>
+                                No card holders report to this manager.
+                              </TableCell>
+                            </TableRow>
+                          )}
                           {manager.reports.map((report) => (
                             <TableRow key={report.employeeEmail}>
                               <Cell>{report.cardHolderName || report.employeeEmail}</Cell>
@@ -798,7 +805,7 @@ function ManagerComplianceTable({
                     </Collapse>
                   </TableCell>
                 </TableRow>
-              </Box>
+              </Fragment>
             );
           })}
         </TableBody>
