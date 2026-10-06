@@ -24,6 +24,30 @@ export function productLabel(productName: string | null, repoName: string): stri
   return productName && productName.trim() !== "" ? productName : repoName;
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Collection jobs are instants, so the time is the viewer's local zone.
+// Download tables keep the API's calendar date, which is already a day.
+export function formatJobTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (n: number): string => String(n).padStart(2, "0");
+  const day = `${pad(date.getDate())} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  return `${day}, ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+const JOB_STATUS_LABEL: Record<string, string> = {
+  SUCCESS: "Success",
+  PARTIAL_FAILURE: "Partial failure",
+  FAILED: "Failed",
+  STARTED: "Started",
+};
+
+export function jobStatusLabel(status: string): string {
+  return JOB_STATUS_LABEL[status] ?? status;
+}
+
 const activityDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 export function activityDate(value: string | null | undefined): string | undefined {

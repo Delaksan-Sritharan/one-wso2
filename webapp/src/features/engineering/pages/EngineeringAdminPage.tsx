@@ -50,7 +50,7 @@ import {
   type NewTrackedRepository,
   type TrackedRepositoryUpdate,
 } from "@features/engineering/api/productDownloadStats";
-import { productLabel } from "./display";
+import { formatJobTime, jobStatusLabel, productLabel } from "./display";
 
 function refreshTrackedLists(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({
@@ -232,10 +232,10 @@ export default function EngineeringAdminPage(): JSX.Element {
                   <ListingTable.Body>
                     {logs.data.logs.map((log) => (
                       <ListingTable.Row key={`${log.source}-${log.id}`}>
-                        <ListingTable.Cell>{log.status}</ListingTable.Cell>
+                        <ListingTable.Cell>{jobStatusLabel(log.status)}</ListingTable.Cell>
                         <ListingTable.Cell align="right">{log.reposSynced}</ListingTable.Cell>
                         <ListingTable.Cell align="right">{log.reposFailed}</ListingTable.Cell>
-                        <ListingTable.Cell>{log.startedAt}</ListingTable.Cell>
+                        <ListingTable.Cell>{formatJobTime(log.startedAt)}</ListingTable.Cell>
                         <ListingTable.Cell>{log.errorMessage ?? ""}</ListingTable.Cell>
                       </ListingTable.Row>
                     ))}

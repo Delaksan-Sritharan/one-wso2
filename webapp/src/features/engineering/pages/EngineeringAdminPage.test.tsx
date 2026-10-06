@@ -22,6 +22,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { ENGINEERING_ADMIN_ITEM_ID } from "@constants/perspectives";
 import { claimOf, foldVisibility, type VisibilityShell } from "@components/side-rail/visibilityFold";
 import { engineeringAdminVisibility } from "@features/engineering/api/engineeringAdminVisibility";
+import { formatJobTime } from "./display";
 import EngineeringAdminPage from "./EngineeringAdminPage";
 
 vi.mock("@asgardeo/react", () => ({
@@ -206,6 +207,9 @@ describe("Admin", () => {
     renderAdmin();
 
     expect(await screen.findByRole("cell", { name: "Retired" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Failed" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: formatJobTime("2026-10-04T02:00:00Z") })).toBeInTheDocument();
+    expect(screen.queryByText("2026-10-04T02:00:00Z")).not.toBeInTheDocument();
     expect(screen.getByText("snapshot write failed")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /start|run now|sync now/i })).not.toBeInTheDocument();
 
