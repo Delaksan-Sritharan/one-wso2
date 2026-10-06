@@ -16,13 +16,14 @@
 
 import type { ExpenseClaimsReport, ExpenseDashboardPeriod } from "../expenseTypes";
 
-// A leading =, +, - or @ makes spreadsheet software treat the cell as a
-// formula, so those values are prefixed with a quote before they reach the
-// file.
+// A leading =, +, -, @, tab or carriage return can make spreadsheet software
+// treat the cell as a formula, so those values are prefixed with a quote before
+// they reach the file. Cells containing a quote, comma, or line break are
+// wrapped in double quotes, with embedded quotes doubled.
 function escapeCell(value: string | number): string {
   const text = String(value ?? "");
-  const guarded = /^[=+\-@]/.test(text) ? `'${text}` : text;
-  return /[",\n]/.test(guarded) ? `"${guarded.replace(/"/g, '""')}"` : guarded;
+  const guarded = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+  return /[",\r\n]/.test(guarded) ? `"${guarded.replace(/"/g, '""')}"` : guarded;
 }
 
 const toRow = (cells: (string | number)[]): string => cells.map(escapeCell).join(",");
@@ -33,9 +34,9 @@ function section(title: string, header: string[], rows: (string | number)[][]): 
 
 /**
  * The dashboard's four tables, stacked into one file under their own
- * headings — `exportReportCsv.ts` in the source. One file rather than one
- * per table, because finance reviews them together and four separate
- * downloads for one Export click is not what the button promises.
+ * headings. One file rather than one per table, because finance reviews them
+ * together and four separate downloads for one Export click is not what the
+ * button promises.
  */
 export function buildExpenseReportCsv(report: ExpenseClaimsReport, period: ExpenseDashboardPeriod): string {
   const currency = report.reportingCurrency;

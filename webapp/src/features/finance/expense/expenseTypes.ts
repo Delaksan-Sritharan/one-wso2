@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// DTOs + enums mirrored from digiops-finance/apps/expense-claims/backend.
+// DTOs and enums for the expense-claims backend's responses.
 
 export type ExpenseClaimStatus =
   | "PENDING_LEAD"
@@ -175,18 +175,15 @@ export function nextStatus(view: ApproverView, decision: "approve" | "reject"): 
 
 // ---- dashboard ---------------------------------------------------------
 //
-// DTOs mirrored from digiops-finance/apps/expense-claims/backend's own
-// `ClaimsReport` (modules/dashboard), via its port in
-// apps/expense-claims/webapp/src/utils/types.ts. GET /claims-report — the
-// one org-wide, aggregated report behind this entire dashboard — is gated on
-// the backend's own `allowedAdminRoles`, the SAME check that produces
-// `enableFinanceView` above (service.bal:75). So the flag this feature's own
-// visibility already reads is the correct gate for this dashboard too; see
+// Response types for the expense-claims backend's claims report. GET
+// /claims-report is the one org-wide, aggregated report behind this dashboard.
+// The backend gates it on `allowedAdminRoles`, the same check that produces
+// `enableFinanceView` above, so that flag is also the correct gate here. See
 // useFinanceGate's `finance-overview` case.
 
-/** `/subsidiaries` on the expense-claims backend — a different response from
- *  Master Data's own `/subsidiaries` (a different backend entirely), so this
- *  is its own type rather than reusing masterDataTypes' `Subsidiary`. */
+/** `/subsidiaries` on the expense-claims backend. Master Data's own
+ *  `/subsidiaries` lives on a different backend with a different response, so
+ *  this has its own type rather than reusing masterDataTypes' `Subsidiary`. */
 export interface ExpenseSubsidiarySummary {
   id: number;
   code: string;

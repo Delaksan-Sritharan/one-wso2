@@ -101,10 +101,10 @@ function reportQueryString(filter: ExpenseClaimsReportFilter): string {
 // period-scoped, filtered totals, the status/entity/monthly/employee
 // breakdowns, and the sales-region list the filter bar itself offers.
 //
-// Backend-gated on `allowedAdminRoles` — the SAME check `/app-data` already
-// answers as `enableFinanceView` (service.bal:75), so this screen's own
-// visibility (useFinanceGate's `finance-overview` case) is already the
-// correct gate; nothing new to check here.
+// Backend-gated on `allowedAdminRoles`, the same check `/app-data` answers as
+// `enableFinanceView`. This screen's visibility (useFinanceGate's
+// `finance-overview` case) is already the correct gate, so nothing new is
+// checked here.
 export function useExpenseClaimsReport(filter: ExpenseClaimsReportFilter, enabled = true) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();

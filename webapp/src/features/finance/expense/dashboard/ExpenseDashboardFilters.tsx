@@ -14,78 +14,61 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import {
-  Autocomplete,
-  Box,
-  Button,
-  Stack,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Typography,
-} from "@wso2/oxygen-ui";
+import { useState } from "react";
+import { Box, Button, IconButton, MenuItem, Popover, Stack, TextField, Typography } from "@wso2/oxygen-ui";
+import { FilterIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { EXPENSE_DASHBOARD_PERIODS, type ExpenseDashboardPeriod } from "../expenseTypes";
 import { ALL_CATEGORIES, ALL_ENTITIES, ALL_REGIONS, ALL_STATUSES } from "./expenseDashboardUtils";
 
-const FIELD_SX = { minWidth: 200, flex: 1 } as const;
+export interface ExpenseDashboardDraftFilters {
+  /** Part of the draft, not applied on selection: a period picked in the panel
+   *  only takes effect once Apply is pressed, like every other filter. */
+  period: ExpenseDashboardPeriod;
+  entity: string;
+  region: string;
+  category: string;
+  status: string;
+  /** Only read when the period is Custom; kept here so a half-typed range
+   *  never triggers a request before Apply is pressed. */
+  startDate: string;
+  endDate: string;
+}
 
 /**
- * One single-select dropdown — Business Entity, Sales Region, Expense
- * Category or Status. Plain `Autocomplete` + `TextField`, the same shape
- * every other finance filter bar in this portal already uses
- * (`ExpenseTypeFilters.tsx`), not the source's own boxed, label-prefixed
- * `FilterBox` — one visual language across the portal is the whole point of
- * this migration, not a second one ported alongside it.
+ * One labelled dropdown inside the Advanced Filter panel. Every option list
+ * starts with its "All ..." sentinel, so an unset filter is a real, displayable
+ * value rather than an empty field.
  */
-function SingleFilter({
+function FilterSelect({
   label,
   value,
-  allLabel,
   options,
   onChange,
 }: {
   label: string;
   value: string;
-  /** The "All ..." sentinel this field's options list is prefixed with — not
-   *  `null`, so an unset filter is still a real, displayable value. */
-  allLabel: string;
   options: readonly string[];
   onChange: (next: string) => void;
 }) {
   return (
-    <Autocomplete
+    <TextField
+      select
+      fullWidth
       size="small"
-      sx={FIELD_SX}
-      options={[allLabel, ...options]}
+      label={label}
       value={value}
-      disableClearable
-      onChange={(_e, next) => onChange(next ?? allLabel)}
-      // No visible label: the field's value is NEVER actually empty — it
-      // starts at `allLabel` ("All entities", ...) and stays on a real
-      // selection from there — so a label floating above the border would
-      // only ever sit beside a value that already says what the field is.
-      // `aria-label` keeps the field named for anyone using a screen reader.
-      renderInput={(params) => (
-        <TextField {...params} slotProps={{ htmlInput: { ...params.inputProps, "aria-label": label } }} />
-      )}
-    />
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {options.map((option) => (
+        <MenuItem key={option} value={option}>
+          {option}
+        </MenuItem>
+      ))}
+    </TextField>
   );
 }
 
-export interface ExpenseDashboardDraftFilters {
-  entity: string;
-  region: string;
-  category: string;
-  status: string;
-  /** Only read when the period preset is Custom; kept here so a half-typed
-   *  range never triggers a request before Apply is pressed. */
-  startDate: string;
-  endDate: string;
-}
-
 export function ExpenseDashboardFilters({
-  period,
-  onPeriodChange,
   draft,
   onDraftChange,
   isDirty,
@@ -98,8 +81,6 @@ export function ExpenseDashboardFilters({
   onApply,
   onClear,
 }: {
-  period: ExpenseDashboardPeriod;
-  onPeriodChange: (next: ExpenseDashboardPeriod) => void;
   draft: ExpenseDashboardDraftFilters;
   onDraftChange: (next: ExpenseDashboardDraftFilters) => void;
   isDirty: boolean;
@@ -112,79 +93,125 @@ export function ExpenseDashboardFilters({
   onApply: () => void;
   onClear: () => void;
 }) {
-  const set = <K extends keyof ExpenseDashboardDraftFilters>(key: K, value: string) =>
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+
+  const set = <K extends keyof ExpenseDashboardDraftFilters>(key: K, value: ExpenseDashboardDraftFilters[K]) =>
     onDraftChange({ ...draft, [key]: value });
 
-  const isCustom = period === "Custom";
+  const close = () => setAnchor(null);
+  const applyAndClose = () => {
+    onApply();
+    close();
+  };
+  const resetAndClose = () => {
+    onClear();
+    close();
+  };
 
   return (
     <Box sx={{ mb: 2 }}>
-      <Stack
-        direction="row"
-        flexWrap="wrap"
-        alignItems="center"
-        justifyContent="space-between"
-        gap={1.5}
-        sx={{ mb: 1.5 }}
-      >
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={period}
-          onChange={(_e, value) => value && onPeriodChange(value as ExpenseDashboardPeriod)}
-          sx={{ flexWrap: "wrap", gap: 1 }}
+      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button
+          variant="text"
+          aria-haspopup="dialog"
+          aria-expanded={Boolean(anchor)}
+          onClick={(e) => setAnchor(e.currentTarget)}
+          endIcon={<FilterIcon size={16} />}
+          sx={{ textTransform: "none", fontSize: 15, fontWeight: 500 }}
         >
-          {EXPENSE_DASHBOARD_PERIODS.map((preset) => (
-            <ToggleButton key={preset} value={preset} sx={{ textTransform: "none", px: 2 }}>
-              {preset}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+          Advanced Filter
+        </Button>
+      </Box>
 
-        <Stack direction="row" gap={1}>
-          <Button variant="contained" size="small" onClick={onApply} disabled={!isDirty || isRangeInvalid}>
+      <Popover
+        open={Boolean(anchor)}
+        anchorEl={anchor}
+        onClose={close}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{ paper: { sx: { width: 340, p: 2.5, mt: 1 } } }}
+      >
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+          <Typography sx={{ fontSize: 18, fontWeight: 700 }}>Advanced Filter</Typography>
+          <IconButton aria-label="Close filters" size="small" onClick={close}>
+            <XIcon size={18} />
+          </IconButton>
+        </Stack>
+
+        <Stack gap={2}>
+          <FilterSelect
+            label="Filter by Business Entity"
+            value={draft.entity}
+            options={[ALL_ENTITIES, ...entityOptions]}
+            onChange={(v) => set("entity", v)}
+          />
+          <FilterSelect
+            label="Filter by Sales Region"
+            value={draft.region}
+            options={[ALL_REGIONS, ...regionOptions]}
+            onChange={(v) => set("region", v)}
+          />
+          <FilterSelect
+            label="Filter by Expense Category"
+            value={draft.category}
+            options={[ALL_CATEGORIES, ...categoryOptions]}
+            onChange={(v) => set("category", v)}
+          />
+          <FilterSelect
+            label="Filter by Status"
+            value={draft.status}
+            options={[ALL_STATUSES, ...statusOptions]}
+            onChange={(v) => set("status", v)}
+          />
+          <FilterSelect
+            label="Filter by Period"
+            value={draft.period}
+            options={EXPENSE_DASHBOARD_PERIODS}
+            onChange={(v) => set("period", v as ExpenseDashboardPeriod)}
+          />
+
+          {draft.period === "Custom" && (
+            <Stack direction="row" gap={1.5}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="From"
+                value={draft.startDate}
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: draft.endDate || undefined } }}
+                onChange={(e) => set("startDate", e.target.value)}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="To"
+                value={draft.endDate}
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: draft.startDate || undefined } }}
+                onChange={(e) => set("endDate", e.target.value)}
+              />
+            </Stack>
+          )}
+        </Stack>
+
+        {isRangeInvalid && (
+          <Typography sx={{ fontSize: 13, fontWeight: 600, color: "error.main", mt: 2 }}>
+            Pick a From date on or before the To date.
+          </Typography>
+        )}
+
+        <Stack direction="row" justifyContent="flex-end" gap={1} sx={{ mt: 2.5 }}>
+          <Button variant="outlined" color="error" size="small" onClick={resetAndClose} disabled={!hasActiveFilters}>
+            Reset
+          </Button>
+          <Button variant="contained" size="small" onClick={applyAndClose} disabled={!isDirty || isRangeInvalid}>
             Apply
           </Button>
-          <Button variant="outlined" color="error" size="small" onClick={onClear} disabled={!hasActiveFilters}>
-            Clear All
-          </Button>
         </Stack>
-      </Stack>
+      </Popover>
 
-      <Stack direction="row" flexWrap="wrap" alignItems="center" gap={1.5}>
-        <SingleFilter label="Business Entity" value={draft.entity} allLabel={ALL_ENTITIES} options={entityOptions} onChange={(v) => set("entity", v)} />
-        <SingleFilter label="Sales Region" value={draft.region} allLabel={ALL_REGIONS} options={regionOptions} onChange={(v) => set("region", v)} />
-        <SingleFilter label="Expense Category" value={draft.category} allLabel={ALL_CATEGORIES} options={categoryOptions} onChange={(v) => set("category", v)} />
-        <SingleFilter label="Status" value={draft.status} allLabel={ALL_STATUSES} options={statusOptions} onChange={(v) => set("status", v)} />
-        {isCustom && (
-          <>
-            {/* No visible label here either — same treatment as the
-                dropdowns above, `aria-label` only. */}
-            <TextField
-              size="small"
-              type="date"
-              value={draft.startDate}
-              slotProps={{ htmlInput: { max: draft.endDate || undefined, "aria-label": "From" } }}
-              onChange={(e) => set("startDate", e.target.value)}
-            />
-            <TextField
-              size="small"
-              type="date"
-              value={draft.endDate}
-              slotProps={{ htmlInput: { min: draft.startDate || undefined, "aria-label": "To" } }}
-              onChange={(e) => set("endDate", e.target.value)}
-            />
-          </>
-        )}
-      </Stack>
-
-      {isRangeInvalid && (
-        <Typography sx={{ fontSize: 13, fontWeight: 600, color: "error.main", mt: 1 }}>
-          Pick a From date on or before the To date.
-        </Typography>
-      )}
       {isDirty && !isRangeInvalid && (
-        <Typography sx={{ fontSize: 13, fontWeight: 600, color: "warning.main", mt: 1 }}>
+        <Typography sx={{ fontSize: 13, fontWeight: 600, color: "warning.main", mt: 1, textAlign: "right" }}>
           Filters changed — apply to refresh
         </Typography>
       )}

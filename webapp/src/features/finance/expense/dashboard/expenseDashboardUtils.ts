@@ -14,13 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Ported from `dashboardUtils.ts` in the source app — the period-range math
-// and the entity-label disambiguation are both behaviour, not presentation,
-// so they moved unchanged. Currency formatting did not: the source used its
-// own `NumericFormat` + `CURRENCY_FORMAT_PROPS`, dropped here in favour of
-// this feature's own `money()` (financeFormat.ts), which every other finance
-// screen already formats amounts with — two currency formatters for one
-// portal is exactly the "disparity" this migration was asked to avoid.
+// Period-range and entity-label helpers for the expense dashboard. Amounts are
+// formatted with the shared `money()` from financeFormat.ts, the same formatter
+// every other finance screen uses, so the portal has one currency format.
 
 import { toIso } from "../../util/financeFormat";
 import type { ExpenseDashboardPeriod, ExpenseSubsidiarySummary } from "../expenseTypes";

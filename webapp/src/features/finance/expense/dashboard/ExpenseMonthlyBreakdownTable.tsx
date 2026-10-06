@@ -19,8 +19,8 @@ import { money } from "../../util/financeFormat";
 import { CELL_SX, HEAD_SX } from "../../opd/dashboard/opdDashboardTableSx";
 import type { ExpenseReportMonthlyItem } from "../expenseTypes";
 
-/** `MonthlyBreakdownTable.tsx` — one row per month, one column per expense
- *  category, with a Total column and a totals row underneath. */
+/** One row per month, one column per expense category, with a Total column
+ *  and a totals row underneath. */
 export function ExpenseMonthlyBreakdownTable({
   expenseTypeColumns,
   items,

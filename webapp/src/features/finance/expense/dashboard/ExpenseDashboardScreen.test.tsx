@@ -136,9 +136,9 @@ describe("a failed app-data lookup", () => {
   });
 });
 
-// The backend's own gate (`allowedAdminRoles`, service.bal) is what decides
-// this, and `enableFinanceView` on /app-data is the SAME check — so a reader
-// without it sees the refusal regardless of what the report itself holds.
+// The backend's gate (`allowedAdminRoles`) decides this, and `enableFinanceView`
+// on /app-data is the same check. A reader without it sees the refusal
+// regardless of what the report itself holds.
 describe("a reader without the finance role", () => {
   it("is refused, even though the report query already has data", () => {
     appDataState.current = queryState({

@@ -51,14 +51,16 @@ import {
   getEntityLabel,
   getPeriodRange,
 } from "./expenseDashboardUtils";
-import type { ExpenseDashboardPeriod } from "../expenseTypes";
 import { EXPENSE_FILTERABLE_STATUSES } from "../expenseTypes";
 
 const BREAKDOWN_TABS = ["Business Entity", "Monthly", "Employee"] as const;
 type BreakdownTab = (typeof BREAKDOWN_TABS)[number];
 
-const DEFAULT_CUSTOM_RANGE = getPeriodRange("All Time");
+// Custom starts on the current quarter, so its From and To fields are filled
+// from the first render rather than blank.
+const DEFAULT_CUSTOM_RANGE = getPeriodRange("Quarterly");
 const DEFAULT_FILTERS: ExpenseDashboardDraftFilters = {
+  period: "All Time",
   entity: ALL_ENTITIES,
   region: ALL_REGIONS,
   category: ALL_CATEGORIES,
@@ -68,18 +70,15 @@ const DEFAULT_FILTERS: ExpenseDashboardDraftFilters = {
 };
 
 /**
- * Finance → Overview → Expense Claims. `Dashboard.tsx` in the source app,
- * ported screen-for-screen: same filters, same three summary tiles, same
- * status breakdown, same three breakdown tables behind the same tabs, same
- * CSV export — MUI redrawn as Oxygen UI, the source's own bespoke `FilterBox`
- * dropped in favour of the `Autocomplete` filter bar every other finance
- * screen already uses.
+ * Finance → Overview → Expense Claims. Shows the org-wide claims report: the
+ * filters, the three summary tiles, the status breakdown, the three breakdown
+ * tables behind their tabs, and the CSV export. Built with the Oxygen UI
+ * components and the `Autocomplete` filter bar every other finance screen
+ * uses.
  *
- * Gated on `enableFinanceView`, the one flag this screen needed: the
- * backend's `GET /claims-report` is itself gated on `allowedAdminRoles`
- * (service.bal), the SAME check that produces `enableFinanceView` on
- * `/app-data` — so there is no separate permission to invent, only the one
- * the rest of this feature already reads.
+ * Gated on `enableFinanceView` from `/app-data`. The backend's
+ * `GET /claims-report` is gated on the same `allowedAdminRoles` check that
+ * produces that flag, so the screen needs no separate permission.
  */
 export default function ExpenseDashboardScreen({ headerActions }: { headerActions?: ReactNode } = {}) {
   return (
@@ -102,7 +101,6 @@ function DashboardBody() {
   const subsidiaries = useExpenseSubsidiaries();
   const expenseTypes = useExpenseDashboardTypes();
 
-  const [period, setPeriod] = useState<ExpenseDashboardPeriod>("All Time");
   // `draft` is what the filter bar shows; `applied` is what the current
   // report was fetched with. Keeping them apart is what lets the bar require
   // an explicit Apply instead of firing a request on every dropdown change.
@@ -126,7 +124,10 @@ function DashboardBody() {
         : expenseTypes.data?.find((t) => t.type === applied.category)?.id,
     [applied.category, expenseTypes.data],
   );
-  const { startDate, endDate } = getPeriodRange(period, { startDate: applied.startDate, endDate: applied.endDate });
+  const { startDate, endDate } = getPeriodRange(applied.period, {
+    startDate: applied.startDate,
+    endDate: applied.endDate,
+  });
 
   const report = useExpenseClaimsReport({
     startDate,
@@ -144,16 +145,14 @@ function DashboardBody() {
     (Object.keys(applied) as (keyof ExpenseDashboardDraftFilters)[]).some(
       (key) => applied[key] !== DEFAULT_FILTERS[key],
     ) ||
-    isDirty ||
-    period !== "All Time";
-  const isCustomPeriod = period === "Custom";
+    isDirty;
+  const isCustomPeriod = draft.period === "Custom";
   const isRangeInvalid =
     isCustomPeriod && (!draft.startDate || !draft.endDate || draft.startDate > draft.endDate);
 
   const handleClearAll = () => {
     setDraft(DEFAULT_FILTERS);
     setApplied(DEFAULT_FILTERS);
-    setPeriod("All Time");
   };
 
   if (appData.isLoading) {
@@ -197,8 +196,6 @@ function DashboardBody() {
   return (
     <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
       <ExpenseDashboardFilters
-        period={period}
-        onPeriodChange={setPeriod}
         draft={draft}
         onDraftChange={setDraft}
         isDirty={isDirty}
@@ -223,7 +220,7 @@ function DashboardBody() {
 
         {!report.isError && report.data && report.data.current.claimCount === 0 && (
           <Typography sx={{ fontSize: 14, color: "text.secondary", py: 2.5 }}>
-            No claims match the selected filters for {period.toLowerCase()}. Try a different business
+            No claims match the selected filters for {applied.period.toLowerCase()}. Try a different business
             entity, period, or clear a filter.
           </Typography>
         )}
@@ -301,7 +298,7 @@ function DashboardBody() {
                 >
                   <MenuItem
                     onClick={() => {
-                      downloadExpenseReportCsv(report.data!, period);
+                      downloadExpenseReportCsv(report.data!, applied.period);
                       setExportAnchor(null);
                     }}
                   >
@@ -319,7 +316,7 @@ function DashboardBody() {
               </Stack>
 
               <Typography sx={{ fontSize: 13, color: "text.secondary", py: 1.5 }}>
-                {period}
+                {applied.period}
                 {activeTab === "Business Entity" && `, ${applied.entity === ALL_ENTITIES ? "all entities" : applied.entity}`}
                 {` · all amounts in ${currency}`}
               </Typography>

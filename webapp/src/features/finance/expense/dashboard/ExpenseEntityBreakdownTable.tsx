@@ -20,8 +20,8 @@ import { CELL_SX, HEAD_SX } from "../../opd/dashboard/opdDashboardTableSx";
 import { formatPercentage, percentageColor } from "./expenseDashboardUtils";
 import type { ExpenseReportEntityItem } from "../expenseTypes";
 
-/** `BusinessEntityTable.tsx` — one row per legal entity, reusing the SAME
- *  table chrome every other finance dashboard draws its breakdowns with. */
+/** One row per legal entity, drawn with the same table chrome as the other
+ *  finance dashboard breakdowns. */
 export function ExpenseEntityBreakdownTable({
   items,
   currency,

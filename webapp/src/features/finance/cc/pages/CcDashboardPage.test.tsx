@@ -30,6 +30,7 @@ const role = { privileges: ["employee"] as string[] };
 const asked = {
   summary: [] as { dateFrom: string | undefined; ownedCardsOnly: boolean; leadEmail?: string }[],
   compliance: [] as { ownedCardsOnly: boolean; enabled: boolean }[],
+  managerCompliance: [] as { enabled: boolean }[],
   leadSummary: [] as { enabled: boolean }[],
   leadTeam: [] as { leadEmail: string | undefined }[],
 };
@@ -125,6 +126,40 @@ vi.mock("../useCc", () => ({
       isError: false,
     };
   },
+  useCcManagerCompliance: (_dateFrom: string | undefined, enabled: boolean) => {
+    asked.managerCompliance.push({ enabled });
+    return {
+      data: [
+        {
+          managerEmail: "lead@wso2.com",
+          managerName: "Lead Person",
+          reportCount: 1,
+          outstandingAmount: 700,
+          transactionCount: 2,
+          avgPendingDays: 20,
+          bucket0To7: 0,
+          bucket8To14: 0,
+          bucket15To30: 1,
+          bucket30Plus: 1,
+          reports: [
+            {
+              employeeEmail: "late@wso2.com",
+              cardHolderName: "Late Filer",
+              outstandingAmount: 700,
+              transactionCount: 2,
+              avgDaysToSubmit: 41.5,
+              bucket0To7: 0,
+              bucket8To14: 0,
+              bucket15To30: 1,
+              bucket30Plus: 1,
+            },
+          ],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    };
+  },
 }));
 
 vi.mock("../../components/FinanceShell", () => ({
@@ -145,6 +180,7 @@ beforeEach(() => {
   role.privileges = ["employee"];
   asked.summary.length = 0;
   asked.compliance.length = 0;
+  asked.managerCompliance.length = 0;
   asked.leadSummary.length = 0;
   asked.leadTeam.length = 0;
 });

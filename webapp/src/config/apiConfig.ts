@@ -520,6 +520,9 @@ export const ccServiceUrls = {
   transactionSummary: `${ccBackendUrl}/transactions/new-transaction-summary`,
   submittedByCategory: `${ccBackendUrl}/transactions/submitted-transaction-summary`,
   cardHolderCompliance: `${ccBackendUrl}/transactions/card-holder-compliance-summary`,
+  // Admin view's "Group by: Reporting Manager" — the same backlog rolled up
+  // under each report's manager. Finance only, enforced server-side.
+  managerCompliance: `${ccBackendUrl}/transactions/manager-compliance-summary`,
   // Lead view: every lead's approval backlog, and one lead's team within it.
   leadApprovalSummary: `${ccBackendUrl}/transactions/lead-approval-summary`,
   leadTeamCardHolders: `${ccBackendUrl}/transactions/lead-team-card-holder-summary`,

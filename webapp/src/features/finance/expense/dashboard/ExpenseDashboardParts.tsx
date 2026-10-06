@@ -19,10 +19,8 @@ import { Card, Typography } from "@wso2/oxygen-ui";
 import { formatPercentage, percentageColor } from "./expenseDashboardUtils";
 
 /**
- * A titled panel — `DashboardSection.tsx` in the source. Same `Card
- * variant="outlined"` shell `OpdDashboardPanel` already draws every other
- * finance dashboard's sections with, so the three dashboards read as one
- * family rather than three different visual languages.
+ * A titled panel. Uses the same `Card variant="outlined"` shell as
+ * `OpdDashboardPanel`, so the finance dashboards share one visual style.
  */
 export function ExpenseDashboardPanel({
   title,
@@ -30,8 +28,7 @@ export function ExpenseDashboardPanel({
   children,
 }: {
   title: string;
-  /** Sits beside the title in lighter type — the period/entity note under
-   *  each breakdown table in the source. */
+  /** Sits beside the title in lighter type, for a period or entity note. */
   aside?: string;
   children: ReactNode;
 }) {
@@ -51,8 +48,7 @@ export function ExpenseDashboardPanel({
 }
 
 /**
- * One of the top-row figures, or one status-breakdown tile — `StatTile.tsx`.
- * `value` takes a pre-formatted string rather than a number: the three top
+ * One of the top-row figures, or one status-breakdown tile. `value` takes a pre-formatted string rather than a number: the three top
  * tiles show money (via `money()`), the status tiles show a bare count, and
  * handing this component a currency code to format with would be one more
  * thing every caller has to know to pass.

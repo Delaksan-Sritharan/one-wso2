@@ -19,8 +19,8 @@ import { money } from "../../util/financeFormat";
 import { CELL_SX, HEAD_SX } from "../../opd/dashboard/opdDashboardTableSx";
 import type { ExpenseReportEmployeeItem } from "../expenseTypes";
 
-/** `EmployeeBreakdownTable.tsx` — one row per employee who filed a claim in
- *  the period, with the top-reimbursed row called out. */
+/** One row per employee who filed a claim in the period, with the
+ *  top-reimbursed row called out. */
 export function ExpenseEmployeeBreakdownTable({
   items,
   currency,

@@ -225,6 +225,25 @@ export interface CcCardHolderCompliance {
   bucket30Plus: number;
 }
 
+/**
+ * The same pending backlog as `CcCardHolderCompliance`, rolled up under one
+ * reporting manager — cardHolderCompliance.ts:29-43. An empty `managerEmail`
+ * ("Unassigned") holds card holders the HRIS has no manager for.
+ */
+export interface CcManagerCompliance {
+  managerEmail: string;
+  managerName: string;
+  reportCount: number;
+  transactionCount: number;
+  outstandingAmount: number;
+  avgPendingDays: number;
+  bucket0To7: number;
+  bucket8To14: number;
+  bucket15To30: number;
+  bucket30Plus: number;
+  reports: CcCardHolderCompliance[];
+}
+
 
 /**
  * One lead's approval backlog — `leadCompliance.ts:17-27`.

@@ -109,6 +109,37 @@ describe("buildExpenseReportCsv", () => {
     expect(csv).toContain("'=SUM(A1:A10)");
   });
 
+  // Tab and carriage return can start a formula in spreadsheet software too,
+  // and a carriage return inside a cell must not break the row apart.
+  it("guards tab- and carriage-return-led values and quotes ones with a line break", () => {
+    const csv = buildExpenseReportCsv(
+      report({
+        employeeBreakdown: [
+          {
+            employeeEmail: "x@wso2.com",
+            employeeName: "\t=cmd",
+            claimCount: 1,
+            pendingCount: 0,
+            claimsPerMonth: 1,
+            totalValue: 50,
+          },
+          {
+            employeeEmail: "y@wso2.com",
+            employeeName: "Line\rBreak",
+            claimCount: 1,
+            pendingCount: 0,
+            claimsPerMonth: 1,
+            totalValue: 50,
+          },
+        ],
+      }),
+      "All Time",
+    );
+
+    expect(csv).toContain("'\t=cmd");
+    expect(csv).toContain('"Line\rBreak"');
+  });
+
   // A month missing one of the report's expense-type columns must still
   // line its OWN amounts up under the right column, not shift left.
   it("realigns a month's amounts against the full column list, not array order", () => {
