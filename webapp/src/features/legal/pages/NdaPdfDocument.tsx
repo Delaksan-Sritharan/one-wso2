@@ -392,6 +392,8 @@ export interface NdaPdfProps {
   wso2Company: string;
   customerName: string;
   customerAddress: string;
+  /** Date the NDA is generated, shown as the Effective Date. */
+  effectiveDate: string;
   notes: string;
   /** Year shown in the page footer. */
   year: number;
@@ -404,6 +406,7 @@ export default function NdaPdfDocument({
   wso2Company,
   customerName,
   customerAddress,
+  effectiveDate,
   notes,
   year,
 }: NdaPdfProps) {
@@ -415,7 +418,7 @@ export default function NdaPdfDocument({
   const addressPhrase = ` having its principal place of business at ${customerAddress || "_____________________"}`;
 
   const openingParagraph =
-    `This Agreement is made and entered into as of _____________________ ` +
+    `This Agreement is made and entered into as of ${effectiveDate} ` +
     `("Effective Date") by and between ${cfg.entityFull} ` +
     `${cfg.entityDescription} ` +
     `(hereinafter referred to as "WSO2" and shall include WSO2 and any of its ` +

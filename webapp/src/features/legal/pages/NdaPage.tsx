@@ -84,6 +84,12 @@ export default function NdaPage(): JSX.Element {
     try {
       const customerName = selectedCustomer?.name ?? "";
       const customerAddress = formatCustomerAddress(selectedCustomer?.address ?? null);
+      const now = new Date();
+      const effectiveDate = now.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
 
       const blob = await pdf(
         <NdaPdfDocument
@@ -91,8 +97,9 @@ export default function NdaPage(): JSX.Element {
           wso2Company={wso2Company}
           customerName={customerName}
           customerAddress={customerAddress}
+          effectiveDate={effectiveDate}
           notes=""
-          year={new Date().getFullYear()}
+          year={now.getFullYear()}
         />,
       ).toBlob();
 
