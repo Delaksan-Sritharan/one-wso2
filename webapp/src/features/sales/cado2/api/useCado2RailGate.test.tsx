@@ -64,10 +64,22 @@ describe("which CadO2 rows a person sees", () => {
     expect(visible(result.current)).toEqual([CADO2_GROUP_ID, CADO2_ITEM.approvals]);
   });
 
-  it("an admin who approves sees all three", () => {
+  it("an admin-only person sees Admin, and nothing else", () => {
+    state.me.data = me(["ADMIN"]);
+    const { result } = renderHook(() => useCado2RailGate(true));
+    expect(visible(result.current)).toEqual([CADO2_GROUP_ID, CADO2_ITEM.admin]);
+  });
+
+  it("roles add up: an approver who is also an admin sees My Approvals and Admin, not My Quotes", () => {
     state.me.data = me(["ADMIN"], ["CFO"]);
     const { result } = renderHook(() => useCado2RailGate(true));
-    expect(visible(result.current)).toEqual([CADO2_GROUP_ID, CADO2_ITEM.quotes, CADO2_ITEM.approvals, CADO2_ITEM.admin]);
+    expect(visible(result.current)).toEqual([CADO2_GROUP_ID, CADO2_ITEM.approvals, CADO2_ITEM.admin]);
+  });
+
+  it("a rep who is also an admin sees My Quotes and Admin", () => {
+    state.me.data = me(["SALES", "ADMIN"]);
+    const { result } = renderHook(() => useCado2RailGate(true));
+    expect(visible(result.current)).toEqual([CADO2_GROUP_ID, CADO2_ITEM.quotes, CADO2_ITEM.admin]);
   });
 
   it("someone with no CadO2 role sees no CadO2 group at all", () => {

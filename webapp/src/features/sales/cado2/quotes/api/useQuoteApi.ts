@@ -150,9 +150,9 @@ export function useActiveLegalEntities() {
   return useAuthedQuery<ActiveLegalEntity[]>(["legal-entities", "active"], cado2ServiceUrls.legalEntities(true));
 }
 
-/** My Quotes: filtered by the latest version's status; `everyone` is Admin only. */
-export function useQuoteList(status = "", everyone = false) {
-  return useAuthedQuery<QuoteList>(["quotes", "list", status, everyone], cado2ServiceUrls.quoteList(status, everyone), "live");
+/** My Quotes: the caller's own quotes, filtered by the latest version's status. */
+export function useQuoteList(status = "") {
+  return useAuthedQuery<QuoteList>(["quotes", "list", status], cado2ServiceUrls.quoteList(status), "live");
 }
 
 /** A quote with its version list and the caller's actions. */

@@ -63,7 +63,8 @@ export function cado2Access(me: Cado2Me | undefined): Cado2Access {
   const roles = me?.roles ?? [];
   const isAdmin = roles.includes("ADMIN");
   return {
-    canQuote: isAdmin || roles.includes("SALES"),
+    // Roles add up; ADMIN is the admin panel only and gives no quote access.
+    canQuote: roles.includes("SALES"),
     canApprove: (me?.approverRoles.length ?? 0) > 0,
     isAdmin,
   };

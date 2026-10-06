@@ -23,12 +23,11 @@ import { ready } from "@features/sales/cado2/quotes/testing/fixtures";
 import MyQuotesPage from "./MyQuotesPage";
 
 const list = { data: undefined as unknown, error: null as unknown, isPending: true, isFetching: false, refetch: vi.fn() };
-const listCalls: [string, boolean][] = [];
-const me = { data: { sub: "s", email: "rep@wso2.com", roles: ["SALES"] as string[] } };
+const listCalls: [string][] = [];
 
 vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
-  useQuoteList: (status: string, everyone: boolean) => {
-    listCalls.push([status, everyone]);
+  useQuoteList: (status: string) => {
+    listCalls.push([status]);
     return list;
   },
   // The draft a row menu deletes is loaded first.
@@ -36,7 +35,6 @@ vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
   useDeleteDraft: () => deleteDraft,
 }));
 const deleteDraft = { mutate: vi.fn(), reset: vi.fn(), isPending: false, error: null };
-vi.mock("@features/sales/cado2/api/useCado2Me", () => ({ useCado2Me: () => me }));
 
 const soon = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
 const later = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
@@ -75,7 +73,6 @@ const rows = () => within(screen.getByRole("list", { name: "Quotes" })).getAllBy
 
 beforeEach(() => {
   Object.assign(list, { data: undefined, error: null, isPending: true });
-  me.data.roles = ["SALES"];
   listCalls.length = 0;
 });
 
@@ -152,24 +149,12 @@ describe("MyQuotesPage", () => {
     expect(screen.getByRole("link", { name: "Create your first quote" })).toHaveAttribute("href", "/sales/cado2/quotes/new");
   });
 
-  it("lets an Admin switch to everyone's quotes, with the owner shown", async () => {
-    me.data.roles = ["ADMIN"];
-    Object.assign(list, { isPending: false, data: { items: [item(1, { ownerEmail: "jane@wso2.com" })], total: 1 } });
-    renderPage();
-    expect(screen.queryByText(/jane@wso2.com/)).toBeNull();
-
-    await userEvent.setup().click(screen.getByRole("switch", { name: "Everyone's quotes" }));
-
-    expect(listCalls.at(-1)).toEqual(["", true]);
-    expect(screen.getByRole("heading", { name: "All Quotes" })).toBeInTheDocument();
-    expect(screen.getByText(/jane@wso2.com/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Actions for/ })).toBeNull(); // not their drafts to delete
-  });
-
-  it("hides the Everyone switch from reps", () => {
+  it("lists only the caller's own quotes: there is no Everyone switch", () => {
     Object.assign(list, { isPending: false, data: { items, total: 5 } });
     renderPage();
     expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.getByRole("heading", { name: "My Quotes" })).toBeInTheDocument();
+    expect(listCalls.at(-1)).toEqual([""]);
   });
 
   it("offers Delete draft in a draft row's menu, and asks first", async () => {

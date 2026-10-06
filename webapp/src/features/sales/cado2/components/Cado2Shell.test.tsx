@@ -136,6 +136,18 @@ describe("CadO2 routing", () => {
     expect(where()).toBe("/sales/cado2/approvals");
   });
 
+  it("lands an admin-only person on Admin", () => {
+    state.me.data = me(["ADMIN"]);
+    open("/sales/cado2");
+    expect(where()).toBe("/sales/cado2/admin/approval-matrix");
+  });
+
+  it("refuses My Quotes to an admin-only person: ADMIN is the admin panel only", () => {
+    state.me.data = me(["ADMIN"]);
+    open("/sales/cado2/quotes");
+    expect(where()).toBe("/sales/cado2/admin/approval-matrix");
+  });
+
   it("refuses Admin to a rep at its URL, not just in the rail", () => {
     open("/sales/cado2/admin/currencies");
     expect(where()).toBe("/sales/cado2/quotes");

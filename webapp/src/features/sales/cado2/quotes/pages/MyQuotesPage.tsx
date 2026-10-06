@@ -25,7 +25,6 @@ import {
   CircularProgress,
   Dialog,
   DialogContent,
-  FormControlLabel,
   IconButton,
   InputAdornment,
   Menu,
@@ -34,7 +33,6 @@ import {
   Skeleton,
   Stack,
   StatCard,
-  Switch,
   TextField,
   Typography,
 } from "@wso2/oxygen-ui";
@@ -42,7 +40,6 @@ import { CircleCheckIcon, EllipsisIcon, FilePenIcon, FileTextIcon, HourglassIcon
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import EmptyState from "@features/sales/cado2/components/empty-state/EmptyState";
 import PageHeader from "@features/sales/cado2/components/page-header/PageHeader";
-import { useCado2Me } from "@features/sales/cado2/api/useCado2Me";
 import { useDocumentTitle } from "@hooks/useDocumentTitle";
 import { useQuoteList, useQuoteVersion } from "@features/sales/cado2/quotes/api/useQuoteApi";
 import DeleteDraftDialog from "@features/sales/cado2/quotes/components/detail/DeleteDraftDialog";
@@ -175,7 +172,7 @@ function DeleteFromList({ q, onClose }: { q: QuoteListItem; onClose: () => void 
   );
 }
 
-function QuoteRow({ q, now, showOwner }: { q: QuoteListItem; now: Date; showOwner: boolean }): JSX.Element {
+function QuoteRow({ q, now }: { q: QuoteListItem; now: Date }): JSX.Element {
   // The expiry runs once the order form is issued.
   const expiry = q.status === "APPROVED" && q.expiryDate ? expiryState(q.expiryDate, now) : null;
   return (
@@ -209,7 +206,6 @@ function QuoteRow({ q, now, showOwner }: { q: QuoteListItem; now: Date; showOwne
         </Typography>
         <Typography variant="body2" color="text.secondary" noWrap>
           {q.opportunityName ?? "No opportunity"}
-          {showOwner ? ` · ${q.ownerEmail}` : ""}
         </Typography>
       </Box>
       <Stack direction="row" spacing={1} alignItems="center" sx={{ gridColumn: { xs: "2", md: "auto" }, flexWrap: "wrap", rowGap: 0.5 }}>
@@ -254,18 +250,14 @@ function QuoteRow({ q, now, showOwner }: { q: QuoteListItem; now: Date; showOwne
  * My Quotes, the landing page (2026-09-25): KPI cards that are also the
  * filters (click again to show all), search, and one rich row per quote that
  * opens its quote page. The
- * quote's status is its latest version's. Admins can switch to
- * everyone's quotes. Loaded once and filtered in the browser.
+ * quote's status is its latest version's. Loaded once and filtered in the
+ * browser.
  */
 export default function MyQuotesPage(): JSX.Element {
-  const me = useCado2Me();
   useDocumentTitle("My Quotes");
-  const isAdmin = me.data?.roles.includes("ADMIN") ?? false;
   const [filter, setFilter] = useState<QuoteFilter>("");
   const [search, setSearch] = useState("");
-  const [everyone, setEveryone] = useState(false);
-  const showOwner = isAdmin && everyone;
-  const { data, error, isPending, isFetching, refetch } = useQuoteList("", showOwner);
+  const { data, error, isPending, isFetching, refetch } = useQuoteList("");
   const now = new Date();
 
   const items = data?.items ?? [];
@@ -276,7 +268,7 @@ export default function MyQuotesPage(): JSX.Element {
   return (
     <Stack spacing={3} sx={{ maxWidth: 1400 }}>
       <PageHeader
-        title={showOwner ? "All Quotes" : "My Quotes"}
+        title="My Quotes"
         actions={
           <Button variant="contained" size="large" component={RouterLink} to={cado2Paths.newQuote} startIcon={<PlusIcon size={18} />}>
             Create Quote
@@ -328,12 +320,6 @@ export default function MyQuotesPage(): JSX.Element {
             },
           }}
         />
-        {isAdmin ? (
-          <FormControlLabel
-            control={<Switch checked={everyone} onChange={(e) => setEveryone(e.target.checked)} slotProps={{ input: { role: "switch" } }} />}
-            label="Everyone's quotes"
-          />
-        ) : null}
       </Stack>
 
       {error ? (
@@ -396,9 +382,9 @@ export default function MyQuotesPage(): JSX.Element {
           <Box component="ul" aria-label="Quotes" sx={{ listStyle: "none", m: 0, p: 0, "& > li:first-of-type > a": { borderTop: { xs: 0, md: 1 }, borderColor: "divider" } }}>
             {shown.map((q) => (
               <Box component="li" key={q.id} sx={{ position: "relative" }}>
-                <QuoteRow q={q} now={now} showOwner={showOwner} />
+                <QuoteRow q={q} now={now} />
                 {/* Beside the row's link, not inside it. A draft of the rep's own. */}
-                {!showOwner && q.status === "DRAFT" ? <RowMenu q={q} /> : null}
+                {q.status === "DRAFT" ? <RowMenu q={q} /> : null}
               </Box>
             ))}
           </Box>
