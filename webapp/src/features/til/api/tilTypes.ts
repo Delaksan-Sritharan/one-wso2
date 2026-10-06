@@ -84,3 +84,13 @@ export interface TilSubmissionPayload {
 export function normalizeSubmission(wire: TilSubmissionWire): TilSubmission {
   return { ...wire, createdAt: new Date(wire.createdAt) };
 }
+
+/** One match from GET /customers/search (entity-service's Account, proxied
+ * through til-backend). `id` exists for a future "link this entry to a real
+ * account" use, but the form today only ever submits `name` as whereDetail —
+ * entity-service's AccountView has far more fields than this; only what the
+ * autocomplete needs is carried over. */
+export interface TilCustomerOption {
+  id: string;
+  name: string;
+}

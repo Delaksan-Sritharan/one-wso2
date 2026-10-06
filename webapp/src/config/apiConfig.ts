@@ -1648,6 +1648,11 @@ export const tilServiceUrls = {
   submissions: `${tilBackendUrl}/submissions`,
   // DELETE one entry, moderator-only (re-checked server-side).
   submission: (id: string) => `${tilBackendUrl}/submissions/${encodeURIComponent(id)}`,
+  // Customer-name autocomplete (where == "Customer"). Always returns 200
+  // with an array -- [] both for "no matches" and for "this feature isn't
+  // configured on the backend", so the form can't tell those apart and
+  // doesn't need to; either way it just has no suggestions to show.
+  customersSearch: (q: string) => `${tilBackendUrl}/customers/search?q=${encodeURIComponent(q)}`,
 };
 
 // ---------------------------------------------------------------------------

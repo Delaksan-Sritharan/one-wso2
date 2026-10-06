@@ -15,6 +15,7 @@
 // under the License.
 import { useState } from "react";
 import {
+  Autocomplete,
   Box,
   Button,
   Dialog,
@@ -22,13 +23,15 @@ import {
   DialogContent,
   DialogTitle,
   MenuItem,
+  Paper,
   Stack,
   TextField,
   Typography,
 } from "@wso2/oxygen-ui";
+import type { PaperProps } from "@wso2/oxygen-ui";
 import { dialogPaperSx } from "@components/confirmation-dialog/dialogPaperSx";
 import { useNotifications } from "@context/notifications/NotificationsContext";
-import { useTilUserInfo } from "../api/useTilData";
+import { useCustomerSearch, useTilUserInfo } from "../api/useTilData";
 import { useCreateTilSubmission } from "../api/useTilMutations";
 import { TIL_WHAT_MAX_LENGTH, TIL_WHERE_OPTIONS, type TilWhere } from "../api/tilTypes";
 import { describeError } from "../util/tilError";
@@ -65,7 +68,53 @@ export default function SubmitEntryDialog({ open, onClose }: { open: boolean; on
   const [what, setWhat] = useState("");
   const [touched, setTouched] = useState(false);
   const create = useCreateTilSubmission();
+  // Only searches real customer records -- Partner/Other keep plain
+  // free-text entry (no equivalent searchable list exists for them). null
+  // (not "") when where !== "Customer" so useCustomerSearch knows the field
+  // isn't in play at all, vs. "" meaning "in play, nothing typed yet" (see
+  // its own doc comment for why that distinction matters -- it's what lets
+  // focusing the field with nothing typed still browse real customers).
+  // whereDetail doubles as the search query here: whatever's currently
+  // typed is both the field's value AND the in-flight search term, the
+  // same combined role MUI's own Autocomplete freeSolo pattern expects.
+  const customerSearch = useCustomerSearch(where === "Customer" ? whereDetail : null);
+  const customerOptions = customerSearch.data?.map((c) => c.name) ?? [];
+  // Open is a direct, fully-derived boolean (just "focused") rather than
+  // round-tripping through MUI's own onOpen/onClose -- that round-trip
+  // turned out not to reliably fire for this freeSolo + controlled-
+  // inputValue combination, which is what silently kept the panel closed
+  // even once there was a real answer (match, "no match", or "still
+  // searching") to show.
+  const [customerFieldFocused, setCustomerFieldFocused] = useState(false);
+  const customerFieldOpen = customerFieldFocused;
   const { showSuccess, showError } = useNotifications();
+
+  // MUI's Autocomplete unconditionally skips `noOptionsText` when `freeSolo`
+  // is set (see Autocomplete.js: `groupedOptions.length === 0 && !freeSolo`)
+  // -- freeSolo is required here (a not-yet-onboarded customer must still be
+  // a valid submission), so with zero matches the Popper mounted an entirely
+  // EMPTY Paper: visually indistinguishable from the dropdown never opening
+  // at all, which is what every prior bug report actually showed. This paper
+  // slot renders our own fallback text instead of relying on that
+  // internally-gated branch, confirmed against a standalone repro using the
+  // same MUI/oxygen-ui build before being applied here.
+  function CustomerAutocompletePaper({ children, ...paperProps }: PaperProps) {
+    return (
+      <Paper {...paperProps}>
+        {customerSearch.isLoading ? (
+          <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.5 }}>
+            Searching customers…
+          </Typography>
+        ) : customerOptions.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.5 }}>
+            No matching customer — you can still use this name
+          </Typography>
+        ) : (
+          children
+        )}
+      </Paper>
+    );
+  }
 
   // The byline is the signed-in user's own name — never typed, so it can't
   // be used to credit (or blame) someone else. submittedByEmail is this same
@@ -169,7 +218,75 @@ export default function SubmitEntryDialog({ open, onClose }: { open: boolean; on
               ))}
             </TextField>
           </Stack>
-          {needsWhereDetail && (
+          {needsWhereDetail && where === "Customer" && (
+            <Stack spacing={0.5}>
+              <Typography variant="subtitle2" color={touched && whereDetailInvalid ? "error" : "text.primary"}>
+                {whereDetailCopy(where).label}
+              </Typography>
+              <Autocomplete
+                freeSolo
+                // Real matches first, but typing something not in the list
+                // (a new/not-yet-onboarded customer, or just a name entity-
+                // service doesn't have) is still a valid submission --
+                // freeSolo + this filter (not the default "only show exact
+                // substring matches") is what lets the typed value itself
+                // stand in as its own option rather than being rejected.
+                filterOptions={(options) => options}
+                options={customerOptions}
+                loading={customerSearch.isLoading}
+                slots={{ paper: CustomerAutocompletePaper }}
+                open={customerFieldOpen}
+                inputValue={whereDetail}
+                onInputChange={(_event, next) => setWhereDetail(next)}
+                onChange={(_event, next) => setWhereDetail(next ?? "")}
+                // The Popper has no z-index of its own by default, and this
+                // field lives inside a Dialog (z-index: theme.zIndex.modal,
+                // 1300) -- without this it portals to document.body but can
+                // still end up stacked BEHIND the dialog's own paper, which
+                // is the other half of why the panel looked like it never
+                // opened at all. 1301 is deliberately just one above modal,
+                // not an arbitrarily large number, so it still sits below
+                // anything that's genuinely meant to cover a dialog (a
+                // confirmation dialog stacked on top of this one, etc.).
+                // placement + the disabled "flip" modifier pin the panel
+                // below the field always -- Popper's default behaviour flips
+                // it above when it judges there isn't enough room below
+                // (true here, since this field sits low in a short left
+                // column), which covered the Who/Where fields above it
+                // instead of the content below. listbox's maxHeight keeps
+                // a long result list from growing tall enough to do the same
+                // thing by itself.
+                slotProps={{
+                  popper: { style: { zIndex: 1301 }, placement: "bottom-start", modifiers: [{ name: "flip", enabled: false }] },
+                  listbox: { sx: { maxHeight: 240 } },
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder={whereDetailCopy(where).placeholder}
+                    error={touched && whereDetailInvalid}
+                    helperText={touched && whereDetailInvalid ? "Required" : whereDetailCopy(where).helper}
+                    // Chained, not replaced: `params.onFocus`/`params.onBlur`
+                    // are MUI's OWN internal handlers (anchor/positioning
+                    // bookkeeping the Popper needs to render at all) --
+                    // overwriting them outright, which an earlier version of
+                    // this did, silently broke the dropdown's own
+                    // positioning even once `open` was correctly true.
+                    onFocus={(e) => {
+                      params.onFocus?.(e);
+                      setCustomerFieldFocused(true);
+                    }}
+                    onBlur={(e) => {
+                      params.onBlur?.(e);
+                      setCustomerFieldFocused(false);
+                    }}
+                  />
+                )}
+                fullWidth
+              />
+            </Stack>
+          )}
+          {needsWhereDetail && where !== "Customer" && (
             <Stack spacing={0.5}>
               <Typography variant="subtitle2" color={touched && whereDetailInvalid ? "error" : "text.primary"}>
                 {whereDetailCopy(where).label}
