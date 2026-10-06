@@ -36,6 +36,8 @@ export interface NdaEntityConfig {
   governingLaw: string;
   /** Name printed under the WSO2 signature column. */
   signatureLabel: string;
+  /** Salesforce billing-country values (names and ISO codes) this entity serves. */
+  countries: string[];
 }
 
 export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
@@ -47,6 +49,7 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       'This Agreement shall be governed by the laws of Texas excluding its conflicts of laws principles. In the event of a dispute between the parties hereto, arising out of or in connection with or with respect to this Agreement or any breach thereof, such dispute shall be determined and settled by arbitration in Houston, Texas, in accordance with the rules of the American Arbitration Association ("AAA"). The award rendered by the arbitrator shall be final and binding on the parties thereto, and judgment may be entered in any court of competent jurisdiction. Nothing in the above provision shall prevent either party from applying to a court of competent jurisdiction for equitable or injunctive relief.',
     signatureLabel: "WSO2 LLC",
+    countries: ["US", "USA", "United States", "United States of America"],
   },
 
   "WSO2 Lanka (Pvt) Ltd — LK": {
@@ -57,6 +60,7 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       "This Agreement is governed by the laws of Sri Lanka. In the event of a dispute between the parties hereto, arising out of or in connection with or with respect to this Agreement or any breach thereof, such dispute shall be determined and settled by arbitration in Colombo, Sri Lanka in accordance with the rules of the Arbitration Act No 11 of 1995. The award rendered by the arbitrator/s shall be final and binding on the parties thereto, and judgment may be entered in any court of competent jurisdiction. Nothing in the above provision shall prevent either party from applying to a court of competent jurisdiction for equitable or injunctive relief.",
     signatureLabel: "WSO2 Lanka (Private) Limited",
+    countries: ["LK", "Sri Lanka"],
   },
 
   "WSO2 India Pvt Ltd — IN": {
@@ -67,6 +71,7 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       'This Agreement is governed by the laws of India. In the event of a dispute between the parties hereto, arising out of or in connection with or with respect to this Agreement or any breach thereof, such dispute shall be determined and settled by arbitration administered by the Singapore International Arbitration Centre (SIAC), India Office in Mumbai in accordance with the Arbitration Rules of the Singapore International Arbitration Centre Rules ("SIAC Rules") for the time being in force, which rules are deemed to be incorporated by reference in this clause. The seat of the arbitration shall be Mumbai. The arbitral tribunal shall consist of one arbitrator jointly appointed by the Parties. The substantive law governing the arbitration shall be the Indian Arbitration and Conciliation Act, 1996. Nothing in the above provision shall prevent either party from applying to a court of competent jurisdiction for equitable or injunctive relief.',
     signatureLabel: "WSO2 India Private Limited",
+    countries: ["IN", "India"],
   },
 
   "WSO2 (UK) Ltd — UK": {
@@ -77,6 +82,7 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       'This Agreement shall be governed by English law. In the event of a dispute between the parties hereto, arising out of or in connection with or with respect to this Agreement or any breach thereof, such dispute shall be determined and settled by arbitration in London, United Kingdom, in accordance with the rules of the International Chamber of Commerce ("ICC"). The award rendered by the arbitrator shall be final and binding on the parties thereto, and judgment may be entered in any court of competent jurisdiction. Nothing in the above provision shall prevent either party from applying to a court of competent jurisdiction for equitable or injunctive relief.',
     signatureLabel: "WSO2 (UK) Ltd.",
+    countries: ["GB", "UK", "United Kingdom", "Great Britain", "England", "Scotland", "Wales", "Northern Ireland"],
   },
 
   "WSO2 Australia Pty Ltd — AU": {
@@ -87,6 +93,7 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       'This Agreement shall be governed by the laws of the State of New South Wales, Australia. In the event of a dispute between the parties hereto, arising out of or in connection with or with respect to this Agreement or any breach thereof, such dispute shall be resolved by arbitration in the Australian Disputes Centre ("ADC") in Sydney, New South Wales, in accordance with the Conciliation Rules. The award rendered by the arbitrator shall be final and binding on the parties thereto, and judgment may be entered in any court of competent jurisdiction. Nothing in the above provision shall prevent either party from applying to a court of competent jurisdiction for equitable or injunctive relief.',
     signatureLabel: "WSO2 Australia Pty Ltd.",
+    countries: ["AU", "Australia"],
   },
 
   "WSO2 Middle East FZ-LLC — AE": {
@@ -97,6 +104,7 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       "This Agreement shall be governed by the laws of the Dubai International Financial Centre (DIFC). Any dispute, difference, controversy or claim arising out of or in connection with this Agreement, including (but not limited to) any question regarding its existence, validity, interpretation, performance, discharge and applicable remedies, shall be subject to the exclusive jurisdiction of the Courts of the DIFC.",
     signatureLabel: "WSO2 Middle East FZ-LLC",
+    countries: ["AE", "UAE", "United Arab Emirates"],
   },
 
   "WSO2EA Ltd — KE": {
@@ -106,6 +114,7 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       "This Agreement and any dispute or claim arising out of or in connection with it (whether contractual or non-contractual in nature) shall be governed by, and is to be construed in accordance with the laws of Kenya. In the case of any dispute, claim, controversy or disagreement arising out of or in connection with this Agreement, the parties shall first use their best efforts to resolve the dispute by negotiation within a period of fifteen (15) Business Days of such dispute arising. If the dispute is not resolved by negotiation, either party may refer the dispute to arbitration in Kenya in accordance with the Arbitration Act (No. 4 of 1995, Laws of Kenya). The seat of arbitration shall be Nairobi, Kenya, and proceedings shall be conducted in English.",
     signatureLabel: "WSO2EA Limited",
+    countries: ["KE", "Kenya"],
   },
 
   "WSO2 SG Pte Ltd — SG": {
@@ -116,6 +125,7 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       'This Agreement shall be governed by the laws of Singapore excluding its conflicts of laws principles. In the event of a dispute between the parties hereto, arising out of or in connection with or with respect to this Agreement or any breach thereof, such dispute shall be determined and settled by arbitration in Singapore, in accordance with the rules of the Singapore International Arbitration Centre ("SIAC"). The award rendered by the arbitrator shall be final and binding on the parties thereto, and judgment may be entered in any court of competent jurisdiction. Nothing in the above provision shall prevent either party from applying to a court of competent jurisdiction for equitable or injunctive relief.',
     signatureLabel: "WSO2 SG Pte Ltd",
+    countries: ["SG", "Singapore"],
   },
 
   "WSO2 South Africa Pty Ltd — ZA": {
@@ -126,6 +136,7 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       "This Agreement shall be governed by and construed in accordance with the laws of the Republic of South Africa and the Parties hereby submit to the non-exclusive jurisdiction of the High Court of South Africa (Gauteng Local Division, Johannesburg), to settle any disputes in connection with the Agreement.",
     signatureLabel: "WSO2 South Africa Pty Limited",
+    countries: ["ZA", "South Africa"],
   },
 
   "WSO2 Spain SL — ES": {
@@ -136,6 +147,7 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       'This Agreement shall be governed by the laws of Spain. In the event of a dispute between the parties hereto, arising out of or in connection with or with respect to this Agreement or any breach thereof, such dispute shall be determined and settled by arbitration in Madrid, Spain, in accordance with the rules of the International Chamber of Commerce ("ICC"). The award rendered by the arbitrator shall be final and binding on the parties thereto, and judgment may be entered in any court of competent jurisdiction. Nothing in the above provision shall prevent either party from applying to a court of competent jurisdiction for equitable or injunctive relief.',
     signatureLabel: "WSO2 Spain SL",
+    countries: ["ES", "Spain"],
   },
 
   "WSO2 Brasil — BR": {
@@ -146,8 +158,19 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
     governingLaw:
       'This Agreement is governed by the laws of Brazil. In the event of a dispute between the parties hereto, arising out of or in connection with or with respect to this Agreement or any breach thereof, such dispute shall be determined and settled by arbitration in Sao Paulo, Brazil in accordance with the rules of the International Chamber of Commerce ("ICC"). The award rendered by the arbitrator shall be final and binding on the parties thereto, and judgment may be entered in any court of competent jurisdiction. Nothing in the above provision shall prevent either party from applying to a court of competent jurisdiction for equitable or injunctive relief.',
     signatureLabel: "WSO2 BRASIL TECNOLOGIA E SOFTWARE EIRELI",
+    countries: ["BR", "Brazil", "Brasil"],
   },
 };
+
+/** The NDA_ENTITY_CONFIGS key for a billing country, or "" when no WSO2 entity serves it. */
+export function entityForCountry(country: string | null | undefined): string {
+  const wanted = country?.trim().toLowerCase();
+  if (!wanted) return "";
+  const match = Object.entries(NDA_ENTITY_CONFIGS).find(([, cfg]) =>
+    cfg.countries.some((c) => c.toLowerCase() === wanted),
+  );
+  return match?.[0] ?? "";
+}
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 
@@ -298,9 +321,9 @@ export interface NdaPdfProps {
   wso2Company: string;
   customerName: string;
   customerAddress: string;
-  effectiveDate: string;
   notes: string;
-  generatedDate: string;
+  /** Year shown in the page footer. */
+  year: number;
 }
 
 // ── Document ─────────────────────────────────────────────────────────────────
@@ -310,17 +333,18 @@ export default function NdaPdfDocument({
   wso2Company,
   customerName,
   customerAddress,
-  effectiveDate,
   notes,
-  generatedDate,
+  year,
 }: NdaPdfProps) {
-  // Fall back to US template if an unrecognised key is passed.
-  const cfg = NDA_ENTITY_CONFIGS[wso2Company] ?? NDA_ENTITY_CONFIGS["WSO2 LLC — US"];
+  // No fallback: the entity sets the governing law, so a wrong one must not
+  // produce a valid-looking contract.
+  const cfg = NDA_ENTITY_CONFIGS[wso2Company];
+  if (!cfg) throw new Error(`No NDA entity config for "${wso2Company}"`);
 
   const addressPhrase = ` having its principal place of business at ${customerAddress || "_____________________"}`;
 
   const openingParagraph =
-    `This Agreement is made and entered into as of ${effectiveDate} ` +
+    `This Agreement is made and entered into as of _____________________ ` +
     `("Effective Date") by and between ${cfg.entityFull} ` +
     `${cfg.entityDescription} ` +
     `(hereinafter referred to as "WSO2" and shall include WSO2 and any of its ` +
@@ -495,8 +519,7 @@ export default function NdaPdfDocument({
 
         {/* ── Footer ── */}
         <View style={styles.footer} fixed>
-          <Text>{"WSO2 \u2014 Internal Use Only"}</Text>
-          <Text>{generatedDate}</Text>
+          <Text>{year}</Text>
         </View>
       </Page>
     </Document>

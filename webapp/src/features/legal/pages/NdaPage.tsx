@@ -32,38 +32,20 @@ import { DownloadIcon, InfoIcon } from "@wso2/oxygen-ui-icons-react";
 import { pdf } from "@react-pdf/renderer";
 import PerspectiveHeader from "@components/perspective-header/PerspectiveHeader";
 import { useCustomerSearch, formatCustomerAddress, type CustomerResult } from "@features/legal/api/useCustomerSearch";
-import NdaPdfDocument, { NDA_ENTITY_CONFIGS } from "./NdaPdfDocument";
+import NdaPdfDocument, { NDA_ENTITY_CONFIGS, entityForCountry } from "./NdaPdfDocument";
 
 // ── Static option lists ─────────────────────────────────────────────────────
 
 // Only Mutual NDA — Standard is currently supported.
 const NDA_TEMPLATE_LOCKED = "Mutual NDA \u2014 Standard";
 
-// Derived from the keys of NDA_ENTITY_CONFIGS so label and value stay in sync.
-// Each entry corresponds to an official WSO2 NDA template docx file.
-const WSO2_COMPANIES: { value: string; label: string }[] = [
-  { value: "WSO2 LLC \u2014 US",                 label: "WSO2 LLC (US)" },
-  { value: "WSO2 Lanka (Pvt) Ltd \u2014 LK",     label: "WSO2 Lanka (Pvt) Ltd (LK)" },
-  { value: "WSO2 India Pvt Ltd \u2014 IN",        label: "WSO2 India Pvt Ltd (IN)" },
-  { value: "WSO2 (UK) Ltd \u2014 UK",             label: "WSO2 (UK) Ltd (UK)" },
-  { value: "WSO2 Australia Pty Ltd \u2014 AU",    label: "WSO2 Australia Pty Ltd (AU)" },
-  { value: "WSO2 Middle East FZ-LLC \u2014 AE",   label: "WSO2 Middle East FZ-LLC (AE)" },
-  { value: "WSO2EA Ltd \u2014 KE",                label: "WSO2EA Ltd (KE)" },
-  { value: "WSO2 SG Pte Ltd \u2014 SG",           label: "WSO2 SG Pte Ltd (SG)" },
-  { value: "WSO2 South Africa Pty Ltd \u2014 ZA", label: "WSO2 South Africa Pty Ltd (ZA)" },
-  { value: "WSO2 Spain SL \u2014 ES",             label: "WSO2 Spain SL (ES)" },
-  { value: "WSO2 Brasil \u2014 BR",               label: "WSO2 Brasil (BR)" },
-];
-
-// Verify at module load that every company value has a matching entity config.
-// This catches a key mismatch at dev time rather than silently falling back.
-if (import.meta.env.DEV) {
-  for (const { value } of WSO2_COMPANIES) {
-    if (!NDA_ENTITY_CONFIGS[value]) {
-      console.warn(`[NdaPage] No entity config found for company key: "${value}"`);
-    }
-  }
-}
+// Derived from the keys of NDA_ENTITY_CONFIGS so the dropdown and the configs
+// cannot drift apart. Each key corresponds to an official WSO2 NDA template docx.
+// "WSO2 LLC — US" is labelled "WSO2 LLC (US)".
+const WSO2_COMPANIES: { value: string; label: string }[] = Object.keys(NDA_ENTITY_CONFIGS).map((value) => ({
+  value,
+  label: value.replace(/ \u2014 (\w+)$/, " ($1)"),
+}));
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -100,12 +82,6 @@ export default function NdaPage(): JSX.Element {
   const handleDownload = async () => {
     setGenerating(true);
     try {
-      const generatedDate = new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-
       const customerName = selectedCustomer?.name ?? "";
       const customerAddress = formatCustomerAddress(selectedCustomer?.address ?? null);
 
@@ -115,9 +91,8 @@ export default function NdaPage(): JSX.Element {
           wso2Company={wso2Company}
           customerName={customerName}
           customerAddress={customerAddress}
-          effectiveDate={generatedDate}
           notes=""
-          generatedDate={generatedDate}
+          year={new Date().getFullYear()}
         />,
       ).toBlob();
 
@@ -162,6 +137,13 @@ export default function NdaPage(): JSX.Element {
             label="WSO2 Company"
             value={wso2Company}
             onChange={(e) => setWso2Company(e.target.value)}
+            helperText={
+              selectedCustomer && !wso2Company
+                ? `No WSO2 entity matches the billing country${
+                    selectedCustomer.address?.billingCountry ? ` "${selectedCustomer.address.billingCountry}"` : ""
+                  }. Choose one.`
+                : undefined
+            }
           >
             {WSO2_COMPANIES.map((c) => (
               <MenuItem key={c.value} value={c.value}>
@@ -169,7 +151,10 @@ export default function NdaPage(): JSX.Element {
               </MenuItem>
             ))}
           </TextField>
-          <Tooltip title="The WSO2 entity is determined based on the customer's country." placement="right">
+          <Tooltip
+            title="Filled in from the customer's billing country when you select a customer. Check it, and change it if needed: the entity sets the governing law."
+            placement="right"
+          >
             <IconButton size="small" sx={{ color: "text.secondary", flexShrink: 0 }}>
               <InfoIcon size={18} />
             </IconButton>
@@ -185,7 +170,11 @@ export default function NdaPage(): JSX.Element {
           inputValue={customerInput}
           getOptionLabel={(option) => option.name}
           isOptionEqualToValue={(option, value) => option.id === value.id}
-          onChange={(_e, newValue) => setSelectedCustomer(newValue)}
+          onChange={(_e, newValue) => {
+            setSelectedCustomer(newValue);
+            // The entity follows the customer's billing country, and stays editable.
+            if (newValue) setWso2Company(entityForCountry(newValue.address?.billingCountry));
+          }}
           onInputChange={(_e, newInput) => setCustomerInput(newInput)}
           filterOptions={(x) => x}
           loading={searchingCustomers}

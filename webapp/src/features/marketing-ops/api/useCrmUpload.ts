@@ -208,31 +208,6 @@ export function useExistingRecord(duplicateId: string | null, sfExistingId: stri
   });
 }
 
-// Fetch all account names from Salesforce via the CRM Upload backend.
-//
-// Used by other features (e.g. the NDA page) that need a list of company names
-// without caring about pipeline runs or record statuses. We ask for a large page,
-// extract `payload.name`, deduplicate, and sort — the result is a plain string[].
-// 5-minute stale time: account names change infrequently, re-fetching on every
-// mount would be wasteful.
-export function useCrmAccountNames() {
-  const { getAccessToken, ready } = useBase();
-  return useQuery<string[]>({
-    queryKey: [...ROOT, "records", "account-names"] as const,
-    enabled: ready,
-    queryFn: async () => {
-      const params = new URLSearchParams({ record_type: "account", limit: "500" });
-      const page = await authedGet<RecordsPage>(urls.crmUploadRecords(params), await getAccessToken());
-      const names = page.items
-        .map((r) => (r.payload as { name?: string }).name ?? "")
-        .filter(Boolean);
-      return [...new Set(names)].sort((a, b) => a.localeCompare(b));
-    },
-    staleTime: 5 * 60 * 1000,
-    retry: httpRetry,
-  });
-}
-
 // Merge or dismiss one collision.
 //
 // Merging writes the reviewer's chosen field values to the existing Salesforce

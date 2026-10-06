@@ -70,11 +70,13 @@ export function useCustomerSearch(search: string) {
     enabled: isLegalBackendConfigured() && debouncedSearch.trim().length >= 2,
     queryFn: async () => {
       const accessToken = await getAccessToken();
-      const data = await authedPost<CustomerResult[]>(legalServiceUrls.customerSearch, accessToken, {
+      const data = await authedPost<unknown>(legalServiceUrls.customerSearch, accessToken, {
         isRealTime: true,
         customerNameLike: debouncedSearch,
       });
-      return (data ?? []).filter((c) => Boolean(c.name));
+      if (data === null) return [];
+      if (!Array.isArray(data)) throw new Error("Customer search returned an unexpected response");
+      return (data as CustomerResult[]).filter((c) => Boolean(c.name));
     },
     placeholderData: (prev) => prev,
   });
