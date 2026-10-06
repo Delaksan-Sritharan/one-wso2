@@ -24,7 +24,7 @@ Font.registerHyphenationCallback((word) => [word]);
 //
 // Each WSO2 entity has a different opening paragraph and governing law clause.
 // The rest of the NDA text is identical across all regional templates.
-// Sources: the official docx files under /legal/NDAs/.
+// Text follows WSO2's official regional Mutual NDA templates.
 
 export interface NdaEntityConfig {
   /** Full legal entity name, e.g. "WSO2 (UK) Ltd." */
