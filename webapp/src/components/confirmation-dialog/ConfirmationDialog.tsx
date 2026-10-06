@@ -24,6 +24,8 @@ export interface ConfirmationContent {
   /** Defaults to "Confirm" — override for a caller whose source dialog uses
    * different wording (e.g. "Proceed"). */
   confirmLabel?: string;
+  /** Defaults to "secondary" (every existing caller's current look). */
+  confirmColor?: "primary" | "secondary" | "error";
 }
 
 /**
@@ -46,10 +48,13 @@ export default function ConfirmationDialog({
       <DialogContent>
         <DialogContentText>{content.text}</DialogContentText>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+      <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+        <Button size="small" onClick={onClose}>
+          Cancel
+        </Button>
         <Button
-          color="secondary"
+          size="small"
+          color={content.confirmColor ?? "secondary"}
           variant="contained"
           autoFocus
           onClick={() => {

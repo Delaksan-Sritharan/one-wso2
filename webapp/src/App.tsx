@@ -20,6 +20,8 @@ import { Navigate, Route, Routes } from "react-router";
 import { landingPath } from "@config/landingConfig";
 import SettingsPage from "@features/settings/pages/SettingsPage";
 import MenuHomePage from "@features/menu/pages/MenuHomePage";
+import TilEntryPage from "@features/til/pages/TilEntryPage";
+import TilHomePage from "@features/til/pages/TilHomePage";
 import OrgChartPage from "@features/org-chart/pages/OrgChartPage";
 import SalesMeetingsPage from "@features/sales/pages/SalesMeetingsPage";
 import MeetingDetailPage from "@features/sales/pages/MeetingDetailPage";
@@ -977,6 +979,17 @@ export default function App() {
               </SriLankaRoute>
             }
           />
+          {isPreviewEnabled("til") && (
+            <>
+              {/* Knowledge Base → Today I Learned: a company-wide learnings feed.
+                  No SriLankaRoute wrapper — unlike Menu/Subscriptions this isn't a
+                  Colombo-office perk, every employee everywhere can use it. */}
+              <Route path="knowledge-base" element={<TilHomePage />} />
+              {/* One entry's own page — what a Chat "View entry" button and a
+                  feed card's own link both land on. */}
+              <Route path="knowledge-base/:id" element={<TilEntryPage />} />
+            </>
+          )}
           {/* Legal perspective — currently just a second entry point into Due
               Diligence, alongside Finance (see the finance/ routes below and
               DUE_DILIGENCE_APPS). */}

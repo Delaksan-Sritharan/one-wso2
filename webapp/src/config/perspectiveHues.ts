@@ -172,6 +172,20 @@ export const PERSPECTIVE_HUES: Record<string, PerspectiveHue> = {
     light: { bg: "#FAE6FA", fg: "#AC3BAA" },
     dark: { bg: "#352135", fg: "#DD4BDA" },
   },
+
+  // Knowledge Base. This is the TENTH hue (this file's own cap is nine — see
+  // perspectiveHues.test.ts) added under immediate time pressure to fix an
+  // invisible launcher tile (the no-tint fallback renders unreadably dark in
+  // this app's theme); it has NOT had the "different encoding" conversation
+  // this file asks for past the cap. Crimson at 352 degrees, the widest
+  // remaining gap (40.1 degrees, between marketing's pink and Me's orange)
+  // that doesn't crowd the blue/violet cluster (people/legal/csm) or read as
+  // a third green (umt/finance). Measured 6.03:1 light, 4.15:1 dark.
+  "knowledge-base": {
+    hue: "#DD4B5E",
+    light: { bg: "#F7DEE2", fg: "#9B2736" },
+    dark: { bg: "#30171B", fg: "#DD4B5E" },
+  },
 };
 
 export function perspectiveHue(key: string): PerspectiveHue | undefined {

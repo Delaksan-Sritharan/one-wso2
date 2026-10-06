@@ -24,6 +24,7 @@ import {
   AwardIcon,
   Box as BoxIcon,
   BarChart3,
+  BookOpenIcon,
   CheckCheckIcon,
   ClipboardCheckIcon,
   DatabaseIcon,
@@ -31,6 +32,7 @@ import {
   HouseIcon,
   LandmarkIcon,
   LifeBuoyIcon,
+  LightbulbIcon,
   LayoutDashboard,
   LucideLayoutGrid,
   MegaphoneIcon,
@@ -470,6 +472,13 @@ const ME_SECTIONS: PerspectiveSection[] = [
   ...(isPreviewEnabled("promotion") ? appsToSections(ME_PROMOTION_APPS) : []),
 ];
 
+// Knowledge Base's one item so far. Its own perspective (not nested under Me)
+// since "a company-wide learnings feed" is a destination in its own right,
+// not a personal-portal item — see KNOWLEDGE_BASE in PERSPECTIVES below.
+const KNOWLEDGE_BASE_SECTIONS: PerspectiveSection[] = [
+  { id: "knowledge-base-today-i-learned", label: "Today I Learned", icon: LightbulbIcon, path: "/knowledge-base" },
+];
+
 const UMT_SECTIONS: PerspectiveSection[] = [
   { id: "umt-updates", label: "Updates", icon: RefreshCcw, path: "/umt/updates" },
   // Admin-only. `requires` speaks the people-app capability vocabulary, which
@@ -709,6 +718,26 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     path: "/sales",
     sections: SALES_SECTIONS,
   },
+  // Knowledge Base, so far just Today I Learned's feed. Held behind a preview
+  // flag until til-backend has a real Choreo deployment and the Chat App side
+  // is registered — see isPreviewEnabled("til")'s doc comment in
+  // previewFeatures.ts. Its own perspective rather than nested under Me or
+  // People Ops: a company-wide feed is a destination in its own right, same
+  // reasoning as Sales/Marketing Ops getting their own waffle tile instead of
+  // living under an existing one.
+  ...(isPreviewEnabled("til")
+    ? [
+        {
+          key: "knowledge-base",
+          label: "Knowledge Base",
+          icon: BookOpenIcon,
+          access: true,
+          path: "/knowledge-base",
+          forwardsToFirstItem: true,
+          sections: KNOWLEDGE_BASE_SECTIONS,
+        },
+      ]
+    : []),
   // Product Download Stats is the first engineering tool. It is not under
   // Infra Portal: Infra is GitHub administration, and this is release
   // downloads, package downloads, and repository stats. The perspective stays
