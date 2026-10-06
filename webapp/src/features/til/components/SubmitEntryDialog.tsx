@@ -43,6 +43,45 @@ import TilRichTextField from "./TilRichTextField";
 // option that's already self-explanatory on its own.
 const WHERE_OPTIONS_NEEDING_DETAIL: readonly TilWhere[] = ["Customer", "Partner", "Other"];
 
+// MUI's Autocomplete unconditionally skips `noOptionsText` when `freeSolo`
+// is set (see Autocomplete.js: `groupedOptions.length === 0 && !freeSolo`)
+// -- freeSolo is required here (a not-yet-onboarded customer must still be
+// a valid submission), so with zero matches the Popper mounted an entirely
+// EMPTY Paper: visually indistinguishable from the dropdown never opening
+// at all, which is what every prior bug report actually showed. This paper
+// slot renders our own fallback text instead of relying on that
+// internally-gated branch, confirmed against a standalone repro using the
+// same MUI/oxygen-ui build before being applied here.
+//
+// Defined at module scope (not inside SubmitEntryDialog) and taking
+// loading/empty as props rather than closing over component state -- a
+// function component defined inside another component's render body is a
+// NEW component type on every render, which made MUI unmount/remount the
+// Popper's own Paper (losing scroll position, flickering the list) on
+// every keystroke.
+function CustomerAutocompletePaper({
+  children,
+  loading,
+  empty,
+  ...paperProps
+}: PaperProps & { loading?: boolean; empty?: boolean }) {
+  return (
+    <Paper {...paperProps}>
+      {loading ? (
+        <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.5 }}>
+          Searching customers…
+        </Typography>
+      ) : empty ? (
+        <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.5 }}>
+          No matching customer — you can still use this name
+        </Typography>
+      ) : (
+        children
+      )}
+    </Paper>
+  );
+}
+
 function whereDetailCopy(where: TilWhere): { label: string; placeholder: string; helper: string } {
   switch (where) {
     case "Customer":
@@ -88,33 +127,6 @@ export default function SubmitEntryDialog({ open, onClose }: { open: boolean; on
   const [customerFieldFocused, setCustomerFieldFocused] = useState(false);
   const customerFieldOpen = customerFieldFocused;
   const { showSuccess, showError } = useNotifications();
-
-  // MUI's Autocomplete unconditionally skips `noOptionsText` when `freeSolo`
-  // is set (see Autocomplete.js: `groupedOptions.length === 0 && !freeSolo`)
-  // -- freeSolo is required here (a not-yet-onboarded customer must still be
-  // a valid submission), so with zero matches the Popper mounted an entirely
-  // EMPTY Paper: visually indistinguishable from the dropdown never opening
-  // at all, which is what every prior bug report actually showed. This paper
-  // slot renders our own fallback text instead of relying on that
-  // internally-gated branch, confirmed against a standalone repro using the
-  // same MUI/oxygen-ui build before being applied here.
-  function CustomerAutocompletePaper({ children, ...paperProps }: PaperProps) {
-    return (
-      <Paper {...paperProps}>
-        {customerSearch.isLoading ? (
-          <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.5 }}>
-            Searching customers…
-          </Typography>
-        ) : customerOptions.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.5 }}>
-            No matching customer — you can still use this name
-          </Typography>
-        ) : (
-          children
-        )}
-      </Paper>
-    );
-  }
 
   // The byline is the signed-in user's own name — never typed, so it can't
   // be used to credit (or blame) someone else. submittedByEmail is this same
@@ -257,6 +269,7 @@ export default function SubmitEntryDialog({ open, onClose }: { open: boolean; on
                 // a long result list from growing tall enough to do the same
                 // thing by itself.
                 slotProps={{
+                  paper: { loading: customerSearch.isLoading, empty: customerOptions.length === 0 },
                   popper: { style: { zIndex: 1301 }, placement: "bottom-start", modifiers: [{ name: "flip", enabled: false }] },
                   listbox: { sx: { maxHeight: 240 } },
                 }}

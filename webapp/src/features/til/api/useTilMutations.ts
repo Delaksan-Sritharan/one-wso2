@@ -57,7 +57,12 @@ export function useDeleteTilSubmission() {
     mutationFn: async (id) => {
       await authedDelete(tilServiceUrls.submission(id), await getAccessToken());
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, id) => {
+      // Without this, a cached ["til-submission", sub, id] detail entry
+      // survives the delete -- a tab with that entry's page already open
+      // (or a link to it clicked right after) can show the stale cached
+      // entry before the backend's own 404 arrives.
+      qc.removeQueries({ queryKey: ["til-submission", submissionsKey[1], id] });
       await qc.invalidateQueries({ queryKey: submissionsKey });
     },
   });

@@ -41,11 +41,20 @@ export function sanitizeTilHtml(html: string): string {
 // markup: the 0/5000 counter and the max-length check. Block-level tags
 // become a space first so "<p>One</p><p>Two</p>" doesn't read as "OneTwo".
 export function tilPlainText(html: string): string {
-  return html
-    .replace(/<\/(p|li|br)>/gi, " ")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .trim();
+  // DOMParser round-trip decodes every HTML entity (&amp;, &lt;, &gt;, …),
+  // not just &nbsp; -- a manual replace list only ever covers what's been
+  // noticed, and Quill emits &amp;/&lt;/&gt; for plain "&"/"<"/">" in the
+  // original text, same as any other HTML serializer. Without this, a
+  // search for "R&D" never matches an entry that actually says "R&D" (its
+  // plain text would still read "R&amp;D"), and excerpts show raw entities
+  // instead of the character. Block tags become a space FIRST, same as
+  // before, so adjacent paragraphs don't glue into one word -- but matching
+  // "<br ...>" directly rather than only "</br>" (closing-tag form), since
+  // <br> is a void element and real markup essentially never actually
+  // closes it.
+  const spaced = html.replace(/<\/(p|li)>|<br\s*\/?>/gi, " ");
+  const text = new DOMParser().parseFromString(spaced, "text/html").body.textContent ?? "";
+  return text.replace(/\u00a0/g, " ").trim();
 }
 
 export function tilPlainTextLength(html: string): number {

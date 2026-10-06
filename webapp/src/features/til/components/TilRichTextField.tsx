@@ -19,11 +19,10 @@ import "react-quill-new/dist/quill.snow.css";
 import { Box, useTheme } from "@wso2/oxygen-ui";
 import { sanitizeTilHtml } from "../util/tilRichText";
 
-// Same react-quill-new port PromotionRichTextField and ParRichTextField
-// already use (draft-js has no React 19 support, so neither ported app's
-// original editor survived the port). Toolbar is the minimum that makes a
+// react-quill-new, same as every other One WSO2 rich-text field -- draft-js
+// has no React 19 support. Toolbar is the minimum that makes a
 // multi-paragraph learning readable: bold/italic/underline and lists — no
-// link/undo-redo, matching Promotion's own simplification.
+// link/undo-redo, kept deliberately simple.
 const MODULES = {
   toolbar: [["bold", "italic", "underline"], [{ list: "ordered" }, { list: "bullet" }], ["clean"]],
   clipboard: { matchVisual: false, matchers: [] },

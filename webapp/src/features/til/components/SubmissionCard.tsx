@@ -44,6 +44,21 @@ export default function SubmissionCard({
     <Paper
       variant="outlined"
       onClick={onOpen}
+      role={onOpen ? "link" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onKeyDown={
+        onOpen
+          ? (e) => {
+              // target === currentTarget so Enter on the delete IconButton
+              // below (which bubbles as a keydown same as any other) doesn't
+              // ALSO open the entry -- only a keypress on the card itself
+              // (the only thing with tabIndex here) should count.
+              if (e.key === "Enter" && e.target === e.currentTarget) {
+                onOpen();
+              }
+            }
+          : undefined
+      }
       sx={{
         p: 2,
         display: "flex",

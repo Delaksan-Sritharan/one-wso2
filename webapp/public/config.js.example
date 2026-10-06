@@ -25,6 +25,9 @@ window.config = {
 
   // Cafeteria menu backend (daily menu, lunch feedback, dinner orders).
   // ONE_WSO2_MENU_BACKEND_URL: "<your-menu-backend-url>",
+
+  // Today I Learned backend — the Knowledge Base perspective's learnings
+  // feed. Shown only while `til` is on in ONE_WSO2_PREVIEW_FEATURES below.
   // ONE_WSO2_TIL_BACKEND_URL: "<your-til-backend-url>",
 
   // Subscriptions backend (PickMe Commute + LaaS opt-in/opt-out). The two
@@ -187,6 +190,6 @@ window.config = {
   // Each entry is deleted when its feature ships — a list that only grows
   // stops describing anything.
   //
-  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, engineering: false, mis: false, eventPlatform: false, cado2: false },
+  // ONE_WSO2_PREVIEW_FEATURES: { umt: false, infra: false, promotion: false, engineering: false, mis: false, eventPlatform: false, cado2: false, til: false },
 
 };

@@ -61,9 +61,9 @@ type SearchScope = (typeof SEARCH_SCOPES)[number]["value"];
 const ENTRIES_PER_PAGE = 10;
 
 // Today I Learned: a company-wide feed of learnings from customers, partners,
-// and internal sources, plus the form to add one. The second, parallel entry
-// point (the Chat App's "+" Dialog) posts to the same til-backend endpoint
-// this page's "New entry" button does — see til-backend/README.md.
+// and internal sources, plus the form to add one. A Google Chat App's "+"
+// Dialog is a second way to post an entry, calling the same
+// ONE_WSO2_TIL_BACKEND_URL this page's "New entry" button does.
 export default function TilHomePage() {
   const navigate = useNavigate();
   const configured = isTilBackendConfigured();

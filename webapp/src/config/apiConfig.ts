@@ -1633,9 +1633,14 @@ export const menuServiceUrls = {
 // ---------------------------------------------------------------------------
 // Today I Learned backend (til-backend) — a company-wide feed of learnings
 // from customers, partners, and internal sources. One submission form in One
-// WSO2, a second parallel one in the Google Chat App's "+" Dialog, both
-// calling this same backend.
-export const tilBackendUrl: string = window.config?.ONE_WSO2_TIL_BACKEND_URL ?? "";
+// WSO2, one in the Google Chat App's "+" Dialog, both calling this same
+// backend.
+//
+// Trailing slashes stripped for the same reason as dueDiligenceBackendUrl —
+// every URL below concatenates a path onto this.
+export const tilBackendUrl: string = (
+  window.config?.ONE_WSO2_TIL_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
 
 export function isTilBackendConfigured(): boolean {
   return Boolean(tilBackendUrl);
