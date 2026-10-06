@@ -16,6 +16,8 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { authedPost } from "@api/http";
+import { useAccessToken } from "@hooks/useAccessToken";
 import { isLegalBackendConfigured, legalServiceUrls } from "@config/apiConfig";
 
 export interface CustomerAddress {
@@ -55,6 +57,7 @@ export function formatCustomerAddress(address: CustomerAddress | null): string {
 // The query is disabled when the backend is not configured or the input is
 // shorter than 2 characters.
 export function useCustomerSearch(search: string) {
+  const getAccessToken = useAccessToken();
   const [debouncedSearch, setDebouncedSearch] = useState(search);
 
   useEffect(() => {
@@ -66,14 +69,12 @@ export function useCustomerSearch(search: string) {
     queryKey: ["legal", "customer-search", debouncedSearch],
     enabled: isLegalBackendConfigured() && debouncedSearch.trim().length >= 2,
     queryFn: async () => {
-      const res = await fetch(legalServiceUrls.customerSearch, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isRealTime: true, customerNameLike: debouncedSearch }),
+      const accessToken = await getAccessToken();
+      const data = await authedPost<CustomerResult[]>(legalServiceUrls.customerSearch, accessToken, {
+        isRealTime: true,
+        customerNameLike: debouncedSearch,
       });
-      if (!res.ok) throw new Error(`Customer search failed: ${res.status}`);
-      const data = (await res.json()) as CustomerResult[];
-      return data.filter((c) => Boolean(c.name));
+      return (data ?? []).filter((c) => Boolean(c.name));
     },
     placeholderData: (prev) => prev,
   });
