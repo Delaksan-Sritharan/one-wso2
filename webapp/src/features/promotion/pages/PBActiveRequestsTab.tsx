@@ -25,7 +25,7 @@
 // read (promotionBoardDeadline, not functionalLeadDeadline).
 import { useState } from "react";
 import { Alert, Box, Button, Card, DataGrid, IconButton, Skeleton, Stack, Tooltip } from "@wso2/oxygen-ui";
-import { CheckIcon, ChevronDownIcon, PencilIcon, RefreshCwIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
+import { CheckIcon, ChevronDownIcon, PencilIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useActivePromotionCycle, isPromotionDeadlinePast } from "../api/usePromotionCycle";
@@ -199,17 +199,6 @@ export default function PBActiveRequestsTab() {
             </span>
           </Tooltip>
         </Stack>
-        <Tooltip title="Refresh">
-          <IconButton
-            size="small"
-            onClick={() => {
-              if (!cycle.isError && cycle.cycle) void requests.refetch();
-              else void cycle.refetch();
-            }}
-          >
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
       </Box>
 
       {cycle.isPending || (Boolean(cycle.cycle) && requests.isPending) ? (

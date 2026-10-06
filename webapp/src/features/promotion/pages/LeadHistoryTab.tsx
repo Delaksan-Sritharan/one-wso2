@@ -19,8 +19,8 @@
 // A data grid, matching the convention every other portal in this app
 // already uses.
 import { useState } from "react";
-import { Box, Card, Chip, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
-import { ChevronDownIcon, RefreshCwIcon } from "@wso2/oxygen-ui-icons-react";
+import { Card, Chip, DataGrid, IconButton, Skeleton, Tooltip } from "@wso2/oxygen-ui";
+import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { humanizeHttpError } from "@api/http";
@@ -111,14 +111,6 @@ export default function LeadHistoryTab() {
   return (
     <>
       <RecommendationHistoryDetailDialog recommendation={viewing} onClose={() => setViewing(null)} />
-
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
-        <Tooltip title="Refresh">
-          <IconButton size="small" onClick={() => void history.refetch()}>
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
-      </Box>
 
       {history.isPending ? (
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 1 }} />

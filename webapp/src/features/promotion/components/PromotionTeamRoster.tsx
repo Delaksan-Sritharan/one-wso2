@@ -15,8 +15,8 @@
 // under the License.
 
 import { useMemo, useState } from "react";
-import { Box, IconButton, Skeleton, TextField, Tooltip, InputAdornment } from "@wso2/oxygen-ui";
-import { RefreshCwIcon, SearchIcon } from "@wso2/oxygen-ui-icons-react";
+import { useOutletContext } from "react-router";
+import { Box, Skeleton } from "@wso2/oxygen-ui";
 import { humanizeHttpError } from "@api/http";
 import { usePromotionTeam } from "../api/usePromotionTeam";
 import PromotionEmptyState from "./PromotionEmptyState";
@@ -30,7 +30,7 @@ import PromotionEmployeeHistoryDialog from "./PromotionEmployeeHistoryDialog";
 // filteredEmployees uses (not name).
 export default function PromotionTeamRoster({ kind, email }: { kind: "direct" | "indirect"; email: string | undefined }) {
   const team = usePromotionTeam(kind, email);
-  const [searchKey, setSearchKey] = useState("");
+  const searchKey = useOutletContext<string>();
   const [viewingEmail, setViewingEmail] = useState<string | null>(null);
 
   const employees = team.data?.employees ?? [];
@@ -45,36 +45,6 @@ export default function PromotionTeamRoster({ kind, email }: { kind: "direct" | 
   return (
     <>
       <PromotionEmployeeHistoryDialog workEmail={viewingEmail} onClose={() => setViewingEmail(null)} />
-
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-        <Tooltip title="Refresh">
-          <IconButton
-            size="small"
-            onClick={() => {
-              setSearchKey("");
-              void team.refetch();
-            }}
-          >
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
-        <TextField
-          size="small"
-          placeholder="Search"
-          value={searchKey}
-          onChange={(e) => setSearchKey(e.target.value)}
-          sx={{ width: 280 }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon size={16} />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
-      </Box>
 
       {team.isPending ? (
         <Box>

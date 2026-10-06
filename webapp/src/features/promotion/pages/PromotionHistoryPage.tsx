@@ -17,8 +17,8 @@
 // Standalone /me/promotion — an employee's own full promotion history,
 // restricted to the EMPLOYEE role.
 //
-// Promotion History shows a page title, summary statistics, and a timeline.
-// A tab strip is unnecessary because this page has no sibling views.
+// Promotion History shows a page title and a timeline. A tab strip is
+// unnecessary because this page has no sibling views.
 //
 // This is the fuller, dedicated view of an employee's promotion record. It
 // reads the same two endpoints as the My-page profile card's "Last
@@ -26,109 +26,13 @@
 // ConnectedServices.tsx, PromotionHistoryDialog.tsx), which stays as its
 // own, separately-designed summary widget rather than being replaced by
 // this page.
-import type { ReactNode } from "react";
-import { Alert, Box, Paper, Skeleton, Stack, Typography } from "@wso2/oxygen-ui";
+import { Alert, Box, Skeleton, Typography } from "@wso2/oxygen-ui";
 import { useUserInfo } from "@api/useUserInfo";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { humanizeHttpError } from "@api/http";
 import { isPromotionBackendConfigured, usePromotionEmployeeInfo } from "../api/usePromotionEmployeeInfo";
 import { usePromotionHistory } from "../api/usePromotionHistory";
 import PromotionTimeline from "../components/PromotionTimeline";
-import {
-  formatDate,
-  formatJobBand,
-  joinedBand,
-  latestPromotion,
-  monthsSince,
-  sortPromotionsByBand,
-} from "../util/promotionHistory";
-import type { PromotionEmployeeInfoWithLead, PromotionHistoryEntry } from "../api/types";
-
-function formatDuration(months: number): ReactNode {
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  if (years === 0) return <>{months}<Typography component="span" variant="body2" sx={{ ml: 0.5 }}>mo</Typography></>;
-  return (
-    <>
-      {years}<Typography component="span" variant="body2" sx={{ ml: 0.5, mr: rest ? 1 : 0 }}>yr</Typography>
-      {rest > 0 && <>{rest}<Typography component="span" variant="body2" sx={{ ml: 0.5 }}>mo</Typography></>}
-    </>
-  );
-}
-
-// A small stat row above the timeline — without it, someone with only one
-// or two entries (or none at all) sees a single lonely row on an otherwise
-// empty page. Gives every record, however short, something substantial at
-// the top regardless of how many promotions it holds.
-function StatCard({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: ReactNode;
-  sub?: string;
-  accent?: string;
-}) {
-  return (
-    <Paper variant="outlined" sx={{ p: 2.25, flex: 1, minWidth: { xs: 140, sm: 160 } }}>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ display: "block", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 600 }}
-      >
-        {label}
-      </Typography>
-      <Typography variant="h4" fontWeight={700} sx={{ mt: 0.25, color: accent ?? "text.primary" }}>
-        {value}
-      </Typography>
-      {sub && (
-        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
-          {sub}
-        </Typography>
-      )}
-    </Paper>
-  );
-}
-
-function PromotionStats({
-  employeeInfo,
-  requests,
-}: {
-  employeeInfo: PromotionEmployeeInfoWithLead;
-  requests: PromotionHistoryEntry[];
-}) {
-  const sorted = sortPromotionsByBand(requests);
-  const latest = latestPromotion(requests);
-  const specialCount = requests.filter((r) => r.promotionType === "SPECIAL").length;
-  // The band held before any promotion on record — same fallback
-  // PromotionTimeline's own "Joined" node uses.
-  const bandAtJoining = joinedBand(sorted, employeeInfo.jobBand);
-  const monthsInBand = monthsSince(latest ? employeeInfo.lastPromotedDate : employeeInfo.startDate);
-
-  return (
-    <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
-      <StatCard
-        label="Current Band"
-        value={formatJobBand(employeeInfo.jobBand)}
-        sub={latest ? `since ${latest.promotionCycle}` : "since joining"}
-        accent="primary.main"
-      />
-      <StatCard
-        label="Promotions"
-        value={requests.length}
-        sub={specialCount > 0 ? `${specialCount} special` : undefined}
-      />
-      <StatCard
-        label="Time in Band"
-        value={monthsInBand !== null ? formatDuration(monthsInBand) : "—"}
-        sub={latest ? "since last move" : "since joining"}
-      />
-      <StatCard label="Joined At" value={formatJobBand(bandAtJoining)} sub={formatDate(employeeInfo.startDate)} />
-    </Stack>
-  );
-}
 
 export default function PromotionHistoryPage() {
   const userInfo = useUserInfo();
@@ -170,16 +74,10 @@ export default function PromotionHistoryPage() {
       ) : history.isError ? (
         <Alert severity="error">Couldn&apos;t load your promotion history. {humanizeHttpError(history.error)}</Alert>
       ) : info.data ? (
-        <>
-          <PromotionStats
-            employeeInfo={info.data.employeeInfo}
-            requests={history.data?.promotionRequests ?? []}
-          />
-          <PromotionTimeline
-            employeeInfo={info.data.employeeInfo}
-            requests={history.data?.promotionRequests ?? []}
-          />
-        </>
+        <PromotionTimeline
+          employeeInfo={info.data.employeeInfo}
+          requests={history.data?.promotionRequests ?? []}
+        />
       ) : null}
     </Box>
   );

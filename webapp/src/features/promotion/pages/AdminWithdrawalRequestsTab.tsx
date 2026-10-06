@@ -24,7 +24,7 @@
 // grid's native column layout never has to fight).
 import { useState } from "react";
 import { alpha, Box, Card, Chip, DataGrid, Divider, IconButton, Skeleton, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { CheckIcon, ChevronDownIcon, RefreshCwIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
+import { CheckIcon, ChevronDownIcon, XIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useApproveWithdrawal, useRejectWithdrawal, useWithdrawalRequests } from "../api/useWithdrawalRequests";
@@ -131,12 +131,7 @@ export default function AdminWithdrawalRequestsTab() {
       <ConfirmationDialog content={confirm} onClose={() => setConfirm(null)} />
       <WithdrawalRequestDetailDialog request={viewing} onClose={() => setViewing(null)} />
 
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-        <Tooltip title="Refresh">
-          <IconButton size="small" onClick={() => void requests.refetch()}>
-            <RefreshCwIcon size={16} />
-          </IconButton>
-        </Tooltip>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 1.5 }}>
         {rows.length > 0 && (
           <Stack direction="row" spacing={2} divider={<Divider orientation="vertical" flexItem />} alignItems="center">
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>All Count: {rows.length}</Typography>

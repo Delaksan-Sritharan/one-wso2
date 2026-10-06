@@ -61,32 +61,3 @@ export function formatDate(v: string | null | undefined): string {
   if (!v) return "—";
   return v.length > 10 ? v.slice(0, 10) : v;
 }
-
-// Whole months between a plain "YYYY-MM-DD"-ish date and today, excluding
-// the current, not-yet-complete month — a promotion dated yesterday should
-// not already read as "1 mo".
-export function monthsSince(dateStr: string | null | undefined): number | null {
-  if (!dateStr) return null;
-  const then = new Date(dateStr);
-  if (Number.isNaN(then.getTime())) return null;
-  const now = new Date();
-  let months = (now.getFullYear() - then.getFullYear()) * 12 + (now.getMonth() - then.getMonth());
-  if (now.getDate() < then.getDate()) months -= 1;
-  return Math.max(0, months);
-}
-
-// "JB5", or a plain dash for an employee with no job band on record — never
-// the literal "JB—" a bare `JB${band ?? "—"}` would produce.
-export function formatJobBand(band: number | null | undefined): string {
-  return band != null ? `JB${band}` : "—";
-}
-
-// The band an employee held before their first promotion on record — the
-// lowest band in their (highest-band-first sorted) history, or their
-// current band when they have no promotion history at all.
-export function joinedBand(
-  sortedHistory: PromotionHistoryEntry[],
-  currentBand: number | null,
-): number | null {
-  return sortedHistory.length > 0 ? sortedHistory[sortedHistory.length - 1].currentJobBand : currentBand;
-}

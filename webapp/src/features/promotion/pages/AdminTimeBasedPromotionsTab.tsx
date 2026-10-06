@@ -36,7 +36,7 @@ import {
   Tooltip,
   Typography,
 } from "@wso2/oxygen-ui";
-import { EyeIcon, RefreshCwIcon, UploadIcon } from "@wso2/oxygen-ui-icons-react";
+import { EyeIcon, UploadIcon } from "@wso2/oxygen-ui-icons-react";
 import { humanizeHttpError } from "@api/http";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import { useActivePromotionCycle } from "../api/usePromotionCycle";
@@ -385,11 +385,6 @@ export default function AdminTimeBasedPromotionsTab() {
             >
               Sync from sheet
             </Button>
-            <Tooltip title="Refresh">
-              <IconButton size="small" onClick={() => void requests.refetch()}>
-                <RefreshCwIcon size={16} />
-              </IconButton>
-            </Tooltip>
           </Box>
           <Card variant="outlined" sx={{ p: 2 }}>
             <DataGrid.DataGrid
