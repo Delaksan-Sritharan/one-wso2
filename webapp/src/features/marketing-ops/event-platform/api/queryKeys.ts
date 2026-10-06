@@ -19,10 +19,9 @@
 //
 // Rooted at ["marketing-ops", "event-platform"] so none of these can collide
 // with the unrelated marketing-ops `events` feature (["marketing-ops",
-// "events", …]) in the one shared QueryClient. Below the root the shape is the
-// source's, because its invalidation leans on prefixes: `tracksRoot` covers
-// both a day's tracks and `allTracks`; `sessionsRoot` covers every filtered
-// session list at once.
+// "events", …]) in the one shared QueryClient. Below the root the keys nest so
+// invalidation can lean on prefixes: `tracksRoot` covers both a day's tracks
+// and `allTracks`; `sessionsRoot` covers every filtered session list at once.
 
 import type { SessionFilters } from "@features/marketing-ops/event-platform/types/eventPlatformTypes";
 

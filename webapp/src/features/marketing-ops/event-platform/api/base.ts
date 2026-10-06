@@ -33,9 +33,8 @@ export function useEventPlatformBase() {
   return { getAccessToken, ready };
 }
 
-// The source handed every mutation a `notify` callback to raise its own
-// "failed — reverted" toast. Here the hook reaches the shared notifications
-// itself, so callers can't forget to wire it.
+// Raises a mutation's "failed — reverted" toast through the shared
+// notifications, so callers need no `notify` callback and can't forget one.
 export function useNotifyFailure() {
   const { showError } = useNotifications();
   return useCallback(

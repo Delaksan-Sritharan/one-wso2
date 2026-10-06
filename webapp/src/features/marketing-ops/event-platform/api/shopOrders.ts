@@ -38,9 +38,8 @@ export function useListShopOrders(eventId: string) {
   });
 }
 
-// Sends `{status}` only. The source also sent `transactionHash`, but the
-// handler binds just `status` and rejects unknown keys, so any change that
-// carried a hash was a 400. The answer is an empty 200, so the cached order is
+// Sends `{status}` only: the handler binds just `status` and rejects unknown
+// keys, so a body that also carried `transactionHash` would be a 400. The answer is an empty 200, so the cached order is
 // patched from the request rather than from a response.
 export function useUpdateShopOrderStatus(eventId: string) {
   const { getAccessToken } = useEventPlatformBase();
@@ -49,7 +48,9 @@ export function useUpdateShopOrderStatus(eventId: string) {
     mutationFn: async ({ id, status }: { id: string; status: ShopOrderStatus }) => {
       await authedPatch<null>(urls.shopOrderStatus(eventId, id), await getAccessToken(), { status });
     },
-    onSuccess: (_data, { id, status }) => {
+    onSuccess: async (_data, { id, status }) => {
+      // An older list read still in flight would land after this and undo it.
+      await qc.cancelQueries({ queryKey: keys.shopOrders(eventId) });
       qc.setQueryData<ShopOrder[]>(keys.shopOrders(eventId), (old = []) =>
         old.map((o) => (o.id === id ? { ...o, status } : o)),
       );

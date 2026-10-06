@@ -15,8 +15,8 @@
 // under the License.
 
 // Conference days. Read-only here: days are edited through the event upsert
-// (./event), and the standalone day create/update/delete routes the source
-// wrapped are not ported — no screen called them.
+// (./event). The standalone day create/update/delete routes have no hooks
+// because no screen calls them.
 
 import { useQuery } from "@tanstack/react-query";
 import { authedGet } from "@api/http";

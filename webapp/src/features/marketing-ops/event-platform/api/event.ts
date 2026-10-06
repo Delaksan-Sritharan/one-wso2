@@ -44,9 +44,9 @@ export interface UpsertEventPayload {
   venueName?: string | null;
   venueAddress?: string | null;
   shopClosingTime?: string | null;
-  // Required here though the source never sent it: the upsert writes every
-  // column, so omitting it set the keynote room to NULL on each Settings save
-  // and silently undid the room-mapping screen. Pass the event's current value
+  // Required: the upsert writes every column, so omitting it would set the
+  // keynote room to NULL on each Settings save and silently undo the
+  // room-mapping screen. Pass the event's current value
   // through unless the form is changing it.
   keynoteRoomId: string | null;
 }
@@ -75,7 +75,7 @@ export function useUpsertEvent(eventId: string) {
       // Replacing the days can drop some, which unplaces their sessions.
       qc.invalidateQueries({ queryKey: keys.days });
       qc.invalidateQueries({ queryKey: keys.sessionsRoot });
-      // Not in the source, which left the list showing the old name.
+      // So the events list and switcher show the new name.
       qc.invalidateQueries({ queryKey: keys.events });
     },
   });
@@ -116,8 +116,8 @@ export function useDownloadSpeakers(eventId: string) {
   });
 }
 
-// The previews are the same exports, parsed. Typed `unknown` as in the source:
-// the Export screen only pretty-prints them, and the static HTML build (phase 7)
+// The previews are the same exports, parsed. Typed `unknown` because the
+// Export screen only pretty-prints them, and the static HTML build (phase 7)
 // hands the agenda to the template's runtime as-is.
 export function useAgendaPreview(eventId: string) {
   const { getAccessToken, ready } = useEventPlatformBase();

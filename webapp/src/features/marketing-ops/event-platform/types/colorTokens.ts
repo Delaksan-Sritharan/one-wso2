@@ -15,14 +15,12 @@
 // under the License.
 
 // The colour vocabulary a track or a room is assigned — names only. The backend
-// enforces exactly these with a CHECK constraint (agenda-organizer migration
-// 030_orange_color_token.sql), and every downstream app (the attendee microapp,
-// the public agenda stylesheet) owns its own colour for each name, which is what
-// lets them theme per appearance. So no hex ever travels over the API, and a
-// ninth name needs the constraint changed first.
+// enforces exactly these with a CHECK constraint, and every downstream app (the
+// attendee app, the public agenda stylesheet) owns its own colour for each name,
+// which is what lets them theme per appearance. So no hex ever travels over the
+// API, and a ninth name needs the constraint changed first.
 //
-// The swatch hexes the source keeps next to these are UI, and land with the
-// screens that draw them, re-checked against both colour schemes.
+// Swatch hexes are UI, and live with the screens that draw them.
 
 export const COLOR_TOKEN_NAMES = [
   "red",

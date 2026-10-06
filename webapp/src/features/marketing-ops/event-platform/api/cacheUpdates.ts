@@ -44,8 +44,8 @@ export function sessionMatchesFilters(session: Session, filters: SessionFilters)
 }
 
 // The body PUT /api/sessions/{id}/placement takes — these four fields and no
-// others (the handler rejects unknown keys, so the source's optional `roomId`
-// here is gone: nothing sent it, and it would have been a 400).
+// others. The handler rejects unknown keys, so `roomId` is not accepted here
+// and sending it would be a 400.
 export interface Placement {
   dayId: string | null;
   trackId: string | null;

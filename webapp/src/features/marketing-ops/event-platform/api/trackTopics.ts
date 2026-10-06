@@ -61,8 +61,8 @@ export function useCreateTrackTopic() {
   const { getAccessToken } = useEventPlatformBase();
   const qc = useQueryClient();
   return useMutation({
-    // configId goes in the path only. The source also sent it in the body,
-    // which the handler's strict binding rejects as an unknown field.
+    // configId goes in the path only: the handler's strict binding rejects it
+    // in the body as an unknown field.
     mutationFn: async ({ configId, name, slug, position, showInFilter }: CreateTrackTopicInput) =>
       expectBody(
         await authedPost<TrackTopic>(urls.eventTrackTopics(configId), await getAccessToken(), {
@@ -76,8 +76,7 @@ export function useCreateTrackTopic() {
   });
 }
 
-// PUT, not the source's PATCH: the backend routes only PUT here, so the
-// source's rename always failed.
+// PUT: the backend routes only PUT here, so a PATCH rename would fail.
 export function useUpdateTrackTopic() {
   const { getAccessToken } = useEventPlatformBase();
   const qc = useQueryClient();

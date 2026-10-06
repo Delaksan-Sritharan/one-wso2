@@ -14,9 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Wire types for the agenda-organizer backend, ported from the source
-// frontend's types/api.ts and checked against the Go models
-// (backend/internal/models). Timestamps arrive as ISO strings.
+// Wire types for the Event Platform backend (ONE_WSO2_EVENT_PLATFORM_BACKEND_URL),
+// checked against its models. Timestamps arrive as ISO strings.
 
 import type { ColorToken } from "@features/marketing-ops/event-platform/types/colorTokens";
 
@@ -178,8 +177,8 @@ export interface Session {
 }
 
 // Which sessions a list asks for. `configId` is required, not optional as the
-// endpoint allows: an unscoped list returns every event's sessions, which is how
-// the source's agenda palette came to offer other events' unscheduled sessions.
+// endpoint allows: an unscoped list returns every event's sessions, so the
+// agenda palette would offer other events' unscheduled sessions.
 export interface SessionFilters {
   configId: string;
   dayId?: string;

@@ -1055,9 +1055,8 @@ export function isEventPlatformConfigured(): boolean {
   return Boolean(eventPlatformBackendUrl);
 }
 
-// One builder per endpoint the port calls, checked against the routes the
-// agenda-organizer's cmd/server/main.go actually registers (it wins over
-// openapi.yaml where the two disagree). See docs/ported-apps/event-platform.md §5.
+// One builder per endpoint the Event Platform calls, checked against the routes
+// the ONE_WSO2_EVENT_PLATFORM_BACKEND_URL backend actually registers.
 //
 // Two naming quirks are the backend's, not typos: some collections sit under
 // `/api/event/…` (singular — days, tracks, rooms, room mappings) while their
@@ -1072,8 +1071,7 @@ export const eventPlatformServiceUrls = {
   //
   // PUT on one event is an UPSERT of its fields AND its full `days` array —
   // that is how days are edited. The standalone day create/update/delete
-  // routes exist but nothing in the source UI calls them, so they have no
-  // builder here.
+  // routes exist but no screen calls them, so they have no builder here.
   events: `${eventPlatformBackendUrl}/api/events`,
   event: (id: string) => `${eventPlatformBackendUrl}/api/events/${encodeURIComponent(id)}`,
   // Every event's days, not one event's. The room-mapping tree filters by
@@ -1109,8 +1107,8 @@ export const eventPlatformServiceUrls = {
   footnote: (id: string) => `${eventPlatformBackendUrl}/api/footnotes/${encodeURIComponent(id)}`,
   eventTrackTopics: (eventId: string) =>
     `${eventPlatformBackendUrl}/api/events/${encodeURIComponent(eventId)}/track-topics`,
-  // PUT only. The source client sent PATCH here, which the backend does not
-  // route, so a rename never saved.
+  // PUT only: the backend does not route PATCH here, so a PATCH rename would
+  // never save.
   trackTopic: (id: string) =>
     `${eventPlatformBackendUrl}/api/track-topics/${encodeURIComponent(id)}`,
 

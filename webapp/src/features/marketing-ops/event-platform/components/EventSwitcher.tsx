@@ -32,8 +32,7 @@ import {
   parseEventPlatformPath,
 } from "@features/marketing-ops/event-platform/eventPlatformTabs";
 
-// The source header's event switcher (components/header/Header.tsx): a
-// searchable menu of every event that opens the SAME screen in the chosen one,
+// The header's event switcher: a searchable menu of every event that opens the SAME screen in the chosen one,
 // so comparing two events' rooms is one click rather than a trip through the
 // list. Any app member may list events, shop operators included, so it needs
 // no gate of its own; the destination's route guard still applies.

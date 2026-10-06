@@ -57,7 +57,7 @@ export interface SpeakerAssignment {
 
 // The fields create and update share. There is no `roomIsManual`: the server
 // derives it from whether `roomId` was supplied, and its strict binding would
-// reject the key — the source typed it but no caller ever sent it.
+// reject the key.
 export interface SessionFields {
   kind: SessionKind;
   title: string;
@@ -91,8 +91,9 @@ export function refileEverywhere(qc: QueryClient, changed: readonly Session[]) {
   }
 }
 
-// `configId` is required (see SessionFilters): the source called this unscoped,
-// so the agenda palette and the Event speakers page saw every event's sessions.
+// `configId` is required (see SessionFilters) so a list never mixes events:
+// unscoped, the agenda palette and the Event speakers page would see every
+// event's sessions.
 export function useListSessions(filters: SessionFilters) {
   const { getAccessToken, ready } = useEventPlatformBase();
   return useQuery<Session[]>({
@@ -112,9 +113,8 @@ export function useCreateSession() {
   return useMutation({
     mutationFn: async (input: CreateSessionInput) =>
       expectBody(await authedPost<Session>(urls.sessions(), await getAccessToken(), input)),
-    // Appended only to lists it belongs in. The source appended to every
-    // cached list, which with scoped lists would drop a new session into
-    // another event's palette.
+    // Appended only to lists it belongs in; appending to every cached list
+    // would drop a new session into another event's palette.
     onSuccess: (created) => refileEverywhere(qc, [created]),
   });
 }

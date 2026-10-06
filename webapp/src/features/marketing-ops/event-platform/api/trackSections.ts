@@ -182,9 +182,9 @@ export function useUpdateTrackSection() {
 }
 
 // Deletes the section FIRST, then unplaces its sessions — the order a track
-// delete uses. The source did it the other way round, which meant a failed PUT
-// or DELETE left sessions unscheduled on the server under a toast saying the
-// changes were reverted. Deleting first is safe: the backend clears the
+// delete uses. Unplacing first would let a failed PUT or DELETE leave
+// sessions unscheduled on the server under a toast saying the changes were
+// reverted. Deleting first is safe: the backend clears the
 // sessions' section, track and slot as part of the delete, and the PUTs only
 // finish the job (clearing the day, so they return to the palette).
 //

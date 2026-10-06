@@ -45,7 +45,9 @@ export function useCreateShopItem(eventId: string) {
       expectBody(
         await authedPost<ShopItem>(urls.shopItems(eventId), await getAccessToken(), toShopItemBody(input)),
       ),
-    onSuccess: (created) => {
+    onSuccess: async (created) => {
+      // An older list read still in flight would land after this and undo it.
+      await qc.cancelQueries({ queryKey: keys.shopItems(eventId) });
       qc.setQueryData<ShopItem[]>(keys.shopItems(eventId), (old = []) => [...old, created]);
     },
   });
@@ -59,7 +61,9 @@ export function useUpdateShopItem(eventId: string) {
       expectBody(
         await authedPut<ShopItem>(urls.shopItem(eventId, id), await getAccessToken(), toShopItemBody(input)),
       ),
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
+      // An older list read still in flight would land after this and undo it.
+      await qc.cancelQueries({ queryKey: keys.shopItems(eventId) });
       qc.setQueryData<ShopItem[]>(keys.shopItems(eventId), (old = []) => replaceById(old, updated));
     },
   });
