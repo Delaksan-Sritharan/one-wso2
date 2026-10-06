@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import type { ReactNode } from "react";
 import { Document, Font, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 // Helvetica is one of the 14 standard PDF fonts — no file or license needed.
@@ -109,7 +110,8 @@ export const NDA_ENTITY_CONFIGS: Record<string, NdaEntityConfig> = {
 
   "WSO2EA Ltd — KE": {
     entityFull: "WSO2EA Limited",
-    entityDescription: "a Private Limited Liability Company in Kenya",
+    entityDescription:
+      "a Private Limited Liability Company in Kenya having its registered address at Riverside Park, Chiromo Road PO Box 10643-00100, Nairobi, Kenya",
     jurisdictionPhrase: "Kenya and/or overseas",
     governingLaw:
       "This Agreement and any dispute or claim arising out of or in connection with it (whether contractual or non-contractual in nature) shall be governed by, and is to be construed in accordance with the laws of Kenya. In the case of any dispute, claim, controversy or disagreement arising out of or in connection with this Agreement, the parties shall first use their best efforts to resolve the dispute by negotiation within a period of fifteen (15) Business Days of such dispute arising. If the dispute is not resolved by negotiation, either party may refer the dispute to arbitration in Kenya in accordance with the Arbitration Act (No. 4 of 1995, Laws of Kenya). The seat of arbitration shall be Nairobi, Kenya, and proceedings shall be conducted in English.",
@@ -235,11 +237,36 @@ const styles = StyleSheet.create({
     textAlign: "justify",
   },
 
-  // Indented sub-item (exclusions list, remedy list)
-  subItem: {
+  // Numbered clause: number hangs in the left padding, body is justified
+  clause: {
+    paddingLeft: 20,
+    marginBottom: 10,
+    textAlign: "justify",
+  },
+  clauseIntro: {
+    marginBottom: 6,
+  },
+  clauseNumber: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+  },
+
+  // Numbered sub-clause: (i), (ii), … indented under its clause's text
+  subClause: {
     marginLeft: 20,
+    paddingLeft: 26,
     marginBottom: 6,
     textAlign: "justify",
+  },
+  subClauseLast: {
+    marginBottom: 10,
+  },
+  // Clause 8's "8." sits in the main clause-number column
+  subClauseClauseNumber: {
+    position: "absolute",
+    left: -20,
+    top: 0,
   },
 
   // Section divider
@@ -314,6 +341,50 @@ const styles = StyleSheet.create({
   },
 });
 
+// ── Numbered clauses ─────────────────────────────────────────────────────────
+//
+// Numbering follows the official templates: clauses 1.–8., and (i), (ii), …
+// sub-clauses under clauses 6, 7 and 8. The number hangs in the left padding so
+// wrapped lines align with the text, not the number.
+//
+// Each clause and sub-clause is unbreakable (wrap={false}); none is longer than
+// a page. Otherwise a page break can leave the number on one page while its
+// text moves to the next.
+
+/** A main clause. `intro` marks one that introduces a sub-clause list. */
+function Clause({ number, intro, children }: { number: string; intro?: boolean; children: ReactNode }) {
+  return (
+    <View style={[styles.clause, intro ? styles.clauseIntro : {}]} wrap={false}>
+      <Text style={styles.clauseNumber}>{number}</Text>
+      <Text>{children}</Text>
+    </View>
+  );
+}
+
+/**
+ * A sub-clause. `last` ends its clause's list. `clauseNumber` is for clause 8,
+ * whose first line is a sub-clause: "8. (i) …".
+ */
+function SubClause({
+  number,
+  last,
+  clauseNumber,
+  children,
+}: {
+  number: string;
+  last?: boolean;
+  clauseNumber?: string;
+  children: ReactNode;
+}) {
+  return (
+    <View style={[styles.subClause, last ? styles.subClauseLast : {}]} wrap={false}>
+      {clauseNumber && <Text style={styles.subClauseClauseNumber}>{clauseNumber}</Text>}
+      <Text style={styles.clauseNumber}>{number}</Text>
+      <Text>{children}</Text>
+    </View>
+  );
+}
+
 // ── Props ────────────────────────────────────────────────────────────────────
 
 export interface NdaPdfProps {
@@ -382,93 +453,93 @@ export default function NdaPdfDocument({
         </Text>
 
         {/* ── Clause 1 — Definition of Confidential Information ── */}
-        <Text style={styles.para}>
+        <Clause number="1.">
           {`"Confidential Information" means: All information which is disclosed by one Party to the other (Disclosing Party) and which is not excluded in terms of Clause 6 below, whether in writing, pictorially, in machine readable form or orally whether of a business, financial or technical nature (including, but without limitation, procedures, ideas, inventions, trade secrets, technical know how, products, designs, software programs, customer lists, reports, records, drawings, sketches, specifications data projects, plans and proposals and other information of a confidential nature and including the terms of this Agreement) whether or not such information is specifically marked or identified as being or is known to be "confidential", and all information and any encrypted data belonging to or originating from each others shareholders and which is disclosed by Disclosing Party to the other (Receiving Party).`}
-        </Text>
+        </Clause>
 
         {/* ── Clause 2 — Non-disclosure obligations ── */}
-        <Text style={styles.para}>
+        <Clause number="2.">
           {`During the term of this Agreement it may be necessary for the Parties to disclose Confidential Information to each other. Each Party agrees to keep the other Party's Confidential Information strictly confidential and not to disclose such Confidential Information to any third party other than each Party's officers, agents, representatives, attorneys or accountants, as the case maybe (Authorised Person), provided that only Confidential Information which an Authorised Person has a need to know shall be disclosed to that Authorised Person and then only if the Authorised Person acknowledges this Agreement and agrees to abide by the terms of this Agreement. Each Party agrees not to use the other Party's Confidential Information other than as required for the Project.`}
-        </Text>
+        </Clause>
 
         {/* ── Clause 3 — Property / No licence ── */}
-        <Text style={styles.para}>
+        <Clause number="3.">
           {`All Confidential Information furnished hereunder shall remain the property of the Disclosing Party. Neither this Agreement nor the furnishing of any information hereunder shall be construed as granting a license under any invention, patent, trade mark or copyright to manufacture, use or sell the products or data of the Disclosing Party. Each Party agrees that it will not, by virtue of its association with the other Party, acquire any rights in any Confidential Information, goodwill or other asset or property of the Disclosing Party, whether tangible or intangible and whether or not created by the Disclosing Party. If any such rights become vested in the non-disclosing Party by operation of law or otherwise, the Party agrees to assign the same to the Disclosing Party without further consideration immediately upon the Disclosing Party's request.`}
-        </Text>
+        </Clause>
 
         {/* ── Clause 4 — No warranty ── */}
-        <Text style={styles.para}>
+        <Clause number="4.">
           No warranty is given as to the accuracy of the Confidential
           Information.
-        </Text>
+        </Clause>
 
         {/* ── Clause 5 — Return / Destruction ── */}
-        <Text style={styles.para}>
+        <Clause number="5.">
           {`Upon the request of a Party and/or in the event of the termination of the association between WSO2 and the COMPANY (for any reason whatsoever) each Party agrees to and will ensure that its employees, agents and Authorised Persons will surrender to the other Party all notes, records and documentation that was supplied to that Party by, or was used, created or controlled by that Party during the period of the association between WSO2 and the COMPANY. This includes all material whether in written or machine-readable form. The Receiving Party will destroy or return to the Disclosing Party upon demand any and all materials or information in tangible form entrusted to the Receiving Party for the Project or copies thereof and the Receiving Party will not distribute in whole or in part any such documents, materials or other items without the Disclosing Party's prior written consent.`}
-        </Text>
+        </Clause>
 
         {/* ── Clause 6 — Exclusions ── */}
-        <Text style={styles.para}>
+        <Clause number="6." intro>
           {`The Disclosing Party accepts that the confidentiality obligations of the Receiving Party set forth herein do not apply to Confidential Information of the Disclosing Party where such Confidential Information:`}
-        </Text>
-        <Text style={styles.subItem}>
-          (a) Was in the public domain at the time of disclosure;
-        </Text>
-        <Text style={styles.subItem}>
-          {`(b) After such disclosure becomes generally available to third parties by publication or otherwise through no fault of the Receiving Party;`}
-        </Text>
-        <Text style={styles.subItem}>
-          {`(c) Was in the Recipient's possession before receipt from the Disclosing Party;`}
-        </Text>
-        <Text style={styles.subItem}>
-          {`(d) Is rightfully received by the Receiving Party from a third party without a duty of confidentiality;`}
-        </Text>
-        <Text style={styles.subItem}>
-          {`(e) Is independently developed by the Receiving Party without using any of the Disclosing Party's Confidential Information;`}
-        </Text>
-        <Text style={styles.subItem}>
-          {`(f) Is disclosed by the Receiving Party with the prior written consent of the Disclosing Party;`}
-        </Text>
-        <Text style={[styles.subItem, { marginBottom: 10 }]}>
-          {`(g) Is required to be disclosed pursuant to a valid judicial court order or is required to be disclosed by law or a Competent Authority, but only to the extent of and for the purpose of such order.`}
-        </Text>
+        </Clause>
+        <SubClause number="(i)">
+          Was in the public domain at the time of disclosure;
+        </SubClause>
+        <SubClause number="(ii)">
+          {`After such disclosure becomes generally available to third parties by publication or otherwise through no fault of the Receiving Party;`}
+        </SubClause>
+        <SubClause number="(iii)">
+          {`Was in the Recipient's possession before receipt from the Disclosing Party;`}
+        </SubClause>
+        <SubClause number="(iv)">
+          {`Is rightfully received by the Receiving Party from a third party without a duty of confidentiality;`}
+        </SubClause>
+        <SubClause number="(v)">
+          {`Is independently developed by the Receiving Party without using any of the Disclosing Party's Confidential Information;`}
+        </SubClause>
+        <SubClause number="(vi)">
+          {`Is disclosed by the Receiving Party with the prior written consent of the Disclosing Party;`}
+        </SubClause>
+        <SubClause number="(vii)" last>
+          {`Is required to be disclosed pursuant to a valid judicial court order or is required to be disclosed by law or a Competent Authority, but only to the extent of and for the purpose of such order.`}
+        </SubClause>
 
         {/* ── Clause 7 — Breach and remedies ── */}
-        <Text style={styles.para}>
+        <Clause number="7." intro>
           {`In the event of a breach or threatened breach of any portion of this Agreement by a Party (the Breaching Party) and/or any Authorised Person, the Breaching Party, on behalf of itself and any Authorised Person agrees that the remedy at law for such breach shall be inadequate and that, in addition to and not to the exclusion of any other rights and remedies at law or in equity, the non breaching Party shall be entitled to:`}
-        </Text>
-        <Text style={styles.subItem}>
-          {`(a) Temporary and/or permanent injunctive relief restraining the Breaching Party and/or any Authorised Person from any activities that might result in or continue a breach of this Agreement and to a decree for specific performance of the provisions of this Agreement, without being required to show actual damage or irreparable harm or to furnish any bond or other security; and`}
-        </Text>
-        <Text style={[styles.subItem, { marginBottom: 10 }]}>
-          {`(b) Any damages to the non-Breaching Party caused by the Breaching Party and/or any Authorised Person.`}
-        </Text>
+        </Clause>
+        <SubClause number="(i)">
+          {`Temporary and/or permanent injunctive relief restraining the Breaching Party and/or any Authorised Person from any activities that might result in or continue a breach of this Agreement and to a decree for specific performance of the provisions of this Agreement, without being required to show actual damage or irreparable harm or to furnish any bond or other security; and`}
+        </SubClause>
+        <SubClause number="(ii)" last>
+          {`Any damages to the non-Breaching Party caused by the Breaching Party and/or any Authorised Person.`}
+        </SubClause>
 
-        {/* ── Clause 8 — Severability + No binding commercial agreement ── */}
-        <Text style={styles.para}>
-          {`(i) If any of the provisions of this Agreement, or any part thereof is construed to be invalid or unenforceable, the same shall not affect the remainder of such provision or provisions, which shall be given full effect. In the event that the courts hold any one or more provisions wholly or partially unenforceable by reason of the scope thereof or otherwise, it is the intention of the Parties hereto that such determination not bar or in any way affect each Party's right to the relief provided for in this Agreement.`}
-        </Text>
-        <Text style={styles.para}>
+        {/* ── Clause 8 — General: (i) severability, (ii) no binding commercial agreement ── */}
+        <SubClause number="(i)" clauseNumber="8.">
+          {`If any of the provisions of this Agreement, or any part thereof is construed to be invalid or unenforceable, the same shall not affect the remainder of such provision or provisions, which shall be given full effect. In the event that the courts hold any one or more provisions wholly or partially unenforceable by reason of the scope thereof or otherwise, it is the intention of the Parties hereto that such determination not bar or in any way affect each Party's right to the relief provided for in this Agreement.`}
+        </SubClause>
+        <SubClause number="(ii)">
           {`Each Party agrees that no contract or agreement providing for a commercial relationship (or any other transaction) between WSO2 and the COMPANY shall be deemed to exist between the Parties unless and until a definitive written agreement has been executed and delivered by both Parties. Unless and until such a definitive written agreement has been executed and delivered by both Parties, neither Party has any legal obligation of any kind with respect to any commercial relationship (or other transaction) by virtue of this Agreement.`}
-        </Text>
+        </SubClause>
 
-        {/* ── Clause 9 — Term and termination ── */}
-        <Text style={styles.para}>
+        {/* ── 8(iii) — Term and termination ── */}
+        <SubClause number="(iii)">
           {`This Agreement shall be valid for a period of two (2) years from the Effective Date unless extended by the parties in writing. However, either party may terminate this Agreement upon thirty (30) days prior written notice to the other party. Provided however, subject to clause 6 hereof the obligations in this Agreement shall be binding on both parties for a period of five (5) years from the Effective Date except in the case of trade secrets where the confidentiality obligations shall continue so long as it retains commercial value.`}
-        </Text>
+        </SubClause>
 
-        {/* ── Clause 10 — Governing law (entity-specific) ── */}
-        <Text style={styles.para}>{cfg.governingLaw}</Text>
+        {/* ── 8(iv) — Governing law (entity-specific) ── */}
+        <SubClause number="(iv)">{cfg.governingLaw}</SubClause>
 
-        {/* ── Clause 11 — Waiver ── */}
-        <Text style={styles.para}>
+        {/* ── 8(v) — Waiver ── */}
+        <SubClause number="(v)">
           {`The waiver by a Party of a breach of any provision of this Agreement shall not be considered to be a continuing waiver and shall not operate or be construed as a waiver of any subsequent breach by the other Party and/or an Authorised Person.`}
-        </Text>
+        </SubClause>
 
-        {/* ── Clause 12 — Assignment / Successors ── */}
-        <Text style={styles.para}>
+        {/* ── 8(vi) — Assignment / Successors ── */}
+        <SubClause number="(vi)" last>
           {`The rights of the Parties under this Agreement shall inure to the benefit of, and shall be binding upon their successors and assigns.`}
-        </Text>
+        </SubClause>
 
         {/* ── Notes (optional) ── */}
         {notes.trim().length > 0 && (
