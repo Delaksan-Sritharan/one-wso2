@@ -40,7 +40,7 @@ async function statusOf(promise: Promise<unknown>): Promise<{ status: number; bo
 
 beforeEach(() => resetMockStore());
 
-describe("the demo store", () => {
+describe("the test double", () => {
   it("covers the situations the demo needs", async () => {
     const brightwater = await client.deal(BRIGHTWATER);
     expect(brightwater.currentStage).toBe("Qualify");
@@ -120,7 +120,7 @@ describe("the demo store", () => {
   it("answers 409 with the blocking fields when the Gate isn't complete", async () => {
     const refusal = await statusOf(client.moveStage(BRIGHTWATER, "Technical Proof"));
     expect(refusal.status).toBe(409);
-    expect(refusal.body.incomplete).toEqual(expect.arrayContaining(["economicBuyer", "mapDocLink"]));
+    expect(refusal.body.incomplete).toEqual(expect.arrayContaining(["economicBuyer"]));
   });
 
   it("answers 422 with Salesforce's message and a link when Salesforce refuses", async () => {

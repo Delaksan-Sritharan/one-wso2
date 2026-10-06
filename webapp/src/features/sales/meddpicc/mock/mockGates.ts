@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// DEMO DATA ONLY. The Gate definitions the demo store serves as GET /gates, and
+// TEST DATA ONLY. The Gate definitions the test double serves as GET /gates, and
 // derives its deals from. The real list lives in echo-backend's gates.json and
 // reaches the live screens through the API; nothing outside ../mock reads this.
 //
@@ -68,14 +68,6 @@ const FIELDS: GateFieldDefinition[] = [
     role: "Primary Contact",
     conversational: true,
     askNext: "Who will be our main point of contact on your side for this project?",
-  },
-  {
-    key: "customerDocLink",
-    gate: "Validate",
-    label: "Customer doc Google Drive link",
-    letters: [],
-    kind: "url",
-    conversational: false,
   },
   // ---- Qualify ---------------------------------------------------------------
   {
@@ -166,14 +158,6 @@ const FIELDS: GateFieldDefinition[] = [
     kind: "salesforceOnly",
     conversational: false,
   },
-  {
-    key: "mapDocLink",
-    gate: "Qualify",
-    label: "Link to the MAP doc",
-    letters: ["DP"],
-    kind: "url",
-    conversational: false,
-  },
   // ---- Technical Proof -------------------------------------------------------
   {
     key: "pocRequired",
@@ -195,14 +179,6 @@ const FIELDS: GateFieldDefinition[] = [
     options: YES_NO,
     dependsOn: { field: "pocRequired", equals: "YES" },
     askNext: "Where are we with the POC: is it complete, and did it meet your success criteria?",
-  },
-  {
-    key: "architectureDoc",
-    gate: "Technical Proof",
-    label: "Proposed architecture doc",
-    letters: ["DC"],
-    kind: "url",
-    conversational: false,
   },
   {
     key: "useCaseFit",

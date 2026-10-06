@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// DEMO DATA ONLY. Seven made-up Opportunities, each showing one situation the
+// TEST DATA ONLY. Seven made-up Opportunities, each showing one situation the
 // screens have to handle:
 //
 //   Brightwater     Qualify; a Champion Proposal matched to a Contact, and no
@@ -147,7 +147,6 @@ function validateFilled(primary: { contactId: string; name: string }, pain: stri
     successCriteriaPain: pain,
     salesPlays: plays,
     primaryContact: primary,
-    customerDocLink: "https://drive.google.com/drive/folders/demo-customer-doc",
   };
 }
 
@@ -266,7 +265,6 @@ export function createFixtures(): MockFixtures {
       paperProcess: ["PO Required", "Mandatory Legal Review"],
       decisionCriteria: ["Security & compliance certs", "Scalability & performance"],
       salesEngineer: "Kasun Silva",
-      mapDocLink: "https://drive.google.com/drive/folders/demo-map-doc",
       pocRequired: "YES",
       competitors: ["Mulesoft"],
       infrastructure: ["Cloud"],
@@ -330,9 +328,7 @@ export function createFixtures(): MockFixtures {
       paperProcess: ["WSO2 Invoice"],
       decisionCriteria: ["Total cost of ownership", "Vendor stability & support"],
       salesEngineer: "Dilini Fernando",
-      mapDocLink: "https://drive.google.com/drive/folders/demo-map-doc",
       pocRequired: "NO",
-      architectureDoc: "https://drive.google.com/drive/folders/demo-architecture",
       useCaseFit: "YES",
       competitors: ["Okta"],
       infrastructure: ["Self-hosted"],
@@ -451,10 +447,8 @@ export function createFixtures(): MockFixtures {
       paperProcess: ["Customer Portal", "Mandatory Legal Review"],
       decisionCriteria: ["Security & compliance certs"],
       salesEngineer: "Kasun Silva",
-      mapDocLink: "https://drive.google.com/drive/folders/demo-map-doc",
       pocRequired: "YES",
       pocCompleted: "YES",
-      architectureDoc: "https://drive.google.com/drive/folders/demo-architecture",
       useCaseFit: "YES",
       competitors: ["APIgee"],
       infrastructure: ["Hybrid"],
@@ -509,10 +503,8 @@ export function createFixtures(): MockFixtures {
       paperProcess: ["PO Required"],
       decisionCriteria: ["Open source / licensing model"],
       salesEngineer: "Dilini Fernando",
-      mapDocLink: "https://drive.google.com/drive/folders/demo-map-doc",
       pocRequired: "YES",
       pocCompleted: "YES",
-      architectureDoc: "https://drive.google.com/drive/folders/demo-architecture",
       useCaseFit: "YES",
       competitors: ["Okta", "Forgerock"],
       infrastructure: ["Cloud"],
@@ -559,9 +551,7 @@ export function createFixtures(): MockFixtures {
       paperProcess: ["PO Required"],
       decisionCriteria: ["Total cost of ownership"],
       salesEngineer: "Nuwan Perera",
-      mapDocLink: "https://drive.google.com/drive/folders/demo-map-doc",
       pocRequired: "NO",
-      architectureDoc: "https://drive.google.com/drive/folders/demo-architecture",
       useCaseFit: "YES",
       competitors: ["Kong"],
       infrastructure: ["Self-hosted"],
@@ -620,7 +610,7 @@ export function createFixtures(): MockFixtures {
 }
 
 /**
- * Where "Open in Salesforce" points in demo mode: the contract's
+ * Where "Open in Salesforce" points in the test data: the contract's
  * `SALESFORCE_BASE_URL + "/" + opportunityId`, on this app's own Salesforce host.
  * The ids are invented, so the record will not exist.
  */
