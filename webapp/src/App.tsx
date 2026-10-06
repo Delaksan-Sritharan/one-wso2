@@ -194,6 +194,7 @@ import ClaimApprovalPage, {
 } from "@features/finance/approvals/ClaimApprovalPage";
 import NeedsYouTab from "@features/finance/approvals/NeedsYouTab";
 import DecidedTab from "@features/finance/approvals/DecidedTab";
+import NdaPage from "@features/legal/pages/NdaPage";
 import { riskRoutes } from "@features/security/grc/modules/risk/routes";
 import { auditRoutes } from "@features/security/grc/modules/audit/routes";
 import { adminRoutes } from "@features/security/grc/modules/admin/routes";
@@ -980,6 +981,7 @@ export default function App() {
               Diligence, alongside Finance (see the finance/ routes below and
               DUE_DILIGENCE_APPS). */}
           <Route path="legal" element={<PerspectiveLanding />} />
+          <Route path="legal/nda" element={<NdaPage />} />
           {/* Security — the GRC platform's Risk Hub and Admin Console, lifted
               from grc-tools rather than rewritten. The two route fragments are
               the SOURCE's own (modules/{risk,audit,admin}/routes.tsx), spread

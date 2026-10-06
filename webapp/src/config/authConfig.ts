@@ -177,6 +177,8 @@ declare global {
       // ONE_WSO2_AUTH_BASE_URL by swapping the api. subdomain for
       // myaccount. (e.g. api.asgardeo.io/t/wso2 → myaccount.asgardeo.io/t/wso2).
       ONE_WSO2_ASGARDEO_MYACCOUNT_URL?: string;
+      // Backend that serves the customer-search endpoint used by the NDA page.
+      ONE_WSO2_LEGAL_BACKEND_URL?: string;
       // Features built but not yet released — see @config/previewFeatures.
       // Absent or false hides the feature, so a deployment that says nothing
       // shows nothing. Typed loosely here and narrowed by `PreviewFeature` at

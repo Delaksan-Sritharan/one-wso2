@@ -27,6 +27,7 @@ import {
   CheckCheckIcon,
   ClipboardCheckIcon,
   DatabaseIcon,
+  FileSignatureIcon,
   HouseIcon,
   LandmarkIcon,
   LifeBuoyIcon,
@@ -657,7 +658,15 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     access: true,
     path: "/legal",
     forwardsToFirstItem: true,
-    sections: [...appsToSections(DUE_DILIGENCE_APPS)],
+    sections: [
+      {
+        id: "legal-nda",
+        label: "NDA",
+        icon: FileSignatureIcon,
+        path: "/legal/nda",
+      },
+      ...appsToSections(DUE_DILIGENCE_APPS),
+    ],
   },
   // A separate application, opened in a new tab. `access` follows the URL being
   // configured: without one the tile stays in its unbuilt state rather than
