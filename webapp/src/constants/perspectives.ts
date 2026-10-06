@@ -139,7 +139,6 @@ function appsToSections(apps: readonly MenuApp[]): PerspectiveSection[] {
 // live under either rail's own path prefix.
 export const BANKING_ADMIN_ITEM_ID = "banking-admin";
 
-export const ENGINEERING_ADMIN_ITEM_ID = "engineering-download-stats-admin";
 const BANKING_ADMIN_SECTION: PerspectiveSection = {
   id: BANKING_ADMIN_ITEM_ID,
   label: "Banking",
@@ -576,6 +575,11 @@ export interface PerspectiveDef {
   forwardsToFirstItem?: boolean;
   sections?: PerspectiveSection[];
 }
+
+// Admin under Product Download Stats, in the Engineering perspective below.
+// The rail shows this row only when the download-stats API says the caller
+// is an admin.
+export const ENGINEERING_ADMIN_ITEM_ID = "engineering-download-stats-admin";
 
 export const PERSPECTIVES: readonly PerspectiveDef[] = [
   // "Apps" (persona areas, locked or unlocked). Order here is the order
