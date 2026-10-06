@@ -44,10 +44,9 @@ import {
   useStoredApprovalPreview,
 } from "@features/sales/cado2/approvals/api/useApprovalApi";
 import type { ApprovalOutcome, ApprovalStep } from "@features/sales/cado2/approvals/api/approvalTypes";
-import { decisionMessage, myApprovalSteps, showMyApprovals } from "@features/sales/cado2/approvals/model/myApprovals";
-import MyApprovalSteps from "@features/sales/cado2/approvals/components/MyApprovalSteps";
+import { decisionNote } from "@features/sales/cado2/approvals/model/myApprovals";
+import YourApprovalPanel from "@features/sales/cado2/approvals/components/YourApprovalPanel";
 import { useCado2Me } from "@features/sales/cado2/api/useCado2Me";
-import { useNotifications } from "@context/notifications/NotificationsContext";
 import { cado2Paths, type Cado2QuoteTab } from "@features/sales/cado2/cado2Paths";
 import { useDocumentTitle } from "@hooks/useDocumentTitle";
 
@@ -91,7 +90,8 @@ export default function QuoteDetailPage(): JSX.Element {
   const approvalPreview = useStoredApprovalPreview(quoteId, latestNumber, isDraft);
   const decide = useDecideStep();
   const me = useCado2Me();
-  const { showSuccess } = useNotifications();
+  // After a decision: what was recorded, shown above the next step (if any).
+  const [decisionNoteText, setDecisionNoteText] = useState<string | null>(null);
   useDocumentTitle(quote.data ? quoteLabel(quote.data.quoteNumber, latest.data?.version.accountName, latest.data?.version.opportunityName) : "Quote");
 
   const openDialog = (d: Dialog) => {
@@ -127,9 +127,9 @@ export default function QuoteDetailPage(): JSX.Element {
   const counts = [null, null, q.versions.length, events.data ? events.data.length : null];
   // Steps the caller may decide now; usually one.
   const actionable = (workflow.data?.steps ?? []).filter((s) => s.canAct);
-  // Someone holding several of the quote's approval roles sees where they are.
   const approverRoles = me.data?.approverRoles ?? [];
-  const showMine = showMyApprovals(workflow.data?.steps ?? [], approverRoles);
+  // Two steps open at once (parallel branches) need their buttons told apart.
+  const asRole = (s: ApprovalStep) => (actionable.length > 1 ? ` as ${s.roleLabel}` : "");
   const approvalProps = { isDraft, workflow, preview: approvalPreview };
   const openDecision = (outcome: ApprovalOutcome, step: ApprovalStep) => {
     decide.reset();
@@ -151,15 +151,14 @@ export default function QuoteDetailPage(): JSX.Element {
           <>
             {actionable.map((s) => (
               <Stack key={s.role} direction="row" spacing={1}>
-                {/* Always named: with several roles, each click visibly acts on a different one. */}
                 <Button variant="contained" color="success" onClick={() => openDecision("approve", s)}>
-                  Approve as {s.roleLabel}
+                  Approve{asRole(s)}
                 </Button>
                 <Button variant="outlined" onClick={() => openDecision("request-changes", s)}>
-                  Request changes as {s.roleLabel}
+                  Request changes{asRole(s)}
                 </Button>
                 <Button variant="outlined" color="error" onClick={() => openDecision("reject", s)}>
-                  Reject as {s.roleLabel}
+                  Reject{asRole(s)}
                 </Button>
               </Stack>
             ))}
@@ -192,8 +191,6 @@ export default function QuoteDetailPage(): JSX.Element {
         }
       />
 
-      {showMine && workflow.data ? <MyApprovalSteps steps={myApprovalSteps(workflow.data.steps, approverRoles)} /> : null}
-
       <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Tabs value={tab} onChange={(_, t: number) => openTab(t)} aria-label="Quote sections">
           {TABS.map((t, i) => (
@@ -205,6 +202,8 @@ export default function QuoteDetailPage(): JSX.Element {
         {tab === 0 && sheet ? (
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", lg: "minmax(0,1fr) 320px" }, gap: 3, alignItems: "start" }}>
             <Stack spacing={2} sx={{ minWidth: 0 }}>
+              {/* The viewer's turn: which role they act as, and why it's asked. */}
+              <YourApprovalPanel steps={workflow.data?.steps ?? []} actionable={actionable} note={decisionNoteText} />
               {/* Deal Desk verifies what the rep chose for unmapped products. */}
               <RepCategoriesNotice lines={sheet.lines} />
               <QuoteSheet sheet={sheet} />
@@ -243,9 +242,9 @@ export default function QuoteDetailPage(): JSX.Element {
               { quoteId: q.id, version: v.versionNumber, stepId: decision.step.stepId as number, outcome: decision.outcome, comment },
               {
                 onSuccess: (after) => {
-                  // Say what was recorded and what's next, so the next step's
-                  // buttons don't look like the same ones again.
-                  showSuccess(decisionMessage(decision.outcome, decision.step, after, approverRoles));
+                  // Say what was recorded, so the next step's buttons don't
+                  // look like the same ones again.
+                  setDecisionNoteText(decisionNote(decision.outcome, decision.step, after, approverRoles));
                   setDecision(null);
                 },
               },

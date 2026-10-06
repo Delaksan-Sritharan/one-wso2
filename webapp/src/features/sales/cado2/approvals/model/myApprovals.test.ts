@@ -16,75 +16,91 @@
 
 import { describe, expect, it } from "vitest";
 import type { ApprovalStep, ApprovalWorkflow } from "@features/sales/cado2/approvals/api/approvalTypes";
-import { decisionMessage, myApprovalSteps, showMyApprovals } from "./myApprovals";
+import { decisionNote, deskSummary, reasonRows } from "./myApprovals";
 
 const step = (role: ApprovalStep["role"], status: ApprovalStep["status"], over: Partial<ApprovalStep> = {}): ApprovalStep => ({
-  stepId: 1, role, roleLabel: role === "AREA_GM" ? "Area GM" : role, branches: ["DISCOUNT"], dependsOn: [], triggers: [],
+  stepId: 1, role, roleLabel: role === "DEAL_DESK" ? "Deal Desk" : role, branches: ["DISCOUNT"], dependsOn: [], triggers: [],
   status, requestedAt: null, actedAt: null, actedByEmail: null, comment: null, canAct: false, cantActReason: null, ...over,
 });
 const wf = (steps: readonly ApprovalStep[], status: ApprovalWorkflow["status"] = "IN_PROGRESS"): ApprovalWorkflow =>
   ({ status, createdAt: "2026-10-06T09:00:00Z", completedAt: null, steps });
-const all = ["CRO", "CFO", "CEO"];
 
-describe("myApprovalSteps", () => {
-  it("lists only the caller's steps, in order, with where each stands", () => {
-    const steps = [
-      step("AREA_GM", "APPROVED"),
-      step("CRO", "APPROVED"),
-      step("CFO", "PENDING", { canAct: true }),
-      step("CEO", "WAITING"),
-    ];
-    expect(myApprovalSteps(steps, all).map((s) => `${s.roleLabel}: ${s.label}`)).toEqual([
-      "CRO: Approved", "CFO: Your turn", "CEO: Later",
+describe("reasonRows", () => {
+  const trigger = (rule: string, lineNumber: number, reason: string) => ({ rule, branch: "DISCOUNT" as const, lineNumber, reason });
+
+  it("splits a line's discount into the line, its group, the figure and the limit", () => {
+    const cfo = step("CFO", "PENDING", { triggers: [
+      trigger("DISCOUNT", 2, "Line 2 · WSO2 API Control Plane (APIM): 45% discount is above the CRO's 40% limit"),
+      trigger("DISCOUNT", 2, "Line 2 · WSO2 API Control Plane (APIM): 45% discount is above the CRO's 40% limit"),
+    ] });
+    expect(reasonRows(cfo)).toEqual([
+      { kind: "discount", title: "Line 2 · WSO2 API Control Plane", group: "APIM", figure: "45%", detail: "Above the CRO's 40% limit" },
     ]);
   });
 
-  it("leaves out steps that are not needed", () => {
-    expect(myApprovalSteps([step("CRO", "PENDING", { canAct: true }), step("CEO", "CANCELLED")], all)).toHaveLength(1);
+  it("keeps a line review and a quote-level rule readable", () => {
+    const legal = step("LEGAL", "PENDING", { triggers: [
+      trigger("REQUIRED_REVIEW", 1, "Line 1 · WSO2 Identity Server (IAM): Legal reviews every IAM line"),
+      trigger("SPECIAL_TERMS", 0, "The quote includes special terms"),
+    ] });
+    expect(reasonRows(legal)).toEqual([
+      { kind: "review", title: "Line 1 · WSO2 Identity Server", group: "IAM", detail: "Legal reviews every IAM line" },
+      { kind: "terms", title: "Special terms", detail: "The quote includes special terms" },
+    ]);
+  });
+
+  it("leaves out Deal Desk's own every-quote review", () => {
+    expect(reasonRows(step("DEAL_DESK", "PENDING", { triggers: [trigger("DEAL_DESK_REVIEW", 0, "Deal Desk reviews every quote")] }))).toEqual([]);
   });
 });
 
-describe("showMyApprovals", () => {
-  it("shows the strip from two of the caller's steps", () => {
-    expect(showMyApprovals([step("CRO", "PENDING", { canAct: true }), step("AREA_GM", "WAITING")], all)).toBe(false);
-    expect(showMyApprovals([step("CRO", "PENDING", { canAct: true }), step("CFO", "WAITING")], all)).toBe(true);
+describe("deskSummary", () => {
+  const trigger = (rule: string, lineNumber: number, reason: string) => ({ rule, branch: "DISCOUNT" as const, lineNumber, reason });
+
+  it("gives Deal Desk each non-standard point once, with the approvals it needs", () => {
+    const dd = step("DEAL_DESK", "PENDING", { canAct: true });
+    const line = "Line 2 · WSO2 API Control Plane (APIM): 45% discount";
+    const steps = [
+      dd,
+      step("CRO", "WAITING", { triggers: [trigger("DISCOUNT", 2, `${line} is above the Area GM's 30% limit`)] }),
+      step("CFO", "WAITING", { triggers: [trigger("DISCOUNT", 2, `${line} is above the CRO's 40% limit`)] }),
+      step("LEGAL", "WAITING", { triggers: [trigger("SPECIAL_TERMS", 0, "The quote includes special terms")] }),
+      step("CEO", "CANCELLED", { triggers: [trigger("PAYMENT_TERMS", 0, "Not needed any more")] }),
+    ];
+    expect(deskSummary(steps, dd)).toEqual([
+      { kind: "discount", title: "Line 2 · WSO2 API Control Plane", group: "APIM", figure: "45%",
+        detail: "Above the Area GM's 30% limit", roles: ["CRO", "CFO"] },
+      { kind: "terms", title: "Special terms", detail: "The quote includes special terms", roles: ["LEGAL"] },
+    ]);
   });
 
-  it("hides it when the caller may not act, e.g. they submitted the quote", () => {
-    const own = { cantActReason: "You submitted this quote" };
-    expect(showMyApprovals([step("CRO", "PENDING", own), step("CFO", "WAITING", own)], all)).toBe(false);
+  it("is empty when nothing comes after Deal Desk", () => {
+    const dd = step("DEAL_DESK", "PENDING", { canAct: true });
+    expect(deskSummary([dd], dd)).toEqual([]);
   });
 });
 
-describe("decisionMessage", () => {
+describe("decisionNote", () => {
   const cro = step("CRO", "PENDING", { canAct: true });
+  const roles = ["CRO", "CFO", "CEO"];
 
-  it("says the next step is the caller's too", () => {
-    const after = wf([step("CRO", "APPROVED"), step("CFO", "PENDING", { canAct: true }), step("CEO", "WAITING")]);
-    expect(decisionMessage("approve", cro, after, all)).toBe("Approved as CRO. CFO is also yours and waiting for you now.");
+  it("is short when the approver's next step is open now (its panel shows next)", () => {
+    expect(decisionNote("approve", cro, wf([step("CRO", "APPROVED"), step("CFO", "PENDING", { canAct: true })]), roles)).toBe("Approved as CRO.");
   });
 
-  it("says when the caller's next step comes after someone else", () => {
-    const after = wf([step("CRO", "APPROVED"), step("AREA_GM", "PENDING"), step("CEO", "WAITING")]);
-    expect(decisionMessage("approve", cro, after, all)).toBe(
-      "Approved as CRO. CEO will come to you once the approvers before it have decided.",
-    );
+  it("says when the approver's next step comes later", () => {
+    expect(decisionNote("approve", cro, wf([step("CRO", "APPROVED"), step("AREA_GM", "PENDING"), step("CEO", "WAITING")]), roles))
+      .toBe("Approved as CRO. You approve as CEO later.");
   });
 
-  it("says when all the caller's approvals are done", () => {
-    const ceo = step("CEO", "PENDING", { canAct: true });
-    const after = wf([step("CRO", "APPROVED"), step("CEO", "APPROVED"), step("AREA_GM", "PENDING")]);
-    expect(decisionMessage("approve", ceo, after, all)).toBe("Approved as CEO. All your approvals on this quote are done.");
-    expect(decisionMessage("approve", ceo, wf(after.steps, "APPROVED"), all)).toBe("Approved as CEO. The quote is now fully approved.");
-  });
-
-  it("keeps a single approver's message short", () => {
-    expect(decisionMessage("approve", cro, wf([step("CRO", "APPROVED"), step("AREA_GM", "PENDING")]), ["CRO"])).toBe("Approved as CRO.");
+  it("says when nothing else waits for the approver", () => {
+    expect(decisionNote("approve", cro, wf([step("CRO", "APPROVED"), step("AREA_GM", "PENDING")]), roles))
+      .toBe("Approved as CRO. Nothing else on this quote is waiting for you.");
   });
 
   it("names the role for a rejection or a send-back", () => {
     const after = wf([step("CRO", "REJECTED")], "REJECTED");
-    expect(decisionMessage("reject", cro, after, all)).toBe("Rejected as CRO. The approval has stopped.");
-    expect(decisionMessage("request-changes", cro, after, all)).toBe("Sent back for changes as CRO. The owner is asked to revise it.");
+    expect(decisionNote("reject", cro, after, roles)).toBe("Rejected as CRO. The approval has stopped.");
+    expect(decisionNote("request-changes", cro, after, roles)).toBe("Sent back for changes as CRO.");
   });
 });

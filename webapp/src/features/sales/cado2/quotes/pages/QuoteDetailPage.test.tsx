@@ -15,7 +15,7 @@
 // under the License.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import type { DraftResponse, QuoteView } from "@features/sales/cado2/quotes/api/quoteTypes";
@@ -47,8 +47,6 @@ vi.mock("@features/sales/cado2/approvals/api/useApprovalApi", () => ({
 
 const me = { data: { sub: "s", email: "approver@wso2.com", roles: [], approverRoles: ["DEAL_DESK"] as string[] } };
 vi.mock("@features/sales/cado2/api/useCado2Me", () => ({ useCado2Me: () => me }));
-const notices = { showSuccess: vi.fn(), showError: vi.fn(), showWarning: vi.fn() };
-vi.mock("@context/notifications/NotificationsContext", () => ({ useNotifications: () => notices }));
 
 const documents = query(undefined as unknown);
 const issue = { ...mutation(), mutateAsync: vi.fn() };
@@ -96,7 +94,6 @@ beforeEach(() => {
   Object.assign(decide, mutation());
   workflow.data = null;
   me.data.approverRoles = ["DEAL_DESK"];
-  notices.showSuccess.mockReset();
   Object.assign(recall, mutation());
   Object.assign(revise, mutation());
   Object.assign(close, mutation());
@@ -235,7 +232,7 @@ describe("QuoteDetailPage — lifecycle", () => {
     expect(within(chain).getByRole("listitem", { name: "Deal Desk" })).toHaveTextContent("Overdue by 2 h"); // its deadline
     expect(within(chain).getByRole("listitem", { name: "Regional Director" })).toHaveTextContent("above the Account Manager's 5% limit");
 
-    await user.click(screen.getByRole("button", { name: "Request changes as Deal Desk" }));
+    await user.click(screen.getByRole("button", { name: "Request changes" }));
     const dialog = screen.getByRole("dialog");
     const send = within(dialog).getByRole("button", { name: "Request changes" });
     expect(send).toBeDisabled();
@@ -247,45 +244,103 @@ describe("QuoteDetailPage — lifecycle", () => {
     );
   });
 
-  it("walks someone holding CRO, CFO and CEO through their steps one by one", async () => {
+  const reasonStep = (role: ApprovalStep["role"], stepId: number, over: Partial<ApprovalStep> = {}): ApprovalStep => ({
+    stepId, role, roleLabel: role === "DEAL_DESK" ? "Deal Desk" : role, branches: ["DISCOUNT"], dependsOn: [], triggers: [],
+    status: "WAITING", requestedAt: null, actedAt: null, actedByEmail: null, comment: null, canAct: false, cantActReason: null, ...over,
+  });
+  const because = (reason: string) => [{ rule: "DISCOUNT", branch: "DISCOUNT" as const, lineNumber: 2, reason }];
+
+  it("tells an approver why their role is asked, and confirms each decision in place", async () => {
     const user = userEvent.setup();
-    const step = (role: ApprovalStep["role"], stepId: number, over: Partial<ApprovalStep> = {}): ApprovalStep => ({
-      stepId, role, roleLabel: role === "AREA_GM" ? "Area GM" : role, branches: ["DISCOUNT"], dependsOn: [], triggers: [],
-      status: "WAITING", requestedAt: null, actedAt: null, actedByEmail: null, comment: null, canAct: false, cantActReason: null, ...over,
-    });
     me.data.approverRoles = ["CRO", "CFO", "CEO"];
     workflow.data = {
       status: "IN_PROGRESS", createdAt: "2026-10-06T09:00:00Z", completedAt: null,
-      steps: [step("AREA_GM", 1, { status: "APPROVED" }), step("CRO", 2, { status: "PENDING", canAct: true }), step("CFO", 3), step("CEO", 4)],
+      steps: [
+        reasonStep("CRO", 2, { status: "PENDING", canAct: true, triggers: because("Line 2 · WSO2 API Control Plane (APIM): 35% discount is above the Area GM's 30% limit") }),
+        reasonStep("CFO", 3, { triggers: because("Line 2 · WSO2 API Control Plane (APIM): 35% discount is above the CRO's 32% limit") }),
+      ],
     };
     show({ ...submitted.quote, actions: [] }, submitted);
 
-    // Where they are: CRO now, CFO and CEO later. Area GM isn't theirs.
-    const mine = screen.getByRole("list", { name: "Your approval steps" });
-    expect(within(mine).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["CROYour turn", "CFOLater", "CEOLater"]);
-    // Every button names the role it acts as.
-    expect(screen.getByRole("button", { name: "Reject as CRO" })).toBeInTheDocument();
+    const panel = screen.getByRole("region", { name: "Your approval as CRO" });
+    // Each reason as a row: the line and product, its group, the discount and the limit it passes.
+    const reason = within(within(panel).getByRole("list", { name: "Why CRO approves" })).getByRole("listitem");
+    expect(reason).toHaveTextContent("Line 2 · WSO2 API Control Plane");
+    expect(within(reason).getByText("APIM")).toBeInTheDocument();
+    expect(within(reason).getByText("35% discount")).toBeInTheDocument();
+    expect(reason).toHaveTextContent("Above the Area GM's 30% limit");
+    expect(panel).not.toHaveTextContent("CRO's 32% limit"); // the CFO's reason is for the CFO
+    expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument(); // short labels
 
-    await user.click(screen.getByRole("button", { name: "Approve as CRO" }));
+    await user.click(screen.getByRole("button", { name: "Approve" }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }));
     const [vars, opts] = decide.mutate.mock.calls[0] as [unknown, { onSuccess: (wf: ApprovalWorkflow) => void }];
     expect(vars).toMatchObject({ quoteId: 5, version: 1, stepId: 2, outcome: "approve" });
 
-    // Saved: the confirmation says so, and that CFO is next and theirs.
-    opts.onSuccess({ ...workflow.data, steps: [step("AREA_GM", 1, { status: "APPROVED" }), step("CRO", 2, { status: "APPROVED" }),
-      step("CFO", 3, { status: "PENDING", canAct: true }), step("CEO", 4)] });
-    expect(notices.showSuccess).toHaveBeenCalledWith("Approved as CRO. CFO is also yours and waiting for you now.");
+    // Saved: CFO is the viewer's turn now; the note confirms CRO above the CFO panel.
+    const after: ApprovalWorkflow = { ...workflow.data, steps: [reasonStep("CRO", 2, { status: "APPROVED" }),
+      reasonStep("CFO", 3, { status: "PENDING", canAct: true, triggers: because("Line 2 · WSO2 API Control Plane (APIM): 35% discount is above the CRO's 32% limit") })] };
+    workflow.data = after;
+    act(() => opts.onSuccess(after));
+    expect(await screen.findByRole("status")).toHaveTextContent("Approved as CRO.");
+    expect(screen.getByRole("region", { name: "Your approval as CFO" })).toHaveTextContent("Above the CRO's 32% limit");
   });
 
-  it("shows no strip to an approver with one step on the quote", () => {
+  it("gives Deal Desk a summary of what's non-standard, each point once with the approvals it needs", () => {
+    const line = "Line 2 · WSO2 API Control Plane (APIM): 45% discount";
     workflow.data = {
       status: "IN_PROGRESS", createdAt: "2026-10-06T09:00:00Z", completedAt: null,
-      steps: [{ stepId: 11, role: "DEAL_DESK", roleLabel: "Deal Desk", branches: [], dependsOn: [], status: "PENDING", requestedAt: null,
-        actedAt: null, actedByEmail: null, comment: null, canAct: true, cantActReason: null, triggers: [] }],
+      steps: [reasonStep("DEAL_DESK", 11, { status: "PENDING", canAct: true }),
+        reasonStep("CRO", 12, { triggers: because(`${line} is above the Area GM's 30% limit`) }),
+        reasonStep("CFO", 13, { triggers: because(`${line} is above the CRO's 40% limit`) })],
     };
     show({ ...submitted.quote, actions: [] }, submitted);
-    expect(screen.queryByRole("region", { name: "Your approvals" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Approve as Deal Desk" })).toBeInTheDocument();
+    const panel = screen.getByRole("region", { name: "Your approval as Deal Desk" });
+    expect(panel).not.toHaveTextContent("After you"); // who approves is in the Approvals tab
+    const points = within(within(panel).getByRole("list", { name: "What's non-standard" })).getAllByRole("listitem");
+    expect(points).toHaveLength(1);
+    expect(points[0]).toHaveTextContent("Line 2 · WSO2 API Control Plane");
+    expect(points[0]).toHaveTextContent("45% discount");
+    expect(points[0]).toHaveTextContent("Above the Area GM's 30% limit · needs CRO and CFO");
+  });
+
+  it("tells Deal Desk when nothing is non-standard", () => {
+    workflow.data = {
+      status: "IN_PROGRESS", createdAt: "2026-10-06T09:00:00Z", completedAt: null,
+      steps: [reasonStep("DEAL_DESK", 11, { status: "PENDING", canAct: true })],
+    };
+    show({ ...submitted.quote, actions: [] }, submitted);
+    expect(screen.getByRole("region", { name: "Your approval as Deal Desk" })).toHaveTextContent(
+      "Nothing non-standard: no further approvals are needed.",
+    );
+  });
+
+  it("shows an approver's first three reasons, and the rest on request", async () => {
+    const user = userEvent.setup();
+    me.data.approverRoles = ["LEGAL"];
+    const triggers = [1, 2, 3, 4, 5].map((n) => ({ rule: "REQUIRED_REVIEW", branch: "DISCOUNT" as const, lineNumber: n,
+      reason: `Line ${n} · WSO2 Identity Server (IAM): Legal reviews every IAM line` }));
+    workflow.data = {
+      status: "IN_PROGRESS", createdAt: "2026-10-06T09:00:00Z", completedAt: null,
+      steps: [reasonStep("LEGAL", 1, { status: "PENDING", canAct: true, roleLabel: "Legal", triggers })],
+    };
+    show({ ...submitted.quote, actions: [] }, submitted);
+    const list = () => screen.getByRole("list", { name: "Why Legal approves" });
+    expect(within(list()).getAllByRole("listitem")).toHaveLength(3);
+    await user.click(screen.getByRole("button", { name: "Show 2 more" }));
+    expect(within(list()).getAllByRole("listitem")).toHaveLength(5);
+  });
+
+  it("names the role on the buttons only when two steps are open at once", () => {
+    me.data.approverRoles = ["LEGAL", "REGIONAL_DIRECTOR"];
+    workflow.data = {
+      status: "IN_PROGRESS", createdAt: "2026-10-06T09:00:00Z", completedAt: null,
+      steps: [reasonStep("LEGAL", 1, { status: "PENDING", canAct: true, roleLabel: "Legal" }),
+        reasonStep("REGIONAL_DIRECTOR", 2, { status: "PENDING", canAct: true, roleLabel: "Regional Director" })],
+    };
+    show({ ...submitted.quote, actions: [] }, submitted);
+    expect(screen.getByRole("button", { name: "Approve as Legal" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject as Regional Director" })).toBeInTheDocument();
   });
 
   it("shows Deal Desk the categories the rep chose, and asks them to confirm on approval", async () => {
@@ -312,7 +367,7 @@ describe("QuoteDetailPage — lifecycle", () => {
     expect(notice).toHaveTextContent(first.productName);
     expect(within(screen.getByRole("table", { name: "Products" })).getAllByText("Category chosen by rep")).toHaveLength(1);
 
-    await user.click(screen.getByRole("button", { name: "Approve as Deal Desk" }));
+    await user.click(screen.getByRole("button", { name: "Approve" }));
     const dialog = within(screen.getByRole("dialog"));
     expect(dialog.getByRole("region", { name: "Categories chosen by the rep" })).toHaveTextContent(/By approving, you confirm/);
   });

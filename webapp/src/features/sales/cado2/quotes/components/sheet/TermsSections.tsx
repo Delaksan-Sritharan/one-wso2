@@ -15,9 +15,9 @@
 // under the License.
 
 import type { JSX, ReactNode } from "react";
-import { Box, Paper, Stack, Typography } from "@wso2/oxygen-ui";
+import { Box, Chip, Link, Paper, Stack, Typography } from "@wso2/oxygen-ui";
 import { FileTextIcon, MapPinIcon, MessageSquareTextIcon } from "@wso2/oxygen-ui-icons-react";
-import type { QuoteSheet, SheetAddress } from "@features/sales/cado2/quotes/sheet/sheetModel";
+import type { ContactRole, QuoteSheet, SheetAddress, SheetContact } from "@features/sales/cado2/quotes/sheet/sheetModel";
 import SheetCard, { Fact, FactGrid } from "@features/sales/cado2/components/section-card/SectionCard";
 
 function TextBlock({ children }: { children: ReactNode }): JSX.Element {
@@ -62,49 +62,110 @@ export function TermsSection({ sheet }: { sheet: QuoteSheet }): JSX.Element {
   );
 }
 
-function AddressCard({ title, address, note }: { title: string; address: SheetAddress | null; note?: string }): JSX.Element {
+const CONTACT_LABEL: Record<ContactRole, string> = { BILLING: "Billing contact", SECURITY: "Security contact" };
+
+/** A contact under its address, as on the order form; quiet, since it matters for the document. */
+function ContactBlock({ role, contact }: { role: ContactRole; contact: SheetContact | null }): JSX.Element {
   return (
-    <Paper variant="outlined" aria-label={title} sx={{ p: 2, borderRadius: 2, minWidth: 0, height: "100%" }}>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, color: "text.secondary" }}>
+    <Box aria-label={CONTACT_LABEL[role]}>
+      <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.4, display: "block" }}>
+        {CONTACT_LABEL[role]}
+      </Typography>
+      {contact ? (
+        <>
+          <Typography variant="body2">
+            {contact.name}
+            {contact.title ? (
+              <Box component="span" sx={{ color: "text.secondary" }}>
+                {` · ${contact.title}`}
+              </Box>
+            ) : null}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
+            {contact.email ? (
+              <Link href={`mailto:${contact.email}`} color="inherit">
+                {contact.email}
+              </Link>
+            ) : null}
+            {contact.source === "MANUAL" ? `${contact.email ? " · " : ""}typed in` : null}
+          </Typography>
+        </>
+      ) : (
+        <Typography variant="body2" color="text.disabled" sx={{ fontStyle: "italic" }}>
+          {role === "SECURITY" ? "Not set (optional)" : "Not set yet"}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+function AddressCard({
+  title,
+  address,
+  note,
+  contact,
+}: {
+  title: string;
+  address: SheetAddress | null;
+  note?: string;
+  contact: ReactNode;
+}): JSX.Element {
+  return (
+    // Three rows (title, address, contact) shared with the card beside it
+    // (subgrid), so both cards' sections line up whatever their length.
+    <Paper
+      variant="outlined"
+      aria-label={title}
+      sx={{ p: 2, borderRadius: 2, minWidth: 0, display: "grid", gridRow: "span 3", gridTemplateRows: "subgrid", rowGap: 1 }}
+    >
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ color: "text.secondary" }}>
         <MapPinIcon size={14} />
         <Typography variant="overline" sx={{ lineHeight: 1.4 }}>
           {title}
         </Typography>
+        {note ? <Chip size="small" variant="outlined" label={note} /> : null}
       </Stack>
-      {note ? (
-        <Typography variant="body2">{note}</Typography>
-      ) : !address ? (
-        <Typography variant="body2" color="text.disabled" sx={{ fontStyle: "italic" }}>
-          Not set yet
-        </Typography>
-      ) : (
-        <>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-            {address.companyName}
+      <Box>
+        {!address ? (
+          <Typography variant="body2" color="text.disabled" sx={{ fontStyle: "italic" }}>
+            Not set yet
           </Typography>
-          {address.lines.map((l) => (
-            <Typography key={l} variant="body2" color="text.secondary">
-              {l}
+        ) : (
+          <>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              {address.companyName}
             </Typography>
-          ))}
-          {address.taxId ? (
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.75 }}>
-              Tax ID {address.taxId}
-            </Typography>
-          ) : null}
-        </>
-      )}
+            {address.lines.map((l) => (
+              <Typography key={l} variant="body2" color="text.secondary">
+                {l}
+              </Typography>
+            ))}
+            {address.taxId ? (
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.75 }}>
+                Tax ID {address.taxId}
+              </Typography>
+            ) : null}
+          </>
+        )}
+      </Box>
+      <Box sx={{ borderTop: 1, borderColor: "divider", pt: 1.5, mt: 0.5 }}>{contact}</Box>
     </Paper>
   );
 }
 
-/** Bill to and ship to, side by side. */
+/** Bill to with the billing contact, ship to with the security contact: section 01 of the order form. */
 export function AddressesSection({ sheet }: { sheet: QuoteSheet }): JSX.Element {
   return (
-    <SheetCard title="Addresses" icon={<MapPinIcon size={18} />}>
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0,1fr))" }, gap: 1.5 }}>
-        <AddressCard title="Bill to" address={sheet.billTo} />
-        <AddressCard title="Ship to" address={sheet.shipTo} note={sheet.shipToSameAsBillTo ? "Same as bill to" : undefined} />
+    <SheetCard title="Addresses and contacts" icon={<MapPinIcon size={18} />}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0,1fr))" }, columnGap: 1.5, rowGap: 1.5 }}>
+        <AddressCard title="Bill to" address={sheet.billTo} contact={<ContactBlock role="BILLING" contact={sheet.contacts[0]} />} />
+        <AddressCard
+          title="Ship to"
+          // Printed in full either way; a small mark says it's the bill-to address.
+          address={sheet.shipToSameAsBillTo ? sheet.billTo : sheet.shipTo}
+          note={sheet.shipToSameAsBillTo ? "Same as bill to" : undefined}
+          contact={<ContactBlock role="SECURITY" contact={sheet.contacts[1]} />}
+        />
       </Box>
     </SheetCard>
   );

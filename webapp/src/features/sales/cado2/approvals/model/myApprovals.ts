@@ -14,70 +14,113 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Someone holding several approval roles on one quote (say CRO, CFO and CEO,
-// in sequence) decides one step at a time. These helpers say which steps are
-// theirs and what a decision did, so each click visibly moves them on.
+// What an approver needs to see when it's their turn: why their role is asked
+// (Deal Desk: what the approvers after them will check), and, after a
+// decision, one line saying what was recorded.
 
 import type { ApprovalOutcome, ApprovalStep, ApprovalWorkflow } from "@features/sales/cado2/approvals/api/approvalTypes";
-import { STEP_STATUS } from "@features/sales/cado2/approvals/model/approvalText";
 
-/** Where one of the caller's own steps stands. */
-export type MyStepState = "done" | "now" | "later" | "stopped";
+/** What kind of rule asked for the approval; picks the row's icon. */
+export type ReasonKind = "discount" | "review" | "terms" | "term" | "downsell" | "payment" | "other";
 
-export interface MyStep {
-  readonly role: string;
-  readonly roleLabel: string;
-  readonly state: MyStepState;
-  /** E.g. "Approved", "Your turn", "Later", "Rejected". */
-  readonly label: string;
+/**
+ * One reason, split for display. From the backend's sentence
+ * "Line 2 · WSO2 API Control Plane (APIM): 45% discount is above the CRO's 40% limit":
+ * title "Line 2 · WSO2 API Control Plane", group "APIM", figure "45%",
+ * detail "Above the CRO's 40% limit".
+ */
+export interface ReasonRow {
+  readonly kind: ReasonKind;
+  readonly title: string;
+  readonly detail: string;
+  /** The number that triggered it, e.g. "45%". */
+  readonly figure?: string;
+  /** The product group of a line, e.g. "APIM". */
+  readonly group?: string;
+  /** In Deal Desk's summary: the approvals this point needs, e.g. ["CRO", "CFO"]. */
+  readonly roles?: readonly string[];
 }
 
-const mine = (s: ApprovalStep, roles: readonly string[]) => roles.includes(s.role) && s.status !== "CANCELLED";
+const RULE: Record<string, { kind: ReasonKind; title: string }> = {
+  DISCOUNT: { kind: "discount", title: "Discount" },
+  REQUIRED_REVIEW: { kind: "review", title: "Required review" },
+  SPECIAL_TERMS: { kind: "terms", title: "Special terms" },
+  GOVERNING_TERMS: { kind: "terms", title: "Governing terms" },
+  SHORT_TERM_NEW_CUSTOMER: { kind: "term", title: "Subscription term" },
+  SHORT_TERM_RENEWAL: { kind: "term", title: "Subscription term" },
+  EXTENDED_TERM: { kind: "term", title: "Subscription term" },
+  EXTENDED_SAAS_TERM: { kind: "term", title: "Subscription term" },
+  RENEWAL_DOWNSELL: { kind: "downsell", title: "Renewal downsell" },
+  RENEWAL_DOWNSELL_CEO: { kind: "downsell", title: "Renewal downsell" },
+  PAYMENT_TERMS: { kind: "payment", title: "Payment terms" },
+};
 
-/** The caller's steps on the quote, in workflow order; steps not needed are left out. */
-export function myApprovalSteps(steps: readonly ApprovalStep[], approverRoles: readonly string[]): MyStep[] {
-  return steps
-    .filter((s) => mine(s, approverRoles))
-    .map((s): MyStep => {
-      if (s.status === "APPROVED") return { role: s.role, roleLabel: s.roleLabel, state: "done", label: "Approved" };
-      if (s.canAct) return { role: s.role, roleLabel: s.roleLabel, state: "now", label: "Your turn" };
-      if (s.status === "REJECTED" || s.status === "CHANGES_REQUESTED") {
-        return { role: s.role, roleLabel: s.roleLabel, state: "stopped", label: STEP_STATUS[s.status].label };
-      }
-      return { role: s.role, roleLabel: s.roleLabel, state: "later", label: "Later" };
-    });
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** A step's reasons as display rows, once each. Deal Desk's own "reviews every quote" is left out. */
+export function reasonRows(step: ApprovalStep): ReasonRow[] {
+  const seen = new Set<string>();
+  const rows: ReasonRow[] = [];
+  for (const t of step.triggers) {
+    if (t.rule === "DEAL_DESK_REVIEW" || seen.has(t.reason)) continue;
+    seen.add(t.reason);
+    const rule = RULE[t.rule] ?? { kind: "other" as const, title: "Approval rule" };
+    const split = t.lineNumber > 0 ? t.reason.indexOf(": ") : -1;
+    if (split < 0) {
+      rows.push({ kind: rule.kind, title: rule.title, detail: t.reason });
+      continue;
+    }
+    // "Line 2 · Product (Group)" and what about it.
+    const head = t.reason.slice(0, split);
+    const rest = t.reason.slice(split + 2);
+    const grouped = /^(.*) \(([^()]+)\)$/.exec(head);
+    const title = grouped ? grouped[1] : head;
+    const group = grouped ? grouped[2] : undefined;
+    const discount = /^([\d.]+%) discount (.*)$/.exec(rest);
+    rows.push(
+      discount
+        ? { kind: rule.kind, title, group, figure: discount[1], detail: capital(discount[2].replace(/^is /, "")) }
+        : { kind: rule.kind, title, group, detail: capital(rest) },
+    );
+  }
+  return rows;
 }
 
 /**
- * The "Your approvals" strip is worth showing only to someone with two or more
- * steps on the quote who may act on them (not, say, the person who submitted it).
+ * For Deal Desk, who reviews every quote: everything non-standard about it,
+ * from the approvals still to come. One row per point (a line, or a rule
+ * such as special terms) with the approvals it needs; for a line discount,
+ * the lowest limit it passes, where approvals start.
  */
-export function showMyApprovals(steps: readonly ApprovalStep[], approverRoles: readonly string[]): boolean {
-  const own = steps.filter((s) => mine(s, approverRoles));
-  return own.length >= 2 && own.every((s) => s.cantActReason === null);
+export function deskSummary(steps: readonly ApprovalStep[], current: ApprovalStep): ReasonRow[] {
+  const points = new Map<string, { row: ReasonRow; roles: string[] }>();
+  for (const s of steps) {
+    if (s.role === current.role || (s.status !== "WAITING" && s.status !== "PENDING")) continue;
+    for (const row of reasonRows(s)) {
+      const key = `${row.kind}|${row.title}|${row.kind === "discount" ? "" : row.detail}`;
+      const point = points.get(key);
+      if (!point) points.set(key, { row, roles: [s.roleLabel] });
+      else if (!point.roles.includes(s.roleLabel)) point.roles.push(s.roleLabel);
+    }
+  }
+  return [...points.values()].map(({ row, roles }) => ({ ...row, roles }));
 }
 
-const joined = (labels: string[]) =>
-  labels.length <= 1 ? (labels[0] ?? "") : `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
-
 /**
- * What a decision did, for the confirmation after it is saved: e.g. "Approved
- * as CRO. CFO is also yours and is waiting for you now."
+ * The line shown after a decision is saved, e.g. "Approved as CRO." When
+ * nothing else waits for the approver: "… Nothing else on this quote is
+ * waiting for you."
  */
-export function decisionMessage(
+export function decisionNote(
   outcome: ApprovalOutcome,
   step: ApprovalStep,
   after: ApprovalWorkflow,
   approverRoles: readonly string[],
 ): string {
   if (outcome === "reject") return `Rejected as ${step.roleLabel}. The approval has stopped.`;
-  if (outcome === "request-changes") return `Sent back for changes as ${step.roleLabel}. The owner is asked to revise it.`;
-  const done = `Approved as ${step.roleLabel}.`;
-  const own = after.steps.filter((s) => mine(s, approverRoles));
-  const next = own.filter((s) => s.canAct).map((s) => s.roleLabel);
-  if (next.length) return `${done} ${joined(next)} ${next.length === 1 ? "is" : "are"} also yours and waiting for you now.`;
-  const later = own.filter((s) => s.status === "WAITING" || s.status === "PENDING").map((s) => s.roleLabel);
-  if (later.length) return `${done} ${joined(later)} will come to you once the approvers before ${later.length === 1 ? "it" : "them"} have decided.`;
-  if (after.status === "APPROVED") return `${done} The quote is now fully approved.`;
-  return own.length > 1 ? `${done} All your approvals on this quote are done.` : done;
+  if (outcome === "request-changes") return `Sent back for changes as ${step.roleLabel}.`;
+  const mine = after.steps.filter((s) => approverRoles.includes(s.role) && (s.status === "WAITING" || s.status === "PENDING"));
+  if (mine.some((s) => s.canAct)) return `Approved as ${step.roleLabel}.`;
+  if (mine.length) return `Approved as ${step.roleLabel}. You approve as ${mine.map((s) => s.roleLabel).join(" and ")} later.`;
+  return `Approved as ${step.roleLabel}. Nothing else on this quote is waiting for you.`;
 }
