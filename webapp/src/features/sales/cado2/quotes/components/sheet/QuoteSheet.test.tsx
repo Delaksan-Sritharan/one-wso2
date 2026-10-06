@@ -25,7 +25,7 @@ import type { QuoteSheet as Sheet, SheetLine } from "@features/sales/cado2/quote
 const sheet = sheetFromVersion(fullPartnerQuote);
 
 describe("QuoteSheet", () => {
-  it("puts the customer, the opportunity, the partner and the contacts up front", () => {
+  it("puts the customer, the opportunity and the partner up front, and each contact under its address", () => {
     render(<QuoteSheet sheet={sheet} />);
     const band = screen.getByRole("region", { name: "Customer" });
 
@@ -37,11 +37,22 @@ describe("QuoteSheet", () => {
 
     // Two contacts, both on the order form; no primary contact.
     expect(within(band).queryByLabelText("Primary contact")).toBeNull();
-    expect(within(within(band).getByLabelText("Billing contact")).getByText("Typed in")).toBeInTheDocument();
-    const security = within(band).getByLabelText("Security contact");
+    // The contacts sit with the addresses, as in the order form's section 01.
+    expect(within(band).queryByLabelText("Billing contact")).toBeNull();
+    const billTo = screen.getByLabelText("Bill to");
+    expect(within(billTo).getByLabelText("Billing contact")).toHaveTextContent("typed in");
+    const security = within(screen.getByLabelText("Ship to")).getByLabelText("Security contact");
     expect(within(security).getByText("Marco Ruiz")).toBeInTheDocument();
     expect(within(security).getByRole("link", { name: /marco@acme.example/ })).toHaveAttribute("href", "mailto:marco@acme.example");
-    expect(within(security).getByText("Salesforce")).toBeInTheDocument();
+    expect(security).not.toHaveTextContent("typed in");
+  });
+
+  it("prints the ship-to address in full when it is the bill-to address, and says so", () => {
+    render(<QuoteSheet sheet={{ ...sheet, shipTo: null, shipToSameAsBillTo: true }} />);
+    const shipTo = screen.getByLabelText("Ship to");
+    expect(within(shipTo).getByText("Same as bill to")).toBeInTheDocument();
+    expect(within(shipTo).getByText(sheet.billTo!.companyName)).toBeInTheDocument();
+    for (const line of sheet.billTo!.lines) expect(within(shipTo).getByText(line)).toBeInTheDocument();
   });
 
   it("shows every submitted field", () => {

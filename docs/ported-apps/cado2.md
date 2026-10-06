@@ -118,10 +118,17 @@ Behaviour is kept as it is today unless §7 says otherwise.
   debounced. A save that hits a newer version (409) offers to reload; a refused save (422) lists the
   issues with links to their step.
 - **Quote page** — the quote as a read-only sheet (customer band, deal, order-form table, deal
-  figures, yearly schedule, terms, addresses, justification), status panel with the actions the
+  figures, yearly schedule, terms, addresses with their contacts (as in the order form's section 01), justification), status panel with the actions the
   backend allows (`quote.actions`: recall, revise, close, delete draft, approve, request changes,
   reject), documents panel (order form preview, issue, download), and the Approvals, Versions and
-  History tabs.
+  History tabs. When it's the viewer's turn, a "Your approval · CFO" panel at the top of the Quote
+  tab says which role they act as and why it's asked (that step's reasons as rows: line, product
+  group, discount and the limit it passes; the first three, then "Show N more"). Deal Desk, who
+  reviews every quote, sees "What's non-standard": every point from the approvals still to come,
+  once each, with the approvals it needs ("· needs CRO and CFO"). Who approves is left to the
+  Approvals tab. After a decision a line in
+  the same place confirms it ("Approved as CRO."). Approver buttons stay short ("Approve"); they
+  name the role only when two of the viewer's steps are open at once.
 - **My Approvals** — inbox of steps for the viewer's roles, deadline chips, opens the quote.
 - **Approval diagram** — the approval workflow drawn with React Flow, in the Approvals tab and the
   submit preview.
