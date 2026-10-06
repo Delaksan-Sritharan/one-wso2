@@ -225,8 +225,8 @@ describe("the last-sabbatical anchor", () => {
   });
 });
 
-// ApplyTab.tsx:158-184. The boundary is the backend's — a plain difference of at
-// least the configured days — and the sentence names which anchor it used.
+// The boundary is the leave backend's — a plain difference of at least the
+// configured days — and the sentence names which anchor it used.
 describe("the eligibility warning", () => {
   it("does not appear on the first eligible day", async () => {
     show();

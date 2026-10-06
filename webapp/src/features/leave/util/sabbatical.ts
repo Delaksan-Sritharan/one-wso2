@@ -20,7 +20,7 @@
 // values are DAYS (2555 and 42 by default) but every message speaks in years
 // and weeks.
 
-/** ApplyTab.tsx:103 — `parseFloat((days / 365).toFixed(1))`, so 2555 → 7. */
+/** Days shown as years to one decimal place, so 2555 → 7. */
 export function eligibilityYears(eligibilityDurationDays: number): number {
   return parseFloat((eligibilityDurationDays / 365).toFixed(1));
 }
@@ -31,9 +31,9 @@ export function maxDurationWeeks(maxApplicationDurationDays: number): number {
 }
 
 /**
- * Whole days from `anchor` to `start` — the same count the backend checks
- * (sabbatical_leave.bal). The source's ApplyTab.tsx:168 subtracted one more,
- * which made the form refuse the first day the server would accept.
+ * Whole days from `anchor` to `start` — the same count the leave backend
+ * checks on submit, so the form never refuses a start date the server would
+ * accept.
  *
  * Both ends are normalised to midnight first, so a time-of-day difference cannot
  * shift the result by a day.

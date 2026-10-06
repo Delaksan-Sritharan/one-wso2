@@ -50,8 +50,8 @@ describe("turning the configured days into the words the user sees", () => {
   });
 });
 
-// A plain difference, matching the backend's check (sabbatical_leave.bal) —
-// the source's `- 1` made the form a day stricter than the server.
+// A plain difference, matching the leave backend's check, so the first day
+// the server accepts is also the first day the form accepts.
 describe("the eligibility gap", () => {
   it("counts the whole days between the dates", () => {
     expect(eligibilityGapDays(d("2026-01-01"), d("2026-01-11"))).toBe(10);
