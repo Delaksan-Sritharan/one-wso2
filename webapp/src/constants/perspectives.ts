@@ -138,6 +138,7 @@ function appsToSections(apps: readonly MenuApp[]): PerspectiveSection[] {
 // live outside Finance/Legal: a screen reached from two rails can't itself
 // live under either rail's own path prefix.
 export const BANKING_ADMIN_ITEM_ID = "banking-admin";
+
 const BANKING_ADMIN_SECTION: PerspectiveSection = {
   id: BANKING_ADMIN_ITEM_ID,
   label: "Banking",
@@ -575,6 +576,11 @@ export interface PerspectiveDef {
   sections?: PerspectiveSection[];
 }
 
+// Admin under Product Download Stats, in the Engineering perspective below.
+// The rail shows this row only when the download-stats API says the caller
+// is an admin.
+export const ENGINEERING_ADMIN_ITEM_ID = "engineering-download-stats-admin";
+
 export const PERSPECTIVES: readonly PerspectiveDef[] = [
   // "Apps" (persona areas, locked or unlocked). Order here is the order
   // shown in the waffle's Apps group.
@@ -740,6 +746,11 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
                   id: "engineering-download-stats-repository-stats",
                   label: "Repository Stats",
                   path: "/engineering/repository-stats",
+                },
+                {
+                  id: ENGINEERING_ADMIN_ITEM_ID,
+                  label: "Admin",
+                  path: "/engineering/admin",
                 },
               ],
             },

@@ -266,6 +266,7 @@ describe("perspectives whose landing forwards to the first rail item", () => {
       expect(labels).toContain("Versions");
       expect(labels).toContain("Packages");
       expect(labels).toContain("Repository Stats");
+      expect(labels).toContain("Admin");
     });
   });
 });
