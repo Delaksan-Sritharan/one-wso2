@@ -127,8 +127,9 @@ Behaviour is kept as it is today unless §7 says otherwise.
   reviews every quote, sees "What's non-standard": every point from the approvals still to come,
   once each, with the approvals it needs ("· needs CRO and CFO"). Who approves is left to the
   Approvals tab. After a decision a line in
-  the same place confirms it ("Approved as CRO."). Approver buttons stay short ("Approve"); they
-  name the role only when two of the viewer's steps are open at once.
+  the same place confirms it ("Approved as CRO."). Approve, Request changes and
+  Reject sit at the foot of each role's card, next to its reasons; the header only has a "Your
+  approval" link (or "Your approvals (2)") that jumps there from any tab.
 - **My Approvals** — inbox of steps for the viewer's roles, deadline chips, opens the quote.
 - **Approval diagram** — the approval workflow drawn with React Flow, in the Approvals tab and the
   submit preview.

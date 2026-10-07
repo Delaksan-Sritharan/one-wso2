@@ -232,7 +232,10 @@ describe("QuoteDetailPage — lifecycle", () => {
     expect(within(chain).getByRole("listitem", { name: "Deal Desk" })).toHaveTextContent("Overdue by 2 h"); // its deadline
     expect(within(chain).getByRole("listitem", { name: "Regional Director" })).toHaveTextContent("above the Account Manager's 5% limit");
 
-    await user.click(screen.getByRole("button", { name: "Request changes" }));
+    // From another tab, the header's "Your approval" goes back to the Quote tab's panel.
+    await user.click(screen.getByRole("button", { name: "Your approval" }));
+    const panel = await screen.findByRole("region", { name: "Your approval as Deal Desk" });
+    await user.click(within(panel).getByRole("button", { name: "Request changes" }));
     const dialog = screen.getByRole("dialog");
     const send = within(dialog).getByRole("button", { name: "Request changes" });
     expect(send).toBeDisabled();
@@ -374,7 +377,8 @@ describe("QuoteDetailPage — lifecycle", () => {
     expect(within(list()).getAllByRole("listitem")).toHaveLength(5);
   });
 
-  it("names the role on the buttons only when two steps are open at once", () => {
+  it("keeps the header short with two open steps: each role decides in its own card", async () => {
+    const user = userEvent.setup();
     me.data.approverRoles = ["LEGAL", "REGIONAL_DIRECTOR"];
     workflow.data = {
       status: "IN_PROGRESS", createdAt: "2026-10-06T09:00:00Z", completedAt: null,
@@ -382,8 +386,16 @@ describe("QuoteDetailPage — lifecycle", () => {
         reasonStep("REGIONAL_DIRECTOR", 2, { status: "PENDING", canAct: true, roleLabel: "Regional Director" })],
     };
     show({ ...submitted.quote, actions: [] }, submitted);
-    expect(screen.getByRole("button", { name: "Approve as Legal" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reject as Regional Director" })).toBeInTheDocument();
+
+    expect(screen.getByRole("button", { name: "Your approvals (2)" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /as Legal|as Regional Director/ })).toBeNull();
+    // One short set of buttons per role, inside its card.
+    const rd = screen.getByRole("region", { name: "Your approval as Regional Director" });
+    await user.click(within(rd).getByRole("button", { name: "Reject" }));
+    expect(within(screen.getByRole("dialog")).getByRole("heading")).toHaveTextContent("Reject");
+    await user.type(within(screen.getByRole("dialog")).getByRole("textbox"), "Too deep");
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Reject" }));
+    expect(decide.mutate).toHaveBeenCalledWith(expect.objectContaining({ stepId: 2, outcome: "reject" }), expect.anything());
   });
 
   it("shows Deal Desk the categories the rep chose, and asks them to confirm on approval", async () => {
