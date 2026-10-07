@@ -146,7 +146,7 @@ describe("planActivitySave", () => {
 });
 
 describe("labels", () => {
-  it("prints wall-clock minutes the source's way", () => {
+  it("prints wall-clock minutes as a 12-hour time", () => {
     expect(minuteLabel(0)).toBe("12:00 am");
     expect(minuteLabel(540)).toBe("9:00 am");
     expect(minuteLabel(725)).toBe("12:05 pm");

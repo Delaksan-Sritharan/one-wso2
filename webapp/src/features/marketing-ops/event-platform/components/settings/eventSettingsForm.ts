@@ -31,7 +31,7 @@ import {
   toInstant,
 } from "@features/marketing-ops/event-platform/utils/dateTime";
 
-// The source's cap. An event stored with more days (made some other way) still
+// The most days the form offers. An event stored with more days still
 // offers its own count, so opening Settings never silently shortens it.
 export const MAX_DAYS = 3;
 // 08:00–17:00, for a first day when there is no previous day to copy.
@@ -234,7 +234,7 @@ export function canSaveSettings(values: EventSettingsFormValues): boolean {
 /**
  * How many stored days a save would delete. The upsert matches days by
  * position, so a shorter list deletes the trailing days and unschedules their
- * sessions — worth a confirmation, which the source never asked for.
+ * sessions, so the save asks for a confirmation first.
  */
 export function droppedDayCount(event: ConferenceConfig, values: EventSettingsFormValues): number {
   return Math.max(0, event.days.length - values.days.length);

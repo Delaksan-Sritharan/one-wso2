@@ -75,8 +75,8 @@ export default function ActivitiesPage() {
   const [editing, setEditing] = useState<Activity | null | undefined>(undefined);
   const [confirm, setConfirm] = useState<ConfirmationContent | null>(null);
   // An activity this dialog created whose hours then failed to save. A second
-  // Save must update it, not create it again: the source did the latter, which
-  // the duplicate-name check then refused.
+  // Save must update it, not create it again, which the duplicate-name check
+  // would refuse.
   const createdRef = useRef<Activity | null>(null);
   // The whole save, not each call: between the create and the hours PUT no
   // mutation is pending, and the dialog must not close there either.

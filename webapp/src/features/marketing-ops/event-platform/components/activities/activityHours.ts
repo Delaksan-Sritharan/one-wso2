@@ -61,7 +61,7 @@ export function newHoursRow(
   return { dayId: day.id, startMinute: day.startMinute, endMinute: day.endMinute };
 }
 
-/** A window must close after it opens. The table has the same CHECK, which would otherwise answer with a bare 400. */
+/** A window must close after it opens. */
 export function closesBeforeOpening(row: ActivityHoursInput): boolean {
   return row.endMinute <= row.startMinute;
 }
@@ -119,7 +119,7 @@ export function nextActivityPosition(activities: readonly Pick<Activity, "positi
   return activities.reduce((max, a) => Math.max(max, a.position + 1), 0);
 }
 
-/** 540 → "9:00 am", the source's `h:mm a`. */
+/** 540 → "9:00 am": 12-hour clock, unpadded hour, lowercase am/pm. */
 export function minuteLabel(minute: number): string {
   const h = Math.floor(minute / 60) % 24;
   const m = minute % 60;

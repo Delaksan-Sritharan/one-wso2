@@ -181,9 +181,15 @@ export default function TrackTopicsDialog({ eventId, onClose }: { eventId: strin
     }
   };
 
-  const moveTopic = (index: number, direction: -1 | 1) => {
-    for (const write of topicMove(sortedTopics, index, direction) ?? []) {
-      updateTopic.mutate(write, { onError: (err) => notifyFailure("Couldn't reorder the topics.", err) });
+  // One write after another, so a failure in any of them reaches the toast;
+  // per-call callbacks on `mutate` only fire for the most recent call.
+  const moveTopic = async (index: number, direction: -1 | 1) => {
+    try {
+      for (const write of topicMove(sortedTopics, index, direction) ?? []) {
+        await updateTopic.mutateAsync(write);
+      }
+    } catch (err) {
+      notifyFailure("Couldn't reorder the topics.", err);
     }
   };
 

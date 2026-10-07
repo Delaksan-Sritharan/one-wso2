@@ -386,7 +386,7 @@ function SettingsForm({ event }: { event: ConferenceConfig }) {
 }
 
 // Deleting an event takes its sessions, tracks and shop with it, so the button
-// stays shut until the event's name is typed — the source's guard — and then
+// stays shut until the event's name is typed, and then
 // asks once more.
 function DangerZone({ event }: { event: ConferenceConfig }) {
   const navigate = useNavigate();

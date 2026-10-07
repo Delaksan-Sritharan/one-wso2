@@ -154,11 +154,11 @@ function RoomSelect({
 }
 
 /**
- * The source's RoomMappingTree: room colours, the keynote room, and each
- * day's tracks and sections with the room they map to.
+ * Room colours, the keynote room, and each day's tracks and sections with the
+ * room they map to.
  *
- * `days` comes from the event itself rather than the unscoped days list the
- * source fetched and filtered — the event already carries exactly its own.
+ * `days` comes from the event itself, which carries exactly its own days, so
+ * there is no unscoped days list to fetch and filter.
  */
 export default function RoomMappingTree({
   eventId,
@@ -187,8 +187,8 @@ export default function RoomMappingTree({
 
   const tree = buildRoomTree(days, eventTracks, sections);
 
-  // The source let these three fail silently; the hooks carry no toast of
-  // their own, so the screen adds one.
+  // These three hooks carry no failure toast of their own, so the screen adds
+  // one rather than let them fail silently.
   const setKeynoteRoom = (roomId: string | null) =>
     updateMappings.mutate(
       { configId: eventId, keynoteRoomId: roomId },
