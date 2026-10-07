@@ -15,7 +15,7 @@
 // under the License.
 
 
-import { useState, type ChangeEvent } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Box,
@@ -61,28 +61,37 @@ interface SpeakerCsvImportDialogProps {
 }
 
 // Pick a CSV, review what it would add or replace, then import row by row.
-// One request per row, in order, as the source did: the backend has no bulk
-// endpoint, and one at a time keeps a big file under its rate limit.
+// One request per row, in order: the backend has no bulk endpoint, and one at
+// a time keeps a big file under its rate limit.
 export default function SpeakerCsvImportDialog({ open, onClose }: SpeakerCsvImportDialogProps) {
   const [step, setStep] = useState<DialogStep>("idle");
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
 
-  const { data: speakers = [] } = useListSpeakers();
+  // Rows are matched against the library to spot duplicates, so a file can
+  // only be chosen once the list has loaded. Before that (auth not ready, or
+  // the request paused offline) every row would read as new and be created
+  // again.
+  const { data: speakers = [], isSuccess: speakersLoaded } = useListSpeakers();
   const createSpeaker = useCreateSpeaker();
   const updateSpeaker = useUpdateSpeaker();
   const queryClient = useQueryClient();
+  // Bumped per file chosen and on reset, so a read that finishes after the
+  // dialog was closed, or after another file was chosen, is dropped.
+  const readId = useRef(0);
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     // Browsers suppress onChange when the same file is chosen again; clearing
     // the value re-arms it.
     e.target.value = "";
-    if (!file) return;
+    if (!file || !speakersLoaded) return;
 
+    const id = ++readId.current;
     file
       .text()
       .then((text) => {
+        if (id !== readId.current) return;
         const result = parseSpeakerCsv(text, speakers);
         if (result.error) {
           setParseError(result.error);
@@ -92,7 +101,9 @@ export default function SpeakerCsvImportDialog({ open, onClose }: SpeakerCsvImpo
         setRows(result.rows);
         setStep("preview");
       })
-      .catch(() => setParseError("Failed to read the file."));
+      .catch(() => {
+        if (id === readId.current) setParseError("Failed to read the file.");
+      });
   }
 
   function setDuplicateAction(index: number, action: DuplicateAction) {
@@ -125,6 +136,7 @@ export default function SpeakerCsvImportDialog({ open, onClose }: SpeakerCsvImpo
   }
 
   function reset() {
+    readId.current++;
     setStep("idle");
     setRows([]);
     setParseError(null);
@@ -185,9 +197,20 @@ export default function SpeakerCsvImportDialog({ open, onClose }: SpeakerCsvImpo
                 {parseError}
               </Typography>
             )}
-            <Button variant="outlined" component="label" sx={{ alignSelf: "flex-start" }}>
+            <Button
+              variant="outlined"
+              component="label"
+              disabled={!speakersLoaded}
+              sx={{ alignSelf: "flex-start" }}
+            >
               Choose CSV file
-              <input type="file" accept=".csv,text/csv" hidden onChange={handleFileChange} />
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                hidden
+                disabled={!speakersLoaded}
+                onChange={handleFileChange}
+              />
             </Button>
           </Box>
         )}

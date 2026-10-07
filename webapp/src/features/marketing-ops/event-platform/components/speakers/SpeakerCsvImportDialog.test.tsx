@@ -14,15 +14,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { eventPlatformKeys as keys } from "../../api/queryKeys";
 import SpeakerCsvImportDialog from "./SpeakerCsvImportDialog";
 
-const api = vi.hoisted(() => ({ create: vi.fn() }));
+const api = vi.hoisted(() => ({ create: vi.fn(), loaded: true }));
 vi.mock("../../api/speakers", () => ({
-  useListSpeakers: () => ({ data: [] }),
+  useListSpeakers: () => ({ data: api.loaded ? [] : undefined, isSuccess: api.loaded }),
   useCreateSpeaker: () => ({ mutateAsync: api.create }),
   useUpdateSpeaker: () => ({ mutateAsync: vi.fn() }),
 }));
@@ -40,17 +40,40 @@ function setup() {
   return { onClose, invalidate, reopen: () => (rerender(ui(false)), rerender(ui(true))) };
 }
 
+const fileInput = () => document.querySelector('input[type="file"]') as HTMLInputElement;
+
+// jsdom's File has no text(), the one method the dialog reads it with.
+const pick = (text: () => Promise<string>) => fireEvent.change(fileInput(), { target: { files: [{ text }] } });
+
 async function choose(csv: string) {
-  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-  // jsdom's File has no text(), the one method the dialog reads it with.
-  fireEvent.change(input, { target: { files: [{ text: () => Promise.resolve(csv) }] } });
+  pick(() => Promise.resolve(csv));
   await screen.findByRole("button", { name: "Import" });
 }
 
 const escape = () => fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
 
 describe("SpeakerCsvImportDialog", () => {
-  beforeEach(() => api.create.mockReset().mockResolvedValue({}));
+  beforeEach(() => {
+    api.create.mockReset().mockResolvedValue({});
+    api.loaded = true;
+  });
+
+  it("offers no file until the speaker list has loaded", () => {
+    api.loaded = false;
+    setup();
+    expect(fileInput()).toBeDisabled();
+  });
+
+  it("drops a file read that finishes after the dialog was closed", async () => {
+    const { reopen } = setup();
+    let finish: (csv: string) => void = () => {};
+    pick(() => new Promise((resolve) => (finish = resolve)));
+    escape();
+    reopen();
+    await act(async () => finish("name\nNew Person"));
+    expect(screen.queryByText("New Person")).toBeNull();
+    expect(screen.getByText("Choose CSV file")).toBeInTheDocument();
+  });
 
   it("reopens empty after Escape in the preview", async () => {
     const { onClose, reopen } = setup();
