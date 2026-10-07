@@ -56,11 +56,27 @@ vi.mock("@config/apiConfig", () => ({
 vi.mock("../useExpense", () => ({
   useExpenseAppData: () => appDataState.current,
 }));
+// What each dashboard read was asked for: whether it was enabled at all.
+const asked = {
+  subsidiaries: [] as boolean[],
+  types: [] as boolean[],
+  report: [] as boolean[],
+};
+
 vi.mock("./useExpenseDashboard", () => ({
   isExpenseBackendConfigured: () => configured.value,
-  useExpenseSubsidiaries: () => queryState({ isSuccess: true, data: [] }),
-  useExpenseDashboardTypes: () => queryState({ isSuccess: true, data: [] }),
-  useExpenseClaimsReport: () => reportState.current,
+  useExpenseSubsidiaries: (enabled = true) => {
+    asked.subsidiaries.push(enabled);
+    return queryState({ isSuccess: true, data: [] });
+  },
+  useExpenseDashboardTypes: (enabled = true) => {
+    asked.types.push(enabled);
+    return queryState({ isSuccess: true, data: [] });
+  },
+  useExpenseClaimsReport: (_filter: unknown, enabled = true) => {
+    asked.report.push(enabled);
+    return reportState.current;
+  },
 }));
 
 const { default: ExpenseDashboardScreen } = await import("./ExpenseDashboardScreen");
@@ -89,6 +105,9 @@ const populatedReport = {
 };
 
 beforeEach(() => {
+  asked.subsidiaries.length = 0;
+  asked.types.length = 0;
+  asked.report.length = 0;
   configured.value = true;
   appDataState.current = queryState({ isSuccess: true, data: FINANCE_APP_DATA });
   reportState.current = queryState({ isSuccess: true, data: populatedReport });
@@ -136,9 +155,8 @@ describe("a failed app-data lookup", () => {
   });
 });
 
-// The backend's gate (`allowedAdminRoles`) decides this, and `enableFinanceView`
-// on /app-data is the same check. A reader without it sees the refusal
-// regardless of what the report itself holds.
+// Finance readers only: `enableFinanceView` on /app-data decides this. A reader
+// without it sees the refusal regardless of what the report itself holds.
 describe("a reader without the finance role", () => {
   it("is refused, even though the report query already has data", () => {
     appDataState.current = queryState({
@@ -150,6 +168,19 @@ describe("a reader without the finance role", () => {
 
     expect(refusal()).toBeInTheDocument();
     expect(aStat()).not.toBeInTheDocument();
+  });
+
+  it("never fires the reference lists or the report for it", () => {
+    appDataState.current = queryState({
+      isSuccess: true,
+      data: { enableFinanceView: false, enableLeadView: true, currencyCode: "USD" },
+    });
+
+    render(<ExpenseDashboardScreen />);
+
+    expect(asked.subsidiaries.every((enabled) => !enabled)).toBe(true);
+    expect(asked.types.every((enabled) => !enabled)).toBe(true);
+    expect(asked.report.every((enabled) => !enabled)).toBe(true);
   });
 });
 
@@ -176,6 +207,14 @@ describe("a finance approver with everything loaded", () => {
     expect(refusal()).not.toBeInTheDocument();
     expect(aStat()).toBeInTheDocument();
     expect(screen.getByText("$1,000.00")).toBeInTheDocument();
+  });
+
+  it("requests the reference lists and the report once the role is known", () => {
+    render(<ExpenseDashboardScreen />);
+
+    expect(asked.subsidiaries.at(-1)).toBe(true);
+    expect(asked.types.at(-1)).toBe(true);
+    expect(asked.report.at(-1)).toBe(true);
   });
 
   // Not "no data" — a real answer that happens to be zero rows, worded as

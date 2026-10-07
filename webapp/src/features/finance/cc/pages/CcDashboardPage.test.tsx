@@ -24,6 +24,12 @@ import { localIsoMonth } from "@utils/localDate";
 
 vi.mock("@hooks/useAccessToken", () => ({ useAccessToken: () => async () => "token" }));
 vi.mock("@asgardeo/react", () => ({ useAsgardeo: () => ({ isSignedIn: true }) }));
+// The copy-reminder button reports its outcome through the notifications
+// context; the page is rendered here without the provider.
+const notify = { showSuccess: vi.fn(), showError: vi.fn() };
+vi.mock("@context/notifications/NotificationsContext", () => ({
+  useNotifications: () => notify,
+}));
 
 // Who is looking, and what each hook was asked for.
 const role = { privileges: ["employee"] as string[] };
@@ -183,6 +189,8 @@ beforeEach(() => {
   asked.managerCompliance.length = 0;
   asked.leadSummary.length = 0;
   asked.leadTeam.length = 0;
+  notify.showSuccess.mockClear();
+  notify.showError.mockClear();
 });
 
 // index.tsx:63-65 — only a lead or finance gets the company-wide view and the
@@ -378,5 +386,43 @@ describe("the cardholder table", () => {
     expect(row).toHaveTextContent("700");
     expect(row).not.toHaveTextContent("700.00");
     expect(row).toHaveTextContent("41.5");
+  });
+});
+
+// CcDashboardPage.tsx:659-760 — "Group by: Reporting Manager" rolls the backlog
+// up under each manager, and each row can be expanded or copied as a reminder.
+describe("the reporting-manager grouping", () => {
+  const groupByManager = async () => {
+    role.privileges = ["employee", "finance"];
+    render();
+    await userEvent.click(screen.getByRole("combobox", { name: "Group by" }));
+    await userEvent.click(screen.getByRole("option", { name: "Group by: Reporting Manager" }));
+  };
+
+  it("swaps the card-holder rows for one row per reporting manager", async () => {
+    await groupByManager();
+    const row = screen.getByText("Lead Person").closest("tr") as HTMLElement;
+    expect(row).toHaveTextContent("700");
+    // Their reports stay folded away until the row is expanded.
+    expect(screen.queryByText("Late Filer")).not.toBeInTheDocument();
+  });
+
+  it("expands a manager into the individual reports behind them", async () => {
+    await groupByManager();
+    await userEvent.click(screen.getByRole("button", { name: "Expand reports" }));
+    expect(screen.getByText("Late Filer")).toBeInTheDocument();
+  });
+
+  it("copies a reminder for the manager to the clipboard", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    await groupByManager();
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy reminder" }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const copied = writeText.mock.calls[0][0] as string;
+    expect(copied).toContain("Hi Lead, 1 of your direct reports has unsubmitted credit card transactions:");
+    expect(copied).toContain("- Late Filer: 2 items, USD 700");
   });
 });

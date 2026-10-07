@@ -87,6 +87,18 @@ describe("buildExpenseReportCsv", () => {
     expect(csv).toContain("Total Value,1000,n/a");
   });
 
+  // The same rule for each entity row: an open-ended period has no prior
+  // period, so the row's change is absent too and must not print "undefined%".
+  it("marks an entity's missing comparison as n/a, not undefined%", () => {
+    const base = report();
+    const entity = { ...base.entityBreakdown[0], totalValueChangePercentage: undefined };
+    const csv = buildExpenseReportCsv(report({ entityBreakdown: [entity] }), "All Time");
+
+    expect(csv).not.toContain("undefined");
+    expect(csv).toContain(`${entity.legalName}`);
+    expect(csv).toMatch(/,n\/a\n/);
+  });
+
   // A value starting with =, +, - or @ is how a spreadsheet cell becomes a
   // live formula — an employee named "=1+1" must not execute as one.
   it("guards a formula-looking value with a leading quote", () => {

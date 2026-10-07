@@ -16,7 +16,7 @@
 
 import { Box, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { money } from "../../util/financeFormat";
-import { CELL_SX, HEAD_SX } from "../../opd/dashboard/opdDashboardTableSx";
+import { CELL_SX, HEAD_SX } from "../../components/dashboardTableSx";
 import type { ExpenseReportMonthlyItem } from "../expenseTypes";
 
 /** One row per month, one column per expense category, with a Total column

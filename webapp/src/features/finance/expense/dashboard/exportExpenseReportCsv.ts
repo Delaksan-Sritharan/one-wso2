@@ -78,7 +78,7 @@ export function buildExpenseReportCsv(report: ExpenseClaimsReport, period: Expen
         item.claimCount,
         item.totalValue,
         item.averageClaimValue,
-        `${item.totalValueChangePercentage}%`,
+        change(item.totalValueChangePercentage),
       ]),
     ),
     ...section(

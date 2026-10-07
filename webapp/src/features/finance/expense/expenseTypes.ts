@@ -177,8 +177,8 @@ export function nextStatus(view: ApproverView, decision: "approve" | "reject"): 
 //
 // Response types for the expense-claims backend's claims report. GET
 // /claims-report is the one org-wide, aggregated report behind this dashboard.
-// The backend gates it on `allowedAdminRoles`, the same check that produces
-// `enableFinanceView` above, so that flag is also the correct gate here. See
+// It is visible to finance readers only, the same audience `enableFinanceView`
+// above describes, so that flag is also the correct gate here. See
 // useFinanceGate's `finance-overview` case.
 
 /** `/subsidiaries` on the expense-claims backend. Master Data's own
@@ -210,7 +210,9 @@ export interface ExpenseReportEntityItem {
   claimCount: number;
   totalValue: number;
   averageClaimValue: number;
-  totalValueChangePercentage: number;
+  // Absent when there is no prior period to compare against ("All Time"), the
+  // same as the top-level changes above.
+  totalValueChangePercentage?: number;
 }
 
 export interface ExpenseReportTypeAmount {

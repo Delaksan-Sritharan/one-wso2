@@ -37,17 +37,20 @@ export interface ExpenseDashboardDraftFilters {
 /**
  * One labelled dropdown inside the Advanced Filter panel. Every option list
  * starts with its "All ..." sentinel, so an unset filter is a real, displayable
- * value rather than an empty field.
+ * value rather than an empty field. `optionLabel` shows an option as something
+ * other than its raw value, while the value itself stays what gets filtered on.
  */
 function FilterSelect({
   label,
   value,
   options,
+  optionLabel = (option) => option,
   onChange,
 }: {
   label: string;
   value: string;
   options: readonly string[];
+  optionLabel?: (option: string) => string;
   onChange: (next: string) => void;
 }) {
   return (
@@ -61,7 +64,7 @@ function FilterSelect({
     >
       {options.map((option) => (
         <MenuItem key={option} value={option}>
-          {option}
+          {optionLabel(option)}
         </MenuItem>
       ))}
     </TextField>
@@ -78,6 +81,7 @@ export function ExpenseDashboardFilters({
   regionOptions,
   categoryOptions,
   statusOptions,
+  statusLabel,
   onApply,
   onClear,
 }: {
@@ -90,6 +94,7 @@ export function ExpenseDashboardFilters({
   regionOptions: readonly string[];
   categoryOptions: readonly string[];
   statusOptions: readonly string[];
+  statusLabel: (status: string) => string;
   onApply: () => void;
   onClear: () => void;
 }) {
@@ -161,6 +166,7 @@ export function ExpenseDashboardFilters({
             label="Filter by Status"
             value={draft.status}
             options={[ALL_STATUSES, ...statusOptions]}
+            optionLabel={(option) => (option === ALL_STATUSES ? option : statusLabel(option))}
             onChange={(v) => set("status", v)}
           />
           <FilterSelect

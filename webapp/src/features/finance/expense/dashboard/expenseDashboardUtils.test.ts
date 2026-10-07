@@ -40,7 +40,7 @@ describe("getPeriodRange", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it("covers the current month to date for Monthly", () => {
+  it("covers the whole current month for Monthly", () => {
     expect(getPeriodRange("Monthly")).toEqual({ startDate: "2026-07-01", endDate: "2026-07-31" });
   });
 

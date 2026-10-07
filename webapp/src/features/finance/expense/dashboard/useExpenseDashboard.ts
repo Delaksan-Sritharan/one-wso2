@@ -101,7 +101,7 @@ function reportQueryString(filter: ExpenseClaimsReportFilter): string {
 // period-scoped, filtered totals, the status/entity/monthly/employee
 // breakdowns, and the sales-region list the filter bar itself offers.
 //
-// Backend-gated on `allowedAdminRoles`, the same check `/app-data` answers as
+// Visible to finance readers only: the same check `/app-data` answers as
 // `enableFinanceView`. This screen's visibility (useFinanceGate's
 // `finance-overview` case) is already the correct gate, so nothing new is
 // checked here.

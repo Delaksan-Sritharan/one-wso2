@@ -16,7 +16,7 @@
 
 import { Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@wso2/oxygen-ui";
 import { money } from "../../util/financeFormat";
-import { CELL_SX, HEAD_SX } from "../../opd/dashboard/opdDashboardTableSx";
+import { CELL_SX, HEAD_SX } from "../../components/dashboardTableSx";
 import { formatPercentage, percentageColor } from "./expenseDashboardUtils";
 import type { ExpenseReportEntityItem } from "../expenseTypes";
 
@@ -74,10 +74,15 @@ export function ExpenseEntityBreakdownTable({
               align="right"
               sx={{
                 ...CELL_SX,
-                color: item.claimCount === 0 ? "text.disabled" : percentageColor(item.totalValueChangePercentage),
+                color:
+                  item.claimCount === 0 || item.totalValueChangePercentage === undefined
+                    ? "text.disabled"
+                    : percentageColor(item.totalValueChangePercentage),
               }}
             >
-              {item.claimCount === 0 ? "—" : formatPercentage(item.totalValueChangePercentage)}
+              {item.claimCount === 0 || item.totalValueChangePercentage === undefined
+                ? "—"
+                : formatPercentage(item.totalValueChangePercentage)}
             </TableCell>
           </TableRow>
         ))}

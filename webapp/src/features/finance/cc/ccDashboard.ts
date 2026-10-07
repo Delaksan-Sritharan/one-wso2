@@ -180,7 +180,8 @@ export function buildBreakdown(
  * "Copy reminder" button.
  */
 export function buildManagerReminderMessage(manager: CcManagerCompliance, currency: string): string {
-  const firstName = manager.managerName.split(" ")[0];
+  // A manager with no name on record still gets a greeting, not "Hi ,".
+  const firstName = manager.managerName.split(" ")[0] || "there";
   const count = manager.reports.length;
   const reportLines = manager.reports.map(
     (report) =>

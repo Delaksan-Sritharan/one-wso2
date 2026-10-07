@@ -19,6 +19,7 @@ import {
   Alert,
   Box,
   Button,
+  GlobalStyles,
   LinearProgress,
   Menu,
   MenuItem,
@@ -36,7 +37,9 @@ import FinanceShell from "../../components/FinanceShell";
 import { money } from "../../util/financeFormat";
 import { useExpenseAppData } from "../useExpense";
 import { useExpenseClaimsReport, useExpenseDashboardTypes, useExpenseSubsidiaries } from "./useExpenseDashboard";
-import { ExpenseDashboardPanel, ExpenseStatTile } from "./ExpenseDashboardParts";
+import { DashboardPanel } from "../../components/DashboardPanel";
+import { expenseStatusMeta } from "../../components/FinanceChips";
+import { ExpenseStatTile } from "./ExpenseDashboardParts";
 import { ExpenseDashboardFilters, type ExpenseDashboardDraftFilters } from "./ExpenseDashboardFilters";
 import { ExpenseEntityBreakdownTable } from "./ExpenseEntityBreakdownTable";
 import { ExpenseMonthlyBreakdownTable } from "./ExpenseMonthlyBreakdownTable";
@@ -72,13 +75,13 @@ const DEFAULT_FILTERS: ExpenseDashboardDraftFilters = {
 /**
  * Finance → Overview → Expense Claims. Shows the org-wide claims report: the
  * filters, the three summary tiles, the status breakdown, the three breakdown
- * tables behind their tabs, and the CSV export. Built with the Oxygen UI
- * components and the `Autocomplete` filter bar every other finance screen
- * uses.
+ * tables behind their tabs, and the CSV export. The filters sit in an
+ * Advanced Filter popover; the rest is built from Oxygen UI components.
  *
- * Gated on `enableFinanceView` from `/app-data`. The backend's
- * `GET /claims-report` is gated on the same `allowedAdminRoles` check that
- * produces that flag, so the screen needs no separate permission.
+ * Visible to finance readers only: gated on `enableFinanceView` from
+ * `/app-data`, the same flag that gates the other finance screens. The report
+ * endpoint enforces the same rule on its side, so the screen needs no separate
+ * permission check.
  */
 export default function ExpenseDashboardScreen({ headerActions }: { headerActions?: ReactNode } = {}) {
   return (
@@ -96,10 +99,34 @@ export default function ExpenseDashboardScreen({ headerActions }: { headerAction
   );
 }
 
+// The dashboard sits inside the app shell, so the browser's print would take
+// the whole app with it. While printing, hide everything except the report,
+// and let the report take the full page height rather than its scroll area.
+const PRINT_STYLES = (
+  <GlobalStyles
+    styles={{
+      "@media print": {
+        "body *": { visibility: "hidden" },
+        "#expense-dashboard-report, #expense-dashboard-report *": { visibility: "visible" },
+        "#expense-dashboard-report": {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          overflow: "visible",
+        },
+      },
+    }}
+  />
+);
+
 function DashboardBody() {
   const appData = useExpenseAppData();
-  const subsidiaries = useExpenseSubsidiaries();
-  const expenseTypes = useExpenseDashboardTypes();
+  // Reference lists and the report are only requested once the role is known,
+  // so a reader without it never fires requests the screen then refuses to show.
+  const hasFinanceView = appData.data?.enableFinanceView === true;
+  const subsidiaries = useExpenseSubsidiaries(hasFinanceView);
+  const expenseTypes = useExpenseDashboardTypes(hasFinanceView);
 
   // `draft` is what the filter bar shows; `applied` is what the current
   // report was fetched with. Keeping them apart is what lets the bar require
@@ -129,14 +156,17 @@ function DashboardBody() {
     endDate: applied.endDate,
   });
 
-  const report = useExpenseClaimsReport({
-    startDate,
-    endDate,
-    businessEntity,
-    expenseTypeId,
-    status: applied.status === ALL_STATUSES ? undefined : applied.status,
-    salesRegion: applied.region === ALL_REGIONS ? undefined : applied.region,
-  });
+  const report = useExpenseClaimsReport(
+    {
+      startDate,
+      endDate,
+      businessEntity,
+      expenseTypeId,
+      status: applied.status === ALL_STATUSES ? undefined : applied.status,
+      salesRegion: applied.region === ALL_REGIONS ? undefined : applied.region,
+    },
+    hasFinanceView,
+  );
 
   const isDirty = (Object.keys(draft) as (keyof ExpenseDashboardDraftFilters)[]).some(
     (key) => draft[key] !== applied[key],
@@ -195,6 +225,7 @@ function DashboardBody() {
 
   return (
     <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+      {PRINT_STYLES}
       <ExpenseDashboardFilters
         draft={draft}
         onDraftChange={setDraft}
@@ -205,6 +236,7 @@ function DashboardBody() {
         regionOptions={regionOptions}
         categoryOptions={categoryOptions}
         statusOptions={EXPENSE_FILTERABLE_STATUSES}
+        statusLabel={(status) => expenseStatusMeta(status).label}
         onApply={() => setApplied(draft)}
         onClear={handleClearAll}
       />
@@ -226,7 +258,10 @@ function DashboardBody() {
         )}
 
         {!report.isError && report.data && report.data.current.claimCount > 0 && (
-          <Stack spacing={3}>
+          <Stack id="expense-dashboard-report" spacing={3}>
+            <Typography sx={{ display: "none", "@media print": { display: "block", fontSize: 18, fontWeight: 700 } }}>
+              Expense Claims Dashboard · {applied.period}
+            </Typography>
             {/* Three across on a wide screen, two on a tablet, stacked on a
                 phone — the same breakpoints `OpdDashboardScreen` draws its
                 own stat row with. */}
@@ -254,7 +289,7 @@ function DashboardBody() {
               />
             </Box>
 
-            <ExpenseDashboardPanel title="Claims by Status">
+            <DashboardPanel title="Claims by Status">
               <Box
                 sx={{
                   display: "grid",
@@ -265,13 +300,13 @@ function DashboardBody() {
                 {report.data.statusBreakdown.map((item) => (
                   <ExpenseStatTile
                     key={item.status}
-                    label={item.status}
+                    label={expenseStatusMeta(item.status).label}
                     value={item.count.toLocaleString("en-US")}
                     caption={`Avg ${item.averageDaysPending} days`}
                   />
                 ))}
               </Box>
-            </ExpenseDashboardPanel>
+            </DashboardPanel>
 
             <Box sx={{ pr: 1 }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1.5}>

@@ -16,7 +16,7 @@
 
 import { Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@wso2/oxygen-ui";
 import { money } from "../../util/financeFormat";
-import { CELL_SX, HEAD_SX } from "../../opd/dashboard/opdDashboardTableSx";
+import { CELL_SX, HEAD_SX } from "../../components/dashboardTableSx";
 import type { ExpenseReportEmployeeItem } from "../expenseTypes";
 
 /** One row per employee who filed a claim in the period, with the

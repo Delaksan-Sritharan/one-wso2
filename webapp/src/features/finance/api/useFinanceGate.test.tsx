@@ -216,8 +216,8 @@ describe("the Finance Overview entry", () => {
 
   // The expense LEAD flag is not this role — it opens Claim Approval, but
   // the Expense Claims dashboard is gated on the finance role specifically
-  // (the same `enableFinanceView`/`allowedAdminRoles` check its own backend
-  // enforces on GET /claims-report), so a lead holding nothing else does not
+  // (the same `enableFinanceView` check the report endpoint enforces on
+  // GET /claims-report), so a lead holding nothing else does not
   // get an Overview entry they would only find empty.
   it("is not opened by the expense lead role alone", () => {
     roles.expenseLead = true;

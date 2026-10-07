@@ -34,9 +34,10 @@ export interface PeriodRange {
 }
 
 /**
- * Each preset covers the current period to date. `new Date(y, m + 1, 0)` is
- * the last day of month `m`, which keeps month lengths and leap years
- * correct without a date library.
+ * Each preset covers its whole calendar period, first day through last, except
+ * All Time, which runs up to today. `new Date(y, m + 1, 0)` is the last day of
+ * month `m`, which keeps month lengths and leap years correct without a date
+ * library.
  */
 export function getPeriodRange(
   preset: ExpenseDashboardPeriod,

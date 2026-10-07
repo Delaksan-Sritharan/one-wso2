@@ -14,38 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import type { ReactNode } from "react";
 import { Card, Typography } from "@wso2/oxygen-ui";
 import { formatPercentage, percentageColor } from "./expenseDashboardUtils";
-
-/**
- * A titled panel. Uses the same `Card variant="outlined"` shell as
- * `OpdDashboardPanel`, so the finance dashboards share one visual style.
- */
-export function ExpenseDashboardPanel({
-  title,
-  aside,
-  children,
-}: {
-  title: string;
-  /** Sits beside the title in lighter type, for a period or entity note. */
-  aside?: string;
-  children: ReactNode;
-}) {
-  return (
-    <Card variant="outlined" sx={{ p: 2, mt: 2 }}>
-      <Typography sx={{ fontSize: 14.5, fontWeight: 600, mb: 1 }}>
-        {title}
-        {aside && (
-          <Typography component="span" sx={{ fontSize: 13, fontWeight: 400, color: "text.secondary", ml: 1 }}>
-            {aside}
-          </Typography>
-        )}
-      </Typography>
-      {children}
-    </Card>
-  );
-}
 
 /**
  * One of the top-row figures, or one status-breakdown tile. `value` takes a pre-formatted string rather than a number: the three top
