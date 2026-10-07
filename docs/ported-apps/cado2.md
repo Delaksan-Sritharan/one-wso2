@@ -110,7 +110,7 @@ Behaviour is kept as it is today unless §7 says otherwise.
 
 - **My Quotes** — KPI filter chips by status, search, rich rows (customer, opportunity, totals,
   status, approval deadline), row menu (open, edit, delete draft). "New quote" button.
-- **Quote wizard** — Overview (Salesforce account, opportunity, legal entity, start date) → Products
+- **Quote wizard** — Overview (Salesforce account with its sales region, opportunity, legal entity, start date; an account with no sales region in Salesforce stops the quote here, with Next and Save draft disabled) → Products
   & Pricing (the opportunity's currency and price book, locked; add lines from that price book only;
   discounts; subscription term; partner commission) → Commercial (payment terms, contacts, bill-to
   and ship-to, special terms, justification) → Review (summary, approval preview, submit). The draft
