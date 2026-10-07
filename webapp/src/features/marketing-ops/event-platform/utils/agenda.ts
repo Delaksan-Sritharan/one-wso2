@@ -17,7 +17,6 @@
 
 // Agenda vocabulary and grid maths shared by the session editor, the event tabs
 // and the export: colour precedence, labels, item kinds and the slot grid.
-// Ported from the source's utils/agenda.ts.
 
 import {
   colorTokenHex,
@@ -92,7 +91,7 @@ export const trackLabel = (track: Track): string => track.room?.name ?? `Track $
 /** "Day 2", or the day's own label when it has one. */
 export const dayName = (day: ConferenceDay, index: number): string => day.label ?? `Day ${index + 1}`;
 
-/** "Day 2 · Sep 30" (or "<label> · Sep 30"), as the source's day tabs and pickers print it. */
+/** "Day 2 · Sep 30" (or "<label> · Sep 30"), as the day tabs and pickers print it. */
 export const dayOptionLabel = (day: ConferenceDay, index: number): string =>
   `${dayName(day, index)} · ${formatDayLabel(day.date)}`;
 
@@ -109,8 +108,8 @@ export const ITEM_KIND_LABELS: Record<ItemKind, string> = {
 
 // Kinds that occupy the whole day width rather than a single track column, and
 // so are never placed in a section. Every layout and drag decision keys off
-// this rather than listing kinds inline, which is what let 'break' handling
-// drift apart across files in the source.
+// this rather than listing kinds inline, so 'break' handling cannot drift
+// apart across files.
 //
 // 'activity' here means an interruption of the whole event (a networking
 // event, a reception, a party), printed in the public agenda as a full-width
@@ -167,7 +166,7 @@ export const slotCountOf = (day: Pick<ConferenceDay, "startMinute" | "endMinute"
 /** Wall-clock minute of day at the start of `slot` on a day starting at `startMinute`. */
 export const slotToMinute = (slot: number, startMinute: number): number => startMinute + slot * SLOT_MINUTES;
 
-/** The slot nearest a wall-clock minute of day, as the source's section dialog rounded it. */
+/** The slot nearest a wall-clock minute of day, as the section dialog rounds it. */
 export const minuteToSlot = (minute: number, startMinute: number): number =>
   Math.round((minute - startMinute) / SLOT_MINUTES);
 

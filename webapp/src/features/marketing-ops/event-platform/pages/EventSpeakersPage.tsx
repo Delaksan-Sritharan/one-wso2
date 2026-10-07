@@ -37,12 +37,11 @@ import SpeakerFormDialog from "../components/speakers/SpeakerFormDialog";
 import SpeakerPreviewDrawer from "../components/speakers/SpeakerPreviewDrawer";
 import type { Speaker, SpeakerType } from "../types/eventPlatformTypes";
 
-// The source's EventSpeakersPage: the speakers on this event's sessions, each
-// with the role they hold there, and the switch that hides one from the
-// published agenda.
+// The speakers on this event's sessions, each with the role they hold there,
+// and the switch that hides one from the published agenda.
 //
-// The source listed every event's sessions and filtered here; the list is now
-// fetched for this event only (see SessionFilters).
+// Sessions are fetched for this event only (see SessionFilters), rather than
+// listing every event's sessions and filtering here.
 
 const EVENT_SPEAKER_TYPES: readonly SpeakerType[] = ["internal", "external"];
 

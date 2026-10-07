@@ -15,7 +15,7 @@
 // under the License.
 
 // Every date and time helper the Event Platform needs, on native Date and Intl.
-// Replaces the source's dayjs (and its utc/timezone plugins), so no date
+// Built on these rather than dayjs (and its utc/timezone plugins), so no date
 // library is added for one app.
 //
 // Three kinds of value travel through here, and mixing them up is the bug to
@@ -138,7 +138,7 @@ function formatDateOnly(value: string, options: Intl.DateTimeFormatOptions): str
   );
 }
 
-/** "2026-09-29" → "Sep 29" (the source's `format("MMM D")`); the input unchanged if unparseable. */
+/** "2026-09-29" → "Sep 29"; the input unchanged if unparseable. */
 export function formatDayLabel(value: string): string {
   return formatDateOnly(value, { month: "short", day: "numeric" }) ?? value;
 }
@@ -149,8 +149,8 @@ export function formatFullDate(value: string): string {
 }
 
 /**
- * An event's span from its start date and day count, as the source dashboard
- * printed it: "Sep 29, 2026", "Sep 29–30, 2026", "Sep 30 – Oct 2, 2026".
+ * An event's span from its start date and day count, as the dashboard prints
+ * it: "Sep 29, 2026", "Sep 29–30, 2026", "Sep 30 – Oct 2, 2026".
  */
 export function formatDateRange(startDate: string, dayCount: number): string {
   if (!dateOnlyParts(startDate)) return startDate;
@@ -179,7 +179,7 @@ export function toInstant(date: Date | null | undefined): string | null {
 
 /**
  * Whether `now` is strictly before the instant — e.g. "is the shop still open".
- * False for an unparseable instant, as the source's `dayjs().isBefore(...)` was.
+ * False for an unparseable instant: an unknown deadline is never treated as ahead.
  */
 export function isNowBefore(value: string, now: Date = new Date()): boolean {
   const instant = parseInstant(value);
@@ -187,9 +187,8 @@ export function isNowBefore(value: string, now: Date = new Date()): boolean {
 }
 
 /**
- * An RFC3339 offset instant shown in `timeZone` as "9:00 AM PDT" (the source's
- * dayjs `format("h:mm A z")`). Zones without a common abbreviation get Intl's
- * "GMT+5:30" form, as dayjs gave. Assembled from parts so the separator is a
+ * An RFC3339 offset instant shown in `timeZone` as "9:00 AM PDT". Zones without
+ * a common abbreviation get Intl's "GMT+5:30" form. Assembled from parts so the separator is a
  * plain space whatever the ICU version (newer ones put U+202F before "AM").
  * Returns "" for an unparseable instant.
  */

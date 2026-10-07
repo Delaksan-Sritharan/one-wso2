@@ -56,13 +56,13 @@ export function speakerFormValues(speaker: Speaker | null): SpeakerFormValues {
   };
 }
 
-/** Name, title and type are required — the source's rule, not the backend's. */
+/** Name, title and type are required — a form rule; the backend does not enforce it. */
 export function isSpeakerFormValid(values: Pick<SpeakerFormValues, "name" | "title" | "speakerType">) {
   return values.name.trim().length > 0 && values.title.trim().length > 0 && values.speakerType !== "";
 }
 
 /**
- * The create/replace body. As in the source: the bio is sent as typed, company
+ * The create/replace body: the bio is sent as typed, company
  * and LinkedIn go as (possibly empty) strings, and the URL and logo-style
  * fields become null when blank so the agenda falls back to its defaults.
  */

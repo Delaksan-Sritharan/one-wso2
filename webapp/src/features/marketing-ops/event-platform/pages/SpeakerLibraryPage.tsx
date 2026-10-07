@@ -34,10 +34,10 @@ import SpeakerFormDialog from "../components/speakers/SpeakerFormDialog";
 import SpeakerPreviewDrawer from "../components/speakers/SpeakerPreviewDrawer";
 import type { Speaker, SpeakerType } from "../types/eventPlatformTypes";
 
-// The source's SpeakersPage: the speaker library every event draws from —
+// The speaker library every event draws from —
 // search, add, edit, delete, preview, and CSV import.
 
-// As in the source, the speaker pages offer only internal and external. An
+// The speaker pages offer only internal and external for new speakers. An
 // existing keynote or moderator keeps that type — the form always offers a
 // speaker's current one.
 const LIBRARY_TYPES: readonly SpeakerType[] = ["internal", "external"];
@@ -93,8 +93,8 @@ export default function SpeakerLibraryPage() {
 
   return (
     <Box>
-      {/* The shell titles the page, so the source's heading row keeps only
-          its search and actions. */}
+      {/* The shell titles the page, so the heading row holds only the
+          search and actions. */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3, flexWrap: "wrap" }}>
         {speakers.length > 0 ? (
           <TextField

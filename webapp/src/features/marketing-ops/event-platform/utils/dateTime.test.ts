@@ -123,7 +123,7 @@ describe("calendar dates", () => {
     expect(formatDayLabel("bad")).toBe("bad");
   });
 
-  it("formats an event's date range as the source dashboard did", () => {
+  it("formats an event's date range, collapsing a shared month and year", () => {
     expect(formatDateRange("2026-09-29", 1)).toBe("Sep 29, 2026");
     expect(formatDateRange("2026-09-28", 3)).toBe("Sep 28–30, 2026");
     expect(formatDateRange("2026-09-30", 3)).toBe("Sep 30 – Oct 2, 2026");

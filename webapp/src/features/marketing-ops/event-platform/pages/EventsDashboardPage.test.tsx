@@ -21,8 +21,8 @@ import type { MarketingOpsGate } from "@features/marketing-ops/api/useMarketingO
 import type { ConferenceConfig } from "../types/eventPlatformTypes";
 import EventsDashboardPage from "./EventsDashboardPage";
 
-// The two faces of the dashboard (the port spec's §8 Q1) and the live-shop
-// warning in front of creating an event.
+// Admins and shop-only operators see different dashboards, and creating an
+// event warns first while the live shop is open.
 
 vi.mock("@config/apiConfig", () => ({
   isMarketingOpsBackendConfigured: () => true,

@@ -57,8 +57,8 @@ export interface ColorTokenSwatch {
   dark: string;
 }
 
-// Light values are the source's, unchanged, so the board matches what the
-// downstream apps draw. Dark values differ only where the light hex would
+// Light values are the canonical palette, unchanged, so the board matches what
+// the downstream apps draw. Dark values differ only where the light hex would
 // vanish against a dark surface: dark-blue is 1.2:1 there, purple 3.2:1.
 const SWATCHES: Record<ColorToken, ColorTokenSwatch> = {
   red: { label: "Red", light: "#e0414a", dark: "#e0414a" },

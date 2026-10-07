@@ -20,9 +20,9 @@ import { Building2Icon } from "@wso2/oxygen-ui-icons-react";
 
 // Shared by the speaker card and the preview drawer.
 
-// The source marked internal speakers with the company's own logo mark. The
-// port does not carry brand assets, so an internal speaker gets a neutral
-// building badge instead, with the same tooltip.
+// An internal speaker gets a neutral building badge with an "Internal"
+// tooltip rather than the company's logo mark, so the app ships no brand
+// assets.
 export function InternalSpeakerBadge({ size = 20 }: { size?: number }) {
   return (
     <Tooltip title="Internal">

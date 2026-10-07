@@ -192,8 +192,8 @@ export function toEditorRichText(html: string): string {
 }
 
 /** Visible text only, for places that can't show markup (a confirmation message, an aria-label). */
-// Read back as textContent rather than a string, unlike the source, so
-// "&amp;" arrives as "&" and React doesn't print the entity literally.
+// Read back as textContent rather than a serialised string, so "&amp;"
+// arrives as "&" and React doesn't print the entity literally.
 export function stripHtmlTags(html: string): string {
   const fragment = DOMPurify.sanitize(html, { ALLOWED_TAGS: [], RETURN_DOM_FRAGMENT: true });
   return (fragment.textContent ?? "").trim();

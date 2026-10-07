@@ -65,18 +65,18 @@ import {
 
 const { DatePicker } = DatePickers;
 
-// The source's EventsDashboard: every event, and creating one.
+// Every event, and creating one.
 //
-// Two faces on one route (the port spec's §8 Q1). An admin gets the dashboard
-// as the source had it. A shop-only operator gets the same list read-only — no
-// create — because without it they had no way to reach an event's shop. Where
+// Two faces on one route. An admin gets the full dashboard. A shop-only
+// operator gets the same list read-only — no create — because without it they
+// would have no way to reach an event's shop. Where
 // a card leads is firstAllowedPath for that event, so it follows the same gate
 // as the event's own index redirect: the agenda for an admin, `shop/inventory`
 // for a shop operator.
 
 const ADMIN_GATE = "mops-event-platform-admin";
 
-// A new event's days start with the source's default 08:00–17:00 window; the
+// A new event's days default to an 08:00–17:00 window; the
 // real hours are set later in the event's Settings.
 const DEFAULT_DAY_START_MINUTE = 480;
 const DEFAULT_DAY_END_MINUTE = 1020;
@@ -203,8 +203,8 @@ function CreateEventDialog({ open, onClose }: { open: boolean; onClose: () => vo
                 <DatePicker
                   label="Start date"
                   value={field.value}
-                  // Clearing the field is ignored, as in the source: an event
-                  // always has a start date.
+                  // Clearing the field is ignored: an event always has a
+                  // start date.
                   onChange={(v) => {
                     if (v) field.onChange(v);
                   }}
@@ -404,8 +404,8 @@ export default function EventsDashboardPage() {
 
   return (
     <Box>
-      {/* The shell already titles the page "Events", so the source's heading
-          row keeps only its controls. */}
+      {/* The shell already titles the page "Events", so the heading row
+          holds only the controls. */}
       <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 1, flexWrap: "wrap" }}>
         <TextField
           size="small"

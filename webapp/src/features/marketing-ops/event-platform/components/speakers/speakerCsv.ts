@@ -23,10 +23,8 @@ import { SPEAKER_TYPES } from "./speakerTypes";
 // Speaker CSV import, the pure half: reading the file into preview rows, and
 // turning a row into a request body. The dialog does the I/O.
 //
-// The source split the text on newlines and commas by hand, which broke any
-// bio with a line break inside quotes (every such row became two garbage
-// rows). papaparse reads quoted cells properly; everything else — the
-// columns, the type fallback, the duplicate rule — is the source's.
+// papaparse reads quoted cells, so a bio with a comma or a line break inside
+// quotes stays one cell instead of splitting its row in two.
 
 /** The columns read, matched case-insensitively after trimming. Others are ignored. */
 export const SPEAKER_CSV_COLUMNS = [
@@ -67,7 +65,7 @@ export interface SpeakerCsvParseResult {
   error: string | null;
 }
 
-// Names compare case- and whitespace-insensitively, as the source did.
+// Names compare case- and whitespace-insensitively.
 const nameKey = (name: string) => name.trim().toLowerCase();
 
 // "Keynote", " MODERATOR " and so on are accepted; anything else is external.
@@ -91,8 +89,8 @@ export function parseSpeakerCsv(text: string, existing: readonly Speaker[]): Spe
     skipEmptyLines: "greedy",
     transformHeader: (h) => h.trim().toLowerCase(),
   });
-  // A short or long row is still readable by column name — the source took
-  // such rows too. A broken quote is not: past it, every cell is shifted.
+  // A short or long row is still readable by column name. A broken quote is
+  // not: past it, every cell is shifted.
   if (result.errors.some((e) => e.type !== "FieldMismatch")) {
     return { rows: [], error: "Failed to parse CSV. Check the file format." };
   }
@@ -151,8 +149,7 @@ export function csvCreateInput(parsed: ParsedSpeakerRow): SpeakerInput {
 /**
  * The PUT body replacing `existing` with a row. PUT replaces the whole
  * speaker, so what the CSV has no column for — the company logo and its
- * styles — is carried over from the existing speaker rather than cleared. (The
- * source carried the styles but dropped the logo URL.)
+ * styles — is carried over from the existing speaker rather than cleared.
  */
 export function csvReplaceInput(parsed: ParsedSpeakerRow, existing: Speaker): SpeakerInput {
   return {

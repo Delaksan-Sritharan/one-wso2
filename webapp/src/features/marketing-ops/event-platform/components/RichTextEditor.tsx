@@ -28,8 +28,8 @@ import {
   toEditorRichText,
 } from "@features/marketing-ops/event-platform/utils/sanitizeHtml";
 
-// Ported from the source's Quill 2 editor onto react-quill-new (the React 19
-// fork of react-quill the webapp already uses; see ParRichTextField).
+// Built on react-quill-new (the React 19 fork of react-quill the webapp
+// already uses; see ParRichTextField).
 //
 // Uncontrolled on purpose: `value` seeds the editor once, and every edit goes
 // out through `onChange` already sanitised. Feeding the sanitised HTML back in
@@ -63,7 +63,7 @@ Quill.register(
 const INLINE_MODULES = {
   toolbar: [[{ fontWeight: ["700", "400", "300"] }, "italic", "link"]],
   // Titles are one logical line; Enter does nothing rather than add a block.
-  // Keyed "Enter", not the source's 13: Quill 2 runs bindings for evt.key
+  // Keyed "Enter", not keyCode 13: Quill 2 runs bindings for evt.key
   // before evt.which, so a 13 binding sits behind its own Enter handler and
   // never fires.
   keyboard: { bindings: { enter: { key: "Enter", handler: () => false } } },
@@ -80,7 +80,7 @@ const FULL_MODULES = {
 
 type QuillInstance = ReturnType<ReactQuill["getEditor"]>;
 
-// Pasted content takes the editor's own styling rather than the source
+// Pasted content takes the editor's own styling rather than the pasted
 // document's. A Node.ELEMENT_NODE clipboard matcher can't do it: Quill applies
 // its tag-based matchers (bold for <b>, list for <li>, ...) after the element
 // matchers for the same node, so the outermost pasted element keeps its
@@ -200,7 +200,7 @@ export default function RichTextEditor({
   const [initialValue] = useState(() => (isInline ? toEditorBlocks(value) : toEditorRichText(value)));
   const [shouldFocus] = useState(Boolean(autoFocus));
 
-  // Seeded straight into the DOM, as the source did, rather than through
+  // Seeded straight into the DOM rather than through
   // `defaultValue`: react-quill-new would load that through the clipboard
   // matchers, which turn a 700 weight into a <strong> the toolbar has no
   // button to remove. "silent" keeps the load out of onChange and the undo
