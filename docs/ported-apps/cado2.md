@@ -124,7 +124,8 @@ Behaviour is kept as it is today unless §7 says otherwise.
   History tabs. When it's the viewer's turn, a "Your approval · CFO" panel at the top of the Quote
   tab says which role they act as and why it's asked (that step's reasons as rows: line, product
   group, discount and the limit it passes; the first three, then "Show N more"). Deal Desk, who
-  reviews every quote, sees "What's non-standard": every point from the approvals still to come,
+  reviews every quote, sees "What's non-standard": lines whose category the rep chose (the only place besides the
+  line's own "Category chosen by rep" tag), then every point from the approvals still to come,
   once each, with the approvals it needs ("· needs CRO and CFO"). Who approves is left to the
   Approvals tab. After a decision a line in
   the same place confirms it ("Approved as CRO."). Approve, Request changes and

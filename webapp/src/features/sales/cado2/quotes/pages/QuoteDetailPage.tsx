@@ -31,7 +31,6 @@ import { sheetFromVersion } from "@features/sales/cado2/quotes/sheet/sheetModel"
 import QuoteSheet from "@features/sales/cado2/quotes/components/sheet/QuoteSheet";
 import DocumentsPanel from "@features/sales/cado2/quotes/components/detail/DocumentsPanel";
 import StatusPanel from "@features/sales/cado2/quotes/components/detail/StatusPanel";
-import RepCategoriesNotice from "@features/sales/cado2/quotes/components/detail/RepCategoriesNotice";
 import PageHeader from "@features/sales/cado2/components/page-header/PageHeader";
 import { STATUS_COLOR, quoteLabel, quoteStatusLabel } from "@features/sales/cado2/quotes/lifecycle/lifecycle";
 import LifecycleDialog from "@features/sales/cado2/quotes/components/detail/LifecycleDialog";
@@ -44,7 +43,7 @@ import {
   useStoredApprovalPreview,
 } from "@features/sales/cado2/approvals/api/useApprovalApi";
 import type { ApprovalOutcome, ApprovalStep } from "@features/sales/cado2/approvals/api/approvalTypes";
-import { decisionNote } from "@features/sales/cado2/approvals/model/myApprovals";
+import { decisionNote, repCategoryPoints } from "@features/sales/cado2/approvals/model/myApprovals";
 import YourApprovalPanel, { YOUR_APPROVAL_ANCHOR } from "@features/sales/cado2/approvals/components/YourApprovalPanel";
 import { ArrowDownIcon } from "@wso2/oxygen-ui-icons-react";
 import { useCado2Me } from "@features/sales/cado2/api/useCado2Me";
@@ -222,10 +221,9 @@ export default function QuoteDetailPage(): JSX.Element {
                 steps={workflow.data?.steps ?? []}
                 actionable={actionable}
                 note={decisionNoteState?.quoteId === quoteId ? decisionNoteState.text : null}
+                repCategories={repCategoryPoints(sheet.lines)}
                 onDecide={openDecision}
               />
-              {/* Deal Desk verifies what the rep chose for unmapped products. */}
-              <RepCategoriesNotice lines={sheet.lines} />
               <QuoteSheet sheet={sheet} />
             </Stack>
             <StatusPanel
@@ -276,11 +274,6 @@ export default function QuoteDetailPage(): JSX.Element {
             : decision.outcome === "reject"
               ? `The approval stops for everyone, and version ${v.versionNumber} is rejected. The owner can revise it or close the quote.`
               : `The approval stops for everyone, and the owner is asked to change version ${v.versionNumber} and submit again.`}
-          {decision.outcome === "approve" && decision.step.role === "DEAL_DESK" && sheet ? (
-            <Box sx={{ mt: 2 }}>
-              <RepCategoriesNotice lines={sheet.lines} approving />
-            </Box>
-          ) : null}
         </LifecycleDialog>
       ) : null}
       {dialog === "recall" ? (
