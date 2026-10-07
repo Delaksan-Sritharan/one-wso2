@@ -25,6 +25,7 @@ import TilHomePage from "@features/til/pages/TilHomePage";
 import OrgChartPage from "@features/org-chart/pages/OrgChartPage";
 import SalesMeetingsPage from "@features/sales/pages/SalesMeetingsPage";
 import MeetingDetailPage from "@features/sales/pages/MeetingDetailPage";
+import SalesDealsPage from "@features/sales/pages/SalesDealsPage";
 import PromotionHistoryPage from "@features/promotion/pages/PromotionHistoryPage";
 import PromotionRequiresLeadRoute from "@features/promotion/components/PromotionRequiresLeadRoute";
 import LeadPortalPage, { LeadPortalIndex } from "@features/promotion/pages/LeadPortalPage";
@@ -968,6 +969,9 @@ export default function App() {
               preview flag; Cado2Shell resolves access for every page. See
               @features/sales/cado2/routes and docs/ported-apps/cado2.md. */}
           {isPreviewEnabled("cado2") && cado2Routes}
+          {/* Deals — MEDDPICC per Opportunity, from the MEDDPICC backend (shows a
+              not-connected state when ONE_WSO2_ECHO_BACKEND_URL is unset). */}
+          <Route path="sales/deals" element={<SalesDealsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           {/* Me → Menu: the cafeteria screen ported from the standalone
               menu app. One page, as the original was. */}
