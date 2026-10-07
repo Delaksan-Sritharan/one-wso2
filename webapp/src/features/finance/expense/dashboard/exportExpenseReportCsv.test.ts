@@ -109,6 +109,32 @@ describe("buildExpenseReportCsv", () => {
     expect(csv).toContain("'=SUM(A1:A10)");
   });
 
+  // Negative numbers and generated percentages are ours, not user text, so
+  // they must not pick up the formula-guard quote (Excel would show it).
+  it("leaves negative numbers and percentages unguarded", () => {
+    const csv = buildExpenseReportCsv(
+      report({
+        claimCountChangePercentage: -50,
+        totalValueChangePercentage: -12.5,
+        employeeBreakdown: [
+          {
+            employeeEmail: "x@wso2.com",
+            employeeName: "Dilani",
+            claimCount: 1,
+            pendingCount: 0,
+            claimsPerMonth: -1,
+            totalValue: -50,
+          },
+        ],
+      }),
+      "All Time",
+    );
+
+    expect(csv).toContain("Claim Count,10,-50%");
+    expect(csv).toContain("Dilani,x@wso2.com,1,0,-1,-50");
+    expect(csv).not.toContain("'-");
+  });
+
   // Tab and carriage return can start a formula in spreadsheet software too,
   // and a carriage return inside a cell must not break the row apart.
   it("guards tab- and carriage-return-led values and quotes ones with a line break", () => {

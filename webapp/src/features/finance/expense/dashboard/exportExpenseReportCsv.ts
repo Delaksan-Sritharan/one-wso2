@@ -14,15 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import { saveBlob } from "@utils/saveFile";
 import type { ExpenseClaimsReport, ExpenseDashboardPeriod } from "../expenseTypes";
 
 // A leading =, +, -, @, tab or carriage return can make spreadsheet software
-// treat the cell as a formula, so those values are prefixed with a quote before
-// they reach the file. Cells containing a quote, comma, or line break are
-// wrapped in double quotes, with embedded quotes doubled.
+// treat the cell as a formula, so free-text values are prefixed with a quote
+// before they reach the file. Numbers and generated percentages ("-12.5%") are
+// exempt: they are ours, not user text, and the quote would show in Excel.
+// Cells containing a quote, comma, or line break are wrapped in double quotes,
+// with embedded quotes doubled.
+const NUMERIC_LIKE = /^[-+]?\d+(\.\d+)?%?$/;
+
 function escapeCell(value: string | number): string {
   const text = String(value ?? "");
-  const guarded = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+  const guarded = !NUMERIC_LIKE.test(text) && /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
   return /[",\r\n]/.test(guarded) ? `"${guarded.replace(/"/g, '""')}"` : guarded;
 }
 
@@ -112,12 +117,7 @@ export function downloadExpenseReportCsv(report: ExpenseClaimsReport, period: Ex
   // A leading BOM so Excel reads the file as UTF-8 rather than the local
   // codepage.
   const blob = new Blob(["﻿", buildExpenseReportCsv(report, period)], {
-    type: "text/csv;charset=utf-8;",
+    type: "text/csv;charset=utf-8",
   });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `expense-claims-dashboard-${period.toLowerCase().replace(/\s+/g, "-")}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+  saveBlob(blob, `expense-claims-dashboard-${period.toLowerCase().replace(/\s+/g, "-")}.csv`);
 }
