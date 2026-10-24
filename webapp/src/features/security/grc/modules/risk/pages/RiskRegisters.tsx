@@ -69,6 +69,7 @@ import {
   fetchAssignmentTeams,
   fetchComplianceReferences,
   fetchLookupOptions,
+  fetchRiskCategories,
   fetchRiskDetail,
   fetchRisks,
   fetchRiskScores,
@@ -86,6 +87,7 @@ import type {
   Escalation,
   HistoryEntry,
   LookupOption,
+  RiskCategory,
   RiskEnvironment,
   RiskDetail,
   RiskListItem,
@@ -229,6 +231,9 @@ interface Filters {
   riskType: string[];
   treatmentStrategy: string[];
   ownerId: number[];
+  // Set only by a dashboard drill-down (no filter-bar control): its chip shows
+  // above the table and removes it.
+  categoryId: number[];
   // Register-template columns' filters. Only meaningful while the matching
   // column is shown (see templateInView), and cleared when it is hidden.
   customerId: number[];
@@ -241,6 +246,17 @@ interface Filters {
   dueOverdueOnly: boolean;
 }
 
+// A comma-separated list of positive integer ids from the URL; anything else is
+// dropped, as ids start at 1 and a bad value must not become a filter that
+// silently matches nothing.
+function parseIds(raw: string | null): number[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map(Number)
+    .filter((n) => Number.isSafeInteger(n) && n > 0);
+}
+
 const EMPTY_FILTERS: Filters = {
   search: "",
   teamId: [],
@@ -249,6 +265,7 @@ const EMPTY_FILTERS: Filters = {
   riskType: [],
   treatmentStrategy: [],
   ownerId: [],
+  categoryId: [],
   customerId: [],
   environment: [],
   platformId: [],
@@ -418,6 +435,7 @@ export default function RiskRegisters(): JSX.Element {
   const [assignmentTeams, setAssignmentTeams] = useState<RiskTeam[]>([]);
   const [riskScores, setRiskScores] = useState<RiskScore[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+  const [riskCategories, setRiskCategories] = useState<RiskCategory[]>([]);
   const [complianceRefs, setComplianceRefs] = useState<ComplianceReference[]>([]);
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -569,6 +587,7 @@ export default function RiskRegisters(): JSX.Element {
     fetchAssignmentTeams(authFetch).then(setAssignmentTeams).catch(console.error);
     fetchRiskScores(authFetch).then(setRiskScores).catch(console.error);
     fetchUsers(authFetch).then(setUsers).catch(console.error);
+    fetchRiskCategories(authFetch).then(setRiskCategories).catch(console.error);
     fetchComplianceReferences(authFetch).then(setComplianceRefs).catch(console.error);
   }, []);
 
@@ -606,6 +625,7 @@ export default function RiskRegisters(): JSX.Element {
         risk_type: filters.riskType.length ? filters.riskType : undefined,
         treatment_strategy: filters.treatmentStrategy.length ? filters.treatmentStrategy : undefined,
         owner_id: filters.ownerId.length ? filters.ownerId : undefined,
+        category_id: filters.categoryId.length ? filters.categoryId : undefined,
         customer_id: filters.customerId.length ? filters.customerId : undefined,
         environment: filters.environment.length ? filters.environment : undefined,
         platform_id: filters.platformId.length ? filters.platformId : undefined,
@@ -742,7 +762,8 @@ export default function RiskRegisters(): JSX.Element {
     const level = searchParams.get("level");
     const team = searchParams.get("team");
     const treatment = searchParams.get("treatment");
-    if (!view && !tab && !approved && !level && !team && !treatment) return;
+    const category = searchParams.get("category");
+    if (!view && !tab && !approved && !level && !team && !treatment && !category) return;
 
     // level/treatment come straight from the URL — a stale bookmark or typo
     // must not become a filter chip that silently matches nothing; dropping
@@ -757,7 +778,10 @@ export default function RiskRegisters(): JSX.Element {
       // > 0 as well as an integer, matching the riskId check above: ids start
       // at 1, and RiskDashboard uses 0 for "all registers", so team=0 would
       // otherwise reach the API as a filter that matches nothing.
-      teamId: team && Number.isSafeInteger(Number(team)) && Number(team) > 0 ? [Number(team)] : [],
+      // team and category take a comma-separated list: a Common Open Category
+      // row spans several registers.
+      teamId: parseIds(team),
+      categoryId: parseIds(category),
       treatmentStrategy: validTreatment ? [validTreatment] : [],
     });
     if (view === "all-stages") {
@@ -771,7 +795,7 @@ export default function RiskRegisters(): JSX.Element {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        ["view", "tab", "approved", "level", "team", "treatment"].forEach((k) => next.delete(k));
+        ["view", "tab", "approved", "level", "team", "treatment", "category"].forEach((k) => next.delete(k));
         return next;
       },
       { replace: true },
@@ -991,7 +1015,10 @@ export default function RiskRegisters(): JSX.Element {
   const dashboardFilterSummary = [
     filters.level[0] && (LEVEL_LABELS[filters.level[0]] ?? filters.level[0]),
     filters.treatmentStrategy[0] && (TREATMENT_LABELS[filters.treatmentStrategy[0]] ?? filters.treatmentStrategy[0]),
-    filters.teamId[0] !== undefined && (sourceTeams.find((t) => t.id === filters.teamId[0])?.name ?? null),
+    filters.teamId.length > 0 &&
+      filters.teamId.map((id) => sourceTeams.find((t) => t.id === id)?.name).filter(Boolean).join(", "),
+    filters.categoryId.length > 0 &&
+      filters.categoryId.map((id) => riskCategories.find((c) => c.id === id)?.name).filter(Boolean).join(", "),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -1033,6 +1060,21 @@ export default function RiskRegisters(): JSX.Element {
             ))}
           </Tabs>
         </Box>
+      )}
+
+      {filters.categoryId.length > 0 && (
+        <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Risk Category:
+          </Typography>
+          <Chip
+            size="small"
+            label={
+              filters.categoryId.map((id) => riskCategories.find((c) => c.id === id)?.name ?? `#${id}`).join(", ")
+            }
+            onDelete={() => setFilters({ ...filters, categoryId: [] })}
+          />
+        </Stack>
       )}
 
       <Paper variant="outlined" sx={{ p: 2, mb: 2, ...darkCardSx }}>

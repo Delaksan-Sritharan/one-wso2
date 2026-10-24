@@ -25,6 +25,9 @@ import { parseDateStr } from "../risk-registers/utils";
 export interface DrillDownFilter {
   level?: string;
   teamId?: number;
+  // Several registers at once — a category row that spans them. Wins over teamId.
+  teamIds?: number[];
+  categoryId?: number;
   treatment?: string;
   closed?: boolean;
 }

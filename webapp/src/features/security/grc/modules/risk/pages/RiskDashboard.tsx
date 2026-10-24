@@ -101,7 +101,9 @@ export default function RiskDashboard(): JSX.Element {
         qs.set("view", "all-stages");
       }
       if (filter.level) qs.set("level", filter.level);
-      if (filter.teamId) qs.set("team", String(filter.teamId));
+      if (filter.teamIds?.length) qs.set("team", filter.teamIds.join(","));
+      else if (filter.teamId) qs.set("team", String(filter.teamId));
+      if (filter.categoryId) qs.set("category", String(filter.categoryId));
       if (filter.treatment) qs.set("treatment", filter.treatment);
       navigate(`/security/risk/registers?${qs}`);
     },

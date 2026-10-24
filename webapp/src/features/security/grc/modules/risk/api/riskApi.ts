@@ -315,6 +315,7 @@ export interface ListRisksParams {
   risk_type?: string[];
   treatment_strategy?: string[];
   owner_id?: number[];
+  category_id?: number[];
   // Register-template filters: a risk whose template lacks the field never
   // matches.
   customer_id?: number[];
@@ -909,6 +910,7 @@ export async function fetchRisks(
   if (params.risk_type?.length) q.set("risk_type", params.risk_type.join(","));
   if (params.treatment_strategy?.length) q.set("treatment_strategy", params.treatment_strategy.join(","));
   if (params.owner_id?.length) q.set("owner_id", params.owner_id.join(","));
+  if (params.category_id?.length) q.set("category_id", params.category_id.join(","));
   if (params.customer_id?.length) q.set("customer_id", params.customer_id.join(","));
   if (params.environment?.length) q.set("environment", params.environment.join(","));
   if (params.platform_id?.length) q.set("platform_id", params.platform_id.join(","));
