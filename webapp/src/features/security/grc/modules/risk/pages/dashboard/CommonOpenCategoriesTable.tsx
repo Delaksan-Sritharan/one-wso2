@@ -27,9 +27,9 @@ import {
 } from "@wso2/oxygen-ui";
 import type { JSX } from "react";
 import type { CategoryCounts, CommonOpenCategory } from "../../api/riskApi";
-import { CountCells, CountHeaderCells, LegendRow, RegisterChip } from "./CategoryCounts";
+import { CountCells, CountHeaderCells, DrillLink, LegendRow, RegisterChip } from "./CategoryCounts";
 import { commonOpenStats, spreadColor, type ScopeRegister } from "./categoryViews";
-import { OPEN_COLOR } from "./constants";
+import { OPEN_COLOR, type OnDrillDown } from "./constants";
 
 const KEYS: (keyof CategoryCounts)[] = ["open", "accept", "remediate", "closed"];
 const FALLBACK_REGISTER_COLOR = "#6b7280";
@@ -38,6 +38,7 @@ interface CommonOpenCategoriesTableProps {
   rows: CommonOpenCategory[];
   registers: ScopeRegister[];
   registerColors: Map<string, string>;
+  onDrillDown: OnDrillDown;
 }
 
 function StatCard({ value, label, color }: { value: string; label: string; color?: string }): JSX.Element {
@@ -74,6 +75,7 @@ export default function CommonOpenCategoriesTable({
   rows,
   registers,
   registerColors,
+  onDrillDown,
 }: CommonOpenCategoriesTableProps): JSX.Element {
   const stats = commonOpenStats(rows, registers);
   const byId = new Map(registers.map((r) => [r.id, r]));
@@ -105,18 +107,35 @@ export default function CommonOpenCategoriesTable({
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.category_id}>
-                  <TableCell sx={{ fontWeight: 600 }}>{row.category_name}</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    <DrillLink
+                      label={`Show ${row.category_name} risks in Risk Register`}
+                      onClick={() => onDrillDown({ categoryId: row.category_id, teamIds: row.register_ids })}
+                    >
+                      {row.category_name}
+                    </DrillLink>
+                  </TableCell>
                   <TableCell>
                     <Stack direction="row" flexWrap="wrap" gap={0.5}>
                       {row.register_ids.map((id) => {
                         const register = byId.get(id);
                         return register ? (
-                          <RegisterChip key={id} register={register} color={colorOf(register)} />
+                          <RegisterChip
+                            key={id}
+                            register={register}
+                            color={colorOf(register)}
+                            onClick={() => onDrillDown({ categoryId: row.category_id, teamId: id })}
+                          />
                         ) : null;
                       })}
                     </Stack>
                   </TableCell>
-                  <CountCells counts={row} keys={KEYS} />
+                  <CountCells
+                    counts={row}
+                    keys={KEYS}
+                    subject={`${row.category_name} risks`}
+                    onSelect={(f) => onDrillDown({ ...f, categoryId: row.category_id, teamIds: row.register_ids })}
+                  />
                   <TableCell>
                     <SpreadBar affected={row.register_ids.length} total={registers.length} />
                   </TableCell>

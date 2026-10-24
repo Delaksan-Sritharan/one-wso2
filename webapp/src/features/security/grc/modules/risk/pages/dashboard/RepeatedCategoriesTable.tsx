@@ -25,19 +25,21 @@ import {
 } from "@wso2/oxygen-ui";
 import type { JSX } from "react";
 import type { CategoryCounts } from "../../api/riskApi";
-import { CountCells, CountHeaderCells, LegendRow, RegisterChip, CountLegend } from "./CategoryCounts";
+import { CountCells, CountHeaderCells, DrillLink, LegendRow, RegisterChip, CountLegend } from "./CategoryCounts";
 import { mostRepeatedSentence, type RegisterRepeats } from "./categoryViews";
+import type { OnDrillDown } from "./constants";
 
 const KEYS: (keyof CategoryCounts)[] = ["open", "accept", "remediate", "closed"];
 
 interface RepeatedCategoriesTableProps {
   groups: RegisterRepeats[];
   registerColors: Map<string, string>;
+  onDrillDown: OnDrillDown;
 }
 
 // "Repeated Risks Within Each Register": every register in scope, each with
 // its Repeated Categories or a single "No repeated risks found" row.
-export default function RepeatedCategoriesTable({ groups, registerColors }: RepeatedCategoriesTableProps): JSX.Element {
+export default function RepeatedCategoriesTable({ groups, registerColors, onDrillDown }: RepeatedCategoriesTableProps): JSX.Element {
   return (
     <>
       <TableContainer>
@@ -73,8 +75,20 @@ export default function RepeatedCategoriesTable({ groups, registerColors }: Repe
                       {chip}
                     </TableCell>
                   )}
-                  <TableCell sx={{ fontWeight: 600 }}>{row.category_name}</TableCell>
-                  <CountCells counts={row} keys={KEYS} />
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    <DrillLink
+                      label={`Show ${row.category_name} risks in ${register.name} in Risk Register`}
+                      onClick={() => onDrillDown({ categoryId: row.category_id, teamId: register.id })}
+                    >
+                      {row.category_name}
+                    </DrillLink>
+                  </TableCell>
+                  <CountCells
+                    counts={row}
+                    keys={KEYS}
+                    subject={`${row.category_name} risks in ${register.name}`}
+                    onSelect={(f) => onDrillDown({ ...f, categoryId: row.category_id, teamId: register.id })}
+                  />
                 </TableRow>
               ));
             })}

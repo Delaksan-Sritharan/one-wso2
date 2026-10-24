@@ -199,7 +199,7 @@ export default function DashboardView({
             />
           }
         >
-          <RepeatedCategoriesTable groups={repeatGroups} registerColors={registerColors} />
+          <RepeatedCategoriesTable groups={repeatGroups} registerColors={registerColors} onDrillDown={onDrillDown} />
         </ChartCard>
       )}
 
@@ -219,6 +219,7 @@ export default function DashboardView({
             rows={commonOpenCategories}
             registers={registers}
             registerColors={registerColors}
+            onDrillDown={onDrillDown}
           />
         </ChartCard>
       )}

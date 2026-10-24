@@ -18,7 +18,7 @@ import { Box, Chip, Stack, TableCell, Tooltip, Typography } from "@wso2/oxygen-u
 import type { JSX, ReactNode } from "react";
 import type { CategoryCounts } from "../../api/riskApi";
 import type { ScopeRegister } from "./categoryViews";
-import { CLOSED_COLOR, OPEN_COLOR, TREATMENT_COLORS } from "./constants";
+import { CLOSED_COLOR, OPEN_COLOR, TREATMENT_COLORS, type DrillDownFilter } from "./constants";
 
 // Open / Acc / Rem / Closed column definitions shared by the two category
 // tables. Open, Closed and Accept reuse the page's shared colours. Remediate is
@@ -30,6 +30,47 @@ const COUNT_COLUMNS: { key: keyof CategoryCounts; header: string; legend: string
   { key: "remediate", header: "Rem", legend: "Remediate", color: "#b87700" },
   { key: "closed", header: "Closed", legend: "Closed", color: CLOSED_COLOR },
 ];
+
+// What a count badge narrows the Risk Register to, on top of the row's own
+// scope. Open spans every approval stage (the all-stages view); Accept and
+// Remediate are the treatment strategy within Open.
+const COUNT_FILTERS: Record<keyof CategoryCounts, DrillDownFilter> = {
+  open: {},
+  accept: { treatment: "ACCEPT" },
+  remediate: { treatment: "REMEDIATE" },
+  closed: { closed: true },
+};
+
+// A table cell's text styled as a link; the cell stays text when onClick is
+// absent.
+export function DrillLink({
+  children,
+  label,
+  onClick,
+}: {
+  children: ReactNode;
+  label: string;
+  onClick?: () => void;
+}): JSX.Element {
+  if (!onClick) return <>{children}</>;
+  return (
+    <Box
+      component="button"
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      sx={{
+        all: "unset",
+        cursor: "pointer",
+        fontWeight: "inherit",
+        "&:hover": { textDecoration: "underline" },
+        "&:focus-visible": { outline: "2px solid currentColor", outlineOffset: 2, borderRadius: 0.5 },
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
 
 export function CountHeaderCells({ keys }: { keys: (keyof CategoryCounts)[] }): JSX.Element {
   return (
@@ -44,7 +85,19 @@ export function CountHeaderCells({ keys }: { keys: (keyof CategoryCounts)[] }): 
 }
 
 // One boxed number per column; zero renders as an em dash.
-export function CountCells({ counts, keys }: { counts: CategoryCounts; keys: (keyof CategoryCounts)[] }): JSX.Element {
+// With onSelect, each non-zero badge is a button reporting the filter for that
+// column; `subject` names the row for screen readers.
+export function CountCells({
+  counts,
+  keys,
+  onSelect,
+  subject,
+}: {
+  counts: CategoryCounts;
+  keys: (keyof CategoryCounts)[];
+  onSelect?: (filter: DrillDownFilter) => void;
+  subject?: string;
+}): JSX.Element {
   return (
     <>
       {COUNT_COLUMNS.filter((c) => keys.includes(c.key)).map((c) => {
@@ -57,8 +110,16 @@ export function CountCells({ counts, keys }: { counts: CategoryCounts; keys: (ke
               </Typography>
             ) : (
               <Box
+                component={onSelect ? "button" : "div"}
+                {...(onSelect && {
+                  type: "button",
+                  "aria-label": `Show ${value} ${c.legend} ${subject ?? ""} in Risk Register`.replace(/\s+/g, " "),
+                  onClick: () => onSelect(COUNT_FILTERS[c.key]),
+                })}
                 sx={{
                   display: "inline-block",
+                  font: "inherit",
+                  ...(onSelect && { cursor: "pointer", "&:hover": { filter: "brightness(0.95)" } }),
                   minWidth: 40,
                   px: 1,
                   py: 0.25,
@@ -81,12 +142,23 @@ export function CountCells({ counts, keys }: { counts: CategoryCounts; keys: (ke
 }
 
 // A register chip in its stable palette colour; full name on hover.
-export function RegisterChip({ register, color, full }: { register: ScopeRegister; color: string; full?: boolean }): JSX.Element {
+export function RegisterChip({
+  register,
+  color,
+  full,
+  onClick,
+}: {
+  register: ScopeRegister;
+  color: string;
+  full?: boolean;
+  onClick?: () => void;
+}): JSX.Element {
   return (
     <Tooltip title={register.name}>
       <Chip
         size="small"
         label={full ? register.name : register.label}
+        onClick={onClick}
         sx={{ bgcolor: `${color}26`, border: `1px solid ${color}`, fontWeight: 600 }}
       />
     </Tooltip>
