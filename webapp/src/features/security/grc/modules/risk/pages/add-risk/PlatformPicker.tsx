@@ -15,7 +15,7 @@
 // under the License.
 
 import { Box, Stack, Typography } from "@wso2/oxygen-ui";
-import type { JSX } from "react";
+import { useEffect, type JSX } from "react";
 import type { LookupOption } from "../../api/riskApi";
 import PillMultiSelect from "./PillMultiSelect";
 import type { PlatformChoices } from "./templates";
@@ -33,6 +33,8 @@ const optionLabel = (o: LookupOption): string => (o.status === "ACTIVE" ? o.name
 // Platform, then the sub-platforms of each platform picked. A sub-platform only
 // exists under its platform, so unticking a platform drops its sub-platforms
 // from the value: the server refuses a sub-platform without its platform.
+// A register that offers a single platform has nothing to choose at that level:
+// it is picked for the risk and only its sub-platforms are shown.
 export default function PlatformPicker({ choices, value, onChange, error }: PlatformPickerProps): JSX.Element {
   const subIdsOf = (parentId: number): number[] => (choices.subsByParent.get(parentId) ?? []).map((s) => s.id);
 
@@ -47,23 +49,31 @@ export default function PlatformPicker({ choices, value, onChange, error }: Plat
   };
 
   const platformValue = value.filter((id) => choices.platforms.some((p) => p.id === id));
+  const soleId = choices.restricted && choices.platforms.length === 1 ? choices.platforms[0].id : null;
+  const soleMissing = soleId !== null && !value.includes(soleId);
+
+  useEffect(() => {
+    if (soleId !== null && soleMissing) onChange([...value, soleId]);
+  }, [soleId, soleMissing, value, onChange]);
 
   return (
     <Stack gap={2.5}>
-      <PillMultiSelect
-        label="Platform"
-        required
-        ariaLabel="Platforms"
-        options={choices.platforms.map((p) => ({ value: p.id, label: optionLabel(p) }))}
-        value={platformValue}
-        onChange={handlePlatforms}
-        error={error}
-        emptyMessage="No platforms have been added yet. Ask a platform admin to add them."
-      />
+      {soleId === null && (
+        <PillMultiSelect
+          label="Platform"
+          required
+          ariaLabel="Platforms"
+          options={choices.platforms.map((p) => ({ value: p.id, label: optionLabel(p) }))}
+          value={platformValue}
+          onChange={handlePlatforms}
+          error={error}
+          emptyMessage="No platforms have been added yet. Ask a platform admin to add them."
+        />
+      )}
       {choices.platforms
         .filter((p) => platformValue.includes(p.id) && (choices.subsByParent.get(p.id)?.length ?? 0) > 0)
         .map((p) => (
-          <Box key={p.id} sx={{ pl: 2, borderLeft: 2, borderColor: "divider" }}>
+          <Box key={p.id} sx={soleId === null ? { pl: 2, borderLeft: 2, borderColor: "divider" } : undefined}>
             <PillMultiSelect
               label={`${p.name} sub-platform`}
               required={choices.restricted}
@@ -71,6 +81,7 @@ export default function PlatformPicker({ choices, value, onChange, error }: Plat
               options={(choices.subsByParent.get(p.id) ?? []).map((s) => ({ value: s.id, label: optionLabel(s) }))}
               value={value.filter((id) => subIdsOf(p.id).includes(id))}
               onChange={(next) => handleSubs(p.id, next)}
+              error={soleId === p.id ? error : undefined}
             />
             {!choices.restricted && (
               <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
