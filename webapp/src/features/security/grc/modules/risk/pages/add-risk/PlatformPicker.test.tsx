@@ -98,4 +98,19 @@ describe("PlatformPicker", () => {
     render(<Harness offered={[]} initial={[7]} onChange={() => {}} />);
     expect(screen.getByText(/Optional: leave empty/)).toBeInTheDocument();
   });
+
+  it("picks the only platform a register offers and shows just its sub-platforms", () => {
+    const onChange = vi.fn();
+    render(<Harness offered={[7, 9, 10]} initial={[]} onChange={onChange} />);
+    expect(screen.queryByRole("button", { name: "Integration Platform" })).toBeNull();
+    expect(onChange).toHaveBeenCalledWith([7]);
+    expect(pill("Ballerina")).toBeInTheDocument();
+    expect(pill("Micro Integrator")).toBeInTheDocument();
+  });
+
+  it("still asks for the platform when the register offers several", () => {
+    render(<Harness offered={[4, 7, 9]} initial={[]} onChange={() => {}} />);
+    expect(pill("Core Platform")).toBeInTheDocument();
+    expect(pill("Integration Platform")).toBeInTheDocument();
+  });
 });
