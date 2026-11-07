@@ -153,6 +153,9 @@ export interface ApprovalInboxItem {
   readonly quoteId: number;
   readonly quoteNumber: string;
   readonly versionNumber: number;
+  /** Salesforce Ids, for grouping by account and opportunity (D144). */
+  readonly sfAccountId: string;
+  readonly sfOpportunityId: string;
   readonly accountName: string | null;
   readonly opportunityName: string | null;
   readonly currencyIsoCode: string | null;
