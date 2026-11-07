@@ -43,7 +43,6 @@ import QuoteApprovals from "@features/sales/cado2/approvals/components/QuoteAppr
 import {
   useApprovalWorkflow,
   useDecideStep,
-  useMarkNote,
   useReview,
   useStoredApprovalPreview,
 } from "@features/sales/cado2/approvals/api/useApprovalApi";
@@ -165,7 +164,6 @@ export default function QuoteDetailPage(): JSX.Element {
   const decide = useDecideStep();
   // D129: Deal Desk and Legal see the quote through their lens, with notes.
   const review = useReview(quoteId, shownNumber, shownStatus !== null && !isDraft);
-  const markNote = useMarkNote(quoteId, shownNumber ?? 0);
   const [rolePick, setRolePick] = useState<{ version: number | null; role: string } | null>(null);
   const [sheetEl, setSheetEl] = useState<HTMLElement | null>(null);
   const me = useCado2Me();
@@ -219,8 +217,6 @@ export default function QuoteDetailPage(): JSX.Element {
   const counts = [null, null, q.versions.length, events.data ? events.data.length : null];
   // Steps the caller may decide now; usually one.
   const actionable = (workflow.data?.steps ?? []).filter((s) => s.canAct);
-  // D86, D128: billing says See Special Terms, which Deal Desk writes before approving.
-  const billingSeesSpecialTerms = v.billingFrequency === "SPECIAL_TERMS";
   const approverRoles = me.data?.approverRoles ?? [];
   // D129: the caller's approval roles on this quote, each with its notes.
   // Several roles: tabs, opening on the one whose turn it is; the choice
@@ -228,17 +224,21 @@ export default function QuoteDetailPage(): JSX.Element {
   const lenses = review.data?.lenses ?? [];
   const lensRoles: string[] = lenses.map((l) => l.role);
   const pickedRole = rolePick && rolePick.version === shownNumber ? rolePick.role : null;
-  const lens = lenses.find((l) => l.role === pickedRole) ?? lenses.find((l) => l.canMark) ?? lenses[0] ?? null;
   const steps = workflow.data?.steps ?? [];
   const pendingFor = (role: string) =>
     steps.find((s) => s.role === role && s.status === "PENDING" && (s.canAct || Boolean(s.cantActReason))) ?? null;
+  // Opens on the lens whose turn it is.
+  const lens =
+    lenses.find((l) => l.role === pickedRole) ??
+    lenses.find((l) => steps.some((s) => s.role === l.role && s.status === "PENDING" && s.canAct)) ??
+    lenses[0] ??
+    null;
   // The decision bar: the lens role's pending step, or under As Submitted the first lens role's.
   // The card at the top of the column: the decision when it's the reviewer's
   // turn, else how their role's approval stands.
   const barStep = lens ? (pendingFor(lens.role) ?? steps.find((s) => s.role === lens.role) ?? null) : null;
   const canWrite = (role: LensRole) => steps.some((s) => s.role === role && s.canAct);
-  const deskBlock = billingSeesSpecialTerms && !v.specialTerms.enabled ? "Billing says See Special Terms: write the special terms first" : "";
-  const barBlock = barStep?.role === "DEAL_DESK" ? deskBlock : barStep?.role === "LEGAL" ? legalApproveBlock(v.legal) : "";
+  const barBlock = barStep?.role === "LEGAL" ? legalApproveBlock(v.legal) : "";
   const goToBlock = () => {
     if (!barStep) return;
     setRolePick({ version: shownNumber, role: barStep.role });
@@ -249,22 +249,16 @@ export default function QuoteDetailPage(): JSX.Element {
   const writing =
     lens?.role === "DEAL_DESK" && canWrite("DEAL_DESK")
       ? {
-          special: (
+          // D139: the AM wrote them; Deal Desk may override them, here on this version.
+          special: v.legal?.specialTerms ? (
             <YoursToWrite
               title="Special terms"
-              intro="Only Deal Desk writes the special terms, here on this version (no new version). Legal reviews them after you approve."
+              label="To review"
+              intro="The AM wrote these. Check them, and override them only if they need it: your text replaces the AM's on the order form. Legal reviews them after you approve."
             >
-              <SpecialTermsEditor
-                key={`${q.id}-${v.versionNumber}`}
-                quoteId={q.id}
-                versionNumber={v.versionNumber}
-                enabled={v.specialTerms.enabled}
-                text={v.specialTerms.text}
-                billingSeesSpecialTerms={billingSeesSpecialTerms}
-                minHeight={260}
-              />
+              <SpecialTermsEditor key={`${q.id}-${v.versionNumber}`} quoteId={q.id} versionNumber={v.versionNumber} legal={v.legal} minHeight={260} />
             </YoursToWrite>
-          ),
+          ) : undefined,
         }
       : lens?.role === "LEGAL" && canWrite("LEGAL") && v.legal
         ? {
@@ -278,7 +272,11 @@ export default function QuoteDetailPage(): JSX.Element {
                 <YoursToWrite
                   title="Special terms"
                   label="To review"
-                  intro="Written by Deal Desk. Review them, and change the wording only if it needs it; your wording replaces theirs on the order form."
+                  intro={
+                    v.legal.deskSpecialTerms
+                      ? "Deal Desk overrode the AM's special terms. Review them, and override them only if they need it: your text replaces Deal Desk's on the order form."
+                      : "Written by the AM. Review them, and override them only if they need it: your text replaces the AM's on the order form."
+                  }
                 >
                   <LegalTermsEditor key={`${q.id}-${v.versionNumber}`} quoteId={q.id} versionNumber={v.versionNumber} legal={v.legal} minHeight={220} part="special" />
                 </YoursToWrite>
@@ -450,16 +448,10 @@ export default function QuoteDetailPage(): JSX.Element {
                   legalEditor={v.legal ? <LegalTermsEditor key={v.updatedAt} quoteId={q.id} versionNumber={v.versionNumber} legal={v.legal} /> : undefined}
                   legalApproveBlock={legalApproveBlock(v.legal)}
                   deskEditor={
-                    <SpecialTermsEditor
-                      key={v.updatedAt}
-                      quoteId={q.id}
-                      versionNumber={v.versionNumber}
-                      enabled={v.specialTerms.enabled}
-                      text={v.specialTerms.text}
-                      billingSeesSpecialTerms={billingSeesSpecialTerms}
-                    />
+                    v.legal?.specialTerms ? (
+                      <SpecialTermsEditor key={v.updatedAt} quoteId={q.id} versionNumber={v.versionNumber} legal={v.legal} />
+                    ) : undefined
                   }
-                  deskApproveBlock={billingSeesSpecialTerms && !v.specialTerms.enabled ? "Describe the billing in the special terms" : ""}
                   previousReturn={workflow.data?.previousReturn}
                 />
               </Box>
@@ -534,8 +526,6 @@ export default function QuoteDetailPage(): JSX.Element {
                     <ReviewNotes
                       lens={lens}
                       sheet={sheetEl}
-                      pending={markNote.isPending}
-                      onMark={(key, fine) => markNote.mutate({ role: lens.role, key, fine })}
                       empty={
                         lens.role === "DEAL_DESK"
                           ? "Standard quote. No approval rules apply, so your approval is the only one needed."
