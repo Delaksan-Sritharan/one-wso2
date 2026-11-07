@@ -14,9 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from "react";
 import { Link as RouterLink, Navigate, useNavigate, useParams, useSearchParams } from "react-router";
-import { Alert, alpha, Box, Button, Chip, CircularProgress, Divider, Link, Paper, Stack, Tab, Tabs, Typography, type Theme } from "@wso2/oxygen-ui";
+import { Alert, alpha, Box, Button, Chip, CircularProgress, Collapse, Divider, Link, Paper, Stack, Tab, Tabs, Typography, type Theme } from "@wso2/oxygen-ui";
 import DeleteDraftDialog from "@features/sales/cado2/quotes/components/detail/DeleteDraftDialog";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import {
@@ -61,6 +61,8 @@ import YourApprovalPanel, { YOUR_APPROVAL_ANCHOR } from "@features/sales/cado2/a
 import {
   ArrowDownIcon,
   ArrowLeftIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   CopyIcon,
   PencilIcon,
   RotateCcwIcon,
@@ -109,6 +111,28 @@ const noteTint = (theme: Theme) => {
 /** Takes the reader to a place in the quote sheet, e.g. the special terms. */
 const scrollToTarget = (target: string) =>
   document.querySelector(`[data-note-target~="${target}"]`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+
+/** The approval notes once the quote is approved: one line, opened on request. */
+function FoldedNotes({ count, children }: { count: number; children: ReactNode }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  return (
+    <Box>
+      <Button
+        size="small"
+        color="inherit"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        startIcon={open ? <ChevronDownIcon size={16} /> : <ChevronRightIcon size={16} />}
+        sx={{ m: 1, textTransform: "none", color: "text.secondary" }}
+      >
+        Approval notes ({count})
+      </Button>
+      <Collapse in={open} unmountOnExit>
+        {children}
+      </Collapse>
+    </Box>
+  );
+}
 
 /**
  * The quote page: the latest
@@ -319,6 +343,18 @@ export default function QuoteDetailPage(): JSX.Element {
 
   // The page's one main button: the approver's task, else the AM's next step.
   // In approval and approved have none; their actions are in the menu.
+  // Once approved, the order form leads the side column and the notes fold (2026-11-07).
+  const approvedView = v.status === "APPROVED";
+  const worksOnQuotes = cado2Access(me.data).canWorkOnQuotes;
+  const documentsPanel = (
+    <DocumentsPanel
+      quoteId={q.id}
+      version={v.versionNumber}
+      approved={approvedView}
+      olderVersion={viewingOlder}
+      downloadOnly={!worksOnQuotes}
+    />
+  );
   const reviseIsMain = can("REVISE") && (v.status === "RECALLED" || v.status === "RETURNED");
   const mainAction = viewingOlder ? (
     // An older version is for reading: its actions belong to the latest.
@@ -472,7 +508,9 @@ export default function QuoteDetailPage(): JSX.Element {
               {/* The side column is pinned as one, so no part of it slides under
                   another; taller than the screen, it scrolls on its own (2026-10-13).
                   An approver's part comes first: their roles (tabs, only with
-                  several), the decision, the approval notes (D129). */}
+                  several), the decision, the approval notes (D129). Once approved, the
+                  order form comes first, for everyone who may open the quote: issuing it
+                  is the next step, and any approver may download it once issued (2026-11-07). */}
               <Stack
                 spacing={3}
                 sx={{
@@ -482,6 +520,7 @@ export default function QuoteDetailPage(): JSX.Element {
                   overflowY: { lg: "auto" },
                 }}
               >
+                {approvedView ? documentsPanel : null}
                 {lens ? (
                   // The approver's part as one card: their roles (tabs, only with several),
                   // the decision or how it stands, then the approval notes.
@@ -522,16 +561,25 @@ export default function QuoteDetailPage(): JSX.Element {
                       </Tabs>
                     ) : null}
                     {decisionCard}
-                    {decisionCard ? <Divider /> : null}
-                    <ReviewNotes
-                      lens={lens}
-                      sheet={sheetEl}
-                      empty={
-                        lens.role === "DEAL_DESK"
-                          ? "Standard quote. No approval rules apply, so your approval is the only one needed."
-                          : "No notes from the approval rules on this quote."
-                      }
-                    />
+                    {decisionCard && !(approvedView && lens.notes.length === 0) ? <Divider /> : null}
+                    {approvedView ? (
+                      // Approved: the notes have done their job; folded, and gone when there were none (2026-11-07).
+                      lens.notes.length ? (
+                        <FoldedNotes count={lens.notes.length}>
+                          <ReviewNotes lens={lens} sheet={sheetEl} empty="" />
+                        </FoldedNotes>
+                      ) : null
+                    ) : (
+                      <ReviewNotes
+                        lens={lens}
+                        sheet={sheetEl}
+                        empty={
+                          lens.role === "DEAL_DESK"
+                            ? "Standard quote. No approval rules apply, so your approval is the only one needed."
+                            : "No notes from the approval rules on this quote."
+                        }
+                      />
+                    )}
                     {/* Deal Desk may step in for an away approver (D120), here as on the Approvals tab. */}
                     {lens.role === "DEAL_DESK" && !viewingOlder && steps.some((s) => s.canApproveOnBehalf) ? (
                       <>
@@ -543,21 +591,14 @@ export default function QuoteDetailPage(): JSX.Element {
                 ) : null}
                 {/* The timeline, the order form and the opportunity's quotes are for who works on
                     quotes (Sales, Deal Desk); a pure approver has the approval card above. */}
-                {cado2Access(me.data).canWorkOnQuotes ? (
+                {worksOnQuotes ? (
                   <>
                   <StatusPanel
                     latest={shown.data}
                     events={events.data ?? []}
                     eventsError={events.error}
                     onRetryEvents={() => void events.refetch()}
-                    documents={
-                      <DocumentsPanel
-                        quoteId={q.id}
-                        version={v.versionNumber}
-                        approved={v.status === "APPROVED"}
-                        olderVersion={viewingOlder}
-                      />
-                    }
+                    documents={approvedView ? undefined : documentsPanel}
                   />
                     <OpportunityQuotesPanel quoteId={q.id} opportunityId={q.sfOpportunityId} />
                   </>

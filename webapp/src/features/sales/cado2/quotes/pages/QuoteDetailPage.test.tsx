@@ -71,13 +71,14 @@ const attach = { ...mutation(), mutateAsync: vi.fn() };
 const files = { preview: vi.fn(), download: vi.fn() };
 const setPrimary = { mutate: vi.fn(), reset: vi.fn(), isPending: false, error: null };
 const opportunityQuotes = { data: [] as unknown[], error: null, isPending: false, isFetching: false, refetch: vi.fn() };
-// No supporting documents in the library (DGD-10); tested on their own.
+// No supporting documents in the library (DGD-10) unless a test says so; tested on their own.
+const supporting = { has: false };
 vi.mock("@features/sales/cado2/quotes/api/useSupportingDocuments", async (actual) => ({
   ...(await actual<typeof import("@features/sales/cado2/quotes/api/useSupportingDocuments")>()),
   useSupportingDocumentLibrary: () => ({ data: [], isPending: false, error: null }),
   useQuoteSupportingDocuments: () => ({ data: undefined, isPending: false, error: null }),
   useSetQuoteSupportingDocuments: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, error: null }),
-  useHasSupportingDocuments: () => false,
+  useHasSupportingDocuments: () => supporting.has,
 }));
 vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
   useQuote: () => quote,
@@ -160,6 +161,7 @@ beforeEach(() => {
   workflow.data = null;
   me.data.approverRoles = ["DEAL_DESK"];
   review.data = { lenses: [] };
+  supporting.has = false;
   me.data.roles = [];
   Object.assign(clone, mutation());
   Object.assign(recall, mutation());
@@ -831,6 +833,37 @@ describe("QuoteDetailPage — order form", () => {
     show(quoteOf(submitted), submitted);
     expect(screen.queryByRole("region", { name: "Order Form" })).toBeNull();
   });
+
+  // 2026-11-07: before approval there is no order form, only the attachments.
+  it("calls the card Supporting Documents before approval", () => {
+    supporting.has = true;
+    show(quoteOf(submitted), submitted);
+    expect(screen.queryByRole("region", { name: "Order Form" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Supporting Documents" })).toHaveTextContent(/Added after the order form/);
+  });
+
+  // 2026-11-07: once issued, any approver who may open the quote downloads it.
+  it("lets an approver who doesn't work on quotes download the issued order form, and nothing else", async () => {
+    me.data.approverRoles = ["CFO"];
+    const doc = { id: 9, fileName: "Q-26-00005-v1.pdf", issueDate: "2026-10-12", status: "ACTIVE" };
+    Object.assign(documents, { data: { canPreview: false, canIssue: false, issueDate: null, expiryDate: null, documents: [doc] } });
+    files.download.mockResolvedValue(new Blob(["%PDF"]));
+    URL.createObjectURL = vi.fn(() => "blob:x");
+    URL.revokeObjectURL = vi.fn();
+    show(quoteOf(approved), approved);
+    expect(panel().getByText("Issued 12 Oct 2026")).toBeInTheDocument();
+    expect(panel().queryByRole("button", { name: "Preview PDF" })).toBeNull();
+    expect(panel().queryByRole("button", { name: "Issue order form" })).toBeNull();
+    await userEvent.setup().click(panel().getByRole("button", { name: "Download PDF" }));
+    expect(files.download).toHaveBeenCalledWith(approved.quote.id, 9);
+  });
+
+  it("shows such an approver nothing before the order form is issued", () => {
+    me.data.approverRoles = ["CFO"];
+    Object.assign(documents, { data: { canPreview: false, canIssue: false, issueDate: "2026-10-12", expiryDate: "2026-11-11", documents: [] } });
+    show(quoteOf(approved), approved);
+    expect(screen.queryByRole("region", { name: "Order Form" })).toBeNull();
+  });
 });
 
 // A failed load is an error on screen, never a wrong answer or a missing card (2026-10-13).
@@ -910,6 +943,30 @@ describe("QuoteDetailPage — lenses", () => {
     expect(screen.queryByRole("region", { name: "Your approval" })).toBeNull();
     // D140: nothing to mark.
     expect(within(notes).queryByRole("button", { name: "Looks fine" })).toBeNull();
+  });
+
+  // 2026-11-07: once approved, the order form leads and the notes fold away.
+  it("puts the order form first once approved, with the approval notes folded", async () => {
+    const user = userEvent.setup();
+    const approvedV: DraftResponse = {
+      ...allMapped,
+      quote: { ...allMapped.quote, status: "APPROVED", actions: ["CLOSE"] },
+      version: { ...allMapped.version, status: "APPROVED" },
+    };
+    Object.assign(documents, { data: { canPreview: true, canIssue: true, issueDate: "2026-10-12", expiryDate: "2026-11-11", documents: [] } });
+    workflow.data = {
+      status: "APPROVED", createdAt: "2026-10-06T09:00:00Z", completedAt: "2026-10-07T09:00:00Z",
+      steps: [step("DEAL_DESK", 11, { status: "APPROVED", actedByEmail: "arjun@wso2.com", actedAt: "2026-10-07T09:00:00Z" })],
+    };
+    deskLens([note({})]);
+    show({ ...approvedV.quote, versions: [{ versionNumber: 1, status: "APPROVED", tcv: "6480.00", submittedAt: null, updatedAt: approvedV.version.updatedAt }] } as unknown as QuoteView, approvedV);
+
+    const orderForm = screen.getByRole("region", { name: "Order Form" });
+    const approval = screen.getByRole("region", { name: "Approval" });
+    expect(orderForm.compareDocumentPosition(approval) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole("complementary", { name: "Deal Desk approval notes" })).toBeNull();
+    await user.click(within(approval).getByRole("button", { name: "Approval notes (1)" }));
+    expect(screen.getByRole("complementary", { name: "Deal Desk approval notes" })).toHaveTextContent("18% discount");
   });
 
   it("gives someone with several roles on the quote a tab per role, opening on the one whose turn it is", async () => {
