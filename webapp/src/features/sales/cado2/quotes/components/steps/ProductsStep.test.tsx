@@ -16,7 +16,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import type { JSX } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { AdapterDateFns, DatePickers } from "@wso2/oxygen-ui";
@@ -29,6 +29,11 @@ import ProductsStep from "./ProductsStep";
 
 // D72: products brought in from the opportunity.
 
+// The opportunity's line items in Salesforce (D147).
+const opportunityLines = {
+  currency: "USD",
+  lines: [{ id: "00kA", productName: "API Manager", productCode: null, quantity: "4", salesPrice: "9000", discount: "25", totalPrice: "27000.00", commissionPercent: null, serviceStartDate: null, serviceEndDate: null }],
+};
 const empty = {
   data: [],
   error: null,
@@ -38,6 +43,7 @@ const empty = {
 };
 vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
   useAccountOpportunities: () => empty,
+  useOpportunityLines: () => ({ ...empty, data: opportunityLines }),
   usePricingFormulas: () => empty,
   useBundleChildren: () => ({ data: { children: [], missing: [] }, isFetching: false }),
   useCurrencies: () => ({ ...empty, data: ["USD"] }),
@@ -112,6 +118,24 @@ function Harness({
 }
 
 describe("ProductsStep (Products & Pricing)", () => {
+  // D147: the opportunity's line items in Salesforce, shown in a dialog, never loaded.
+  it("shows the opportunity's line items in Salesforce on demand", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Harness />);
+    expect(screen.queryByRole("button", { name: "View SF line items" })).toBeNull(); // no opportunity yet
+    unmount();
+
+    render(<Harness values={{ opportunityId: "006A", opportunityName: "Acme renewal" }} />);
+    await user.click(screen.getByRole("button", { name: "View SF line items" }));
+    const dialog = within(screen.getByRole("dialog", { name: /Line items in Salesforce/ }));
+    expect(dialog.getByText("Acme renewal")).toBeInTheDocument();
+    expect(dialog.getByText("API Manager")).toBeInTheDocument();
+    expect(dialog.getByText("27,000.00")).toBeInTheDocument();
+    await user.click(dialog.getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText("WSO2 Gateway")).toBeInTheDocument(); // the quote's own lines untouched
+  });
+
   // D78: products can be added and kept before the start date; they are
   // priced once it is chosen.
   it("lets the AM add products before the start date is chosen", () => {
@@ -157,7 +181,7 @@ describe("ProductsStep (Products & Pricing)", () => {
     expect(screen.queryByRole("button", { name: "Delete Year 1" })).toBeNull();
     unmount();
     render(<Harness />);
-    expect(screen.getByRole("region", { name: "Year 1" })).toHaveTextContent("2 products");
+    expect(screen.getByRole("region", { name: "Year 1" })).not.toHaveTextContent(/\d+ products?/); // no product count (2026-11-08)
     expect(screen.queryByRole("button", { name: "Delete Year 1" })).toBeNull();
   });
 

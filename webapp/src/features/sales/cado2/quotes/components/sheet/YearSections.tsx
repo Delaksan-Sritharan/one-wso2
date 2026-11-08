@@ -128,10 +128,10 @@ export default function YearSections({
                 </Typography>
               ) : null}
               {short ? <Chip size="small" color="warning" variant="outlined" label={short} /> : null}
+              {/* Folded, the header carries the year's total; open, the table's last row does. No product
+                  count (2026-11-08). The empty box still pushes the year's buttons to the right. */}
               <Typography variant="body2" color="text.secondary" sx={{ ml: "auto !important", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-                {ofYear.length} product{ofYear.length === 1 ? "" : "s"}
-                {/* Folded, the header carries the year's total; open, the table's last row does. */}
-                {!open && total ? ` · ${currency} ${formatMoney(total)}` : ""}
+                {!open && total ? `${currency} ${formatMoney(total)}` : ""}
               </Typography>
               {yearActions ? (
                 // Its buttons don't fold the year.

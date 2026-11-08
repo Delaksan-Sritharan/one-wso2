@@ -95,6 +95,8 @@ const { LocalizationProvider } = DatePickers;
 const PREVIEW_DEBOUNCE_MS = 500;
 
 const REVIEW_STEP = 4;
+// Products & Pricing: Sync to SF shows from here on, not on Overview (2026-11-08).
+const PRODUCTS_STEP = 1;
 
 /** "Last synced 13 Oct 2026, 10:42 (v1)", or "Not synced yet" (D77). */
 function lastSynced(q: QuoteView): string {
@@ -402,6 +404,8 @@ export default function QuoteWizardPage(): JSX.Element {
     saved?.version.versionNumber ?? null,
     Boolean(saved?.quote.canSync) && (confirmingSync || confirmingSubmit),
   );
+  // A preview refused with reasons (422), e.g. "Add products before syncing to Salesforce".
+  const syncPreviewRefusal = problemOf(syncPreview.error);
 
   const reloadLatest = () => {
     setConflict(false);
@@ -499,19 +503,26 @@ export default function QuoteWizardPage(): JSX.Element {
               actions={
                 <>
                   {/* One main button, the rest under "Actions", destructive last (2026-10-13, as on the quote page);
-                      Sync to Salesforce is the exception, a button of its own (D137). */}
-                  {saved && saved.quote.syncSwitchOn && editable ? (
+                      Sync to Salesforce is the exception, a button of its own (D137); it says "SF"
+                      to save room (2026-11-08), the full name on hover and for screen readers. */}
+                  {saved && saved.quote.syncSwitchOn && editable && step >= PRODUCTS_STEP ? (
                     <Stack alignItems={{ xs: "flex-start", sm: "flex-end" }} spacing={0.25}>
                       <Button
                         variant="outlined"
                         startIcon={<CloudUploadIcon size={16} />}
                         onClick={() => void openSync()}
-                        disabled={busy || !canSave || !saved.quote.canSync}
+                        disabled={busy || !canSave || !saved.quote.canSync || values.lines.length === 0}
+                        aria-label="Sync to Salesforce"
+                        title="Sync to Salesforce"
                       >
-                        {sync.isPending ? "Syncing…" : "Sync to Salesforce"}
+                        {sync.isPending ? "Syncing…" : "Sync to SF"}
                       </Button>
                       <Typography variant="caption" color="text.secondary">
-                        {saved.quote.canSync ? lastSynced(saved.quote) : "Only the primary quote syncs. Mark it primary on Overview."}
+                        {!saved.quote.canSync
+                          ? "Only the primary quote syncs. Mark it primary on Overview."
+                          : values.lines.length === 0
+                            ? "Add products first"
+                            : lastSynced(saved.quote)}
                       </Typography>
                     </Stack>
                   ) : null}
@@ -778,6 +789,13 @@ export default function QuoteWizardPage(): JSX.Element {
                   <Typography variant="body2" color="text.secondary">
                     Reading the opportunity in Salesforce…
                   </Typography>
+                ) : syncPreviewRefusal ? (
+                  // Refused for a reason the AM can fix, e.g. no products yet: say that, not "couldn't read".
+                  <Alert severity="warning">
+                    {syncPreviewRefusal.issues.map((i) => (
+                      <div key={`${i.field}-${i.message}`}>{i.message.endsWith(".") ? i.message : `${i.message}.`}</div>
+                    ))}
+                  </Alert>
                 ) : syncPreview.error ? (
                   <ErrorNotice error={syncPreview.error} onRetry={() => void syncPreview.refetch()} retrying={syncPreview.isFetching}>
                     Couldn&apos;t read what Salesforce has now.

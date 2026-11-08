@@ -31,6 +31,7 @@ import {
   ChartColumnIcon,
   ChevronsDownUpIcon,
   ChevronsUpDownIcon,
+  CloudDownloadIcon,
   CopyIcon,
   PackageIcon,
   PencilIcon,
@@ -64,6 +65,7 @@ import {
 import AddLineDialog from "@features/sales/cado2/quotes/components/AddLineDialog";
 import TermCard from "@features/sales/cado2/quotes/components/TermCard";
 import LastYearEnd from "@features/sales/cado2/quotes/components/LastYearEnd";
+import OpportunityLinesDialog from "@features/sales/cado2/quotes/components/OpportunityLinesDialog";
 import PartnerCommissionCard from "@features/sales/cado2/quotes/components/PartnerCommissionCard";
 import PricingSetupCard from "@features/sales/cado2/quotes/components/PricingSetupCard";
 import { useFieldIssue } from "@features/sales/cado2/quotes/components/fieldIssues";
@@ -126,6 +128,8 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
     index: null,
     year: 1,
   });
+  // D147: the opportunity's line items in Salesforce, to add from by hand.
+  const [viewingLines, setViewingLines] = useState(false);
   const fold = useCollapsedYears();
   const linesIssue = useFieldIssue("lines");
   const yearsIssue = useFieldIssue("years");
@@ -312,14 +316,30 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
         title="Products"
         icon={<PackageIcon size={18} />}
         aside={
-          years.length > 1 ? (
-            <Button
-              size="small"
-              startIcon={anyFolded ? <ChevronsUpDownIcon size={14} /> : <ChevronsDownUpIcon size={14} />}
-              onClick={() => fold.toggleAll(years.map((y) => y.number))}
-            >
-              {anyFolded ? "Expand all" : "Collapse all"}
-            </Button>
+          values.opportunityId || years.length > 1 ? (
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {/* D147: shown, never loaded; "SF" to save room, the full name on hover (2026-11-08). */}
+              {values.opportunityId ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<CloudDownloadIcon size={14} />}
+                  onClick={() => setViewingLines(true)}
+                  title="View the opportunity's line items in Salesforce"
+                >
+                  View SF line items
+                </Button>
+              ) : null}
+              {years.length > 1 ? (
+                <Button
+                  size="small"
+                  startIcon={anyFolded ? <ChevronsUpDownIcon size={14} /> : <ChevronsDownUpIcon size={14} />}
+                  onClick={() => fold.toggleAll(years.map((y) => y.number))}
+                >
+                  {anyFolded ? "Expand all" : "Collapse all"}
+                </Button>
+              ) : null}
+            </Stack>
           ) : undefined
         }
       >
@@ -470,6 +490,12 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
           onClose={() => setEditing({ open: false, index: null, year: 1 })}
         />
       ) : null}
+      <OpportunityLinesDialog
+        open={viewingLines}
+        opportunityId={values.opportunityId || null}
+        opportunityName={values.opportunityName}
+        onClose={() => setViewingLines(false)}
+      />
     </Stack>
   );
 }

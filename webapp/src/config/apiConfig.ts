@@ -1968,6 +1968,9 @@ export const cado2ServiceUrls = {
   // are chosen from these only.
   opportunityContacts: (opportunityId: string): string =>
     `${cado2BackendUrl}/opportunities/${encodeSegment(opportunityId)}/contacts`,
+  // The opportunity's product lines as they are in Salesforce now (D147), read only.
+  opportunityLines: (opportunityId: string): string =>
+    `${cado2BackendUrl}/opportunities/${encodeSegment(opportunityId)}/products`,
   // One page of a price book's products in a currency. Paged server-side by
   // limit/offset (Salesforce stops at offset 2000).
   products: (

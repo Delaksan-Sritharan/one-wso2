@@ -55,6 +55,7 @@ vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => {
     useOpportunityQuotes: () => idle(),
     useAccountOpportunities: () => idle(),
     useOpportunityContacts: () => idle(),
+    useOpportunityLines: () => idle(),
     useProducts: () => idle(),
     usePricebooks: () => ({
       ...idle(),
@@ -641,6 +642,7 @@ describe("QuoteWizardPage — Salesforce sync", () => {
     });
     const user = await openTermAndProducts();
     expect(screen.getByText("Not synced yet")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sync to Salesforce" })).toHaveTextContent("Sync to SF");
     await user.click(screen.getByRole("button", { name: "Sync to Salesforce" }));
 
     const dialog = within(screen.getByRole("dialog", { name: "Sync to Salesforce?" }));
@@ -659,6 +661,25 @@ describe("QuoteWizardPage — Salesforce sync", () => {
     expect(save.mutateAsync).not.toHaveBeenCalled(); // nothing changed: nothing to save first
     expect(sync.mutateAsync).toHaveBeenCalledWith({ quoteId: primary.quote.id, version: 1, expectedUpdatedAt: primary.version.updatedAt });
     expect(await screen.findByRole("status")).toHaveTextContent("Synced to Salesforce"); // a toast
+  });
+
+  // 2026-11-08: a preview refused with a reason shows the reason, not "couldn't read".
+  it("says what to fix when Salesforce can't be synced yet", async () => {
+    Object.assign(version, { data: primary });
+    Object.assign(syncPreview, {
+      error: new HttpError(
+        "/quotes/5/versions/1/sync/preview",
+        422,
+        JSON.stringify({ message: "This version can't be submitted yet", issues: [{ field: "lines", message: "Add products before syncing to Salesforce" }] }),
+      ),
+    });
+    const user = await openTermAndProducts();
+    await user.click(screen.getByRole("button", { name: "Sync to Salesforce" }));
+
+    const dialog = within(screen.getByRole("dialog", { name: "Sync to Salesforce?" }));
+    expect(dialog.getByText("Add products before syncing to Salesforce.")).toBeInTheDocument();
+    expect(dialog.queryByText(/Couldn't read/)).toBeNull();
+    expect(dialog.getByRole("button", { name: "Sync" })).toBeDisabled();
   });
 
   it("syncs nothing when the AM cancels, or when nothing would change", async () => {
@@ -681,6 +702,18 @@ describe("QuoteWizardPage — Salesforce sync", () => {
     await openTermAndProducts();
     expect(screen.getByRole("button", { name: "Sync to Salesforce" })).toBeDisabled();
     expect(screen.getByText("Only the primary quote syncs. Mark it primary on Overview.")).toBeInTheDocument();
+  });
+
+  // 2026-11-08: nothing to sync on Overview; greyed until the quote has products.
+  it("isn't on Overview, and waits for products, saying so", async () => {
+    Object.assign(version, { data: { ...primary, version: { ...primary.version, lines: [] } } });
+    const user = userEvent.setup();
+    renderWizard();
+    await user.click(screen.getByRole("button", { name: "Overview" }));
+    expect(screen.queryByRole("button", { name: "Sync to Salesforce" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Products & Pricing" }));
+    expect(screen.getByRole("button", { name: "Sync to Salesforce" })).toBeDisabled();
+    expect(screen.getByText("Add products first")).toBeInTheDocument();
   });
 
   it("isn't offered when the sync is switched off", async () => {

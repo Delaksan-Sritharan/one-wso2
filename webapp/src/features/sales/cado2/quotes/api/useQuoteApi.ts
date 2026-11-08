@@ -41,6 +41,7 @@ import type {
   DraftResponse,
   Issue,
   Opportunity,
+  OpportunityLines,
   OpportunityQuote,
   PricebookOption,
   SyncPreview,
@@ -108,6 +109,15 @@ export function useOpportunityContacts(opportunityId: string | null) {
   return useAuthedQuery<Contact[]>(
     ["opportunity-contacts", opportunityId],
     opportunityId ? cado2ServiceUrls.opportunityContacts(opportunityId) : null,
+  );
+}
+
+/** The opportunity's product lines as they are in Salesforce now (D147): read fresh while `enabled`. */
+export function useOpportunityLines(opportunityId: string | null, enabled: boolean) {
+  return useAuthedQuery<OpportunityLines>(
+    ["opportunity-lines", opportunityId],
+    enabled && opportunityId ? cado2ServiceUrls.opportunityLines(opportunityId) : null,
+    "live",
   );
 }
 

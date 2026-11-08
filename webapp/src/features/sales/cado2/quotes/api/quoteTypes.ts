@@ -119,6 +119,34 @@ export interface RenewalStart {
 /** First Sale, Renewal or Expansion; any other record type is OTHER. */
 export type DealKind = "FIRST_SALE" | "RENEWAL" | "EXPANSION" | "OTHER";
 
+/**
+ * A product line on the opportunity in Salesforce (D147). Money is an exact
+ * decimal string in the opportunity's currency; null when Salesforce has none.
+ */
+export interface OpportunityLineView {
+  readonly id: string;
+  readonly productName: string | null;
+  readonly productCode: string | null;
+  /** Exact decimal, e.g. "4". */
+  readonly quantity: string | null;
+  /** Per unit. */
+  readonly salesPrice: string | null;
+  /** Percent, e.g. "25". */
+  readonly discount: string | null;
+  readonly commissionPercent: string | null;
+  /** The whole line after discount: quantity × sales price × (1 − discount %). */
+  readonly totalPrice: string | null;
+  readonly serviceStartDate: string | null;
+  readonly serviceEndDate: string | null;
+}
+
+/** The opportunity's product lines as they are in Salesforce now (D147). */
+export interface OpportunityLines {
+  /** The opportunity's currency, which the lines are priced in. */
+  readonly currency: string | null;
+  readonly lines: readonly OpportunityLineView[];
+}
+
 /** A contact on the opportunity, with its roles there, e.g. "Economic Buyer" (D124). */
 export interface Contact {
   readonly id: string;

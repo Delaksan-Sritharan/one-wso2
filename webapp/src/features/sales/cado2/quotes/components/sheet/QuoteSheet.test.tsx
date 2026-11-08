@@ -149,7 +149,7 @@ describe("Order form", () => {
     expect(screen.getByRole("region", { name: "Order totals" })).toHaveTextContent("Total order value · all 3 years (USD)119,540.00");
     // Each year closes with its own total, inside its table.
     expect(rows.at(-1)).toContain("Year 1 total (USD)119,540.00");
-    expect(screen.getByRole("region", { name: "Year 1" })).toHaveTextContent("4 products");
+    expect(screen.getByRole("region", { name: "Year 1" })).not.toHaveTextContent(/\d+ products?/); // no product count (2026-11-08)
     expect(screen.getAllByText("No products in this year.")).toHaveLength(2);
   });
 
