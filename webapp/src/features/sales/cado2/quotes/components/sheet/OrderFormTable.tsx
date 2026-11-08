@@ -166,12 +166,12 @@ export default function OrderFormTable({
           <TableCell align="right" sx={num}>
             {Number(l.discountPercent) ? `${l.discountPercent}%` : "–"}
           </TableCell>
-          {/* Each line's term (D113): its dates, its length below like the
-              SKU under the name; a one-off line shows its date and "One-time". */}
+          {/* Each line's term (D113): its start and end (D146), its length
+              below like the SKU under the name; a one-off line "One-time". */}
           <TableCell sx={{ whiteSpace: "nowrap" }}>
             {!l.startDate
               ? "–"
-              : l.recurring && l.endDate
+              : l.endDate
                 ? `${formatDate(l.startDate)} – ${formatDate(l.endDate)}`
                 : formatDate(l.startDate)}
             {l.startDate && (!l.recurring || l.endDate) ? (

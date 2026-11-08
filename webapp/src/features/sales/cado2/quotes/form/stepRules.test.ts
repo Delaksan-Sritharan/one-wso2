@@ -104,7 +104,8 @@ describe("stepChecks", () => {
     expect(products({ yearCount: 3 })).toEqual([]);
     expect(products({ yearCount: 2, lastYearEndDate: "2028-03-31" })).toEqual([]);
     expect(products({ yearCount: 2, lastYearEndDate: "2028-10-01" })[0].message).toMatch(/at most 12 months/);
-    const late = { ...complete().lines[0], startDate: "2027-10-01" }; // after Year 1 ends
+    // A one-off line after Year 1 ends (D146).
+    const late = { ...complete().lines[0], recurring: false, startDate: "2027-10-01" };
     expect(products({ lines: [late] }).map((c) => c.field)).toEqual(["lines[0].startDate"]);
   });
 

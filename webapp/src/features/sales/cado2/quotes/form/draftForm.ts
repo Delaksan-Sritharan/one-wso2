@@ -112,7 +112,12 @@ export interface LineValue {
   discount: string;
   /** The contract year the line belongs to, 1-based. */
   yearNumber: number;
-  /** Within its year; "" = the year's own start / end. A one-off is charged on its start. */
+  /**
+   * A one-off line's dates within its year, as picked: they stay put when the
+   * term moves ("" only for a line not yet dated: the year's start, and the
+   * end its start). Always "" for a recurring line, which covers its whole
+   * year (D146).
+   */
   startDate: string;
   endDate: string;
   /**
@@ -427,15 +432,20 @@ export function lastYearEndProblem(start: string, count: number, lastEnd: string
   return "";
 }
 
-/** A line's dates: its own, else its year's; a one-off ends on its start. Null without its year. */
+/**
+ * A line's dates (D146): a recurring line its whole year; a one-off line its
+ * own, the start defaulting to the year's and the end to the start. Null
+ * without its year.
+ */
 export function lineDates(
   l: Pick<LineValue, "yearNumber" | "startDate" | "endDate" | "recurring">,
   years: readonly ContractYear[],
 ): { start: string; end: string } | null {
   const y = years[l.yearNumber - 1];
   if (!y) return null;
+  if (l.recurring) return { start: y.start, end: y.end };
   const start = l.startDate || y.start;
-  return { start, end: l.recurring ? l.endDate || y.end : start };
+  return { start, end: l.endDate || start };
 }
 
 /** Why a line's dates are not allowed in its year, or "". */
@@ -521,19 +531,29 @@ export const insertIndex = (lines: readonly Pick<LineValue, "yearNumber">[], n: 
   lines.reduce((at, l, i) => (l.yearNumber <= n ? i + 1 : at), 0);
 
 /**
- * Shortens (or restores) the last year: its products' dates that would fall
- * after the new end are pulled back within it.
+ * The last year's end, as stored: "" when it's a full 12 months. Its recurring
+ * lines follow it; its one-off lines keep their dates, and it can't end
+ * before them (lastYearEarliestEnd, D146).
  */
-export function setLastYearEnd(v: Pick<DraftFormValues, "startDate" | "yearCount" | "lines">, end: string) {
-  const last = contractYears(v.startDate, v.yearCount, end).at(-1);
-  if (!last) return { lastYearEndDate: end, lines: v.lines };
-  const lines = v.lines.map((l) => {
-    if (l.yearNumber !== v.yearCount) return l;
-    const startDate = l.startDate && l.startDate > last.end ? "" : l.startDate;
-    const endDate = l.endDate && l.endDate > last.end ? "" : l.endDate;
-    return startDate === l.startDate && endDate === l.endDate ? l : { ...l, startDate, endDate };
-  });
-  return { lastYearEndDate: end === contractYears(v.startDate, v.yearCount).at(-1)?.end ? "" : end, lines };
+export function setLastYearEnd(v: Pick<DraftFormValues, "startDate" | "yearCount">, end: string) {
+  return end === contractYears(v.startDate, v.yearCount).at(-1)?.end ? "" : end;
+}
+
+/**
+ * The earliest the last year may end (D146): the latest end of its one-off
+ * lines, with that line's product; null when none holds it back.
+ */
+export function lastYearEarliestEnd(
+  v: Pick<DraftFormValues, "startDate" | "yearCount" | "lastYearEndDate" | "lines">,
+): { date: string; productName: string } | null {
+  const years = formYears(v);
+  let earliest: { date: string; productName: string } | null = null;
+  for (const l of v.lines) {
+    if (l.recurring || l.yearNumber !== v.yearCount) continue;
+    const d = lineDates(l, years);
+    if (d && (!earliest || d.end > earliest.date)) earliest = { date: d.end, productName: l.productName };
+  }
+  return earliest;
 }
 
 // ---------------------------------------------------------------------------
@@ -612,8 +632,7 @@ export function fromVersion(res: DraftResponse): DraftFormValues {
   // The last year's end only when shortened: a full year is the default.
   const lastEnd = v.years?.at(-1)?.endDate ?? "";
   const fullEnd = contractYears(start, yearCount).at(-1)?.end ?? "";
-  // Each line keeps its year; its dates only when narrowed within it.
-  const yearOf = (n: number | null) => (v.years ?? []).find((y) => y.yearNumber === n);
+  // Each line keeps its year; a one-off line its own dates.
   const shipTo = res.version.addresses.find((a) => a.type === "SHIP_TO");
   return {
     ...emptyDraftForm(),
@@ -669,8 +688,10 @@ export function fromVersion(res: DraftResponse): DraftFormValues {
       quantity: String(l.quantity),
       discount: String(Number(l.discretionaryDiscountPercent)),
       yearNumber: l.yearNumber ?? 0,
-      startDate: l.startDate && l.startDate !== yearOf(l.yearNumber)?.startDate ? l.startDate : "",
-      endDate: l.recurring && l.endDate && l.endDate !== yearOf(l.yearNumber)?.endDate ? l.endDate : "",
+      // A one-off line's real dates, kept when the term moves (D146). A
+      // recurring line takes its year's.
+      startDate: !l.recurring ? (l.startDate ?? "") : "",
+      endDate: !l.recurring ? (l.endDate ?? "") : "",
       salesPrice: l.salesPrice && Number(l.salesPrice) !== Number(l.unitPrice) ? String(Number(l.salesPrice)) : "",
       key: `saved-${l.id}`,
       parentKey: l.parentLineNumber ? `saved-${v.lines.find((p) => p.lineNumber === l.parentLineNumber)?.id ?? ""}` : "",
@@ -755,12 +776,15 @@ function termInput(v: DraftFormValues) {
   };
 }
 
-/** A line's year, dates and sales price in a request: each only when set (the backend defaults them). */
+/**
+ * A line's year, dates and sales price in a request: each only when set (the
+ * backend defaults them). A recurring line sends no dates: it covers its year (D146).
+ */
 function linePlace(l: LineValue) {
   return {
     yearNumber: l.yearNumber,
-    startDate: opt(l.startDate),
-    endDate: l.recurring ? opt(l.endDate) : undefined,
+    startDate: l.recurring ? undefined : opt(l.startDate),
+    endDate: l.recurring ? undefined : opt(l.endDate),
     salesPrice: opt(l.salesPrice),
   };
 }

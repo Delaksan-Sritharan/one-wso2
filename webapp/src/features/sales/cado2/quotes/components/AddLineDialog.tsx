@@ -65,6 +65,7 @@ import {
   type BundlePicksValue,
 } from "@features/sales/cado2/quotes/form/bundlePicks";
 import {
+  durationText,
   formatDate,
   LINE_CATEGORIES,
   lineDatesProblem,
@@ -271,9 +272,11 @@ export default function AddLineDialog({
   // The unit price charged: "" = the list price.
   const [salesPrice, setSalesPrice] = useState(line?.salesPrice ?? "");
   const [tried, setTried] = useState(false);
-  // Its dates within the year, shown filled in; saved as "" when they are the year's own.
+  // A one-off line's dates within the year (D146), shown filled in: the
+  // end follows the start until the AM picks one. A recurring line has none.
   const [startDate, setStartDate] = useState(line?.startDate || year?.start || "");
-  const [endDate, setEndDate] = useState(line?.endDate || year?.end || "");
+  const [pickedEnd, setEndDate] = useState(line?.endDate ?? "");
+  const endDate = pickedEnd || startDate;
   const formulas = usePricingFormulas();
   const isChild = Boolean(line?.parentKey);
   // A new product's bundle, or an edited parent's (its picks, D131): what
@@ -366,14 +369,15 @@ export default function AddLineDialog({
     discount: formula ? "0" : discount,
   });
   const recurring = keepsExisting ? line.recurring : (product?.recurring ?? true);
-  const datesProblem = !year
-    ? ""
-    : !startDate || (recurring && !endDate)
-      ? "Choose the dates"
-      : lineDatesProblem(
-          { yearNumber: year.number, startDate, endDate: recurring ? endDate : "", recurring },
-          Array.from({ length: year.number }, () => year),
-        );
+  const datesProblem =
+    !year || recurring
+      ? ""
+      : !startDate
+        ? "Choose the dates"
+        : lineDatesProblem(
+            { yearNumber: year.number, startDate, endDate, recurring },
+            Array.from({ length: year.number }, () => year),
+          );
   // The list price the sales price can't go below: the price book's (a kept
   // line's stored one); a formula line has no sales price.
   const listPrice = keepsExisting ? keptUnitPrice : (entry?.unitPrice ?? "");
@@ -426,8 +430,9 @@ export default function AddLineDialog({
       unitPrice: keepsExisting ? keptUnitPrice : base.unitPrice,
       useLatestPricing: keepsExisting && moved ? true : undefined,
       salesPrice: formula || !salesPrice.trim() || Number(salesPrice) === Number(listPrice) ? "" : String(Number(salesPrice)),
-      startDate: year && startDate !== year.start ? startDate : "",
-      endDate: year && recurring && endDate !== year.end ? endDate : "",
+      // A one-off line's real dates, kept when the term moves (D146).
+      startDate: year && !recurring ? startDate : "",
+      endDate: year && !recurring ? endDate : "",
     };
     // Its bundle comes with it: same year and dates, the quantity its rule
     // says (D125: fixed, or the parent's), no discount, priced from the same
@@ -445,8 +450,8 @@ export default function AddLineDialog({
               {
                 ...kept,
                 yearNumber: saved.yearNumber,
-                startDate: saved.startDate,
-                endDate: kept.recurring ? saved.endDate : "",
+                startDate: kept.recurring ? "" : saved.startDate,
+                endDate: kept.recurring ? "" : saved.endDate,
                 quantity: childQuantity(saved.quantity, p.fixedQuantity),
                 bundleFixedQuantity: p.fixedQuantity,
               },
@@ -472,8 +477,8 @@ export default function AddLineDialog({
               quantity: childQuantity(saved.quantity, p.fixedQuantity),
               discount: "0",
               yearNumber: saved.yearNumber,
-              startDate: saved.startDate,
-              endDate: p.recurring ? saved.endDate : "",
+              startDate: p.recurring ? "" : saved.startDate,
+              endDate: p.recurring ? "" : saved.endDate,
               salesPrice: "",
               key: newLineKey(),
               parentKey: saved.key,
@@ -704,19 +709,34 @@ export default function AddLineDialog({
               />
             </Stack>
           </Group>
-          {/* Its dates within its year: the whole year
-              unless narrowed; a one-off is charged on its start. A bundle
-              child keeps its parent's. */}
+          {/* Its dates within its year (D146): a recurring line covers all
+              of it; a one-off line has a start and an end inside it,
+              charged once. A bundle child keeps its parent's. */}
           {isChild ? (
             <Typography variant="body2" color="text.secondary">
               Comes with {parentName ?? "its bundle's product"}: same year and dates, and removed only with it.
             </Typography>
+          ) : year && recurring ? (
+            <Group icon={<CalendarDaysIcon size={14} />} title={`Dates in Year ${year.number}`}>
+              <Box sx={{ bgcolor: "action.hover", borderRadius: 1, px: 1.5, py: 1.25 }}>
+                <Typography variant="body2">
+                  Covers the whole of Year {year.number}:{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {formatDate(year.start)} – {formatDate(year.end)}
+                  </Box>{" "}
+                  · {durationText(year.start, year.end)}
+                </Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                Charged every year: its dates follow the year.
+              </Typography>
+            </Group>
           ) : year ? (
             <Group icon={<CalendarDaysIcon size={14} />} title={`Dates in Year ${year.number}`}>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 {[
-                  { label: recurring ? "Start" : "Charged on", value: startDate, set: setStartDate },
-                  ...(recurring ? [{ label: "End", value: endDate, set: setEndDate }] : []),
+                  { label: "Start", value: startDate, set: setStartDate },
+                  { label: "End", value: endDate, set: setEndDate },
                 ].map((f) => (
                   <DatePicker
                     key={f.label}
@@ -730,7 +750,8 @@ export default function AddLineDialog({
                 ))}
               </Stack>
               <Typography variant="caption" color={tried && datesProblem ? "error" : "text.secondary"}>
-                {(tried && datesProblem) || `Year ${year.number} runs ${formatDate(year.start)} – ${formatDate(year.end)}`}
+                {(tried && datesProblem) ||
+                  `One-time: charged once, in full. Year ${year.number} runs ${formatDate(year.start)} – ${formatDate(year.end)}`}
               </Typography>
             </Group>
           ) : null}

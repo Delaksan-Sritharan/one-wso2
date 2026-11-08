@@ -53,6 +53,7 @@ import {
   deleteYear,
   insertIndex,
   isPartnerLed,
+  lastYearEarliestEnd,
   lastYearEndProblem,
   MAX_YEARS,
   setLastYearEnd,
@@ -198,11 +199,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
     setValue("lastYearEndDate", next.lastYearEndDate, { shouldDirty: true });
     if (next.lines) replace(next.lines);
   };
-  const changeLastEnd = (end: string) => {
-    const next = setLastYearEnd(getValues(), end);
-    setValue("lastYearEndDate", next.lastYearEndDate, { shouldDirty: true });
-    if (next.lines !== getValues("lines")) replace(next.lines);
-  };
+  const changeLastEnd = (end: string) => setValue("lastYearEndDate", setLastYearEnd(getValues(), end), { shouldDirty: true });
 
   const addButton = (n: number, label = "Product") => (
     <Button
@@ -275,7 +272,14 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
   // header is clickable (2026-10-26); a problem with it shows above its products.
   const yearEnd = (n: number) =>
     n === values.yearCount && values.startDate && years[n - 1]?.end ? (
-      <LastYearEnd yearNumber={n} start={years[n - 1].start} end={years[n - 1].end} fullEnd={fullLastEnd} onChange={changeLastEnd} />
+      <LastYearEnd
+        yearNumber={n}
+        start={years[n - 1].start}
+        end={years[n - 1].end}
+        fullEnd={fullLastEnd}
+        earliest={lastYearEarliestEnd(values)}
+        onChange={changeLastEnd}
+      />
     ) : null;
   const yearTop = (n: number) =>
     n === values.yearCount && (lastProblem || lastEndIssue) ? <Alert severity="error">{lastProblem || lastEndIssue}</Alert> : null;
