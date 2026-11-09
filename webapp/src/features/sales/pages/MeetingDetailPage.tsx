@@ -189,7 +189,14 @@ export default function MeetingDetailPage() {
                 value={tab}
                 // Chosen from the tab bar, not from a circle: no Letter to mark.
                 onChange={(_, next: MeetingTab) => show(next)}
-                sx={{ mb: 2, minHeight: 36, "& .MuiTab-root": { minHeight: 36, textTransform: "none" } }}
+                // Styled like the deal page's tabs, so the two Echo screens read as one product.
+                sx={{
+                  mb: 2,
+                  minHeight: 40,
+                  borderBottom: 1,
+                  borderColor: "divider",
+                  "& .MuiTab-root": { minHeight: 40, textTransform: "none" },
+                }}
               >
                 <Tab value="summary" label="Summary" />
                 {/* Between the summary and the raw transcript: the analysis of the call sits
