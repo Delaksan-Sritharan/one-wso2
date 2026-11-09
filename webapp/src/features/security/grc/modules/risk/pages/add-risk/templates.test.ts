@@ -248,6 +248,18 @@ describe("platformMissingSub", () => {
     expect(platformMissingSub(platformChoices(all, []), [7])).toBeNull();
   });
 
+  it("does not require a sub-platform the register no longer offers", () => {
+    const c = platformChoices(all, [4, 7], [7, 9]);
+    expect(platformMissingSub(c, [7])).toBeNull();
+  });
+
+  it("checks only the platforms to enforce", () => {
+    const c = platformChoices(all, [4, 7, 9]);
+    expect(platformMissingSub(c, [7], [])).toBeNull();
+    expect(platformMissingSub(c, [7], [4])).toBeNull();
+    expect(platformMissingSub(c, [7], [7])?.id).toBe(7);
+  });
+
   it("is reported by missingTemplateFields", () => {
     const values = { platforms: [7], customer: "" as const, deploymentType: "" as const, products: [], environments: [] };
     const c = platformChoices(all, [7, 9]);

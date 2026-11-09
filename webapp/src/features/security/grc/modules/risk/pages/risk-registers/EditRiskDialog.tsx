@@ -385,6 +385,17 @@ export default function EditRiskDialog({
       if (reassessmentDate && reassessmentDate < today) {
         e.reassessmentDate = "Reassessment date cannot be in the past.";
       }
+      // The server only checks sub-platforms when the platforms changed, and then
+      // only for a platform newly added or one the risk already has a
+      // sub-platform under. Anything else is left alone, so a register that
+      // started offering sub-platforms later never blocks an unrelated edit.
+      const platformsToEnforce = sameValues(platformIds, currentPlatformIds)
+        ? []
+        : platformIds.filter(
+            (id) =>
+              !currentPlatformIds.includes(id) ||
+              platformOptions.some((o) => o.parent_id === id && currentPlatformIds.includes(o.id)),
+          );
       // The customer is locked and never validated here: it cannot be edited,
       // so a risk missing one could not be repaired from this form.
       Object.assign(
@@ -395,7 +406,7 @@ export default function EditRiskDialog({
           deploymentType: deploymentTypeId,
           products: productIds,
           environments,
-        }, platformPickerChoices),
+        }, platformPickerChoices, platformsToEnforce),
       );
     }
     if (implementationDate && implementationDate < today) {

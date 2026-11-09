@@ -48,12 +48,14 @@ export function missingTemplateFields(
   // The platforms the register offers, to require a sub-platform where it
   // lists some. Left out, only "at least one platform" is checked.
   platforms?: PlatformChoices,
+  // Limits the sub-platform requirement to these platforms; see platformMissingSub.
+  enforceIds?: number[],
 ): Partial<Record<TemplateField, string>> {
   const missing: Partial<Record<TemplateField, string>> = {};
   if (template === "AGGREGATED" && values.platforms.length === 0) {
     missing.platforms = "Select at least one platform";
   } else if (template === "AGGREGATED" && platforms) {
-    const needsSub = platformMissingSub(platforms, values.platforms);
+    const needsSub = platformMissingSub(platforms, values.platforms, enforceIds);
     if (needsSub) missing.platforms = `Select at least one ${needsSub.name} sub-platform`;
   }
   if (template === "MANAGED_SERVICES") {
@@ -147,6 +149,10 @@ export interface PlatformChoices {
   platforms: LookupOption[];
   // Sub-platforms the picker offers, by the platform they sit under.
   subsByParent: Map<number, LookupOption[]>;
+  // The sub-platforms the register itself offers (active and listed), by
+  // platform. Unlike subsByParent this leaves out values kept only because the
+  // risk already carries them, so they never make a pick required.
+  requiredSubsByParent: Map<number, LookupOption[]>;
   // True when the register lists its platforms. The server then requires a
   // sub-platform whenever the register offers any under a chosen platform.
   restricted: boolean;
@@ -161,26 +167,41 @@ export function platformChoices(all: LookupOption[], offeredIds: number[], keepI
   const restricted = offeredIds.length > 0;
   const offered = (o: LookupOption): boolean =>
     keepIds.includes(o.id) || (o.status === "ACTIVE" && (!restricted || offeredIds.includes(o.id)));
+  const registerOffers = (o: LookupOption): boolean =>
+    o.status === "ACTIVE" && (!restricted || offeredIds.includes(o.id));
   const subsByParent = new Map<number, LookupOption[]>();
+  const requiredSubsByParent = new Map<number, LookupOption[]>();
   for (const o of all) {
     if (o.parent_id === undefined || o.parent_id === null || !offered(o)) continue;
     subsByParent.set(o.parent_id, [...(subsByParent.get(o.parent_id) ?? []), o]);
+    if (registerOffers(o)) {
+      requiredSubsByParent.set(o.parent_id, [...(requiredSubsByParent.get(o.parent_id) ?? []), o]);
+    }
   }
   return {
     platforms: all.filter((o) => (o.parent_id === undefined || o.parent_id === null) && offered(o)),
     subsByParent,
+    requiredSubsByParent,
     restricted,
   };
 }
 
 // The first platform the user picked whose offered sub-platforms none of the
 // picks include, or null. Only a restricted register requires one: it lists
-// sub-platforms on purpose. The server checks the same rule.
-export function platformMissingSub(choices: PlatformChoices, selected: number[]): LookupOption | null {
+// sub-platforms on purpose. The server checks the same rule: only sub-platforms
+// the register offers count, and `enforceIds`, when given, limits the check to
+// those platforms (the edit form passes the ones newly added or already holding
+// a sub-platform, so an untouched platform never blocks a save).
+export function platformMissingSub(
+  choices: PlatformChoices,
+  selected: number[],
+  enforceIds?: number[],
+): LookupOption | null {
   if (!choices.restricted) return null;
   return (
     choices.platforms.find((p) => {
-      const subs = choices.subsByParent.get(p.id) ?? [];
+      if (enforceIds && !enforceIds.includes(p.id)) return false;
+      const subs = choices.requiredSubsByParent.get(p.id) ?? [];
       return selected.includes(p.id) && subs.length > 0 && !subs.some((s) => selected.includes(s.id));
     }) ?? null
   );
