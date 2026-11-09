@@ -43,6 +43,7 @@ import AuditProgramFilter from "@features/security/grc/modules/audit/components/
 import { ALL_PROGRAMS, auditIdsFor, OVERDUE_STATUS } from "@features/security/grc/modules/audit/utils/assigneeProgress";
 import PersonStatusTable from "@features/security/grc/modules/audit/components/dashboard/PersonStatusTable";
 import RoleProgressCard from "@features/security/grc/modules/audit/components/dashboard/RoleProgressCard";
+import RoleStatusTotalsCard from "@features/security/grc/modules/audit/components/dashboard/RoleStatusTotalsCard";
 import SectionCard from "@features/security/grc/modules/audit/components/dashboard/SectionCard";
 import PhaseInsightDialog from "@features/security/grc/modules/audit/components/dashboard/PhaseInsightDialog";
 import TeamProgress from "@features/security/grc/modules/audit/components/dashboard/TeamProgress";
@@ -289,7 +290,7 @@ export default function AuditDashboard(): JSX.Element {
           as a full-width table (one row per person, a column per status). */}
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" }, gap: 2 }}>
         <RoleProgressCard title="Auditor Team" role="auditor" statuses={AUDITOR_STATUSES} audits={audits} />
-        <RoleProgressCard title="Compliance Team" role="compliance" statuses={COMPLIANCE_STATUSES} audits={audits} />
+        <RoleStatusTotalsCard title="Compliance Team" role="compliance" statuses={COMPLIANCE_STATUSES} audits={audits} />
       </Box>
       <PersonStatusTable title="Process Owner Team" role="owner" statuses={OWNER_STATUSES} personLabel="Process Owner" audits={audits} />
 
