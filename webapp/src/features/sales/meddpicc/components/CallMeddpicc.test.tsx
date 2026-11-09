@@ -86,6 +86,20 @@ describe("CallMeddpiccStrip", () => {
     expect(screen.getByText(/this call has no transcript to analyse/)).toBeInTheDocument();
   });
 
+  // An empty transcript is not a failed analysis: nothing was said, so nothing went wrong.
+  it("says the transcript is empty rather than that the analysis failed", () => {
+    render(
+      <CallMeddpiccStrip
+        call={callOf(makeCoverage({ status: "EMPTY", coverage: null }), undefined)}
+        meetingTitle="x"
+        onLetterClick={() => {}}
+        onOpenDeal={() => {}}
+      />,
+    );
+    expect(screen.getByText(/transcript is empty, so there was nothing to analyse/)).toBeInTheDocument();
+    expect(screen.queryByText(/analysis failed/)).not.toBeInTheDocument();
+  });
+
   it("is left out when the MEDDPICC backend is not configured", () => {
     const { container } = render(
       <CallMeddpiccStrip
