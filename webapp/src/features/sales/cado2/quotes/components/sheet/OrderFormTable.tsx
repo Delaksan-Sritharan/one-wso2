@@ -24,6 +24,9 @@ import { visuallyHidden } from "@features/sales/cado2/utils/visuallyHidden";
 
 const num = { fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" } as const;
 
+/** A unit price after its discount, to the cent: 32,000 less 5% → "30400.00". */
+const afterDiscount = (price: string, pct: string) => (Math.round(Number(price) * (100 - Number(pct))) / 100).toFixed(2);
+
 interface OrderFormTableProps {
   readonly lines: readonly SheetLine[];
   readonly currency: string;
@@ -146,13 +149,19 @@ export default function OrderFormTable({
                 Comes with {l.parentName}
               </Typography>
             ) : null}
-            {/* How a formula line's unit price was worked out (D81); it has no discount. */}
+            {/* How a formula line's unit price was worked out (D81), and
+                what its discount brings it to (D149). */}
             {l.formula ? (
               <Typography variant="caption" color="text.secondary" display="block" aria-label="Priced by formula">
                 Formula {l.formula.version}:{" "}
                 <Box component="span" sx={{ fontFamily: "monospace" }}>
                   {l.formula.explanation}
                 </Box>
+              </Typography>
+            ) : null}
+            {l.formula && Number(l.discountPercent) > 0 ? (
+              <Typography variant="caption" display="block" sx={{ color: "primary.main" }} aria-label="After discount">
+                After {l.discountPercent}% discount: {formatMoney(afterDiscount(l.unitPrice, l.discountPercent))}
               </Typography>
             ) : null}
           </TableCell>

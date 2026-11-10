@@ -155,6 +155,17 @@ describe("Order form", () => {
 
   // 2026-10-12 (amends D53): a line shows its product's name and SKU only; the
   // description is shown when choosing the product.
+  // D149: a formula line's discount, and what it brings its price to.
+  it("shows a formula line's discount and its price after it", () => {
+    const support = { ...line(3, "Enterprise Support", "SUPPORT", "30400.00", "30400.00"), unitPrice: "32000.00", discountPercent: "5",
+      formula: { version: "v3 · 15 Oct 2026", explanation: "max(25,000, 10% × 320,000)" } };
+    render(<QuoteSheet sheet={{ ...threeYears, lines: [support] }} />);
+    const row = within(screen.getByRole("table", { name: "Products" })).getByText("Enterprise Support").closest("tr") as HTMLElement;
+    expect(within(row).getByLabelText("Priced by formula")).toHaveTextContent("Formula v3 · 15 Oct 2026: max(25,000, 10% × 320,000)");
+    expect(within(row).getByLabelText("After discount")).toHaveTextContent("After 5% discount: 30,400.00");
+    expect(within(row).getByText("5%")).toBeInTheDocument();
+  });
+
   it("shows a line's product name and SKU, not its description", () => {
     const described = { ...threeYears.lines[0], productCode: "GW-SKU", productDescription: "Based on the number of gateways." };
     render(<QuoteSheet sheet={{ ...threeYears, lines: [described, ...threeYears.lines.slice(1)] }} />);

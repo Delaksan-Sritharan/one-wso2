@@ -450,7 +450,7 @@ describe("Quotes page", () => {
     await user.type(screen.getByRole("textbox", { name: "Search quotes" }), "Q-26-00119");
     expect(screen.getByText("1–1 of 1")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "My quotes 120" })).toBeInTheDocument(); // still the whole count
-  });
+  }, 15_000); // 50 rows twice and a typed search: slow when every test file runs at once
 
   // D148: the tree pages accounts, so an account's quotes stay together.
   it("pages the tree by account, each account with all its quotes", async () => {

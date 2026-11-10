@@ -1968,9 +1968,13 @@ export const cado2ServiceUrls = {
   // are chosen from these only.
   opportunityContacts: (opportunityId: string): string =>
     `${cado2BackendUrl}/opportunities/${encodeSegment(opportunityId)}/contacts`,
-  // The opportunity's product lines as they are in Salesforce now (D147), read only.
-  opportunityLines: (opportunityId: string): string =>
-    `${cado2BackendUrl}/opportunities/${encodeSegment(opportunityId)}/products`,
+  // The opportunity's product lines as they are in Salesforce now (D147); with
+  // the quote's price book and currency, checked for loading (D150).
+  opportunityLines: (opportunityId: string, check?: { pricebookId: string; currency: string }): string => {
+    const base = `${cado2BackendUrl}/opportunities/${encodeSegment(opportunityId)}/products`;
+    if (!check) return base;
+    return `${base}?${new URLSearchParams({ pricebookId: check.pricebookId, currency: check.currency }).toString()}`;
+  },
   // One page of a price book's products in a currency. Paged server-side by
   // limit/offset (Salesforce stops at offset 2000).
   products: (

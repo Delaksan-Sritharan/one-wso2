@@ -88,7 +88,7 @@ export interface SheetLine {
   readonly unitOfMeasure: string | null;
   /** The unit price charged: the sales price, which is the list price unless raised. */
   readonly unitPrice: string;
-  /** e.g. "10" for 10%; "0" when none, and always on a formula line. */
+  /** e.g. "10" for 10%; "0" when none. A formula line's is off its formula price (D149). */
   readonly discountPercent: string;
   /**
    * A formula line's version and how it worked the unit price out (D81, D82):
@@ -425,7 +425,7 @@ export function sheetFromForm(
         quantity: l.quantity,
         unitOfMeasure: blank(l.unitOfMeasure),
         unitPrice: byFormula ? (p.unitPrice ?? l.unitPrice) : l.salesPrice || l.unitPrice,
-        discountPercent: byFormula ? "0" : String(Number(l.discount || "0")),
+        discountPercent: String(Number(l.discount || "0")),
         formula: byFormula ? formulaOf(p.formula) : null,
         yearNumber: l.yearNumber,
         startDate: dates?.start ?? null,

@@ -114,10 +114,15 @@ export function useOpportunityContacts(opportunityId: string | null) {
 }
 
 /** The opportunity's product lines as they are in Salesforce now (D147): read fresh while `enabled`. */
-export function useOpportunityLines(opportunityId: string | null, enabled: boolean) {
+export function useOpportunityLines(
+  opportunityId: string | null,
+  enabled: boolean,
+  check?: { pricebookId: string; currency: string },
+) {
+  const usable = check && check.pricebookId && check.currency ? check : undefined;
   return useAuthedQuery<OpportunityLines>(
-    ["opportunity-lines", opportunityId],
-    enabled && opportunityId ? cado2ServiceUrls.opportunityLines(opportunityId) : null,
+    ["opportunity-lines", opportunityId, usable ?? null],
+    enabled && opportunityId ? cado2ServiceUrls.opportunityLines(opportunityId, usable) : null,
     "live",
   );
 }

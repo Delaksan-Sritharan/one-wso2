@@ -44,7 +44,8 @@ import ScheduleTable from "@features/sales/cado2/quotes/components/sheet/Schedul
 import YearSections, { OrderTotalsFooter, type SectionYear } from "@features/sales/cado2/quotes/components/sheet/YearSections";
 import { useCollapsedYears } from "@features/sales/cado2/quotes/components/sheet/useCollapsedYears";
 import { hasYearlySchedule, orderForm, sheetFromForm } from "@features/sales/cado2/quotes/sheet/sheetModel";
-import type { PricingPreview } from "@features/sales/cado2/quotes/api/quoteTypes";
+import type { OpportunityLineLoad, PricingPreview, RenewalCheck } from "@features/sales/cado2/quotes/api/quoteTypes";
+import { useOpportunityQuotes } from "@features/sales/cado2/quotes/api/useQuoteApi";
 import {
   addYear,
   childQuantity,
@@ -56,6 +57,7 @@ import {
   isPartnerLed,
   lastYearEarliestEnd,
   lastYearEndProblem,
+  lineFromSalesforce,
   MAX_YEARS,
   setLastYearEnd,
   type ContractYear,
@@ -128,8 +130,27 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
     index: null,
     year: 1,
   });
-  // D147: the opportunity's line items in Salesforce, to add from by hand.
+  // D150: an auto-generated renewal's inherited line items in Salesforce,
+  // until a quote has been synced to it (its lines then came from
+  // QuickQuote). First sales and expansions add products, or clone a quote.
+  const opportunityQuotes = useOpportunityQuotes(values.opportunityId || null);
+  const showSalesforceLines =
+    Boolean(values.opportunityId) &&
+    values.dealKind === "RENEWAL" &&
+    opportunityQuotes.data !== undefined &&
+    !opportunityQuotes.data.some((q) => q.syncedAt);
   const [viewingLines, setViewingLines] = useState(false);
+  const [loaded, setLoaded] = useState<number | null>(null);
+  // Clean lines replace any already added (the dialog warns); the term
+  // becomes the opportunity's one year, so each recurring line covers it.
+  const onLoad = (loads: OpportunityLineLoad[], check: RenewalCheck) => {
+    if (check.subsStartDate) setValue("startDate", check.subsStartDate, { shouldDirty: true });
+    setValue("yearCount", 1, { shouldDirty: true });
+    setValue("lastYearEndDate", "", { shouldDirty: true });
+    replace(loads.map(lineFromSalesforce));
+    setLoaded(loads.length);
+    setViewingLines(false);
+  };
   const fold = useCollapsedYears();
   const linesIssue = useFieldIssue("lines");
   const yearsIssue = useFieldIssue("years");
@@ -316,18 +337,18 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
         title="Products"
         icon={<PackageIcon size={18} />}
         aside={
-          values.opportunityId || years.length > 1 ? (
+          showSalesforceLines || years.length > 1 ? (
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {/* D147: shown, never loaded; "SF" to save room, the full name on hover (2026-11-08). */}
-              {values.opportunityId ? (
+              {/* D150: the renewal's inherited products, to import. */}
+              {showSalesforceLines ? (
                 <Button
                   size="small"
                   variant="outlined"
                   startIcon={<CloudDownloadIcon size={14} />}
                   onClick={() => setViewingLines(true)}
-                  title="View the opportunity's line items in Salesforce"
+                  title="Import the products this renewal inherited in Salesforce"
                 >
-                  View SF line items
+                  Import renewal products
                 </Button>
               ) : null}
               {years.length > 1 ? (
@@ -346,6 +367,11 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
         {yearsIssue ? (
           <Alert severity="error" sx={{ mb: 2 }}>
             {yearsIssue}
+          </Alert>
+        ) : null}
+        {loaded !== null ? (
+          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setLoaded(null)} aria-label="Loaded from Salesforce">
+            Loaded {loaded === 1 ? "1 product" : `${loaded} products`} from Salesforce. Check them, then save the draft.
           </Alert>
         ) : null}
         {orphans.length ? (
@@ -494,6 +520,10 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
         open={viewingLines}
         opportunityId={values.opportunityId || null}
         opportunityName={values.opportunityName}
+        pricebookId={values.defaultPricebookId}
+        currency={currency}
+        productCount={values.lines.length}
+        onLoad={onLoad}
         onClose={() => setViewingLines(false)}
       />
     </Stack>

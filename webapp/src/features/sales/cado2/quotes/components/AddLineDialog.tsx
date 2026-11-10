@@ -119,6 +119,49 @@ type CardPricing =
   | { kind: "FORMULA"; formula: PricingFormula };
 
 /**
+ * A formula line's discount (D149): the formula price, the discount and the
+ * price after it, per unit. A new line's formula price is worked out on the
+ * quote, so only the discount is said.
+ */
+function FormulaDiscount({
+  currency,
+  formulaPrice,
+  discount,
+}: {
+  currency: string;
+  formulaPrice: string | null;
+  discount: string;
+}): JSX.Element {
+  const pct = Number(discount);
+  if (!formulaPrice) {
+    return (
+      <Typography variant="body2" color="text.secondary" aria-label="Price after discount">
+        {pct}% off the formula price, once it&apos;s worked out on the quote.
+      </Typography>
+    );
+  }
+  const price = Number(formulaPrice);
+  const off = Math.round(price * pct) / 100;
+  const row = (label: string, value: string, bold = false) => (
+    <Stack direction="row" justifyContent="space-between" spacing={2} sx={{ fontWeight: bold ? 700 : 400 }}>
+      <span>{label}</span>
+      <Box component="span" sx={{ fontVariantNumeric: "tabular-nums" }}>
+        {value}
+      </Box>
+    </Stack>
+  );
+  return (
+    <Box aria-label="Price after discount" sx={{ p: 1.25, borderRadius: 1, bgcolor: "action.hover", typography: "body2" }}>
+      {row("Formula price", `${currency} ${formatMoney(price.toFixed(2))}`)}
+      {row(`Discount ${pct}%`, `− ${currency} ${formatMoney(off.toFixed(2))}`)}
+      <Box sx={{ borderTop: 1, borderColor: "divider", mt: 0.5, pt: 0.5 }}>
+        {row("Price after discount, per unit", `${currency} ${formatMoney((price - off).toFixed(2))}`, true)}
+      </Box>
+    </Box>
+  );
+}
+
+/**
  * The chosen product and its price, shown prominently (the price can't be
  * edited), with where the price comes from.
  */
@@ -326,7 +369,7 @@ export default function AddLineDialog({
     : inForce
       ? { kind: "FORMULA", formula: inForce }
       : { kind: "PRICE_BOOK" };
-  // A formula line has no discount.
+  // A formula sets the price; the AM's discount is taken off it (D149).
   const formula = kept ? kept.method === "FORMULA" : Boolean(inForce);
   // What the AM can move the kept line to, if the pricing in force differs.
   const moveTo = !kept
@@ -366,7 +409,7 @@ export default function AddLineDialog({
     pricebookEntryId: keepsExisting ? line.pricebookEntryId : entry ? entry.id : "",
     category: mapped ?? category,
     quantity,
-    discount: formula ? "0" : discount,
+    discount,
   });
   const recurring = keepsExisting ? line.recurring : (product?.recurring ?? true);
   const datesProblem =
@@ -426,7 +469,7 @@ export default function AddLineDialog({
       categorySource: source,
       unitOfMeasure: uom.trim(),
       quantity: String(Number(quantity)),
-      discount: formula ? "0" : discount.trim() || "0",
+      discount: discount.trim() || "0",
       unitPrice: keepsExisting ? keptUnitPrice : base.unitPrice,
       useLatestPricing: keepsExisting && moved ? true : undefined,
       salesPrice: formula || !salesPrice.trim() || Number(salesPrice) === Number(listPrice) ? "" : String(Number(salesPrice)),
@@ -695,12 +738,11 @@ export default function AddLineDialog({
               />
               <TextField
                 label="Discount"
-                value={formula ? "0" : discount}
+                value={discount}
                 onChange={(e) => setDiscount(e.target.value)}
                 size="small"
-                disabled={Boolean(formula)}
-                error={Boolean(show("discount")) && !formula}
-                helperText={formula ? "No discount on formula-priced products" : show("discount")}
+                error={Boolean(show("discount"))}
+                helperText={show("discount") ?? (formula ? "Off the formula price" : undefined)}
                 slotProps={{
                   input: {
                     endAdornment: <InputAdornment position="end">%</InputAdornment>,
@@ -708,6 +750,13 @@ export default function AddLineDialog({
                 }}
               />
             </Stack>
+            {formula && !problems.discount && Number(discount) > 0 ? (
+              <FormulaDiscount
+                currency={currency}
+                formulaPrice={pricing.kind === "KEPT_FORMULA" ? keptUnitPrice : null}
+                discount={discount}
+              />
+            ) : null}
           </Group>
           {/* Its dates within its year (D146): a recurring line covers all
               of it; a one-off line has a start and an end inside it,

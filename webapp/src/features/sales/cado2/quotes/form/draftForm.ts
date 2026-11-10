@@ -32,6 +32,7 @@ import type {
   DraftResponse,
   LineCategory,
   LineFormula,
+  OpportunityLineLoad,
   Partner,
   PricingMethod,
   PricingPreview,
@@ -139,6 +140,39 @@ export interface LineValue {
 let lineKeys = 0;
 /** A new line's key, unique in the page. */
 export const newLineKey = () => `line-${Date.now().toString(36)}-${++lineKeys}`;
+
+/**
+ * A clean Salesforce line as it goes into the quote (D150): Year 1, priced
+ * from the quote's price book, with its quantity, a sales price above the
+ * book and its discount. A recurring line covers the whole year (D146).
+ */
+export function lineFromSalesforce(l: OpportunityLineLoad): LineValue {
+  return {
+    lineId: null,
+    pricebookEntryId: l.pricebookEntryId,
+    productId: l.productId,
+    productName: l.productName,
+    productCode: l.productCode ?? "",
+    productDescription: l.productDescription ?? "",
+    pricebookId: l.pricebookId,
+    pricebookName: l.pricebookName,
+    unitPrice: l.unitPrice,
+    category: l.category as LineCategory,
+    categorySource: "MAPPED",
+    recurring: l.recurring,
+    classification: l.classification ?? "",
+    unitOfMeasure: "",
+    quantity: String(Number(l.quantity)),
+    discount: String(Number(l.discount)),
+    yearNumber: 1,
+    startDate: "",
+    endDate: "",
+    salesPrice: l.salesPrice ? String(Number(l.salesPrice)) : "",
+    key: newLineKey(),
+    parentKey: "",
+    bundleFixedQuantity: null,
+  };
+}
 
 /** A bundle parent's children, in order. */
 export const childrenOf = (lines: readonly LineValue[], key: string) => lines.filter((l) => l.parentKey !== "" && l.parentKey === key);

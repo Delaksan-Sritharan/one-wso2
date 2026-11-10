@@ -482,7 +482,7 @@ describe("AddLineDialog", () => {
 
 // A click outside the dialog doesn't throw the typed line away (2026-10-13).
 describe("AddLineDialog — closing", () => {
-  it("shows a formula product's formula instead of a price, and allows no discount (D81)", async () => {
+  it("shows a formula product's formula instead of a price, and takes a discount off it (D81, D149)", async () => {
     formulas.list = [supportFormula];
     try {
       const onSave = renderDialog();
@@ -496,9 +496,12 @@ describe("AddLineDialog — closing", () => {
       expect(card.getByText("$1 = 25000 · $2 = 10% · $3 = total of WSO2 API Manager")).toBeInTheDocument();
 
       const discount = screen.getByRole("textbox", { name: "Discount" });
-      expect(discount).toBeDisabled();
-      expect(discount).toHaveValue("0");
-      expect(screen.getByText("No discount on formula-priced products")).toBeInTheDocument();
+      expect(discount).toBeEnabled();
+      expect(screen.getByText("Off the formula price")).toBeInTheDocument();
+      await user.clear(discount);
+      await user.type(discount, "5");
+      // A new line's formula price is worked out on the quote.
+      expect(screen.getByLabelText("Price after discount")).toHaveTextContent("5% off the formula price, once it's worked out on the quote.");
       // A formula's price can't be overridden.
       expect(screen.getByRole("textbox", { name: "Sales price" })).toBeDisabled();
       expect(screen.getByText("Priced by formula: the price can't be changed")).toBeInTheDocument();
@@ -508,7 +511,7 @@ describe("AddLineDialog — closing", () => {
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({
           productId: support.id,
-          discount: "0",
+          discount: "5",
           salesPrice: "",
           unitOfMeasure: "Annual, higher of 25,000 or 10% of subscription",
         }),
@@ -531,7 +534,14 @@ describe("AddLineDialog — closing", () => {
       expect(card.queryByText("per unit, from the price book")).toBeNull();
       expect(card.getByText("Formula v3 · 15 Oct 2026")).toBeInTheDocument();
       expect(card.getByText("= max(25,000, 4,140,000 × 10%)")).toBeInTheDocument();
-      expect(screen.getByRole("textbox", { name: "Discount" })).toBeDisabled();
+      // D149: the discount is taken off the formula price, shown worked out.
+      const discount = screen.getByRole("textbox", { name: "Discount" });
+      expect(discount).toBeEnabled();
+      await userEvent.setup().clear(discount);
+      await userEvent.setup().type(discount, "5");
+      expect(screen.getByLabelText("Price after discount")).toHaveTextContent(
+        "Formula priceUSD 414,000.00Discount 5%− USD 20,700.00Price after discount, per unitUSD 393,300.00",
+      );
 
       expect(screen.getByText(/This formula was removed on 16 Oct 2026/)).toBeInTheDocument();
       const user = userEvent.setup();
@@ -572,7 +582,7 @@ describe("AddLineDialog — closing", () => {
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: "Use the formula" }));
       expect(within(screen.getByLabelText("Chosen product")).getByText("By formula")).toBeInTheDocument();
-      expect(screen.getByRole("textbox", { name: "Discount" })).toBeDisabled();
+      expect(screen.getByRole("textbox", { name: "Discount" })).toBeEnabled(); // D149
     } finally {
       formulas.list = [];
     }
