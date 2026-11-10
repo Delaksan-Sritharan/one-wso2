@@ -28,6 +28,7 @@ import { problemOf } from "./errors";
 import { httpRetry } from "@api/errors";
 import { cado2ServiceUrls } from "@config/apiConfig";
 import { useCado2Basis } from "@features/sales/cado2/api/cado2Basis";
+import { DEFAULT_SORT, type QuoteSort } from "@features/sales/cado2/quotes/list/quoteListModel";
 import type {
   Account,
   BundleChildren,
@@ -228,9 +229,50 @@ export function usePricingFormulas(): UseQueryResult<PricingFormula[], Error> {
   return useAuthedQuery<PricingFormula[]>(["pricing-formulas"], cado2ServiceUrls.pricingFormulas);
 }
 
-/** My Quotes: the caller's own quotes, filtered by the latest version's status. */
-export function useQuoteList(status = "", scope: QuoteScope = "mine") {
-  return useAuthedQuery<QuoteList>(["quotes", "list", scope, status], cado2ServiceUrls.quoteList(status, scope), "live");
+/** Rows on a page of the Quotes list (D148). */
+export const QUOTE_PAGE = 50;
+/** Accounts on a page of the tree, each with all its quotes (D148). */
+export const ACCOUNT_PAGE = 20;
+
+export interface QuoteListQuery {
+  readonly search?: string;
+  readonly sort?: QuoteSort;
+  /** Page accounts, each with all its quotes, instead of quotes (the tree). */
+  readonly byAccount?: boolean;
+  /** From 0. */
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+/**
+ * A page of the Quotes list (D70): the caller's quotes or everyone's,
+ * searched, sorted and paged by the backend (D148): by quote, or by account
+ * for the tree, so an account never splits across pages. The previous page
+ * stays on screen while the next loads.
+ */
+export function useQuoteList(scope: QuoteScope = "mine", query: QuoteListQuery = {}) {
+  const { getToken, ready, key } = useCado2Basis();
+  const byAccount = query.byAccount ?? false;
+  const limit = query.limit ?? (byAccount ? ACCOUNT_PAGE : QUOTE_PAGE);
+  const sort = query.sort ?? DEFAULT_SORT;
+  const url = cado2ServiceUrls.quoteList({
+    scope,
+    q: query.search?.trim() ?? "",
+    sort: sort.key,
+    order: sort.dir,
+    byAccount,
+    limit,
+    offset: (query.page ?? 0) * limit,
+  });
+  return useQuery<QuoteList, Error>({
+    queryKey: key("quotes", "list", url),
+    queryFn: async () => authedGet<QuoteList>(url, await getToken()),
+    enabled: ready,
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    refetchOnMount: "always",
+    retry: httpRetry,
+  });
 }
 
 /** A quote with its version list and the caller's actions. */

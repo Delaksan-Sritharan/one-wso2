@@ -1992,12 +1992,22 @@ export const cado2ServiceUrls = {
   quoteSettings: `${cado2BackendUrl}/quote-settings`,
   pricingPreview: `${cado2BackendUrl}/pricing/preview`,
   quotes: `${cado2BackendUrl}/quotes`,
-  // My Quotes: the caller's own quotes.
-  // scope "mine" (the default) or "all" (every AM's quotes, D70).
-  quoteList: (status: string, scope = "mine"): string => {
-    const q = new URLSearchParams({ limit: "200" });
-    if (status) q.set("status", status);
-    if (scope !== "mine") q.set("scope", scope);
+  // The Quotes page: scope "mine" (the default) or "all" (every AM's quotes,
+  // D70), one page at a time, searched and sorted by the backend (D148);
+  // byAccount pages accounts, for the tree.
+  quoteList: (p: {
+    scope: string;
+    q: string;
+    sort: string;
+    order: string;
+    byAccount: boolean;
+    limit: number;
+    offset: number;
+  }): string => {
+    const q = new URLSearchParams({ limit: String(p.limit), offset: String(p.offset), sort: p.sort, order: p.order });
+    if (p.scope !== "mine") q.set("scope", p.scope);
+    if (p.byAccount) q.set("group", "account");
+    if (p.q) q.set("q", p.q);
     return `${cado2BackendUrl}/quotes?${q.toString()}`;
   },
   quote: (quoteId: number): string => `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}`,

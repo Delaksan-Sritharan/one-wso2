@@ -52,9 +52,12 @@ import EmptyState from "@features/sales/cado2/components/empty-state/EmptyState"
 import PageHeader from "@features/sales/cado2/components/page-header/PageHeader";
 import { useDocumentTitle } from "@hooks/useDocumentTitle";
 import {
+  ACCOUNT_PAGE,
+  QUOTE_PAGE,
   useQuoteList,
   useQuoteVersion,
 } from "@features/sales/cado2/quotes/api/useQuoteApi";
+import { useDebouncedValue } from "@hooks/useDebouncedValue";
 import DeleteDraftDialog from "@features/sales/cado2/quotes/components/detail/DeleteDraftDialog";
 import PrimaryDialog from "@features/sales/cado2/quotes/components/detail/PrimaryDialog";
 import QuoteActionsMenu from "@features/sales/cado2/quotes/components/detail/QuoteActionsMenu";
@@ -73,9 +76,7 @@ import { formatDate } from "@features/sales/cado2/quotes/form/draftForm";
 import {
   DEFAULT_SORT,
   changedAgo,
-  filterQuotes,
   groupQuotes,
-  sortQuotes,
   type QuoteLayout,
   type QuoteSort,
   type QuoteSortKey,
@@ -445,9 +446,11 @@ function ScopeLabel({ icon, label, count, on }: { icon: ReactNode; label: string
  * included, D69), each with its count, then search (owners too, on All
  * quotes) and the List / Tree icons; the table is right under it, so the
  * tabs read as being about the table (2026-10-15: Sales hadn't noticed
- * them; the status chips were removed). Every column sorts. Loaded once and
- * searched, sorted and grouped in the browser. The tab and layout are in the
- * URL, so a link or Back keeps them; the layout is also remembered.
+ * them; the status chips were removed). Every column sorts. The backend
+ * searches, sorts and pages the list (D148): 50 quotes a page, or for the
+ * tree 20 accounts a page, each with all its quotes, so an account never
+ * splits across pages. The tab and layout are in the URL, so a link or
+ * Back keeps them; the layout is also remembered.
  */
 export default function MyQuotesPage(): JSX.Element {
   useDocumentTitle("Quotes");
@@ -469,18 +472,36 @@ export default function MyQuotesPage(): JSX.Element {
     );
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<QuoteSort>(DEFAULT_SORT);
+  const [page, setPage] = useState(0);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-  // Both tabs show their count, so both lists load.
-  const mineList = useQuoteList("", "mine");
-  const allList = useQuoteList("", "all");
-  const { data, error, isPending, isFetching, refetch } =
-    scope === "all" ? allList : mineList;
+  const debounced = useDebouncedValue(search, 300);
+  // Each tab shows its whole count, whatever the search: one row is enough.
+  const mineCount = useQuoteList("mine", { limit: 1 });
+  const allCount = useQuoteList("all", { limit: 1 });
+  const byAccount = layout === "tree";
+  const pageSize = byAccount ? ACCOUNT_PAGE : QUOTE_PAGE;
+  const { data, error, isPending, isFetching, refetch } = useQuoteList(scope, {
+    search: debounced,
+    sort,
+    page,
+    byAccount,
+  });
   const now = new Date();
   const mine = scope === "mine";
 
-  const items = data?.items ?? [];
-  const shown = sortQuotes(filterQuotes(items, search), sort);
-  const searching = search.trim() !== "";
+  const shown = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const searching = debounced.trim() !== "";
+  // A page emptied by a delete steps back one (adjusted while rendering).
+  if (data && !isFetching && shown.length === 0 && page > 0) setPage(page - 1);
+  const changeSearch = (v: string) => {
+    setSearch(v);
+    setPage(0);
+  };
+  const changeSort = (v: QuoteSort) => {
+    setSort(v);
+    setPage(0);
+  };
   const accountIds = [...new Set(shown.map((q) => q.sfAccountId))];
   const allCollapsed =
     accountIds.length > 0 && accountIds.every((id) => collapsed.has(id));
@@ -520,7 +541,7 @@ export default function MyQuotesPage(): JSX.Element {
           <Tabs
             value={scope}
             onChange={(_, v: QuoteScope) => {
-              setSearch("");
+              changeSearch("");
               setParam("scope", v, "mine");
             }}
             aria-label="Whose quotes"
@@ -534,12 +555,12 @@ export default function MyQuotesPage(): JSX.Element {
             {canQuote ? (
               <Tab
                 value="mine"
-                label={<ScopeLabel icon={<UserIcon size={18} />} label="My quotes" count={mineList.data?.total} on={mine} />}
+                label={<ScopeLabel icon={<UserIcon size={18} />} label="My quotes" count={mineCount.data?.total} on={mine} />}
               />
             ) : null}
             <Tab
               value="all"
-              label={<ScopeLabel icon={<UsersIcon size={18} />} label="All quotes" count={allList.data?.total} on={!mine} />}
+              label={<ScopeLabel icon={<UsersIcon size={18} />} label="All quotes" count={allCount.data?.total} on={!mine} />}
             />
           </Tabs>
           {/* Wide: beside the tabs. Narrow: its own line, full width. */}
@@ -547,7 +568,7 @@ export default function MyQuotesPage(): JSX.Element {
             size="small"
             placeholder={mine ? "Search quote, account or opportunity" : "Search quote, account, opportunity or owner"}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => changeSearch(e.target.value)}
             sx={{ order: { xs: 3, md: 2 }, ml: { md: "auto" }, width: { xs: "100%", md: 340 }, mb: { xs: 1.5, md: 0 } }}
             slotProps={{
               htmlInput: { "aria-label": "Search quotes" },
@@ -566,6 +587,7 @@ export default function MyQuotesPage(): JSX.Element {
               onLayout={(v) => {
                 storeLayout(LAYOUT_KEY, v);
                 setParam("layout", v, "");
+                setPage(0);
               }}
               treeLabel="account › opportunity › quote"
               allCollapsed={allCollapsed}
@@ -586,7 +608,7 @@ export default function MyQuotesPage(): JSX.Element {
               <Skeleton key={i} variant="rounded" height={36} sx={{ my: 1 }} />
             ))}
           </Box>
-        ) : items.length === 0 ? (
+        ) : total === 0 && !searching ? (
           <Box sx={{ p: 3 }}>
             <EmptyState
               icon={<FileTextIcon size={28} />}
@@ -599,13 +621,13 @@ export default function MyQuotesPage(): JSX.Element {
               }
             />
           </Box>
-        ) : shown.length === 0 ? (
+        ) : total === 0 ? (
           <Box sx={{ p: 3 }}>
             <EmptyState
               icon={<SearchIcon size={28} />}
               title="No quotes match"
               body="Try another search term."
-              action={<Button onClick={() => setSearch("")}>Clear search</Button>}
+              action={<Button onClick={() => changeSearch("")}>Clear search</Button>}
             />
           </Box>
         ) : (
@@ -616,16 +638,41 @@ export default function MyQuotesPage(): JSX.Element {
                 now={now}
                 showOwner={!mine}
                 sort={sort}
-                onSort={setSort}
+                onSort={changeSort}
                 collapsed={collapsed}
                 toggle={toggleBranch}
                 searching={searching}
               />
             ) : (
-              <ListLayout rows={shown} now={now} showOwner={!mine} sort={sort} onSort={setSort} />
+              <ListLayout rows={shown} now={now} showOwner={!mine} sort={sort} onSort={changeSort} />
             )}
           </Box>
         )}
+        {total > 0 ? (
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider" }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              {`${byAccount ? "Accounts " : ""}${page * pageSize + 1}–${Math.min((page + 1) * pageSize, total)} of ${total.toLocaleString()}`}
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <Button size="small" variant="outlined" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                Previous
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={(page + 1) * pageSize >= total}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </Stack>
+          </Stack>
+        ) : null}
       </Paper>
     </Stack>
   );
