@@ -174,12 +174,12 @@ function Where(): JSX.Element {
   return <output aria-label="Location">{l.pathname + l.search}</output>;
 }
 
-function renderPage(path = "/sales/cado2/quotes") {
+function renderPage(path = "/sales/quickquote/quotes") {
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/sales/cado2/quotes" element={<MyQuotesPage />} />
-        <Route path="/sales/cado2/quotes/:id/quote" element={<Where />} />
+        <Route path="/sales/quickquote/quotes" element={<MyQuotesPage />} />
+        <Route path="/sales/quickquote/quotes/:id/quote" element={<Where />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -233,7 +233,7 @@ describe("Quotes page", () => {
     expect(first.getByLabelText("Primary quote")).toBeInTheDocument();
     expect(first.getByRole("link", { name: "Q-26-00001" })).toHaveAttribute(
       "href",
-      "/sales/cado2/quotes/1/quote",
+      "/sales/quickquote/quotes/1/quote",
     );
     expect(first.getByText("Draft (v2)")).toBeInTheDocument();
     expect(first.getByText("2 Oct 2026")).toBeInTheDocument(); // created
@@ -246,7 +246,7 @@ describe("Quotes page", () => {
       .setup()
       .click(within(bodyRows()[1]).getByText("Northwind Logistics"));
     expect(screen.getByLabelText("Location")).toHaveTextContent(
-      "/sales/cado2/quotes/2/quote",
+      "/sales/quickquote/quotes/2/quote",
     ); // the whole row opens it
   });
 
@@ -473,7 +473,7 @@ describe("Quotes page", () => {
       updatedAt: "2026-01-01T00:00:00Z",
     });
     Object.assign(lists.mine, { data: { items: [...accounts, oldest], total: 26 } });
-    renderPage("/sales/cado2/quotes?layout=tree");
+    renderPage("/sales/quickquote/quotes?layout=tree");
     const user = userEvent.setup();
     const tree = "Quotes by account and opportunity";
 
@@ -494,6 +494,6 @@ describe("Quotes page", () => {
     expect(screen.getByText("No quotes yet")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Create your first quote" }),
-    ).toHaveAttribute("href", "/sales/cado2/quotes/new");
+    ).toHaveAttribute("href", "/sales/quickquote/quotes/new");
   });
 });

@@ -36,7 +36,7 @@ function open(at: string) {
     <MemoryRouter initialEntries={[at]}>
       <Where />
       <Routes>
-        <Route path="sales/cado2/admin" element={<Cado2AdminLayout />}>
+        <Route path="sales/quickquote/admin" element={<Cado2AdminLayout />}>
           {ADMIN_SECTIONS.map((s) => (
             <Route key={s.id} path={s.id} element={<p>{s.label} content</p>} />
           ))}
@@ -49,7 +49,7 @@ function open(at: string) {
 describe("CadO2 Admin's section list", () => {
   it("lists every section under its group, and marks the open one", () => {
     wide.value = true;
-    open("/sales/cado2/admin/pricing-formulas");
+    open("/sales/quickquote/admin/pricing-formulas");
     const nav = screen.getByRole("navigation", { name: "QuickQuote Admin sections" });
     for (const group of ADMIN_SECTION_GROUPS) expect(within(nav).getByText(group.label)).toBeInTheDocument();
     expect(within(nav).getAllByRole("link")).toHaveLength(ADMIN_SECTIONS.length);
@@ -59,21 +59,21 @@ describe("CadO2 Admin's section list", () => {
 
   it("gives each section its own address", () => {
     wide.value = true;
-    open("/sales/cado2/admin/pricing-formulas");
+    open("/sales/quickquote/admin/pricing-formulas");
     expect(screen.getByRole("link", { name: "Legal Entities" })).toHaveAttribute(
       "href",
-      "/sales/cado2/admin/legal-entities",
+      "/sales/quickquote/admin/legal-entities",
     );
   });
 
   it("becomes a select above the content on a narrow screen", async () => {
     wide.value = false;
-    open("/sales/cado2/admin/approval-matrix");
+    open("/sales/quickquote/admin/approval-matrix");
     expect(screen.queryByRole("navigation", { name: "QuickQuote Admin sections" })).toBeNull();
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Admin section" }));
     await user.click(screen.getByRole("option", { name: "Product Categories" }));
-    expect(screen.getByTestId("where").textContent).toBe("/sales/cado2/admin/product-categories");
+    expect(screen.getByTestId("where").textContent).toBe("/sales/quickquote/admin/product-categories");
   });
 
   it("opens on the approval matrix", () => {

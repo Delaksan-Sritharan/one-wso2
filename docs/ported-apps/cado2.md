@@ -5,7 +5,7 @@ the flag on per environment, and deleting it once CadO2 is released. This docume
 behaviour and what is deliberately done differently.
 
 **In One WSO2:** a collapsible **CadO2** group under Sales, with **My Quotes**, **My Approvals** and
-**Admin** under `/sales/cado2`. The backend is the CadO2 Go service, unchanged in shape, configured as
+**Admin** under `/sales/quickquote`. The backend is the CadO2 Go service, unchanged in shape, configured as
 `ONE_WSO2_CADO2_BACKEND_URL`. The whole feature sits behind the `cado2` preview flag.
 
 CadO2 (Cadence + WSO2) is WSO2's quote tool: an account manager builds a quote from a Salesforce
@@ -30,7 +30,7 @@ all (§4).
 
 ## 2. Route map
 
-All paths below are relative to `/sales/cado2`. Paths are built in one place,
+All paths below are relative to `/sales/quickquote`. Paths are built in one place,
 `features/sales/cado2/cado2Paths.ts`, so no component writes a CadO2 URL by hand.
 
 ### 2.1 Rail
@@ -47,7 +47,7 @@ sections only while the flag is on. The group uses `ReceiptTextIcon` (not the pe
 Echo's Video icon) and `alwaysGroup: true`, so a person who can open only one child still sees it
 under **CadO2**.
 
-`/sales/cado2` itself redirects to `/quotes` for a rep, otherwise to `/approvals` for an approver,
+`/sales/quickquote` itself redirects to `/quotes` for a rep, otherwise to `/approvals` for an approver,
 otherwise to `/admin`.
 
 ### 2.2 Quotes
@@ -94,7 +94,7 @@ section renders its own heading, and the tab title reads "Currencies · CadO2 Ad
 ### 2.5 Routing rules
 
 - Code lives in `features/sales/cado2/`; routes are exported as a `cado2Routes` fragment rooted at
-  `sales/cado2` and mounted in `App.tsx` only while `isPreviewEnabled("cado2")`.
+  `sales/quickquote` and mounted in `App.tsx` only while `isPreviewEnabled("quickquote")`.
 - Every leaf is wrapped in the CadO2 shell (§4), which runs the gate ladder before rendering. A hidden
   item is refused at its URL too.
 - Heavy leaves are lazy with a `Skeleton` fallback: the wizard, the quote page and the approval

@@ -221,12 +221,12 @@ describe("PricingFormulasPage", () => {
     renderPage();
     expect(screen.getByRole("link", { name: "WSO2 Enterprise Support" })).toHaveAttribute(
       "href",
-      "/sales/cado2/admin/pricing-formulas/01tSUPPORT00000AAA",
+      "/sales/quickquote/admin/pricing-formulas/01tSUPPORT00000AAA",
     );
     expect(screen.getByText("Removed Formulas (1)")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Old Support" })).toBeNull();
     await userEvent.setup().click(screen.getByRole("button", { name: "Show" }));
-    expect(screen.getByRole("link", { name: "Old Support" })).toHaveAttribute("href", "/sales/cado2/admin/pricing-formulas/01tOTHER000000AAA");
+    expect(screen.getByRole("link", { name: "Old Support" })).toHaveAttribute("href", "/sales/quickquote/admin/pricing-formulas/01tOTHER000000AAA");
     expect(screen.getByText("removed in v3 · 15 Oct 2026")).toBeInTheDocument();
   });
 });

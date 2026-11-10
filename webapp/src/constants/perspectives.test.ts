@@ -22,7 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 type Perspectives = typeof import("./perspectives");
 
 async function load(
-  preview: { infra?: boolean; cado2?: boolean } = {},
+  preview: { infra?: boolean; quickquote?: boolean } = {},
 ): Promise<Perspectives> {
   vi.resetModules();
   window.config = {
@@ -116,20 +116,21 @@ describe("CadO2's rail entries", () => {
       .map((section) => section.id);
 
   it("are a CadO2 group under Sales once the flag is on", async () => {
-    const perspectives = await load({ cado2: true });
+    const perspectives = await load({ quickquote: true });
     const group = perspectives.findPerspectiveByKey("sales")?.sections?.find((s) => s.id === "sec-app-cado2");
     expect(group?.label).toBe("QuickQuote");
     expect(group?.alwaysGroup).toBe(true);
     expect(group?.children?.map((c) => [c.label, c.path])).toEqual([
-      ["Quotes", "/sales/cado2/quotes"],
-      ["My Approvals", "/sales/cado2/approvals"],
-      ["Insights", "/sales/cado2/insights/operations"],
-      ["Admin", "/sales/cado2/admin"],
+      ["Quotes", "/sales/quickquote/quotes"],
+      ["Deal Desk", "/sales/quickquote/desk"], // D130
+      ["My Approvals", "/sales/quickquote/approvals"],
+      ["Insights", "/sales/quickquote/insights/operations"],
+      ["Admin", "/sales/quickquote/admin"],
     ]);
   });
 
   it("are gone when the flag is off, or never mentioned", async () => {
-    for (const preview of [{ cado2: false }, {}]) {
+    for (const preview of [{ quickquote: false }, {}]) {
       expect(salesIdsIn(await load(preview))).toEqual([
         "sales-echo",
         "sales-meetings",
@@ -141,7 +142,7 @@ describe("CadO2's rail entries", () => {
   });
 
   it("never join the Echo gate's ids", async () => {
-    const { SALES_ITEM_IDS } = await load({ cado2: true });
+    const { SALES_ITEM_IDS } = await load({ quickquote: true });
     // Echo and Deals are the Sales rows gated through ONE_WSO2_REVOPS_BACKEND_URL;
     // nothing of CadO2's joins them.
     expect([...SALES_ITEM_IDS]).toEqual(["sales-echo", "sales-meetings", "sales-deals"]);
@@ -165,7 +166,7 @@ describe("the Ask Sales rail entry", () => {
   });
 
   it("sits before CadO2 when its flag is on", async () => {
-    expect(salesIdsIn(await load({ cado2: true }))).toEqual([
+    expect(salesIdsIn(await load({ quickquote: true }))).toEqual([
       "sales-echo",
       "sales-pitstop",
       "sec-app-cado2",
@@ -173,7 +174,7 @@ describe("the Ask Sales rail entry", () => {
   });
 
   it("is not affected by the other preview flags being off", async () => {
-    expect(salesIdsIn(await load({ cado2: false }))).toEqual(["sales-echo", "sales-pitstop"]);
+    expect(salesIdsIn(await load({ quickquote: false }))).toEqual(["sales-echo", "sales-pitstop"]);
   });
 
   it("never joins the Echo gate's ids", async () => {
@@ -321,7 +322,7 @@ describe("a rail row does one thing", () => {
     window.config = {
       ...(window.config ?? {}),
       ONE_WSO2_PREVIEW_FEATURES: previewOn
-        ? { infra: true, cado2: true, nda: true }
+        ? { infra: true, quickquote: true, nda: true }
         : {},
       // ISAC and CSM are only in the registry once their addresses are set.
       ONE_WSO2_MARKETINGOPS_ISAC_URL: "https://isac.example",

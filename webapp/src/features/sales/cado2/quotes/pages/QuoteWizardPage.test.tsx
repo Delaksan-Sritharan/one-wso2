@@ -93,9 +93,9 @@ vi.mock("@features/sales/cado2/approvals/api/useApprovalApi", () => ({ useApprov
 function renderWizard() {
   return render(
     <Cado2ToastProvider>
-      <MemoryRouter initialEntries={["/sales/cado2/quotes/5/versions/1/edit"]}>
+      <MemoryRouter initialEntries={["/sales/quickquote/quotes/5/versions/1/edit"]}>
         <Routes>
-          <Route path="sales/cado2/quotes/:quoteId/versions/:version/edit" element={<QuoteWizardPage />} />
+          <Route path="sales/quickquote/quotes/:quoteId/versions/:version/edit" element={<QuoteWizardPage />} />
         </Routes>
       </MemoryRouter>
     </Cado2ToastProvider>,
@@ -106,10 +106,10 @@ function renderWizard() {
 function renderAt() {
   return render(
     <Cado2ToastProvider>
-      <MemoryRouter initialEntries={["/sales/cado2/quotes/5/versions/1/edit"]}>
+      <MemoryRouter initialEntries={["/sales/quickquote/quotes/5/versions/1/edit"]}>
         <Routes>
-          <Route path="sales/cado2/quotes/:quoteId/versions/:version/edit" element={<QuoteWizardPage />} />
-          <Route path="sales/cado2/quotes/:quoteId/:tab" element={<LandedOn />} />
+          <Route path="sales/quickquote/quotes/:quoteId/versions/:version/edit" element={<QuoteWizardPage />} />
+          <Route path="sales/quickquote/quotes/:quoteId/:tab" element={<LandedOn />} />
         </Routes>
       </MemoryRouter>
     </Cado2ToastProvider>,
@@ -141,7 +141,7 @@ describe("QuoteWizardPage — drafts", () => {
     expect(screen.getByText("Draft · Version 1")).toBeInTheDocument(); // a draft: no number yet
     expect(screen.getByRole("heading", { level: 1, name: "Acme Corp" })).toBeInTheDocument();
     expect(screen.getByText("Draft")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Back to quote/ })).toHaveAttribute("href", "/sales/cado2/quotes/5/quote");
+    expect(screen.getByRole("link", { name: /Back to quote/ })).toHaveAttribute("href", "/sales/quickquote/quotes/5/quote");
     const summary = within(screen.getByRole("complementary", { name: "Quote summary" }));
     expect(summary.getByText("Acme Corp")).toBeInTheDocument();
     expect(summary.getByText("Acme APIM renewal")).toBeInTheDocument();
@@ -364,7 +364,7 @@ describe("QuoteWizardPage — review and submit", () => {
 
     expect(save.mutateAsync).not.toHaveBeenCalled();
     expect(submit.mutateAsync).toHaveBeenCalledWith({ quoteId: 5, version: 1, expectedUpdatedAt: "2026-09-25T10:00:00.123Z" });
-    expect(await screen.findByText("quote page /sales/cado2/quotes/5/quote")).toBeInTheDocument();
+    expect(await screen.findByText("quote page /sales/quickquote/quotes/5/quote")).toBeInTheDocument();
     expect(await screen.findByRole("status")).toHaveTextContent("Version 1 submitted for approval");
   });
 
@@ -431,7 +431,7 @@ describe("QuoteWizardPage — review and submit", () => {
     Object.assign(version, { data: submitted });
     renderAt();
 
-    expect(screen.getByText("quote page /sales/cado2/quotes/5/quote")).toBeInTheDocument();
+    expect(screen.getByText("quote page /sales/quickquote/quotes/5/quote")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
   });
 
@@ -446,7 +446,7 @@ describe("QuoteWizardPage — review and submit", () => {
     });
     renderAt();
 
-    expect(screen.getByText("quote page /sales/cado2/quotes/5/quote?version=1")).toBeInTheDocument();
+    expect(screen.getByText("quote page /sales/quickquote/quotes/5/quote?version=1")).toBeInTheDocument();
   });
 });
 
@@ -454,16 +454,16 @@ describe("QuoteWizardPage — new quote", () => {
   it("shows one status label and asks for the account first", () => {
     Object.assign(version, { data: undefined, isPending: false });
     render(
-      <MemoryRouter initialEntries={["/sales/cado2/quotes/new"]}>
+      <MemoryRouter initialEntries={["/sales/quickquote/quotes/new"]}>
         <Routes>
-          <Route path="sales/cado2/quotes/new" element={<QuoteWizardPage />} />
+          <Route path="sales/quickquote/quotes/new" element={<QuoteWizardPage />} />
         </Routes>
       </MemoryRouter>,
     );
 
     expect(screen.getByRole("heading", { level: 1, name: "New Quote" })).toBeInTheDocument();
     expect(screen.getByText("Editing")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Quotes/ })).toHaveAttribute("href", "/sales/cado2/quotes");
+    expect(screen.getByRole("link", { name: /Quotes/ })).toHaveAttribute("href", "/sales/quickquote/quotes");
     expect(screen.queryByText(/Start by choosing/)).toBeNull(); // no hint in the title
     expect(screen.getByText("Choose the Salesforce account this quote is for.")).toBeInTheDocument();
     expect(screen.getByText("Not saved yet")).toBeInTheDocument();
@@ -504,9 +504,9 @@ describe("QuoteWizardPage — delete a draft", () => {
   it("has no Delete draft before the first save, or on a submitted version", () => {
     Object.assign(version, { data: undefined, isPending: false });
     render(
-      <MemoryRouter initialEntries={["/sales/cado2/quotes/new"]}>
+      <MemoryRouter initialEntries={["/sales/quickquote/quotes/new"]}>
         <Routes>
-          <Route path="sales/cado2/quotes/new" element={<QuoteWizardPage />} />
+          <Route path="sales/quickquote/quotes/new" element={<QuoteWizardPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -519,7 +519,7 @@ describe("QuoteWizardPage — lifecycle", () => {
     Object.assign(version, { data: { ...submitted, version: { ...submitted.version, status: "RECALLED" } } });
     renderAt();
 
-    expect(screen.getByText("quote page /sales/cado2/quotes/5/quote")).toBeInTheDocument();
+    expect(screen.getByText("quote page /sales/quickquote/quotes/5/quote")).toBeInTheDocument();
   });
 
   it("says where a revised draft was copied from", () => {
@@ -534,9 +534,9 @@ describe("QuoteWizardPage — lifecycle", () => {
     Object.assign(version, { data: ready });
     render(
       <Cado2ToastProvider>
-        <MemoryRouter initialEntries={[{ pathname: "/sales/cado2/quotes/5/versions/1/edit", state: { clonedFrom: "Q-26-00003 v2" } }]}>
+        <MemoryRouter initialEntries={[{ pathname: "/sales/quickquote/quotes/5/versions/1/edit", state: { clonedFrom: "Q-26-00003 v2" } }]}>
           <Routes>
-            <Route path="sales/cado2/quotes/:quoteId/versions/:version/edit" element={<QuoteWizardPage />} />
+            <Route path="sales/quickquote/quotes/:quoteId/versions/:version/edit" element={<QuoteWizardPage />} />
           </Routes>
         </MemoryRouter>
       </Cado2ToastProvider>,

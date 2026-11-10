@@ -582,7 +582,7 @@ const SALES_SECTIONS: PerspectiveSection[] = [
   // CadO2 answers to its own backend (CADO2_ITEM_IDS, the `cado2` adapter).
   // With the flag off the group doesn't exist, so nothing asks that backend.
   // Its group shows CADO2's own logo, as Echo's does (D101).
-  ...(isPreviewEnabled("cado2") ? appsToSections(CADO2_APPS).map((s) => ({ ...s, icon: Cado2LogoIcon })) : []),
+  ...(isPreviewEnabled("quickquote") ? appsToSections(CADO2_APPS).map((s) => ({ ...s, icon: Cado2LogoIcon })) : []),
 ];
 
 /**

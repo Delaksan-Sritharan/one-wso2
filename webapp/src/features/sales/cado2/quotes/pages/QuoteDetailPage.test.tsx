@@ -134,7 +134,7 @@ function show(q: QuoteView, ...vs: DraftResponse[]) {
 
 /** Opens the quote page as if from another page, e.g. My Approvals. */
 function showFrom(from: string | undefined, q: QuoteView, ...vs: DraftResponse[]) {
-  showAt(`/sales/cado2/quotes/5/quote${from === "approvals" ? "?from=approvals" : ""}`, q, ...vs);
+  showAt(`/sales/quickquote/quotes/5/quote${from === "approvals" ? "?from=approvals" : ""}`, q, ...vs);
 }
 
 function showAt(url: string, q: QuoteView, ...vs: DraftResponse[]) {
@@ -145,9 +145,9 @@ function showAt(url: string, q: QuoteView, ...vs: DraftResponse[]) {
     <Cado2ToastProvider>
       <MemoryRouter initialEntries={[url]}>
         <Routes>
-          <Route path="sales/cado2/quotes/:quoteId/:tab" element={<QuoteDetailPage />} />
-          <Route path="sales/cado2/quotes/:quoteId/versions/:version/edit" element={<p>wizard</p>} />
-          <Route path="sales/cado2/quotes" element={<p>My Quotes page</p>} />
+          <Route path="sales/quickquote/quotes/:quoteId/:tab" element={<QuoteDetailPage />} />
+          <Route path="sales/quickquote/quotes/:quoteId/versions/:version/edit" element={<p>wizard</p>} />
+          <Route path="sales/quickquote/quotes" element={<p>My Quotes page</p>} />
         </Routes>
       </MemoryRouter>
     </Cado2ToastProvider>,
@@ -196,7 +196,7 @@ describe("QuoteDetailPage — primary quote", () => {
     show(submitted.quote, submitted);
 
     const panel = screen.getByRole("region", { name: "This Opportunity's Quotes" });
-    expect(within(panel).getByRole("link", { name: "Q-26-00031" })).toHaveAttribute("href", "/sales/cado2/quotes/3/quote");
+    expect(within(panel).getByRole("link", { name: "Q-26-00031" })).toHaveAttribute("href", "/sales/quickquote/quotes/3/quote");
     // The current quote: a shaded row, not a link, "This quote" under its number (2026-10-14).
     const rows = within(panel).getAllByRole("listitem");
     expect(rows[1]).toHaveAttribute("aria-current", "true");
@@ -227,20 +227,20 @@ describe("QuoteDetailPage — primary quote", () => {
 describe("QuoteDetailPage — lifecycle", () => {
   it("goes back to My Approvals when opened from there, else to Quotes", () => {
     showFrom("approvals", submitted.quote, submitted);
-    expect(screen.getByRole("link", { name: /My Approvals/ })).toHaveAttribute("href", "/sales/cado2/approvals");
+    expect(screen.getByRole("link", { name: /My Approvals/ })).toHaveAttribute("href", "/sales/quickquote/approvals");
     cleanup();
     show(submitted.quote, submitted);
-    expect(screen.getByRole("link", { name: /Quotes/ })).toHaveAttribute("href", "/sales/cado2/quotes");
+    expect(screen.getByRole("link", { name: /Quotes/ })).toHaveAttribute("href", "/sales/quickquote/quotes");
   });
 
   it("goes back to the Quote Report, with its filters, when opened from there", () => {
-    const back = "/sales/cado2/insights/report?q=north&status=SUBMITTED";
-    showAt(`/sales/cado2/quotes/5/quote?${new URLSearchParams({ from: "insights", back })}`, submitted.quote, submitted);
+    const back = "/sales/quickquote/insights/report?q=north&status=SUBMITTED";
+    showAt(`/sales/quickquote/quotes/5/quote?${new URLSearchParams({ from: "insights", back })}`, submitted.quote, submitted);
     expect(screen.getByRole("link", { name: /Quote Report/ })).toHaveAttribute("href", back);
     cleanup();
     // Only an Insights address is accepted as the way back.
-    showAt(`/sales/cado2/quotes/5/quote?${new URLSearchParams({ from: "insights", back: "https://evil.example" })}`, submitted.quote, submitted);
-    expect(screen.getByRole("link", { name: /Quotes/ })).toHaveAttribute("href", "/sales/cado2/quotes");
+    showAt(`/sales/quickquote/quotes/5/quote?${new URLSearchParams({ from: "insights", back: "https://evil.example" })}`, submitted.quote, submitted);
+    expect(screen.getByRole("link", { name: /Quotes/ })).toHaveAttribute("href", "/sales/quickquote/quotes");
   });
 
   it("offers Recall in the menu on a submitted quote, with no main button", async () => {
@@ -363,7 +363,7 @@ describe("QuoteDetailPage — lifecycle", () => {
   it("gives a draft one main button, Edit draft, and puts the destructive actions last in the menu", async () => {
     show(ready.quote, ready);
     const user = userEvent.setup();
-    expect(screen.getByRole("link", { name: "Edit draft" })).toHaveAttribute("href", "/sales/cado2/quotes/5/versions/1/edit");
+    expect(screen.getByRole("link", { name: "Edit draft" })).toHaveAttribute("href", "/sales/quickquote/quotes/5/versions/1/edit");
     // The status is with the title, not among the actions.
     expect(within(screen.getByLabelText("About this quote")).queryByRole("button", { name: "Close quote" })).toBeNull();
     await openMenu(user);
@@ -651,8 +651,8 @@ describe("QuoteDetailPage — versions and history", () => {
 
     const table = screen.getByRole("table", { name: "Versions" });
     // The draft opens in edit mode; any other version is viewed here (2026-10-13).
-    expect(within(table).getByRole("link", { name: "Edit draft" })).toHaveAttribute("href", "/sales/cado2/quotes/5/versions/2/edit");
-    expect(within(table).getByRole("link", { name: "View" })).toHaveAttribute("href", "/sales/cado2/quotes/5/quote?version=1");
+    expect(within(table).getByRole("link", { name: "Edit draft" })).toHaveAttribute("href", "/sales/quickquote/quotes/5/versions/2/edit");
+    expect(within(table).getByRole("link", { name: "View" })).toHaveAttribute("href", "/sales/quickquote/quotes/5/quote?version=1");
 
     const diff = screen.getByRole("table", { name: "Comparison" });
     expect(within(diff).getByText("WSO2 Gateway · Quantity")).toBeInTheDocument();
@@ -664,18 +664,18 @@ describe("QuoteDetailPage — versions and history", () => {
 
   // View mode (2026-10-13): an older version is shown here, read-only, with no actions.
   it("shows an older version with a way back to the latest, and no actions", () => {
-    showAt("/sales/cado2/quotes/5/quote?version=1", v2.quote, recalledV1, v2);
+    showAt("/sales/quickquote/quotes/5/quote?version=1", v2.quote, recalledV1, v2);
 
     expect(screen.getByText("Q-26-00005 · Version 1")).toBeInTheDocument();
     expect(screen.getByText("Recalled")).toBeInTheDocument();
     expect(screen.getByText(/You're viewing version 1\. The latest is version 2\. Clone copies this version; other actions apply to the latest\./)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View latest version" })).toHaveAttribute("href", "/sales/cado2/quotes/5/quote");
+    expect(screen.getByRole("link", { name: "View latest version" })).toHaveAttribute("href", "/sales/quickquote/quotes/5/quote");
     expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Edit draft" })).toBeNull();
   });
 
   it("ignores a version that doesn't exist and shows the latest", () => {
-    showAt("/sales/cado2/quotes/5/quote?version=9", v2.quote, recalledV1, v2);
+    showAt("/sales/quickquote/quotes/5/quote?version=9", v2.quote, recalledV1, v2);
 
     expect(screen.getByRole("link", { name: "Edit draft" })).toBeInTheDocument();
     expect(screen.queryByText(/You're viewing version/)).toBeNull();
@@ -1047,11 +1047,11 @@ describe("QuoteDetailPage — lenses", () => {
   // D130: "Recall as Deal Desk" on the board opens the quote with its Recall confirmation, once.
   it("opens the confirmation the board asked for, with a Deal Desk back link", async () => {
     const user = userEvent.setup();
-    showAt("/sales/cado2/quotes/5/quote?from=desk&do=recall", { ...submitted.quote, actions: ["RECALL"] }, submitted);
+    showAt("/sales/quickquote/quotes/5/quote?from=desk&do=recall", { ...submitted.quote, actions: ["RECALL"] }, submitted);
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent(/Recall version 1\?/);
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull(); // once, not again
-    expect(screen.getByRole("link", { name: /Deal Desk/ })).toHaveAttribute("href", "/sales/cado2/desk");
+    expect(screen.getByRole("link", { name: /Deal Desk/ })).toHaveAttribute("href", "/sales/quickquote/desk");
   });
 });

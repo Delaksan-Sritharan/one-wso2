@@ -58,7 +58,7 @@ describe("MyApprovalsPage", () => {
     renderPage();
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
     expect(headers).toEqual(["Quote", "Account", "Opportunity", "Approving as", "Submitted by", "Value (TCV)", "Deadline", "Waiting"]);
-    expect(screen.getByRole("link", { name: "Q-26-00005" })).toHaveAttribute("href", "/sales/cado2/quotes/5/quote?from=approvals");
+    expect(screen.getByRole("link", { name: "Q-26-00005" })).toHaveAttribute("href", "/sales/quickquote/quotes/5/quote?from=approvals");
     const row = bodyRows()[0];
     expect(row).toHaveTextContent("v2");
     expect(row).toHaveTextContent("Northwind Logistics");

@@ -54,13 +54,13 @@ describe("DeskBoardPage", () => {
     expect(review).toHaveTextContent("Showing 2 of 14");
     const others = screen.getByRole("region", { name: "With other approvers" });
     expect(others).toHaveTextContent("Waiting on Area GM · NA");
-    expect(within(others).getByRole("link", { name: "Approve on behalf…" })).toHaveAttribute("href", "/sales/cado2/quotes/2/approvals?from=desk");
+    expect(within(others).getByRole("link", { name: "Approve on behalf…" })).toHaveAttribute("href", "/sales/quickquote/quotes/2/approvals?from=desk");
     const back = screen.getByRole("region", { name: "Back with the AM" });
     expect(back).toHaveTextContent("Returned by CFO");
-    expect(within(back).getByRole("link", { name: "Revise as Deal Desk" })).toHaveAttribute("href", "/sales/cado2/quotes/3/quote?from=desk&do=revise");
+    expect(within(back).getByRole("link", { name: "Revise as Deal Desk" })).toHaveAttribute("href", "/sales/quickquote/quotes/3/quote?from=desk&do=revise");
     // Deal Desk's own approval: Approve opens the quote; who submitted it gets Recall.
-    expect(within(review).getByRole("link", { name: "Approve" })).toHaveAttribute("href", "/sales/cado2/quotes/1/quote?from=desk");
-    expect(within(review).getByRole("link", { name: "Recall as Deal Desk" })).toHaveAttribute("href", "/sales/cado2/quotes/4/quote?from=desk&do=recall");
+    expect(within(review).getByRole("link", { name: "Approve" })).toHaveAttribute("href", "/sales/quickquote/quotes/1/quote?from=desk");
+    expect(within(review).getByRole("link", { name: "Recall as Deal Desk" })).toHaveAttribute("href", "/sales/quickquote/quotes/4/quote?from=desk&do=recall");
     // With other approvers, or approved but not issued: Recall first (then Revise).
     expect(within(others).getByRole("link", { name: "Recall as Deal Desk" })).toBeInTheDocument();
     expect(within(back).queryByRole("link", { name: "Recall as Deal Desk" })).toBeNull();

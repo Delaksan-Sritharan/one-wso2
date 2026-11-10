@@ -51,7 +51,7 @@ const loading = <Skeleton variant="rounded" height={240} />;
 const deferred = (page: ReactNode) => <Suspense fallback={loading}>{page}</Suspense>;
 
 export const cado2Routes = (
-  <Route path="sales/cado2" element={<Cado2Shell />}>
+  <Route path="sales/quickquote" element={<Cado2Shell />}>
     <Route index element={<Cado2Landing />} />
     <Route
       path="quotes"
