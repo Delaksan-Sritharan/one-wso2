@@ -174,6 +174,7 @@ function UmtProductsBody() {
         )}
         <Box sx={{ flex: 1, minHeight: 240 }}>
           <DataGridComponent
+            disableVirtualization
             columnHeaderHeight={40}
             columns={columns}
             disableRowSelectionOnClick
