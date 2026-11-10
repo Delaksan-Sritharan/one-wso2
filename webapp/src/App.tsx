@@ -147,6 +147,7 @@ import PostBuilderPage from "@features/marketing-ops/design-studio/pages/PostBui
 import MarketingCalendarPage from "@features/marketing-ops/marketing-calendar/pages/MarketingCalendarPage";
 import { marketingCalendarViewRoutes } from "@features/marketing-ops/marketing-calendar/routes";
 import {
+  EventsLeadImportPage,
   EventsMinePage,
   EventsReviewPage,
 } from "@features/marketing-ops/events/pages/EventsPages";
@@ -993,6 +994,7 @@ export default function App() {
             <Route path="events" element={<EventsSettingsPage />} />
             <Route path="events-notifications" element={<EventsNotificationsPage />} />
           </Route>
+          <Route path="marketing-ops/events/lead-import" element={<EventsLeadImportPage />} />
           <Route path="marketing-ops/events/mine" element={<EventsMinePage />} />
           <Route path="marketing-ops/events/review" element={<EventsReviewPage />} />
           {/* Event Platform — event agendas, speakers and swag shops, a different
