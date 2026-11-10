@@ -65,10 +65,12 @@ describe("placeLine", () => {
     expect(placeLine(line("2026-10-25T10:35:00Z", 42), [], -1)).toEqual({ recordingId: -1, offsetSeconds: 42 });
   });
 
-  it("falls back to the line's own offset when the recordings have no times", () => {
+  it("puts lines on the first recording by their own offset when the recordings have no times", () => {
     const untimed = [part(1, null), part(2, null)];
     expect(partsAreTimed(untimed)).toBe(false);
-    expect(placeLine(line("2026-10-25T10:35:00Z", 42), untimed, 2)).toEqual({ recordingId: 2, offsetSeconds: 42 });
+    // The offset counts from the call's start, where the first recording starts -- not from
+    // whichever part is open, so the default id is ignored when there are recordings.
+    expect(placeLine(line("2026-10-25T10:35:00Z", 42), untimed, -1)).toEqual({ recordingId: 1, offsetSeconds: 42 });
   });
 });
 

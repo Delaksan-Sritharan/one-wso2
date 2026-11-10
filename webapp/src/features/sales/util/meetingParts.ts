@@ -45,16 +45,18 @@ export interface LinePlace {
  * The recording a line was spoken during, and its position there.
  *
  * Null when the parts are timed and the line falls between them -- said while nothing was
- * recording. When they are not timed, the line's own offset on the given fallback recording
- * is the best there is.
+ * recording. When they are not timed, the line's own offset is the best there is, and that
+ * offset counts from the start of the call, which is where the FIRST recording starts: the
+ * line goes there, whichever part is being played, so switching parts never moves it. A
+ * meeting listing no recordings at all puts its lines on `defaultRecordingId`.
  */
 export function placeLine(
   line: TranscriptLine,
   recordings: readonly MeetingPart[],
-  fallbackRecordingId: number | null,
+  defaultRecordingId: number,
 ): LinePlace | null {
   if (!partsAreTimed(recordings)) {
-    return fallbackRecordingId === null ? null : { recordingId: fallbackRecordingId, offsetSeconds: line.offsetSeconds };
+    return { recordingId: recordings[0]?.id ?? defaultRecordingId, offsetSeconds: line.offsetSeconds };
   }
   const spoken = parseUtc(line.startTime);
   if (!spoken) return null;

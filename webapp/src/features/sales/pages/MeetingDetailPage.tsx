@@ -129,12 +129,12 @@ export default function MeetingDetailPage() {
         label: transcripts.length > 1 ? partLabel(transcripts[i], i, "Transcript") : null,
         lines: (query.data?.lines ?? []).map((line) => ({
           line,
-          place: placeLine(line, recordings, playingId),
+          place: placeLine(line, recordings, DEFAULT_RECORDING),
         })),
         isLoading: query.isLoading,
         error: query.error,
       })),
-    [transcriptQueries, transcripts, recordings, playingId],
+    [transcriptQueries, transcripts, recordings],
   );
   // The timeline draws the lines spoken during the recording being played, timed from its
   // start. Without parts (a meeting from before they were listed) it reads the transcript
