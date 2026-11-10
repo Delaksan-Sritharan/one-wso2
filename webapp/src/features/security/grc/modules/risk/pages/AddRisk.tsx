@@ -317,7 +317,7 @@ export default function AddRisk(): JSX.Element {
       valid = await trigger([...STEP_1_FIELDS, "identifiedByName"]);
       // The template fields have no field-level rules (they only exist for some
       // registers), so the register's template decides what is required here.
-      const registerPlatformIds = sourceRegisterTeams.find((t) => t.id === watchedSourceRegister)?.platform_ids ?? [];
+      const registerPlatformIds = selectedRegister?.platform_ids ?? [];
       const missing = missingTemplateFields(
         template,
         getValues(),

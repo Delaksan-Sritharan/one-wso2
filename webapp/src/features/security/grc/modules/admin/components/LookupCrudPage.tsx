@@ -247,10 +247,10 @@ export default function LookupCrudPage({
                     </IconButton>
                     <Tooltip
                       title={
-                        row.in_use
-                          ? "In use by risks — deactivate it instead"
-                          : hasChildren(row.id)
-                            ? "Has sub-platforms — remove them first"
+                        hasChildren(row.id)
+                          ? "Has sub-platforms — remove them first"
+                          : row.in_use
+                            ? "In use by risks — deactivate it instead"
                             : "Delete"
                       }
                     >
