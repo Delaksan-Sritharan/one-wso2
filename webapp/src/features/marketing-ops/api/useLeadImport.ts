@@ -32,6 +32,7 @@ import {
   isMarketingOpsBackendConfigured,
   marketingOpsServiceUrls as urls,
 } from "@config/apiConfig";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import { downloadAuthed } from "../events/lib/download";
 import type { SheetType } from "../events/lib/leadImport";
 import type {
@@ -57,7 +58,8 @@ const POLL_MS = 3000;
 function useBase() {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
-  return { getAccessToken, ready: isSignedIn && isMarketingOpsBackendConfigured() };
+  const ready = isSignedIn && isMarketingOpsBackendConfigured() && isPreviewEnabled("eventsLeadImport");
+  return { getAccessToken, ready };
 }
 
 /** The backend's message for a refusal ("Upload an .xlsx, .xls or .csv file…").
