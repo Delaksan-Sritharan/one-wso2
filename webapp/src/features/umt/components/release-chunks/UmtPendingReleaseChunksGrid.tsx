@@ -167,14 +167,14 @@ function tgBuildStatusOf(
 // One update level's product build status. The list that loads the chunks
 // carries one too, but only the build status request is read again while the
 // page is open, so its value wins, even when it is null. The list's value
-// stands in until that request has answered, and for a level the answer does
-// not list.
+// stands in until that request has answered, for a level the answer does not
+// list, and for a level the answer lists without a build status.
 function productBuildStatusOf(
   status: UmtReleaseChunkRowStatus | undefined,
   level: UmtReleaseChunkUpdateLevel,
 ): string | null | undefined {
   const match = statusLevelOf(status, level);
-  return match ? match.buildStatus : level.buildStatus;
+  return match?.buildStatus !== undefined ? match.buildStatus : level.buildStatus;
 }
 
 function statusLevelOf(
