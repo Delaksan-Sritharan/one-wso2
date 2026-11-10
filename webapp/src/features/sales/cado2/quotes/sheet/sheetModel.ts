@@ -79,11 +79,9 @@ export interface SheetLine {
   /** The product's description, without the name if it repeats it. */
   readonly productDescription: string | null;
   readonly pricebookName: string;
-  /** "" = not chosen yet (D72): listed under "Uncategorised". */
+  /** Its group, from its classification (D152); "" = not set up: listed under "Not set up". */
   readonly category: LineCategory | "";
-  /** The rep chose the category, because the product isn't mapped: Deal Desk verifies it. */
-  readonly categoryByRep: boolean;
-  /** Charged every year of the term, from its product's Salesforce classification (D76). */
+  /** Charged every year of the term, from its product's Salesforce classification (D152). */
   readonly recurring: boolean;
   readonly quantity: string;
   readonly unitOfMeasure: string | null;
@@ -279,7 +277,6 @@ export function sheetFromVersion(res: DraftResponse): QuoteSheet {
       productDescription: descriptionAfterName(l.productName, l.productDescription),
       pricebookName: l.pricebookName,
       category: l.category,
-      categoryByRep: l.categorySource !== "MAPPED",
       recurring: l.recurring,
       quantity: String(l.quantity),
       unitOfMeasure: blank(l.unitOfMeasure),
@@ -433,7 +430,6 @@ export function sheetFromForm(
         productDescription: descriptionAfterName(l.productName, l.productDescription),
         pricebookName: l.pricebookName,
         category: l.category,
-        categoryByRep: l.categorySource !== "MAPPED",
         recurring: l.recurring,
         quantity: l.quantity,
         unitOfMeasure: blank(l.unitOfMeasure),

@@ -162,8 +162,6 @@ export interface ApprovalInboxItem {
   readonly tcv: string;
   readonly submittedByEmail: string | null;
   readonly submittedAt: string | null;
-  /** Lines whose category the rep chose for an unmapped product. */
-  readonly repCategorisedLines?: number;
 }
 
 // --- Admin matrix ----------------------------------------------------------

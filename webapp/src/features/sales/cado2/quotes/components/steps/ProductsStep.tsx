@@ -480,7 +480,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
                 </>
               )}
               below={(i) => <LineIssue key={fields[i]?.id} index={i} />}
-              flagUncategorised
+              flagNotSetUp
             />
             {/* The next year once every year has products, so empty years
                 don't pile up. */}

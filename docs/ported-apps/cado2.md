@@ -84,7 +84,7 @@ content.
 | | Approval SLAs | `/admin/approval-slas` |
 | Reference data | Legal entities | `/admin/legal-entities` |
 | | Currencies | `/admin/currencies` |
-| | Product categories | `/admin/product-categories` |
+| | Product classifications | `/admin/product-classifications` |
 
 `/admin` and any unknown section → `/admin/approval-matrix` (an absolute redirect: a relative one from
 the catch-all route would resolve under itself and loop). Adding a section is one entry in
@@ -186,7 +186,7 @@ built in `cado2ServiceUrls` in `src/config/apiConfig.ts`.
 | Quotes | `GET /quotes?limit&status&scope=all`, `POST /quotes`, `GET /quotes/{id}`, `POST /quotes/{id}/revise`, `POST /quotes/{id}/close`, `GET /quotes/{id}/audit-events`, `GET/PUT/DELETE /quotes/{id}/versions/{v}`, `POST …/submit`, `POST …/recall` |
 | Documents | `GET/POST /quotes/{id}/versions/{v}/documents` (list, issue), `POST …/documents/preview` (PDF), `GET /quotes/{id}/documents/{docId}/file` (PDF) |
 | Approvals | `POST /approvals/preview`, `GET …/versions/{v}/approval-preview`, `GET …/versions/{v}/approval`, `POST …/approval/steps/{stepId}/approve\|reject\|request-changes`, `GET /approvals/inbox` |
-| Admin | `GET/PUT /admin/approval-matrix`, `GET /admin/approval-matrix/changes`, `GET/PUT /admin/approval-slas`, `GET /admin/approval-slas/changes`, `GET/POST /admin/currencies`, `PATCH /admin/currencies/{code}`, `GET /admin/product-categories`, `GET /admin/product-categories/search?q`, `PUT/DELETE /admin/product-categories/{productId}`, `POST /legal-entities`, `PATCH /legal-entities/{id}` |
+| Admin | `GET/PUT /admin/approval-matrix`, `GET /admin/approval-matrix/changes`, `GET/PUT /admin/approval-slas`, `GET /admin/approval-slas/changes`, `GET/POST /admin/currencies`, `PATCH /admin/currencies/{code}`, `GET /admin/product-classifications`, `PUT /admin/product-classifications/{classification}`, `POST /legal-entities`, `PATCH /legal-entities/{id}` |
 
 Writes that change a draft or a version send `expectedUpdatedAt`; a newer copy on the server answers
 409. A refused save or submit answers 422 with `{message, issues: [{field, message}]}`.

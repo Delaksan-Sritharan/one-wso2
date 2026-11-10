@@ -72,7 +72,6 @@ const line = (name: string, category: LineValue["category"]): LineValue => ({
   pricebookName: "USD Price Book",
   unitPrice: "360",
   category,
-  categorySource: category ? "MAPPED" : "REP",
   recurring: category !== "PROFESSIONAL_SERVICE",
   classification: "PS",
   unitOfMeasure: "",
@@ -281,32 +280,23 @@ describe("ProductsStep (Products & Pricing)", () => {
     expect(regions).not.toContain("Payment Terms");
   });
 
-  // D93: a plain "Uncategorised" heading, no amber and no chip; the line's edit button opens the dialog.
-  it("puts a line whose product isn't mapped under Uncategorised; its category is chosen in the line's dialog", async () => {
+  // D152: a line whose classification isn't set up sits first under "Not set up"; only an Admin can fix it.
+  it("puts a line whose classification isn't set up under Not set up, saying an Admin sets it", async () => {
     const user = userEvent.setup();
     render(<Harness />);
     const table = screen.getByRole("table", { name: "Products" });
     expect(within(table).queryByRole("combobox")).toBeNull(); // no dropdown on the line
-    expect(within(table).getByText("Uncategorised")).toBeInTheDocument(); // its own section, first
-    // Framed by a thin red line.
-    const group = within(table).getByRole("rowgroup", { name: "Uncategorised" });
+    // Framed by a thin red line, first.
+    const group = within(table).getByRole("rowgroup", { name: "Not set up" });
     expect(within(group).getByText("WSO2 Integrator")).toBeInTheDocument();
     expect(within(group).queryByText("WSO2 Gateway")).toBeNull();
-    // Says what to do (D95).
-    expect(within(table).getByText(/to choose a category/)).toBeInTheDocument();
-    expect(within(table).queryByRole("button", { name: /Category not set/ })).toBeNull();
+    expect(within(table).getByText(/Classification not set up · ask an Admin/)).toBeInTheDocument();
 
-    // Line 2 is WSO2 Integrator, the one without a category.
+    // Line 2 is WSO2 Integrator: its dialog says the same, with nothing to choose.
     await user.click(within(table).getByRole("button", { name: "Edit line 2" }));
     const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveTextContent("No category is set up for this product");
-    await user.click(within(dialog).getByRole("combobox", { name: "Category" }));
-    await user.click(screen.getByRole("option", { name: "Support" }));
-    await user.click(within(dialog).getByRole("button", { name: "Save product" }));
-
-    expect(within(table).getByText("Support")).toBeInTheDocument(); // now in its group
-    expect(within(table).queryByText("Uncategorised")).toBeNull(); // gone once empty
-    expect(within(table).queryByRole("rowgroup", { name: "Uncategorised" })).toBeNull();
+    expect(within(dialog).getByRole("alert", { name: "Classification" })).toHaveTextContent(/ask an Admin/);
+    expect(within(dialog).queryByRole("combobox", { name: "Category" })).toBeNull();
   });
 
   // D125: a bundle child's quantity follows its rule when the AM changes the parent's.

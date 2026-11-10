@@ -72,8 +72,8 @@ describe("CadO2 Admin's section list", () => {
     expect(screen.queryByRole("navigation", { name: "QuickQuote Admin sections" })).toBeNull();
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Admin section" }));
-    await user.click(screen.getByRole("option", { name: "Product Categories" }));
-    expect(screen.getByTestId("where").textContent).toBe("/sales/quickquote/admin/product-categories");
+    await user.click(screen.getByRole("option", { name: "Product Classifications" }));
+    expect(screen.getByTestId("where").textContent).toBe("/sales/quickquote/admin/product-classifications");
   });
 
   it("opens on the approval matrix", () => {
@@ -83,7 +83,7 @@ describe("CadO2 Admin's section list", () => {
   // 2026-10-30: grouped by what the Admin changes, in the quote's order.
   it("groups the sections by what they change", () => {
     expect(ADMIN_SECTION_GROUPS.map((g) => [g.label, g.sections.map((s) => s.label)])).toEqual([
-      ["Products & Pricing", ["Product Categories", "Product Bundles", "Pricing Formulas"]],
+      ["Products & Pricing", ["Product Classifications", "Product Bundles", "Pricing Formulas"]],
       ["Approvals", ["Approval Matrix", "Approval SLAs"]],
       ["Order Form", ["Legal Entities", "Legal Texts", "Supporting Documents"]],
       ["Settings", ["Quote Access", "Salesforce Sync", "Email Notifications"]],

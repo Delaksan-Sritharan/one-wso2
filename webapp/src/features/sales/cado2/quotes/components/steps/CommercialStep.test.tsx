@@ -43,7 +43,6 @@ const line = (discount: string): LineValue => ({
   pricebookName: "FY26 USD",
   unitPrice: "1000",
   category: "SUBSCRIPTION",
-  categorySource: "MAPPED",
   recurring: true,
   classification: "PS",
   unitOfMeasure: "Gateways",

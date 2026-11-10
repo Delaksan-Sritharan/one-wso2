@@ -48,7 +48,7 @@ interface YearSectionsProps {
   /** A line's buttons and problems, by its position in `lines`. */
   readonly lineActions?: (index: number) => ReactNode;
   readonly below?: (index: number) => ReactNode;
-  readonly flagUncategorised?: boolean;
+  readonly flagNotSetUp?: boolean;
 }
 
 /**
@@ -73,7 +73,7 @@ export default function YearSections({
   empty,
   lineActions,
   below,
-  flagUncategorised = false,
+  flagNotSetUp = false,
 }: YearSectionsProps): JSX.Element {
   return (
     <Box sx={{ borderTop: 1, borderColor: "divider" }}>
@@ -156,7 +156,7 @@ export default function YearSections({
                     commissionPercent={commissionPercent}
                     showTotals={false}
                     closingTotalLabel={y.number ? `Year ${y.number} total` : "Total"}
-                    flagUncategorised={flagUncategorised}
+                    flagNotSetUp={flagNotSetUp}
                     actions={lineActions ? (k) => lineActions(indexes[k]) : undefined}
                     below={below ? (k) => below(indexes[k]) : undefined}
                   />

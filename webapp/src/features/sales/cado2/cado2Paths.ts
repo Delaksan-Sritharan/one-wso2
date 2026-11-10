@@ -27,7 +27,7 @@ export type Cado2AdminSection =
   | "email-notifications"
   | "legal-entities"
   | "currencies"
-  | "product-categories"
+  | "product-classifications"
   | "product-bundles"
   | "legal-texts"
   | "supporting-documents"

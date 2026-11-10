@@ -36,8 +36,6 @@ describe("noteText", () => {
   });
 
   it("words Deal Desk's own checks and what is written, not marked", () => {
-    expect(noteText(note({ rule: "AM_CATEGORY", roles: [], reasons: ["Line 2 · Migration: category chosen by the AM: Professional Service"] }), "DEAL_DESK"))
-      .toEqual({ title: "Category chosen by the AM", detail: "Professional Service", who: "Only Deal Desk checks this" });
     expect(noteText(note({ rule: "RENEWAL_START", lineNumber: 0, roles: [], reasons: ["Starts 1 Mar 2027, not 1 Feb 2027, the day after APIM ends"] }), "DEAL_DESK").title)
       .toBe("Start date");
     expect(noteText(note({ rule: "GOVERNING_TERMS", lineNumber: 0, roles: [], yoursToWrite: true }), "LEGAL").who).toBe("Yours to write");

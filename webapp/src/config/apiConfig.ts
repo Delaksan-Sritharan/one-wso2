@@ -2079,11 +2079,9 @@ export const cado2ServiceUrls = {
   approvalMatrixProducts: `${cado2BackendUrl}/admin/approval-matrix/products`,
   adminApprovalSlas: `${cado2BackendUrl}/admin/approval-slas`,
   adminApprovalSlaChanges: `${cado2BackendUrl}/admin/approval-slas/changes`,
-  productCategories: `${cado2BackendUrl}/admin/product-categories`,
-  productCategorySearch: (q: string): string =>
-    `${cado2BackendUrl}/admin/product-categories/search?q=${encodeSegment(q)}`,
-  productCategory: (productId: string): string =>
-    `${cado2BackendUrl}/admin/product-categories/${encodeSegment(productId)}`,
+  productClassifications: `${cado2BackendUrl}/admin/product-classifications`,
+  productClassification: (classification: string): string =>
+    `${cado2BackendUrl}/admin/product-classifications/${encodeSegment(classification)}`,
   // Legal terms: the texts quotes use; Admin › Legal Texts; Legal's terms on a version.
   legalConfig: `${cado2BackendUrl}/legal`,
   adminLegal: `${cado2BackendUrl}/admin/legal`,

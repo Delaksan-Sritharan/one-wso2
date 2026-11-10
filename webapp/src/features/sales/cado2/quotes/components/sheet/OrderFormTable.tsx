@@ -16,7 +16,7 @@
 
 import { Fragment, type JSX, type ReactNode } from "react";
 import { alpha, Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@wso2/oxygen-ui";
-import { CircleAlertIcon, PencilIcon } from "@wso2/oxygen-ui-icons-react";
+import { CircleAlertIcon } from "@wso2/oxygen-ui-icons-react";
 import { orderForm, type SheetLine } from "@features/sales/cado2/quotes/sheet/sheetModel";
 import { commissionRatesText, durationShort, formatDate } from "@features/sales/cado2/quotes/form/draftForm";
 import { formatMoney } from "@features/sales/cado2/utils/money";
@@ -45,11 +45,11 @@ interface OrderFormTableProps {
   /** A last row inside the table with the lines' total, e.g. "Year 1 total": quieter than the order totals. */
   readonly closingTotalLabel?: string;
   /**
-   * The wizard: frame the "Uncategorised" group in red and say how to fix it
-   * (D93, D95). Elsewhere (Review, the quote page) the group still shows,
-   * with a plain heading.
+   * The wizard: frame the "Not set up" group in red and say what it means
+   * (D93, D95, D152). Elsewhere (Review, the quote page) the group still
+   * shows, with a plain heading.
    */
-  readonly flagUncategorised?: boolean;
+  readonly flagNotSetUp?: boolean;
 }
 
 /**
@@ -71,7 +71,7 @@ export default function OrderFormTable({
   below,
   commissionPercent = null,
   commissionRates = null,
-  flagUncategorised = false,
+  flagNotSetUp = false,
   totalLabel = "Total order value",
   showTotals = true,
   closingTotalLabel,
@@ -113,19 +113,18 @@ export default function OrderFormTable({
   );
 
 
-  // The uncategorised group's heading (D93, D95): in the error colour, saying
-  // what to do, so it reads as something to fix, not just another section.
-  const uncategorisedHeader = (
+  // The "Not set up" group's heading (D93, D95, D152): in the error colour,
+  // saying what it means, so it reads as something to fix, not just another
+  // section. Only an Admin can fix it; the AM can remove the line.
+  const notSetUpHeader = (
     <TableRow>
       <TableCell colSpan={cols} sx={{ bgcolor: (t) => alpha(t.palette.error.main, 0.06), py: 0.75 }}>
         <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", columnGap: 1, color: "error.main" }}>
           <CircleAlertIcon size={16} aria-hidden />
           <Typography variant="overline" sx={{ fontWeight: 700, lineHeight: 1.6 }}>
-            Uncategorised
+            Not set up
           </Typography>
-          <Typography variant="body2" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-            · Click <PencilIcon size={14} aria-label="Edit" /> to choose a category
-          </Typography>
+          <Typography variant="body2">· Classification not set up · ask an Admin</Typography>
         </Box>
       </TableCell>
     </TableRow>
@@ -236,7 +235,7 @@ export default function OrderFormTable({
           size="small"
           aria-label="Products"
           // Light lines between columns (D97); not after the last cell, so the
-          // Uncategorised group's red frame keeps its right edge.
+          // "Not set up" group's red frame keeps its right edge.
           sx={{ "& th:not(:last-child), & td:not(:last-child)": { borderRight: 1, borderRightColor: "divider" } }}
         >
           <TableHead
@@ -267,11 +266,11 @@ export default function OrderFormTable({
               ) : null}
             </TableRow>
           </TableHead>
-          {/* Lines waiting for a category come first, under a plain heading, with no
-              subtotal, framed by a thin red line until each has one (D72, D93). */}
-          {pending.length > 0 && flagUncategorised ? (
+          {/* Lines whose classification isn't set up come first, with no
+              subtotal, framed by a thin red line (D93, D152). */}
+          {pending.length > 0 && flagNotSetUp ? (
             <TableBody
-              aria-label="Uncategorised"
+              aria-label="Not set up"
               sx={(t) => {
                 const line = `1px solid ${t.palette.error.main}`;
                 return {
@@ -284,14 +283,14 @@ export default function OrderFormTable({
                 };
               }}
             >
-              {uncategorisedHeader}
+              {notSetUpHeader}
               {pending.map(lineRow)}
             </TableBody>
           ) : null}
           {/* Read-only views: the same lines under a plain heading. */}
-          {pending.length > 0 && !flagUncategorised ? (
-            <TableBody aria-label="Uncategorised">
-              {groupHeader("Uncategorised")}
+          {pending.length > 0 && !flagNotSetUp ? (
+            <TableBody aria-label="Not set up">
+              {groupHeader("Not set up")}
               {pending.map(lineRow)}
             </TableBody>
           ) : null}

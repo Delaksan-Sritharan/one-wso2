@@ -27,14 +27,16 @@ const gateway = {
   productCode: "APIM-GW",
   family: null,
   unitOfMeasure: "Gateways",
-  recurring: true, // from its Salesforce classification (D76)
+  // Its category and recurring status, from its Salesforce classification (D152).
+  category: "SUBSCRIPTION" as const,
+  recurring: true,
   classification: "PS", // on-prem
   pricebookEntries: [
     { id: "01u000000000001", unitPrice: "360", currencyIsoCode: "USD", isActive: true, pricebook: { id: "01s1", name: "FY26 USD" } },
   ],
 };
 
-// Mapped by an Admin.
+// Classified ES: Support.
 const support = {
   ...gateway,
   id: "01t000000000002",
@@ -43,12 +45,18 @@ const support = {
   // Its description repeats the name first, as in Salesforce.
   description: "WSO2 Enterprise Support Plan - APIM. Based on the number of production gateways.",
   category: "SUPPORT" as const,
+  classification: "ES",
   pricebookEntries: [{ ...gateway.pricebookEntries[0], id: "01u000000000002", unitPrice: "25000" }],
 };
 
 // The backend lists the quote's price book only. `more` stands for a
-// next page still to load; `book` records the book asked for.
-const productPages = { more: false, fetchNextPage: vi.fn(), book: "" };
+// next page still to load; `book` records the book asked for; `override`
+// replaces the products listed.
+const productPages: { more: boolean; fetchNextPage: () => void; book: string; override?: unknown[] } = {
+  more: false,
+  fetchNextPage: vi.fn(),
+  book: "",
+};
 vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
   usePricingFormulas: () => ({ data: formulas.list }),
   useBundleChildren: (id: string | null) =>
@@ -56,7 +64,7 @@ vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
   useProducts: (_currency: string, _term: string, book: string) => {
     productPages.book = book;
     return {
-      data: book ? [gateway, support] : [],
+      data: book ? (productPages.override ?? [gateway, support]) : [],
       isPending: false,
       fetchStatus: "idle",
       hasNextPage: productPages.more,
@@ -109,7 +117,6 @@ function savedSupportLine(): LineValue {
     pricebookName: "FY26 USD",
     unitPrice: "414000",
     category: "SUPPORT",
-    categorySource: "MAPPED",
     recurring: true,
     classification: "PS",
     unitOfMeasure: "",
@@ -178,16 +185,12 @@ describe("AddLineDialog", () => {
     expect(card.getByText("FY26 USD")).toBeInTheDocument();
     expect(card.getByText("USD 360")).toBeInTheDocument();
 
-    // Not mapped: the rep must choose the category.
-    expect(screen.getByText(/No category is set up for this product/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Add product" }));
-    expect(onSave).not.toHaveBeenCalled();
-    expect(screen.getByText("Choose the category")).toBeInTheDocument();
-    await user.click(screen.getByRole("combobox", { name: /Category/ }));
-    await user.click(screen.getByRole("option", { name: "Subscription" }));
-    // Chosen: the warning goes; a quiet note stays under the field.
-    expect(screen.queryByText(/No category is set up for this product/)).toBeNull();
-    expect(screen.getByText("Deal Desk will check it")).toBeInTheDocument();
+    // Its category comes from its classification (D152): nothing to choose,
+    // and only the category is shown.
+    expect(within(screen.getByLabelText("Category")).getByText("Subscription")).toBeInTheDocument();
+    expect(screen.queryByText("Recurring")).toBeNull();
+    expect(screen.queryByText(/Salesforce classification/)).toBeNull();
+    expect(screen.queryByRole("combobox", { name: /Category/ })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Add product" }));
     // Product_Unit__c is the product family, so it no longer pre-fills the unit (2026-09-26).
@@ -197,7 +200,6 @@ describe("AddLineDialog", () => {
         unitPrice: "360",
         unitOfMeasure: "",
         category: "SUBSCRIPTION",
-        categorySource: "REP",
         recurring: true,
         classification: "PS",
       }), []);
@@ -243,8 +245,6 @@ describe("AddLineDialog", () => {
       const user = await pick(/WSO2 API Manager/);
       expect(screen.getByLabelText("Bundle")).toHaveTextContent("Comes with WSO2 Enterprise Support Plan - APIM");
       expect(screen.getByLabelText("Not in the price book")).toHaveTextContent("Not in FY26 USD, so not added: Onboarding");
-      await user.click(screen.getByRole("combobox", { name: /Category/ }));
-      await user.click(screen.getByRole("option", { name: "Subscription" }));
       const qty = screen.getByRole("textbox", { name: "Quantity" });
       await user.clear(qty);
       await user.type(qty, "4");
@@ -273,8 +273,6 @@ describe("AddLineDialog", () => {
         </DatePickers.LocalizationProvider>,
       );
       const user = await pick(/WSO2 API Manager/);
-      await user.click(screen.getByRole("combobox", { name: /Category/ }));
-      await user.click(screen.getByRole("option", { name: "Subscription" }));
       const picks = screen.getByRole("region", { name: "Comes with it" });
       expect(within(picks).getByRole("radio", { name: /Premium Support/ })).not.toBeChecked();
       expect(screen.getByText("To add: pick support tier")).toBeInTheDocument();
@@ -329,8 +327,6 @@ describe("AddLineDialog", () => {
       const onSave = renderDialog();
       const user = await pick(/WSO2 API Manager/);
       expect(screen.getByLabelText("Bundle")).toHaveTextContent("WSO2 Enterprise Support Plan - APIM (always 1)");
-      await user.click(screen.getByRole("combobox", { name: /Category/ }));
-      await user.click(screen.getByRole("option", { name: "Subscription" }));
       const qty = screen.getByRole("textbox", { name: "Quantity" });
       await user.clear(qty);
       await user.type(qty, "5");
@@ -367,20 +363,34 @@ describe("AddLineDialog", () => {
     }
   });
 
-  it("takes a mapped product's category, with no choice to make", async () => {
+  it("takes a product's category from its classification, with no choice to make", async () => {
     const onSave = renderDialog();
     const user = await pick(/Enterprise Support Plan/);
 
     expect(within(screen.getByLabelText("Category")).getByText("Support")).toBeInTheDocument();
-    expect(screen.getByText("Set for this product by an Admin")).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: /Category/ })).toBeNull();
-    expect(screen.queryByText(/No category is set up/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Add product" }));
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ category: "SUPPORT", categorySource: "MAPPED" }), []);
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ category: "SUPPORT" }), []);
   });
 
-  it("keeps a saved line's category locked when it came from a mapping", async () => {
+  it("can't add a product whose classification isn't set up (D152)", async () => {
+    const problem =
+      "WSO2 API Manager's classification, AI, isn't set up in QuickQuote. Ask an Admin to set it on Admin → Product Classifications.";
+    const unset = { ...gateway, category: null, classification: "AI", classificationProblem: problem };
+    productPages.override = [unset];
+    try {
+      const onSave = renderDialog();
+      await pick(/WSO2 API Manager/);
+      expect(screen.getByRole("alert", { name: "Classification" })).toHaveTextContent(problem);
+      expect(screen.getByRole("button", { name: "Add product" })).toBeDisabled();
+      expect(onSave).not.toHaveBeenCalled();
+    } finally {
+      productPages.override = undefined;
+    }
+  });
+
+  it("keeps a saved line's category, with nothing to choose", async () => {
     const line: LineValue = {
       lineId: 7,
       pricebookEntryId: "01u000000000002",
@@ -391,7 +401,6 @@ describe("AddLineDialog", () => {
       pricebookName: "FY26 USD",
       unitPrice: "25000",
       category: "SUPPORT",
-      categorySource: "MAPPED",
       recurring: true,
       classification: "PS",
       unitOfMeasure: "",
@@ -412,7 +421,7 @@ describe("AddLineDialog", () => {
     expect(screen.queryByRole("combobox", { name: /Product/ })).toBeNull();
     expect(screen.getByText(/remove this line and add it/)).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Save product" }));
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ lineId: 7, category: "SUPPORT", categorySource: "MAPPED" }), null);
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ lineId: 7, category: "SUPPORT" }), null);
   });
 
   it("lists the quote's price book only, with its prices, and no choice of book", async () => {

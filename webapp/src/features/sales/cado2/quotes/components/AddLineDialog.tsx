@@ -27,7 +27,6 @@ import {
   DialogContent,
   DialogTitle,
   InputAdornment,
-  MenuItem,
   Paper,
   Stack,
   TextField,
@@ -41,7 +40,6 @@ import { descriptionAfterName } from "@features/sales/cado2/utils/productDescrip
 import { lineProblems } from "@features/sales/cado2/quotes/components/lineProblems";
 import { useBundleChildren, usePricingFormulas, useProducts } from "@features/sales/cado2/quotes/api/useQuoteApi";
 import type {
-  CategorySource,
   LineCategory,
   LineFormula,
   PricebookRef,
@@ -307,8 +305,6 @@ export default function AddLineDialog({
   const [product, setProduct] = useState<Product | null>(null);
   // The parent mounts the dialog afresh for each add/edit, so the line (or
   // blanks) only needs loading once.
-  // The rep's choice, used only for a product without a mapping.
-  const [category, setCategory] = useState<LineCategory | "">(line?.category ?? "");
   // Locked for now (2026-10-14): a saved line keeps its value; a new one has none.
   const [quantity, setQuantity] = useState(line?.quantity ?? "1");
   const [discount, setDiscount] = useState(line?.discount ?? "0");
@@ -347,13 +343,12 @@ export default function AddLineDialog({
   const entry = product?.pricebookEntries[0];
   // Editing without re-choosing the product keeps the saved snapshot.
   const keepsExisting = line !== null && product === null;
-  // A mapped product's category is the Admin's and can't be changed.
-  const mapped: LineCategory | null = product
-    ? (product.category ?? null)
-    : keepsExisting && line.categorySource === "MAPPED" && line.category
-      ? line.category
-      : null;
-  const source: CategorySource = mapped ? "MAPPED" : "REP";
+  // Its group and whether it recurs come from its Salesforce classification
+  // (D152); nobody chooses them. A product whose classification isn't set up
+  // can't be added.
+  const group: LineCategory | "" = product ? (product.category ?? "") : keepsExisting ? line.category : "";
+  const classificationProblem = product?.classificationProblem ?? null;
+  const classification = product ? product.classification : keepsExisting ? line.classification : null;
   const chosen = product !== null || keepsExisting;
   // How the line is priced (D81, D82). A saved line keeps its pricing until
   // the AM moves it to the product's pricing in force; a new line takes that.
@@ -407,7 +402,6 @@ export default function AddLineDialog({
 
   const problems = lineProblems({
     pricebookEntryId: keepsExisting ? line.pricebookEntryId : entry ? entry.id : "",
-    category: mapped ?? category,
     quantity,
     discount,
   });
@@ -435,7 +429,7 @@ export default function AddLineDialog({
 
   const save = () => {
     setTried(true);
-    if (Object.keys(problems).length > 0 || (!isChild && datesProblem) || salesProblem || stillToPick.length > 0) return;
+    if (classificationProblem || Object.keys(problems).length > 0 || (!isChild && datesProblem) || salesProblem || stillToPick.length > 0) return;
     const base: LineValue = keepsExisting
       ? { ...line }
       : {
@@ -448,8 +442,7 @@ export default function AddLineDialog({
           pricebookId: entry!.pricebook?.id ?? "",
           pricebookName: entry!.pricebook?.name ?? "",
           unitPrice: entry!.unitPrice ?? "",
-          category: mapped ?? (category as LineCategory),
-          categorySource: source,
+          category: product!.category ?? "",
           recurring: product!.recurring,
           classification: product!.classification ?? "",
           unitOfMeasure: "",
@@ -465,8 +458,6 @@ export default function AddLineDialog({
         };
     const saved: LineValue = {
       ...base,
-      category: mapped ?? (category as LineCategory),
-      categorySource: source,
       unitOfMeasure: uom.trim(),
       quantity: String(Number(quantity)),
       discount: discount.trim() || "0",
@@ -513,7 +504,6 @@ export default function AddLineDialog({
               pricebookName: e.pricebook?.name ?? "",
               unitPrice: e.unitPrice ?? "",
               category: p.category ?? "",
-              categorySource: p.category ? "MAPPED" : "REP",
               recurring: p.recurring,
               classification: p.classification ?? "",
               unitOfMeasure: "",
@@ -654,48 +644,24 @@ export default function AddLineDialog({
               Not in {pricebook.name}, so not added: {bundle.data.missing.join(", ")}.
             </Alert>
           ) : null}
-          {chosen && mapped ? (
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                aria-label="Category"
-                sx={{ flexWrap: "wrap", rowGap: 0.5 }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  Category
-                </Typography>
-                <Chip size="small" color="primary" variant="outlined" label={categoryLabel(mapped)} />
-                <Typography variant="caption" color="text.secondary">
-                  Set for this product by an Admin
-                </Typography>
-              </Stack>
-            ) : chosen ? (
-              <>
-                {/* Until the AM chooses; then only a quiet note under the field. */}
-                {category ? null : (
-                  <Alert severity="warning">
-                    No category is set up for this product. Choose one; Deal Desk will check it.
-                  </Alert>
-                )}
-                <TextField
-                  select
-                  label="Category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as LineCategory)}
-                  size="small"
-                  required
-                  error={Boolean(show("category"))}
-                  helperText={show("category") ?? (category ? "Deal Desk will check it" : undefined)}
-                >
-                  {CATEGORIES.map((c) => (
-                    <MenuItem key={c.value} value={c.value}>
-                      {c.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </>
-            ) : null}
+          {/* The category only; its type and classification aren't the AM's concern (D152). */}
+          {chosen && classificationProblem ? (
+            <Alert severity="error" aria-label="Classification">
+              {classificationProblem}
+            </Alert>
+          ) : chosen && group ? (
+            <Stack direction="row" spacing={1} alignItems="center" aria-label="Category">
+              <Typography variant="body2" color="text.secondary">
+                Category
+              </Typography>
+              <Chip size="small" color="primary" variant="outlined" label={categoryLabel(group)} />
+            </Stack>
+          ) : chosen ? (
+            <Alert severity="warning" aria-label="Classification">
+              Classification not set up · ask an Admin. This product can&apos;t be quoted until its classification
+              {classification ? `, ${classification},` : ""} is set up on Admin → Product Classifications.
+            </Alert>
+          ) : null}
           </Stack>
           <Group icon={<PercentIcon size={14} />} title="Price, Quantity & Discount">
             {/* The sales price: the list price unless raised; never
@@ -816,7 +782,12 @@ export default function AddLineDialog({
         <Button
           variant="contained"
           onClick={save}
-          disabled={(Boolean(product ?? line) && bundle.isFetching && !isChild) || bundleFailed || stillToPick.length > 0}
+          disabled={
+            Boolean(classificationProblem) ||
+            (Boolean(product ?? line) && bundle.isFetching && !isChild) ||
+            bundleFailed ||
+            stillToPick.length > 0
+          }
         >
           {/* With choices, what the picks bring (D131). */}
           {line ? "Save product" : comesCount ? `Add ${comesCount + 1} products` : "Add product"}

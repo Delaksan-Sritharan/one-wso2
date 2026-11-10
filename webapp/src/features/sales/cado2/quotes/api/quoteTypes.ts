@@ -26,12 +26,6 @@ export type BillingFrequency = "MONTHLY" | "QUARTERLY" | "ANNUAL" | "UPFRONT" | 
 export type LineCategory = "SUBSCRIPTION" | "SUPPORT" | "PROFESSIONAL_SERVICE";
 
 /**
- * Who chose a line's category: MAPPED = an Admin's product mapping (the
- * rep can't change it); REP = the product isn't mapped, so the rep chose and
- * Deal Desk verifies it.
- */
-export type CategorySource = "MAPPED" | "REP";
-/**
  * How the subscription term is set (D85): a number of years (1–10), or an
  * end date of any length up to 10 years.
  */
@@ -170,7 +164,7 @@ export interface OpportunityLineLoad {
   /** Salesforce's, exact, e.g. "2.5". */
   readonly quantity: string;
   readonly discount: string;
-  /** The Admin's mapping; "" when not mapped. */
+  /** Its group from its classification (D152); "" when that isn't set up. */
   readonly category: string;
   readonly classification: string | null;
   readonly recurring: boolean;
@@ -243,10 +237,15 @@ export interface Product {
   /** Product_Unit__c and product_Classification__c: the approval group inputs. */
   readonly productUnit: string | null;
   readonly classification: string | null;
-  /** The Admin's mapping; null = not mapped, the rep chooses. */
+  /**
+   * Its group and whether it recurs, from its classification as set up on
+   * Admin → Product Classifications (D152). category is null when that
+   * isn't set up, or the product has none: classificationProblem says why
+   * it can't be added.
+   */
   readonly category?: LineCategory | null;
-  /** Charged every year, from the Salesforce classification (D76). */
   readonly recurring: boolean;
+  readonly classificationProblem?: string | null;
   readonly pricebookEntries: readonly PricebookEntry[];
 }
 
@@ -480,9 +479,8 @@ export interface PricingPreview {
     readonly yearNumber?: number;
     readonly startDate?: string;
     readonly endDate?: string;
-    /** The category priced: a mapped product's comes from its mapping. */
-    readonly category?: LineCategory;
-    readonly categorySource?: CategorySource;
+    /** Its group, from its classification (D152); "" when that isn't set up. */
+    readonly category?: LineCategory | "";
     /** The list price priced: a formula line's is worked out (D81). */
     readonly unitPrice?: string;
     /** The unit price charged. */
@@ -526,8 +524,6 @@ export interface DraftLineInput {
   readonly keepSnapshotFromLineId?: number;
   readonly pricebookEntryId: string;
   readonly quantity: number;
-  /** "" = not chosen yet (D72): the draft saves, submission waits for it. */
-  readonly category: LineCategory | "";
   readonly discretionaryDiscountPercent: string;
   readonly unitOfMeasure?: string;
   /** A kept line moved to its product's pricing in force: the latest formula version, or the price book (D82). */
@@ -613,11 +609,14 @@ export interface LineView {
   readonly unitOfMeasure: string | null;
   readonly productUnit: string | null;
   readonly classification: string | null;
-  /** Charged every year, from the classification (D76). */
+  /**
+   * Charged every year or once, and the group on the order form, as the
+   * classification was set up when the line was saved (D152); category ""
+   * when it wasn't set up.
+   */
   readonly recurring: boolean;
   readonly quantity: number;
-  readonly category: LineCategory;
-  readonly categorySource?: CategorySource;
+  readonly category: LineCategory | "";
   readonly discretionaryDiscountPercent: string;
   /** The contract year it belongs to. */
   readonly yearNumber: number | null;

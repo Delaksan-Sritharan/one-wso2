@@ -47,7 +47,7 @@ import {
   useStoredApprovalPreview,
 } from "@features/sales/cado2/approvals/api/useApprovalApi";
 import type { ApprovalOutcome, ApprovalStep, LensRole } from "@features/sales/cado2/approvals/api/approvalTypes";
-import { decisionNote, renewalStartPoints, repCategoryPoints } from "@features/sales/cado2/approvals/model/myApprovals";
+import { decisionNote, renewalStartPoints } from "@features/sales/cado2/approvals/model/myApprovals";
 import ReviewNotes from "@features/sales/cado2/approvals/components/ReviewNotes";
 import DecisionCard from "@features/sales/cado2/approvals/components/DecisionCard";
 import YoursToWrite from "@features/sales/cado2/approvals/components/YoursToWrite";
@@ -479,7 +479,7 @@ export default function QuoteDetailPage(): JSX.Element {
                 <YourApprovalPanel
                   steps={workflow.data?.steps ?? []}
                   actionable={panelSteps}
-                  repCategories={[...repCategoryPoints(sheet.lines), ...renewalStartPoints(sheet)]}
+                  deskPoints={renewalStartPoints(sheet)}
                   onDecide={openDecision}
                   legalEditor={v.legal ? <LegalTermsEditor key={v.updatedAt} quoteId={q.id} versionNumber={v.versionNumber} legal={v.legal} /> : undefined}
                   legalApproveBlock={legalApproveBlock(v.legal)}

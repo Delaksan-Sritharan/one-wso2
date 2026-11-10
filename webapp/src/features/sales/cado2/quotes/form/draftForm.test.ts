@@ -145,7 +145,6 @@ function filled(): DraftFormValues {
         pricebookName: "FY26",
         unitPrice: "360",
         category: "SUBSCRIPTION",
-        categorySource: "REP",
         recurring: true,
         classification: "PS",
         unitOfMeasure: "",
@@ -169,7 +168,6 @@ function filled(): DraftFormValues {
         pricebookName: "FY26",
         unitPrice: "4800",
         category: "SUBSCRIPTION",
-        categorySource: "REP",
         recurring: true,
         classification: "PS",
         unitOfMeasure: "Portals",
@@ -204,7 +202,6 @@ describe("toDraftInput", () => {
       keepSnapshotFromLineId: 11,
       pricebookEntryId: "01uA",
       quantity: 20,
-      category: "SUBSCRIPTION",
       discretionaryDiscountPercent: "10",
       unitOfMeasure: undefined,
       useLatestFormula: undefined,
@@ -291,12 +288,13 @@ describe("toPreviewBody", () => {
     expect(toPreviewBody({ ...v, lines: [{ ...v.lines[0], startDate: "2028-01-01" }] })).not.toBeNull();
   });
 
-  it("prices a line waiting for its category too (D72, D76)", () => {
+  it("prices a line whose classification isn't set up too, and never sends a category (D152)", () => {
     const v = filled();
     const waiting = { ...v, lines: [...v.lines, { ...v.lines[0], pricebookEntryId: "01uWAIT", category: "" as const }] };
-    const body = toPreviewBody(waiting) as { lines: { pricebookEntryId: string; category: string }[] };
-    expect(body.lines.at(-1)).toMatchObject({ pricebookEntryId: "01uWAIT", category: "" });
-    // An uncategorised product still needs a year.
+    const body = toPreviewBody(waiting) as { lines: { pricebookEntryId: string; category?: string }[] };
+    expect(body.lines.at(-1)).toMatchObject({ pricebookEntryId: "01uWAIT" });
+    expect(body.lines.every((l) => !("category" in l))).toBe(true);
+    // It still needs a year.
     expect(toPreviewBody({ ...v, yearCount: 0, lines: [{ ...v.lines[0], category: "" }] })).toBeNull();
   });
 
@@ -826,7 +824,7 @@ describe("lineFromSalesforce", () => {
     expect(l).toMatchObject({
       lineId: null, pricebookEntryId: "01uAS", productId: "01tAS", productName: "API Manager Analytics", productCode: "P-APIM-AN",
       productDescription: "", pricebookId: "01sQQ", unitPrice: "15000", salesPrice: "16500", quantity: "2", discount: "5.5",
-      category: "SUBSCRIPTION", categorySource: "MAPPED", recurring: true, yearNumber: 1, startDate: "", endDate: "", parentKey: "",
+      category: "SUBSCRIPTION", recurring: true, yearNumber: 1, startDate: "", endDate: "", parentKey: "",
     });
     expect(l.key).not.toBe("");
   });

@@ -39,10 +39,6 @@ export function noteText(n: ReviewNote, role: LensRole): NoteText {
   let title: string;
   let detail: string;
   switch (n.rule) {
-    case "AM_CATEGORY":
-      title = "Category chosen by the AM";
-      detail = first.slice(first.lastIndexOf(": ") + 2);
-      break;
     case "RENEWAL_START":
       title = "Start date";
       detail = first;

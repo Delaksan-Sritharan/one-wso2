@@ -103,7 +103,7 @@ describe("QuoteSheet", () => {
 
 // A 3-year quote: two subscriptions, support and a one-time service.
 const line = (number: number, productName: string, category: SheetLine["category"], tcv: string, arr: string): SheetLine => ({
-  number, productName, productCode: null, productDescription: null, pricebookName: "FY26 USD", category, categoryByRep: false, recurring: category !== "PROFESSIONAL_SERVICE", quantity: "1", unitOfMeasure: null, unitPrice: "1",
+  number, productName, productCode: null, productDescription: null, pricebookName: "FY26 USD", category, recurring: category !== "PROFESSIONAL_SERVICE", quantity: "1", unitOfMeasure: null, unitPrice: "1",
   discountPercent: "0", formula: null, yearNumber: 1, startDate: "2027-01-01", endDate: "2027-12-31", parentName: null, annualList: null, annualNet: null, arr, acv: null, tcv, commission: "0.00",
   schedule: [1, 2, 3].map((y) => ({ yearNumber: y, periodStart: "", periodEnd: "", yearFraction: "1.0000", gross: "1.00", discount: "0.00", net: "1.00", billing: "1.00" })),
 });
@@ -271,14 +271,14 @@ describe("Partner commission", () => {
     expect(span).toBe(amountCol); // the label fills the columns before Amount
   });
 
-  // A draft whose products have no category yet still lists them on the quote page, under a plain heading.
-  it("lists lines without a category under Uncategorised, without the wizard's red flag", () => {
-    const uncategorised = threeYears.lines.map((l) => ({ ...l, category: "" as const }));
-    render(<QuoteSheet sheet={{ ...threeYears, lines: uncategorised }} />);
+  // A draft whose products' classification isn't set up still lists them on the quote page, under a plain heading (D152).
+  it("lists lines whose classification isn't set up under Not set up, without the wizard's red flag", () => {
+    const notSetUp = threeYears.lines.map((l) => ({ ...l, category: "" as const }));
+    render(<QuoteSheet sheet={{ ...threeYears, lines: notSetUp }} />);
     const table = screen.getByRole("table", { name: "Products" });
-    const group = within(table).getByRole("rowgroup", { name: "Uncategorised" });
+    const group = within(table).getByRole("rowgroup", { name: "Not set up" });
     for (const l of threeYears.lines) expect(within(group).getByText(l.productName)).toBeInTheDocument();
-    expect(within(table).queryByText(/to choose a category/)).toBeNull();
+    expect(within(table).queryByText(/ask an Admin/)).toBeNull();
     expect(screen.getByRole("region", { name: "Order totals" })).toHaveTextContent("119,540.00");
   });
 

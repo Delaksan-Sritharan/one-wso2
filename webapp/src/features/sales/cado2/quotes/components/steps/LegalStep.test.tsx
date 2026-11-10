@@ -53,7 +53,7 @@ vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
 
 const line = (classification: string): LineValue => ({
   lineId: null, pricebookEntryId: `01u${classification}`, productName: classification, productCode: "", productDescription: "",
-  pricebookId: "01sA", pricebookName: "FY26 USD", unitPrice: "1000", category: "SUBSCRIPTION", categorySource: "MAPPED",
+  pricebookId: "01sA", pricebookName: "FY26 USD", unitPrice: "1000", category: "SUBSCRIPTION",
   recurring: true, classification, unitOfMeasure: "", quantity: "1", discount: "", yearNumber: 1, startDate: "", endDate: "",
   salesPrice: "", key: `k-${classification}`, parentKey: "", bundleFixedQuantity: null,
 });

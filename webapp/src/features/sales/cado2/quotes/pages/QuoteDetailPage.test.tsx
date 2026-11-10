@@ -100,11 +100,8 @@ vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
 }));
 const writeSpecial = mutation();
 
-/** The submitted quote with every product mapped: no category chosen by the AM. */
-const allMapped: DraftResponse = {
-  ...submitted,
-  version: { ...submitted.version, lines: submitted.version.lines.map((l) => ({ ...l, categorySource: "MAPPED" as const })) },
-};
+/** The submitted quote. */
+const allMapped: DraftResponse = submitted;
 
 // D139: the AM's special terms, with no override yet.
 const withSpecialTerms: DraftResponse = {
@@ -574,46 +571,6 @@ describe("QuoteDetailPage — lifecycle", () => {
     expect(decide.mutate).toHaveBeenCalledWith(expect.objectContaining({ stepId: 2, outcome: "return" }), expect.anything());
   });
 
-  it("shows a rep-chosen category on its line and in Deal Desk's summary, nowhere else", async () => {
-    const user = userEvent.setup();
-    const [first, ...rest] = submitted.version.lines;
-    const mixed: DraftResponse = {
-      ...submitted,
-      version: {
-        ...submitted.version,
-        lines: [{ ...first, categorySource: "REP" }, ...rest.map((l) => ({ ...l, categorySource: "MAPPED" as const }))],
-      },
-    };
-    workflow.data = {
-      status: "IN_PROGRESS", createdAt: "2026-10-01T09:00:00Z", completedAt: null,
-      steps: [{
-        stepId: 11, role: "DEAL_DESK", roleLabel: "Deal Desk", branches: [], dependsOn: [], status: "PENDING",
-        requestedAt: null, actedAt: null, actedByEmail: null, comment: null, canAct: true, cantActReason: null, triggers: [],
-      }],
-    };
-    show({ ...submitted.quote, actions: [] }, mixed);
-
-    // No tag on the line (D93); only a point in Deal Desk's summary.
-    expect(screen.queryByText("Category chosen by AM")).toBeNull();
-    const points = within(screen.getByRole("region", { name: "Your approval as Deal Desk" })).getByRole("list", { name: "What's non-standard" });
-    expect(points).toHaveTextContent(`Line ${first.lineNumber} · ${first.productName}`);
-    expect(points).toHaveTextContent("Category chosen by the AM");
-    // Nowhere else: no warning box, and nothing in the approval dialog.
-    expect(screen.queryByRole("region", { name: "Categories chosen by the AM" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Approve" }));
-    expect(screen.getByRole("dialog")).not.toHaveTextContent(/category/i);
-  });
-
-  it("shows no category notice when every product is mapped", () => {
-    const allMapped: DraftResponse = {
-      ...submitted,
-      version: { ...submitted.version, lines: submitted.version.lines.map((l) => ({ ...l, categorySource: "MAPPED" as const })) },
-    };
-    show(submitted.quote, allMapped);
-    expect(screen.queryByRole("region", { name: "Categories chosen by the AM" })).toBeNull();
-    expect(screen.queryByText("Category chosen by AM")).toBeNull();
-  });
-
   it("explains a closed quote", () => {
     const closed: DraftResponse = {
       ...ready,
@@ -926,7 +883,7 @@ describe("QuoteDetailPage — lenses", () => {
       status: "IN_PROGRESS", createdAt: "2026-10-06T09:00:00Z", completedAt: null,
       steps: [step("DEAL_DESK", 11, { status: "PENDING", canAct: true }), step("REGIONAL_DIRECTOR", 12, { roleLabel: "Regional Director · NA" })],
     };
-    deskLens([note({}), note({ key: "AM_CATEGORY.L1", rule: "AM_CATEGORY", reasons: ["Line 1 · WSO2 API Manager: category chosen by the AM: Subscription"], roles: [] })]);
+    deskLens([note({}), note({ key: "RENEWAL_START", rule: "RENEWAL_START", reasons: ["Starts 2 Feb 2027, not 1 Feb 2027, the day after Acme 2026 ends"], roles: [] })]);
     show({ ...submitted.quote, actions: [] }, allMapped);
 
     expect(screen.queryByRole("button", { name: "As Submitted" })).toBeNull();
@@ -935,7 +892,7 @@ describe("QuoteDetailPage — lenses", () => {
     const discount = within(notes).getByRole("article", { name: "18% discount" });
     expect(discount).toHaveTextContent("Above the Account Manager's 15% limit");
     expect(discount).toHaveTextContent("Regional Director · NA approves after you");
-    expect(within(notes).getByRole("article", { name: "Category chosen by the AM" })).toHaveTextContent("Only Deal Desk checks this");
+    expect(within(notes).getByRole("article", { name: "Start date" })).toHaveTextContent("Only Deal Desk checks this");
     // The decision is a card of its own; the old "Your approval" box is gone.
     const decision = screen.getByRole("region", { name: "Your decision as Deal Desk" });
     expect(decision).not.toHaveTextContent("After you");
