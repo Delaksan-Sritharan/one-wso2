@@ -1,0 +1,237 @@
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+// Lead import data layer — a raw event lead file in, the List Import Template out.
+//
+// Gated by the same `events` capability as My Submissions (the backend mounts these
+// routes under the Events router's guard). Runs are SITE-WIDE, not owner-scoped, and
+// live two hours, so the keys carry no sub.
+//
+// A conversion runs in the background on the server (30 s to a few minutes); the run
+// query polls while it is processing and stops once it is ready or failed.
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAsgardeo } from "@asgardeo/react";
+import { authedGet, authedPost, fetchWithReauth, HttpError } from "@api/http";
+import { describeError, httpRetry } from "@api/errors";
+import { useAccessToken } from "@hooks/useAccessToken";
+import {
+  isMarketingOpsBackendConfigured,
+  marketingOpsServiceUrls as urls,
+} from "@config/apiConfig";
+import { downloadAuthed } from "../events/lib/download";
+import type { SheetType } from "../events/lib/leadImport";
+import type {
+  CellEdit,
+  LeadImportDetail,
+  LeadImportFileKind,
+  LeadImportOptions,
+  LeadImportRun,
+  LeadSheet,
+} from "../events/leadImportTypes";
+
+const KEY = {
+  options: ["marketing-ops", "events", "lead-import", "options"] as const,
+  runs: ["marketing-ops", "events", "lead-import", "runs"] as const,
+  run: (id: string) => ["marketing-ops", "events", "lead-import", "run", id] as const,
+  sheet: (id: string) => ["marketing-ops", "events", "lead-import", "sheet", id] as const,
+};
+
+const POLL_MS = 3000;
+
+function useBase() {
+  const { isSignedIn } = useAsgardeo();
+  const getAccessToken = useAccessToken();
+  return { getAccessToken, ready: isSignedIn && isMarketingOpsBackendConfigured() };
+}
+
+/** The backend's message for a refusal ("Upload an .xlsx, .xls or .csv file…").
+ *  FastAPI nests it under `detail`, which describeError does not read; the raw body is
+ *  still never shown. */
+export function leadImportError(err: unknown): string {
+  if (err instanceof HttpError && err.responseBody) {
+    try {
+      const parsed = JSON.parse(err.responseBody) as { detail?: { message?: unknown } };
+      const message = parsed?.detail?.message;
+      if (typeof message === "string" && message.trim()) return message;
+    } catch {
+      // not JSON — fall through
+    }
+  }
+  return describeError(err);
+}
+
+export function useLeadImportOptions() {
+  const { getAccessToken, ready } = useBase();
+  return useQuery<LeadImportOptions>({
+    queryKey: KEY.options,
+    enabled: ready,
+    queryFn: async () =>
+      authedGet<LeadImportOptions>(urls.eventsLeadImportOptions, await getAccessToken()),
+    staleTime: 10 * 60 * 1000,
+    retry: httpRetry,
+  });
+}
+
+/** Recently converted — every live run on the site, newest first. */
+export function useLeadImportRuns() {
+  const { getAccessToken, ready } = useBase();
+  return useQuery<LeadImportRun[]>({
+    queryKey: KEY.runs,
+    enabled: ready,
+    queryFn: async () =>
+      authedGet<LeadImportRun[]>(urls.eventsLeadImportRuns, await getAccessToken()),
+    // Keep "time left" and in-flight rows honest without hammering the server.
+    refetchInterval: (query) =>
+      query.state.data?.some((r) => r.status === "processing") ? POLL_MS * 2 : 60 * 1000,
+    staleTime: 10 * 1000,
+    retry: httpRetry,
+  });
+}
+
+export function useLeadImportRun(id: string | null) {
+  const { getAccessToken, ready } = useBase();
+  return useQuery<LeadImportDetail>({
+    queryKey: KEY.run(id ?? ""),
+    enabled: ready && Boolean(id),
+    queryFn: async () =>
+      authedGet<LeadImportDetail>(urls.eventsLeadImportRun(id!), await getAccessToken()),
+    refetchInterval: (query) =>
+      query.state.data?.run.status === "processing" ? POLL_MS : false,
+    retry: httpRetry,
+  });
+}
+
+export function useUploadLeadFile() {
+  const { getAccessToken } = useBase();
+  const qc = useQueryClient();
+  return useMutation({
+    // The sheet type reaches Claude as a routing hint (which tab the leads belong on).
+    mutationFn: async ({ file, sheetType }: { file: File; sheetType: SheetType }) => {
+      const url = urls.eventsLeadImportUpload(file.name, sheetType);
+      // The file is the whole body. Not authedUpload: that sends multipart FormData.
+      const res = await fetchWithReauth(
+        url,
+        { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file },
+        await getAccessToken(),
+      );
+      if (!res.ok) throw new HttpError(url, res.status, await res.text().catch(() => ""));
+      return (await res.json()) as { id: string };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY.runs }),
+  });
+}
+
+/** Delete a run and all its files on the server now, instead of waiting for it to expire.
+ *  Refused (409) while the file is still converting. */
+export function useDeleteLeadImport() {
+  const { getAccessToken } = useBase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const url = urls.eventsLeadImportRun(id);
+      const res = await fetchWithReauth(url, { method: "DELETE" }, await getAccessToken());
+      if (!res.ok) throw new HttpError(url, res.status, await res.text().catch(() => ""));
+    },
+    onSuccess: (_, id) => {
+      qc.removeQueries({ queryKey: KEY.run(id) });
+      qc.removeQueries({ queryKey: KEY.sheet(id) });
+      return qc.invalidateQueries({ queryKey: KEY.runs });
+    },
+  });
+}
+
+/** The converted workbook as the server reads it back — what the download holds. Only
+ *  for a ready run; it changes only when a confirm/undo or an edit rebuilds the workbook. */
+export function useLeadImportSheet(id: string, enabled: boolean) {
+  const { getAccessToken, ready } = useBase();
+  return useQuery<LeadSheet>({
+    queryKey: KEY.sheet(id),
+    enabled: ready && enabled,
+    queryFn: async () =>
+      authedGet<LeadSheet>(urls.eventsLeadImportSheet(id), await getAccessToken()),
+    staleTime: Infinity,
+    retry: httpRetry,
+  });
+}
+
+/** After a rebuild: the returned detail replaces the cached one, and the sheet is
+ *  refetched. Awaited, so the caller's edit stays on screen until the new sheet is in. */
+function useAfterRebuild() {
+  const qc = useQueryClient();
+  return async (detail: LeadImportDetail | null, id: string) => {
+    if (detail) qc.setQueryData(KEY.run(id), detail);
+    void qc.invalidateQueries({ queryKey: KEY.runs });
+    await qc.invalidateQueries({ queryKey: KEY.sheet(id) });
+  };
+}
+
+/** Confirm or undo changes (or user edits) by id. The server replays the saved plan (no
+ *  Claude call, a few seconds) and returns the new detail. */
+export function useApplyLeadChanges() {
+  const { getAccessToken } = useBase();
+  const afterRebuild = useAfterRebuild();
+  return useMutation({
+    mutationFn: async ({ id, confirm, undo }: { id: string; confirm: string[]; undo: string[] }) =>
+      authedPost<LeadImportDetail>(urls.eventsLeadImportApply(id), await getAccessToken(), {
+        confirm,
+        undo,
+      }),
+    onSuccess: (detail, { id }) => afterRebuild(detail, id),
+  });
+}
+
+/** Save cell edits. The server records them in the plan and rebuilds the workbook, so
+ *  the download always matches the sheet; every edit is undoable. */
+export function useSaveLeadEdits() {
+  const { getAccessToken } = useBase();
+  const afterRebuild = useAfterRebuild();
+  return useMutation({
+    mutationFn: async ({ id, cells }: { id: string; cells: CellEdit[] }) =>
+      authedPost<LeadImportDetail>(urls.eventsLeadImportEdits(id), await getAccessToken(), {
+        cells,
+      }),
+    onSuccess: (detail, { id }) => afterRebuild(detail, id),
+  });
+}
+
+export function useFinishLeadImport() {
+  const { getAccessToken } = useBase();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      authedPost<LeadImportDetail>(urls.eventsLeadImportFinish(id), await getAccessToken(), {}),
+    onSuccess: (detail, id) => {
+      if (detail) qc.setQueryData(KEY.run(id), detail);
+      void qc.invalidateQueries({ queryKey: KEY.runs });
+    },
+  });
+}
+
+export function useDownloadLeadFile() {
+  const { getAccessToken } = useBase();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      kind,
+      filename,
+    }: {
+      id: string;
+      kind: LeadImportFileKind;
+      filename: string;
+    }) => downloadAuthed(urls.eventsLeadImportFile(id, kind), await getAccessToken(), filename),
+  });
+}
