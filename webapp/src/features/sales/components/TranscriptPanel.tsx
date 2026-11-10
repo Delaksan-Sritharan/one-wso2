@@ -125,7 +125,11 @@ export default function TranscriptPanel({
     return <Alert severity="info">This transcript is empty.</Alert>;
   }
 
-  const nothingMatches = query.trim() !== "" && filtered.every((section) => section.lines.length === 0);
+  // Only once every transcript has loaded: one still loading, or that failed, has no lines to
+  // match yet, and saying "nothing matches" would hide its loading or its error.
+  const nothingMatches =
+    query.trim() !== "" &&
+    filtered.every((section) => !section.isLoading && !section.error && section.lines.length === 0);
 
   return (
     <Box>
