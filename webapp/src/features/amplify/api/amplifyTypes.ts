@@ -134,6 +134,8 @@ export interface LeaderboardEntry {
   email: string;
   points: number;
   rank: number;
+  /** When the person reached these points (their latest points entry); ties are ordered by it. Only for Amplify dashboard readers. */
+  reachedAt?: string | null;
 }
 
 export interface PersonalStanding {
