@@ -425,9 +425,11 @@ export interface FormulaProduct {
 /** One placeholder's value: a fixed VALUE ("25000", "10%"), or PRODUCTS whose lines it adds up. */
 export interface FormulaBinding {
   readonly name: string;
-  readonly kind: "VALUE" | "PRODUCTS";
+  readonly kind: "VALUE" | "PRODUCTS" | "CATEGORY";
   readonly value?: string;
   readonly products?: readonly FormulaProduct[];
+  /** CATEGORY: the category whose price-book lines it adds up (D153). */
+  readonly category?: LineCategory;
 }
 
 /**
@@ -461,7 +463,12 @@ export interface LineFormula {
   readonly expression: string;
   readonly explanation: string;
   readonly listPrice: string;
-  readonly values: readonly { readonly name: string; readonly value: string; readonly products?: readonly FormulaProduct[] }[];
+  readonly values: readonly {
+    readonly name: string;
+    readonly value: string;
+    readonly products?: readonly FormulaProduct[];
+    readonly category?: LineCategory;
+  }[];
 }
 
 /** How a line's unit price was worked out: the price book, or an Admin's formula (D81). */

@@ -185,11 +185,11 @@ describe("AddLineDialog", () => {
     expect(card.getByText("FY26 USD")).toBeInTheDocument();
     expect(card.getByText("USD 360")).toBeInTheDocument();
 
-    // Its category comes from its classification (D152): nothing to choose,
-    // and only the category is shown.
-    expect(within(screen.getByLabelText("Category")).getByText("Subscription")).toBeInTheDocument();
-    expect(screen.queryByText("Recurring")).toBeNull();
-    expect(screen.queryByText(/Salesforce classification/)).toBeNull();
+    // Its category and type come from its classification (D152): nothing to choose.
+    const category = within(screen.getByLabelText("Category"));
+    expect(category.getByText("Subscription")).toBeInTheDocument();
+    expect(category.getByText("Recurring")).toBeInTheDocument();
+    expect(category.getByText("From its Salesforce classification, PS.")).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: /Category/ })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Add product" }));
@@ -368,6 +368,7 @@ describe("AddLineDialog", () => {
     const user = await pick(/Enterprise Support Plan/);
 
     expect(within(screen.getByLabelText("Category")).getByText("Support")).toBeInTheDocument();
+    expect(screen.getByText("From its Salesforce classification, ES.")).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: /Category/ })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Add product" }));

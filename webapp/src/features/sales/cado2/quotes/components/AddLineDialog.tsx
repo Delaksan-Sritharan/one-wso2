@@ -46,7 +46,7 @@ import type {
   PricingFormula,
   Product,
 } from "@features/sales/cado2/quotes/api/quoteTypes";
-import { bindingsSummary, versionLabel } from "@features/sales/cado2/utils/pricingFormula";
+import { bindingsSummary, unitOfMeasureFor, versionLabel } from "@features/sales/cado2/utils/pricingFormula";
 import {
   ProductListContext,
   productLabel,
@@ -390,7 +390,8 @@ export default function AddLineDialog({
   // formula has none.
   const uom =
     pricing.kind === "FORMULA"
-      ? pricing.formula.unitOfMeasure
+      ? // %LIST_PRICE% filled in with the price-book price (D154), as the save does.
+        unitOfMeasureFor(pricing.formula.unitOfMeasure, entry?.unitPrice ?? line?.keepPricing?.formula?.listPrice ?? "")
       : pricing.kind === "KEPT_FORMULA"
         ? (pricing.formula.unitOfMeasure ?? line?.unitOfMeasure ?? "")
         : keepsExisting && moved && line.keepPricing?.method === "FORMULA"
@@ -644,17 +645,23 @@ export default function AddLineDialog({
               Not in {pricebook.name}, so not added: {bundle.data.missing.join(", ")}.
             </Alert>
           ) : null}
-          {/* The category only; its type and classification aren't the AM's concern (D152). */}
+          {/* Its category and type, and the classification they come from (D152). */}
           {chosen && classificationProblem ? (
             <Alert severity="error" aria-label="Classification">
               {classificationProblem}
             </Alert>
           ) : chosen && group ? (
-            <Stack direction="row" spacing={1} alignItems="center" aria-label="Category">
+            <Stack direction="row" spacing={1} alignItems="center" aria-label="Category" sx={{ flexWrap: "wrap", rowGap: 0.5 }}>
               <Typography variant="body2" color="text.secondary">
                 Category
               </Typography>
               <Chip size="small" color="primary" variant="outlined" label={categoryLabel(group)} />
+              <Chip size="small" variant="outlined" label={recurring ? "Recurring" : "Non-recurring"} />
+              {classification ? (
+                <Typography variant="caption" color="text.secondary">
+                  From its Salesforce classification, {classification}.
+                </Typography>
+              ) : null}
             </Stack>
           ) : chosen ? (
             <Alert severity="warning" aria-label="Classification">
