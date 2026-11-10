@@ -176,6 +176,7 @@ export default function UmtReleasedChunksGrid() {
         )}
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <DataGridComponent
+            disableVirtualization
             columnHeaderHeight={40}
             columnGroupingModel={COLUMN_GROUPING_MODEL}
             columns={columns}

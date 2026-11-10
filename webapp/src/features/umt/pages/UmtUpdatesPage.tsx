@@ -324,6 +324,7 @@ function UmtUpdatesBody() {
         <Box sx={{ height: { xs: "calc(100dvh - 360px)", md: "calc(100dvh - 310px)" }, minHeight: 240 }}>
           <OpenActionsRowContext.Provider value={actionAnchor ? (actionRow?.id ?? null) : null}>
             <DataGridComponent
+              disableVirtualization
               columnHeaderHeight={40}
               columns={gridColumns}
               disableRowSelectionOnClick

@@ -267,6 +267,7 @@ function UmtCreateReleaseChunkForm() {
         )}
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <DataGridComponent
+            disableVirtualization
             checkboxSelection
             columnHeaderHeight={40}
             columns={columns}
