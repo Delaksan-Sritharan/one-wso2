@@ -2209,18 +2209,27 @@ export const salesServiceUrls = {
   // The conversation as timed, speaker-attributed lines — what a synchronised transcript
   // is built from. 404 when the meeting predates the transcript resource name being stored,
   // in which case there is only the Drive document.
-  transcript: (meetingId: number): string =>
-    `${salesBackendUrl}/meetings/${meetingId}/transcript`,
+  //
+  // These three take an optional part id: a call holds a recording, transcript and smart
+  // notes for each time one was started, listed on the meeting. Without one, the backend
+  // serves the first.
+  transcript: (meetingId: number, transcriptId?: number): string =>
+    withPart(`${salesBackendUrl}/meetings/${meetingId}/transcript`, "transcriptId", transcriptId),
   // Gemini's notes, as plain text. Meet writes these only as a Google Doc.
-  smartNotes: (meetingId: number): string =>
-    `${salesBackendUrl}/meetings/${meetingId}/smart-notes`,
+  smartNotes: (meetingId: number, smartNoteId?: number): string =>
+    withPart(`${salesBackendUrl}/meetings/${meetingId}/smart-notes`, "smartNoteId", smartNoteId),
   // A signed, time-limited URL for streaming this meeting's recording. The URL it returns
   // points at drive-service, NOT here — streaming is deliberately not this backend's job.
   // 404 means either playback isn't configured or no recording is attached yet; the two
   // are distinguished by the message, and neither is an error worth a banner.
-  playback: (meetingId: number): string =>
-    `${salesBackendUrl}/meetings/${meetingId}/playback`,
+  playback: (meetingId: number, recordingId?: number): string =>
+    withPart(`${salesBackendUrl}/meetings/${meetingId}/playback`, "recordingId", recordingId),
 };
+
+/** Adds a part id as a query parameter, or leaves the URL as it is without one. */
+function withPart(url: string, name: string, partId: number | undefined): string {
+  return partId === undefined ? url : `${url}?${name}=${partId}`;
+}
 
 /**
  * Build the meetings URL with only the filters that are actually set.
