@@ -174,6 +174,28 @@ describe("ProductsStep (Products & Pricing)", () => {
     }
   });
 
+  // D151: a rate per year, from the Partner Commission card.
+  it("splits the commission into a rate per year, and back to one after asking", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Harness values={{ dealType: "PARTNER", partnerCommissionPercent: "10", yearCount: 1 }} />);
+    expect(screen.queryByRole("checkbox", { name: "Different rate per year" })).toBeNull(); // one year
+    unmount();
+
+    render(<Harness values={{ dealType: "PARTNER", partnerCommissionPercent: "10", yearCount: 3 }} />);
+    await user.click(screen.getByRole("checkbox", { name: "Different rate per year" }));
+    const perYear = within(screen.getByLabelText("Commission per year"));
+    expect(perYear.getAllByRole("textbox").map((t) => (t as HTMLInputElement).value)).toEqual(["10", "10", "10"]);
+    const year1 = perYear.getByRole("textbox", { name: "Year 1" });
+    await user.clear(year1);
+    await user.type(year1, "15");
+
+    await user.click(screen.getByRole("checkbox", { name: "Different rate per year" }));
+    expect(screen.getByText("Every year will use Year 1's 15%.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Use 15%" }));
+    expect(screen.queryByLabelText("Commission per year")).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Commission" })).toHaveValue("15");
+  });
+
   // D78: products can be added and kept before the start date; they are
   // priced once it is chosen.
   it("lets the AM add products before the start date is chosen", () => {

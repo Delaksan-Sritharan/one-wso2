@@ -52,6 +52,7 @@ import {
   type AddressValue,
   type ContactValue,
   type DraftFormValues,
+  commissionByYearInput,
 } from "@features/sales/cado2/quotes/form/draftForm";
 
 export type ContactRole = "BILLING" | "SECURITY";
@@ -149,8 +150,10 @@ export interface QuoteSheet {
   /** Whether any line recurs, i.e. the quote has a subscription term. */
   readonly recurring: boolean;
   readonly billingFrequency: BillingFrequency | null;
-  /** e.g. "15" on a partner-led quote with a commission; null otherwise. */
+  /** e.g. "15" on a partner-led quote with a commission; null otherwise. Year 1's with rates per year. */
   readonly partnerCommissionPercent: string | null;
+  /** D151: each year's rate when they differ, e.g. ["15", "10", "10"]; null with one rate. */
+  readonly partnerCommissionRates?: readonly string[] | null;
   /** Billing, then security; null when not chosen. */
   readonly contacts: readonly [SheetContact | null, SheetContact | null];
   readonly lines: readonly SheetLine[];
@@ -267,6 +270,7 @@ export function sheetFromVersion(res: DraftResponse): QuoteSheet {
     recurring: hasRecurring(v.lines),
     billingFrequency: v.billingFrequency,
     partnerCommissionPercent: v.partnerCommissionPercent ? String(Number(v.partnerCommissionPercent)) : null,
+    partnerCommissionRates: v.partnerCommissionByYear?.length ? v.partnerCommissionByYear.map((r) => String(Number(r))) : null,
     contacts: [contact("BILLING"), contact("SECURITY")],
     lines: v.lines.map((l) => ({
       number: l.lineNumber,
@@ -405,8 +409,17 @@ export function sheetFromForm(
     }),
     recurring,
     billingFrequency: v.billingFrequency || null,
-    partnerCommissionPercent:
-      isPartnerLed(v) && !commissionProblem(v.partnerCommissionPercent) ? String(Number(v.partnerCommissionPercent)) : null,
+    // With rates per year (D151) the single rate reads as Year 1's.
+    partnerCommissionPercent: !isPartnerLed(v)
+      ? null
+      : v.partnerCommissionByYear.length > 0
+        ? commissionByYearInput(v)
+          ? String(Number(v.partnerCommissionByYear[0]))
+          : null
+        : !commissionProblem(v.partnerCommissionPercent)
+          ? String(Number(v.partnerCommissionPercent))
+          : null,
+    partnerCommissionRates: isPartnerLed(v) && commissionByYearInput(v) ? v.partnerCommissionByYear.map((r) => String(Number(r))) : null,
     contacts: [contacts[0], contacts[1]],
     lines: v.lines.map((l, i) => {
       const p = preview?.lines[i];

@@ -26,7 +26,7 @@ import type {
   OpportunityQuote,
   VersionStatus,
 } from "@features/sales/cado2/quotes/api/quoteTypes";
-import { BILLING_LABEL, durationText, formatDate } from "@features/sales/cado2/quotes/form/draftForm";
+import { BILLING_LABEL, durationText, formatDate, commissionRatesText } from "@features/sales/cado2/quotes/form/draftForm";
 import { formatMoney } from "@features/sales/cado2/utils/money";
 import { legalPlainText } from "@features/sales/cado2/utils/legalRichText";
 import { roleLabel } from "@features/sales/cado2/approvals/model/approvalText";
@@ -134,8 +134,14 @@ export function compareVersions(a: DraftResponse, b: DraftResponse): CompareRow[
     (v.subscriptionStartDate && v.subscriptionEndDate && durationText(v.subscriptionStartDate, v.subscriptionEndDate)) || DASH;
   add("Products", "Subscription term", termText(va), termText(vb));
   add("Products", "End date", formatDate(va.subscriptionEndDate), formatDate(vb.subscriptionEndDate));
-  const commission = (p: string | null | undefined) => (p ? `${Number(p)}%` : DASH);
-  add("Products", "Partner commission", commission(va.partnerCommissionPercent), commission(vb.partnerCommissionPercent));
+  // One rate, or a rate per year (D151).
+  const commission = (v: typeof va) =>
+    v.partnerCommissionByYear?.length
+      ? commissionRatesText(v.partnerCommissionByYear)
+      : v.partnerCommissionPercent
+        ? `${Number(v.partnerCommissionPercent)}%`
+        : DASH;
+  add("Products", "Partner commission", commission(va), commission(vb));
 
   const la = keyed(va.lines);
   const lb = keyed(vb.lines);

@@ -69,7 +69,8 @@ export default function ReviewStep({ preview, savedLegalEntityName, approvals, q
     <Stack spacing={2.5}>
       {/* A card of its own (the approval preview is a SectionCard). */}
       {approvals}
-      <QuoteSheet sheet={sheet} />
+      {/* The justification is written below when editable, so the sheet doesn't show it twice. */}
+      <QuoteSheet sheet={sheet} showJustification={!editable} />
       <SupportingDocumentsSummary quoteId={quoteId} />
       {editable ? (
         <SectionCard title="Justification" icon={<MessageSquareTextIcon size={18} />}>

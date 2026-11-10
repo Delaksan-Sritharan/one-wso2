@@ -231,6 +231,22 @@ describe("Partner commission", () => {
     expect(within(screen.getByRole("table", { name: "Yearly schedule" })).getByText("Billed, net of commission")).toBeInTheDocument();
   });
 
+  // D151: rates per year, in the totals label and a row of the schedule.
+  it("shows a rate per year in the totals and the yearly schedule", () => {
+    const perYear = {
+      ...partner,
+      partnerCommissionRates: ["15", "10", "10"],
+      years: partner.years.map((y, i) => ({ ...y, commission: ["7047.00", "5440.00", "5444.00"][i], netBilling: "1.00" })),
+    };
+    render(<QuoteSheet sheet={perYear} />);
+    expect(screen.getByRole("region", { name: "Order totals" }).textContent).toContain(
+      "Partner commission (Year 1: 15% · Years 2–3: 10%) (USD)− 17,931.00",
+    );
+    const schedule = within(screen.getByRole("table", { name: "Yearly schedule" }));
+    const row = schedule.getByText("Partner commission").closest("tr") as HTMLElement;
+    expect(row.textContent).toBe("Partner commission− 7,047.0015%− 5,440.0010%− 5,444.0010%");
+  });
+
   it("says a one-off line is one-time in the Term column (D85, D94)", () => {
     render(<QuoteSheet sheet={{ ...threeYears, startDate: "2027-01-01" }} />);
     const products = within(screen.getByRole("table", { name: "Products" }));

@@ -227,6 +227,11 @@ export interface DraftFormValues {
   billingFrequency: BillingFrequency | "";
   /** Partner-led quotes only: the partner's commission %, "" until entered. */
   partnerCommissionPercent: string;
+  /**
+   * D151: each contract year's commission, in order, when they differ; [] =
+   * partnerCommissionPercent for every year.
+   */
+  partnerCommissionByYear: string[];
   lines: LineValue[];
   // Step 3
   netTermsDays: "" | "30" | "45" | "60";
@@ -300,6 +305,7 @@ export function emptyDraftForm(): DraftFormValues {
     lastYearEndDate: "",
     billingFrequency: "ANNUAL",
     partnerCommissionPercent: "",
+    partnerCommissionByYear: [],
     lines: [],
     netTermsDays: "",
     poNumber: "",
@@ -699,6 +705,7 @@ export function fromVersion(res: DraftResponse): DraftFormValues {
     lastYearEndDate: lastEnd && lastEnd !== fullEnd ? lastEnd : "",
     billingFrequency: v.billingFrequency ?? "ANNUAL",
     partnerCommissionPercent: v.partnerCommissionPercent ? String(Number(v.partnerCommissionPercent)) : "",
+    partnerCommissionByYear: (v.partnerCommissionByYear ?? []).map((r) => String(Number(r))),
     lines: v.lines.map((l) => ({
       lineId: l.id,
       pricebookEntryId: l.pricebookEntryId,
@@ -798,7 +805,45 @@ export function commissionProblem(value: string): string {
 
 /** The commission to send: only on a partner-led quote, and only once valid. */
 function commissionInput(v: DraftFormValues): string | undefined {
+  if (v.partnerCommissionByYear.length > 0) return undefined;
   return isPartnerLed(v) && !commissionProblem(v.partnerCommissionPercent) ? v.partnerCommissionPercent.trim() : undefined;
+}
+
+/** The rates per year to send (D151): partner-led, set, and every one valid. */
+export function commissionByYearInput(v: Pick<DraftFormValues, "partnerCommissionByYear" | "dealType">): string[] | undefined {
+  const rates = v.partnerCommissionByYear;
+  return isPartnerLed(v) && rates.length > 0 && rates.every((r) => !commissionProblem(r)) ? rates.map((r) => r.trim()) : undefined;
+}
+
+/** Rates per year in words, equal years together (D151): "Year 1: 15% · Years 2–3: 10%". */
+export function commissionRatesText(rates: readonly string[]): string {
+  const parts: string[] = [];
+  for (let i = 0; i < rates.length; ) {
+    let j = i;
+    while (j + 1 < rates.length && Number(rates[j + 1]) === Number(rates[i])) j++;
+    parts.push(`${j > i ? `Years ${i + 1}–${j + 1}` : `Year ${i + 1}`}: ${Number(rates[i])}%`);
+    i = j + 1;
+  }
+  return parts.join(" · ");
+}
+
+/**
+ * The rates per year after a year is added, cloned or deleted (D151): a new
+ * year takes the last year's rate, a clone its year's, a deleted year's goes.
+ * Down to one year, there's one rate again (returned as single).
+ */
+export function commissionAfterYearChange(
+  rates: readonly string[],
+  change: { readonly add: true } | { readonly clone: number } | { readonly remove: number },
+): { byYear: string[]; single: string | null } {
+  if (rates.length === 0) return { byYear: [], single: null };
+  const next =
+    "add" in change
+      ? [...rates, rates[rates.length - 1]]
+      : "clone" in change
+        ? [...rates, rates[change.clone - 1] ?? rates[rates.length - 1]]
+        : rates.filter((_, i) => i !== change.remove - 1);
+  return next.length > 1 ? { byYear: next, single: null } : { byYear: [], single: next[0] ?? rates[0] };
 }
 
 /** The years of a request, and the billing (every quote, D88). */
@@ -848,7 +893,8 @@ export function toDraftInput(v: DraftFormValues, expectedUpdatedAt?: string): Dr
     defaultPricebookId: opt(v.defaultPricebookId),
     subscriptionStartDate: opt(v.startDate),
     ...termInput(v),
-    partnerCommissionPercent: isPartnerLed(v) ? opt(v.partnerCommissionPercent) : undefined,
+    partnerCommissionPercent: isPartnerLed(v) && v.partnerCommissionByYear.length === 0 ? opt(v.partnerCommissionPercent) : undefined,
+    partnerCommissionByYear: commissionByYearInput(v),
     netTermsDays: v.netTermsDays ? Number(v.netTermsDays) : undefined,
     specialTerms: {
       enabled: v.specialTermsEnabled,
@@ -904,6 +950,7 @@ export function toPreviewBody(v: DraftFormValues): object | null {
     lastYearEndDate: opt(v.lastYearEndDate),
     billingFrequency: v.billingFrequency,
     partnerCommissionPercent: commissionInput(v),
+    partnerCommissionByYear: commissionByYearInput(v),
     lines: lines.map((l) => ({
       pricebookEntryId: l.pricebookEntryId,
       quantity: Number(l.quantity),
@@ -1051,6 +1098,7 @@ const STEP_2_FIELDS = [
   "yearCount",
   "lastYearEndDate",
   "partnerCommissionPercent",
+  "partnerCommissionByYear",
 ];
 
 /** Commercials (D86): billing and payment terms first. */

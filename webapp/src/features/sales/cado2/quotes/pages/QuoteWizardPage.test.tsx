@@ -601,6 +601,8 @@ describe("QuoteWizardPage — justification", () => {
     await user.click(screen.getByRole("button", { name: "Review" }));
     const field = screen.getByRole("textbox", { name: /^Justification/ });
     expect(field).toBeRequired();
+    // Written here, so the sheet above doesn't show a second, read-only copy.
+    expect(screen.queryByText("None given")).toBeNull();
     expect(screen.getByText(/Required: a line has a discount/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Submit version 1" })).toBeDisabled();
     expect(screen.getByText("Write the justification first")).toBeInTheDocument();

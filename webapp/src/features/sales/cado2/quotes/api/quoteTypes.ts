@@ -571,6 +571,8 @@ export interface DraftInput {
   readonly partnerContractDate?: string;
   /** Partner-led quotes only: one % for every line. */
   readonly partnerCommissionPercent?: string;
+  /** D151: one % per contract year, in order, when they differ; replaces partnerCommissionPercent. */
+  readonly partnerCommissionByYear?: string[];
   readonly netTermsDays?: number;
   /** The AM's special terms (D139); Deal Desk and Legal may override them during approval. */
   readonly specialTerms: { readonly enabled: boolean; readonly text?: string };
@@ -727,8 +729,10 @@ export interface VersionView {
   readonly termsSaasNonStandard?: boolean;
   readonly partnerContractName?: string | null;
   readonly partnerContractDate?: string | null;
-  /** "15.00" on a partner-led quote with a commission; null otherwise. */
+  /** "15.00" on a partner-led quote with a commission; null otherwise. Year 1's with rates per year. */
   readonly partnerCommissionPercent?: string | null;
+  /** D151: each year's rate, in order, when they differ; null with one rate. */
+  readonly partnerCommissionByYear?: string[] | null;
   readonly billingFrequency: BillingFrequency | null;
   readonly netTermsDays: number | null;
   readonly specialTerms: {

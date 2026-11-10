@@ -166,3 +166,14 @@ describe("reachableStep and nextHint", () => {
     );
   });
 });
+
+// D151: each year's rate is checked on its own.
+describe("commission per year", () => {
+  it("asks for every year's rate", () => {
+    const v = { ...complete(), yearCount: 2, partnerCommissionByYear: ["15", "abc"] };
+    const products = stepChecks(v)[1];
+    expect(products.map((c) => c.field)).toContain("partnerCommissionByYear[1]");
+    expect(products.map((c) => c.field)).not.toContain("partnerCommissionByYear[0]");
+    expect(products.find((c) => c.field === "partnerCommissionByYear[1]")?.message).toMatch(/^Year 2: /);
+  });
+});

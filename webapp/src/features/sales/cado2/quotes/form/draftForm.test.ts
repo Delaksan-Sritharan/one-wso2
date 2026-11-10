@@ -22,6 +22,8 @@ import {
   durationText,
   emptyDraftForm,
   lineFromSalesforce,
+  commissionAfterYearChange,
+  commissionRatesText,
   endDateFor,
   addYear,
   cloneYear,
@@ -831,5 +833,31 @@ describe("lineFromSalesforce", () => {
 
   it("leaves the price to the book, or the formula, when nothing was raised", () => {
     expect(lineFromSalesforce({ ...load, salesPrice: null, formula: true }).salesPrice).toBe("");
+  });
+});
+
+// D151: a partner's commission per contract year.
+describe("commission per year", () => {
+  it("follows the years: a new year takes the last rate, a clone its year's, a deleted year's goes", () => {
+    expect(commissionAfterYearChange(["15", "10"], { add: true })).toEqual({ byYear: ["15", "10", "10"], single: null });
+    expect(commissionAfterYearChange(["15", "10"], { clone: 1 })).toEqual({ byYear: ["15", "10", "15"], single: null });
+    expect(commissionAfterYearChange(["15", "10", "12"], { remove: 2 })).toEqual({ byYear: ["15", "12"], single: null });
+    expect(commissionAfterYearChange(["15", "10"], { remove: 1 })).toEqual({ byYear: [], single: "10" }); // one year: one rate
+    expect(commissionAfterYearChange([], { add: true })).toEqual({ byYear: [], single: null });
+  });
+
+  it("says the rates in words, equal years together", () => {
+    expect(commissionRatesText(["15", "10", "10"])).toBe("Year 1: 15% · Years 2–3: 10%");
+    expect(commissionRatesText(["10", "12.5", "10"])).toBe("Year 1: 10% · Year 2: 12.5% · Year 3: 10%");
+  });
+
+  it("sends the rates per year instead of the single rate, once every one is valid", () => {
+    const v = { ...emptyDraftForm(), dealType: "PARTNER" as const, yearCount: 3, partnerCommissionPercent: "15" };
+    expect(toDraftInput({ ...v, partnerCommissionByYear: ["15", "10", "10"] })).toMatchObject({
+      partnerCommissionPercent: undefined,
+      partnerCommissionByYear: ["15", "10", "10"],
+    });
+    expect(toDraftInput({ ...v, partnerCommissionByYear: ["15", "", "10"] }).partnerCommissionByYear).toBeUndefined();
+    expect(toDraftInput(v)).toMatchObject({ partnerCommissionPercent: "15", partnerCommissionByYear: undefined });
   });
 });

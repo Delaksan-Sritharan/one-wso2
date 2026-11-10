@@ -18,7 +18,7 @@ import { Fragment, type JSX, type ReactNode } from "react";
 import { alpha, Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@wso2/oxygen-ui";
 import { CircleAlertIcon, PencilIcon } from "@wso2/oxygen-ui-icons-react";
 import { orderForm, type SheetLine } from "@features/sales/cado2/quotes/sheet/sheetModel";
-import { durationShort, formatDate } from "@features/sales/cado2/quotes/form/draftForm";
+import { commissionRatesText, durationShort, formatDate } from "@features/sales/cado2/quotes/form/draftForm";
 import { formatMoney } from "@features/sales/cado2/utils/money";
 import { visuallyHidden } from "@features/sales/cado2/utils/visuallyHidden";
 
@@ -36,6 +36,8 @@ interface OrderFormTableProps {
   readonly below?: (index: number) => ReactNode;
   /** A partner-led quote's commission %, e.g. "15": adds the commission and net rows. */
   readonly commissionPercent?: string | null;
+  /** D151: each year's rate, when they differ. */
+  readonly commissionRates?: readonly string[] | null;
   /** The totals box's label. */
   readonly totalLabel?: string;
   /** False inside a year: the Products card closes with the totals over every year. */
@@ -68,6 +70,7 @@ export default function OrderFormTable({
   actions,
   below,
   commissionPercent = null,
+  commissionRates = null,
   flagUncategorised = false,
   totalLabel = "Total order value",
   showTotals = true,
@@ -326,7 +329,12 @@ export default function OrderFormTable({
             <>
               <Box sx={{ pt: 0.75 }}>
                 {summaryRow(totalLabel, form.total)}
-                {summaryRow(`Partner commission (${commissionPercent}%)`, form.commission, false, "− ")}
+                {summaryRow(
+                  `Partner commission (${commissionRates?.length ? commissionRatesText(commissionRates) : `${commissionPercent}%`})`,
+                  form.commission,
+                  false,
+                  "− ",
+                )}
               </Box>
               {summaryRow("Net order value", form.netOrderValue, true)}
             </>

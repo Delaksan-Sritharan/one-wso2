@@ -17,7 +17,7 @@
 import type { JSX, ReactNode } from "react";
 import { Box, Chip, Stack, Typography } from "@wso2/oxygen-ui";
 import { ChevronRightIcon } from "@wso2/oxygen-ui-icons-react";
-import { durationShort, durationText, formatDate } from "@features/sales/cado2/quotes/form/draftForm";
+import { commissionRatesText, durationShort, durationText, formatDate } from "@features/sales/cado2/quotes/form/draftForm";
 import { orderForm, type SheetLine } from "@features/sales/cado2/quotes/sheet/sheetModel";
 import { formatMoney } from "@features/sales/cado2/utils/money";
 import OrderFormTable from "./OrderFormTable";
@@ -179,11 +179,14 @@ export function OrderTotalsFooter({
   lines,
   currency,
   commissionPercent,
+  commissionRates = null,
   yearCount,
 }: {
   lines: readonly SheetLine[];
   currency: string;
   commissionPercent: string | null;
+  /** D151: each year's rate, when they differ. */
+  commissionRates?: readonly string[] | null;
   yearCount: number;
 }): JSX.Element {
   const form = orderForm(lines, commissionPercent);
@@ -213,7 +216,7 @@ export function OrderTotalsFooter({
       {form.commission !== null ? (
         <Stack spacing={0.5}>
           {row(total, form.total)}
-          {row(`Partner commission (${commissionPercent}%)`, form.commission, false, "− ")}
+          {row(`Partner commission (${commissionRates?.length ? commissionRatesText(commissionRates) : `${commissionPercent}%`})`, form.commission, false, "− ")}
           {row("Net order value", form.netOrderValue, true)}
         </Stack>
       ) : (

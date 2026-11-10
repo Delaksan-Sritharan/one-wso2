@@ -91,9 +91,17 @@ export function stepChecks(
   });
 
   // Partner-led: the partner's commission, 0 allowed.
+  // With a rate per year (D151), each year's.
   if (isPartnerLed(v) && v.lines.length > 0) {
-    const problem = commissionProblem(v.partnerCommissionPercent);
-    need(products, !problem, "partnerCommissionPercent", problem);
+    if (v.partnerCommissionByYear.length > 0) {
+      v.partnerCommissionByYear.forEach((r, i) => {
+        const problem = commissionProblem(r);
+        need(products, !problem, `partnerCommissionByYear[${i}]`, problem && `Year ${i + 1}: ${problem}`);
+      });
+    } else {
+      const problem = commissionProblem(v.partnerCommissionPercent);
+      need(products, !problem, "partnerCommissionPercent", problem);
+    }
   }
   const commercial: StepCheck[] = [];
   // Commercials opens with billing and payment terms (D86), on every quote (D88).

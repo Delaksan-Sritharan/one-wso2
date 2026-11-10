@@ -49,6 +49,7 @@ import { useOpportunityQuotes } from "@features/sales/cado2/quotes/api/useQuoteA
 import {
   addYear,
   childQuantity,
+  commissionAfterYearChange,
   childrenOf,
   cloneYear,
   contractYears,
@@ -147,6 +148,12 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
     if (check.subsStartDate) setValue("startDate", check.subsStartDate, { shouldDirty: true });
     setValue("yearCount", 1, { shouldDirty: true });
     setValue("lastYearEndDate", "", { shouldDirty: true });
+    // One year: one commission rate again (D151).
+    const rates = getValues("partnerCommissionByYear");
+    if (rates.length > 0) {
+      setValue("partnerCommissionPercent", rates[0], { shouldDirty: true });
+      setValue("partnerCommissionByYear", [], { shouldDirty: true });
+    }
     replace(loads.map(lineFromSalesforce));
     setLoaded(loads.length);
     setViewingLines(false);
@@ -219,10 +226,20 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
   };
   // Year changes rewrite the count, the last year's end and, for clone and
   // delete, the lines together.
-  const setYears = (next: { yearCount: number; lastYearEndDate: string; lines?: LineValue[] }) => {
+  // A year's rate follows the year (D151): added, cloned or deleted with it.
+  const setYears = (
+    next: { yearCount: number; lastYearEndDate: string; lines?: LineValue[] },
+    change?: Parameters<typeof commissionAfterYearChange>[1],
+  ) => {
     setValue("yearCount", next.yearCount, { shouldDirty: true });
     setValue("lastYearEndDate", next.lastYearEndDate, { shouldDirty: true });
     if (next.lines) replace(next.lines);
+    const rates = getValues("partnerCommissionByYear");
+    if (change && rates.length > 0) {
+      const after = commissionAfterYearChange(rates, change);
+      setValue("partnerCommissionByYear", after.byYear, { shouldDirty: true });
+      if (after.single !== null) setValue("partnerCommissionPercent", after.single, { shouldDirty: true });
+    }
   };
   const changeLastEnd = (end: string) => setValue("lastYearEndDate", setLastYearEnd(getValues(), end), { shouldDirty: true });
 
@@ -266,7 +283,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
                 size="small"
                 startIcon={<CopyIcon size={14} />}
                 disabled={recurring === 0 || emptyYear !== null || values.yearCount >= MAX_YEARS || !values.startDate}
-                onClick={() => setYears(cloneYear(getValues(), n))}
+                onClick={() => setYears(cloneYear(getValues(), n), { clone: n })}
               >
                 Clone
               </Button>
@@ -281,7 +298,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
               size="small"
               aria-label={`Delete Year ${n}`}
               onClick={() => {
-                setYears(deleteYear(getValues(), n));
+                setYears(deleteYear(getValues(), n), { remove: n });
                 fold.reset();
               }}
             >
@@ -326,7 +343,12 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
       {/* Partner-led: the commission, right above the products whose totals it
           changes (D91); shown before any product too. */}
       {isPartnerLed(values) ? (
-        <PartnerCommissionCard commission={total.commission} total={total.total} currency={currency} />
+        <PartnerCommissionCard
+          commission={total.commission}
+          total={total.total}
+          currency={currency}
+          yearCommissions={Array.from({ length: values.yearCount }, (_, i) => preview?.years.find((y) => y.yearNumber === i + 1)?.commission)}
+        />
       ) : null}
 
       {/* When it starts and where the years take it, right above the products
@@ -470,7 +492,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
                     size="small"
                     startIcon={<PlusIcon size={14} />}
                     disabled={emptyYear !== null}
-                    onClick={() => setYears(addYear(getValues()))}
+                    onClick={() => setYears(addYear(getValues()), { add: true })}
                   >
                     Add Year {values.yearCount + 1}
                   </Button>
@@ -488,6 +510,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
                 lines={sheet.lines}
                 currency={currency}
                 commissionPercent={sheet.partnerCommissionPercent}
+                commissionRates={sheet.partnerCommissionRates}
                 yearCount={values.yearCount}
               />
             ) : null}
@@ -498,7 +521,12 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
 
       {hasYearlySchedule(sheet) ? (
         <SectionCard title="Yearly Schedule" icon={<ChartColumnIcon size={18} />}>
-          <ScheduleTable years={sheet.years} lines={sheet.lines} netOfCommission={sheet.partnerCommissionPercent !== null} />
+          <ScheduleTable
+            years={sheet.years}
+            lines={sheet.lines}
+            netOfCommission={sheet.partnerCommissionPercent !== null}
+            commissionRates={sheet.partnerCommissionRates ?? (sheet.partnerCommissionPercent ? [sheet.partnerCommissionPercent] : null)}
+          />
         </SectionCard>
       ) : null}
 
