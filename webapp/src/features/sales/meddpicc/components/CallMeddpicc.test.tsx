@@ -130,6 +130,19 @@ describe("CallMeddpiccTab", () => {
     expect(onSeek).toHaveBeenCalledWith(760);
   });
 
+  it("says the transcript is empty rather than that the analysis failed", () => {
+    render(
+      <CallMeddpiccTab
+        call={callOf(makeCoverage({ status: "EMPTY", coverage: null }), undefined)}
+        focusLetter={null}
+        onSeek={() => {}}
+        onOpenDeal={() => {}}
+      />,
+    );
+    expect(screen.getByText(/transcript is empty, so there was nothing to analyse/)).toBeInTheDocument();
+    expect(screen.queryByText(/analysis failed/)).not.toBeInTheDocument();
+  });
+
   it("says an approved suggestion is kept in Echo when Salesforce doesn't have the field yet", () => {
     const approved = { value: "Ingrid Solberg", rationale: null, confidence: 0.86, evidence: [quote()], pending: false };
     const { unmount } = render(
