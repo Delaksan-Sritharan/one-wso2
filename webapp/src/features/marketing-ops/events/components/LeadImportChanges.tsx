@@ -27,6 +27,7 @@ import { primaryBtn, quietBtn } from "./eventsStyles";
 
 const CHANGES_SHOWN = 150;
 
+/** Confirm or undo one change or user edit, by id. */
 export type ActOn = (id: string, which: "confirm" | "undo") => void;
 
 function Section({ title, caption, children }: { title: string; caption?: string; children: ReactNode }) {
@@ -39,6 +40,7 @@ function Section({ title, caption, children }: { title: string; caption?: string
   );
 }
 
+/** The changes that wait for a person, each with Apply and Dismiss. Shows nothing when none wait. */
 export function PendingChanges({
   changes,
   editable,
@@ -68,6 +70,7 @@ export function PendingChanges({
 
 type StatusFilter = ChangeStatus | null;
 
+/** Every change and user edit, filterable by status, each with the action its status allows. */
 export function AllChanges({
   changes,
   editable,

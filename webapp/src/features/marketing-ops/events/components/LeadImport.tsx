@@ -74,6 +74,8 @@ export default function LeadImport({ onOpen }: { onOpen: (id: string) => void })
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
+  // The server refuses uploads without a configured conversion; say so, and don't offer one.
+  const unavailable = options.data !== undefined && !options.data.claude_configured;
   const accepted = options.data?.accepted ?? [".xlsx", ".xls", ".csv"];
   const maxBytes = options.data?.max_bytes ?? 10 * 1024 * 1024;
   const hours = options.data?.retention_hours ?? 2;
@@ -120,7 +122,7 @@ export default function LeadImport({ onOpen }: { onOpen: (id: string) => void })
   return (
     <Box>
       <Panel sx={{ p: 2.5, mb: 3 }}>
-        {options.data && !options.data.claude_configured && (
+        {unavailable && (
           <Alert severity="warning" sx={{ mb: 2, fontSize: 13 }}>
             Lead import isn't available on this server because Claude isn't configured. Ask the
             Marketing Ops team.
@@ -217,7 +219,7 @@ export default function LeadImport({ onOpen }: { onOpen: (id: string) => void })
           <Button
             variant="contained"
             sx={primaryBtn}
-            disabled={!file || !sheetType || upload.isPending}
+            disabled={unavailable || !file || !sheetType || upload.isPending}
             onClick={() => void convert()}
             startIcon={upload.isPending ? <CircularProgress size={15} color="inherit" /> : undefined}
           >

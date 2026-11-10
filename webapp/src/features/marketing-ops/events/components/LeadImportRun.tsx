@@ -36,6 +36,7 @@ import {
   useApplyLeadChanges,
   useDownloadLeadFile,
   useFinishLeadImport,
+  useLeadImportRebuilding,
   useLeadImportRun,
   useLeadImportSheet,
 } from "../../api/useLeadImport";
@@ -113,6 +114,7 @@ function Head({ run, workbook, onBack }: { run: Run; workbook: string | null; on
       setAsking(false);
       if (workbook) await download.mutateAsync({ id: run.id, kind: "workbook", filename: workbook });
     } catch (e) {
+      setAsking(false);
       setError(leadImportError(e));
     }
   }
@@ -251,6 +253,7 @@ function Review({ detail, result }: { detail: LeadImportDetail; result: LeadImpo
   const { run } = detail;
   const apply = useApplyLeadChanges();
   const sheet = useLeadImportSheet(run.id, true);
+  const rebuilding = useLeadImportRebuilding();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -278,7 +281,8 @@ function Review({ detail, result }: { detail: LeadImportDetail; result: LeadImpo
     () => [...detail.changes, ...userEdits.map(userEditAsChange)],
     [detail.changes, userEdits],
   );
-  const editable = run.can_edit && !apply.isPending;
+  // One rebuild at a time: no change action while a cell edit or another action saves.
+  const editable = run.can_edit && !rebuilding;
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>

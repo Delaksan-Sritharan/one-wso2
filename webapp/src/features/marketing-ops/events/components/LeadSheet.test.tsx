@@ -22,8 +22,10 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { SheetTab } from "../leadImportTypes";
 
 const save = vi.fn();
+let rebuilding = false;
 vi.mock("../../api/useLeadImport", () => ({
   useSaveLeadEdits: () => ({ mutateAsync: save }),
+  useLeadImportRebuilding: () => rebuilding,
   leadImportError: (e: Error) => e.message,
 }));
 
@@ -55,8 +57,10 @@ const TABS: SheetTab[] = [
   { name: "Session", columns: [column("email", "Email", false)], rows: [{ row: 2, email: "lee@x.sg", cells: ["lee@x.sg"] }] },
 ];
 
-function renderSheet() {
-  render(<LeadSheet runId="run-1" tabs={TABS} changes={[]} userEdits={[]} editable busyId={null} onAct={vi.fn()} />);
+function renderSheet(tabs: SheetTab[] = TABS) {
+  return render(
+    <LeadSheet runId="run-1" tabs={tabs} changes={[]} userEdits={[]} editable busyId={null} onAct={vi.fn()} />,
+  );
 }
 
 function editCompany(value: string) {
@@ -69,6 +73,7 @@ function editCompany(value: string) {
 // mockClear, not mockReset: under Vitest 4 a reset mock's rejection is reported as
 // unhandled even when the component catches it.
 beforeEach(() => {
+  rebuilding = false;
   save.mockClear();
   save.mockResolvedValue(undefined);
 });
@@ -108,6 +113,33 @@ describe("LeadSheet", () => {
     editCompany("Nope");
     expect(await screen.findByText("Not saved: Email can't be edited.")).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();
+  });
+
+  it("shows all rows when the chosen filter has no rows left", () => {
+    const { rerender } = renderSheet();
+    fireEvent.click(screen.getByRole("button", { name: /isn.t applied yet/ }));
+    expect(screen.queryByText("ana@acme.io")).not.toBeInTheDocument();
+
+    // The last pending change was applied: its mark is now "applied".
+    const applied: SheetTab[] = [
+      {
+        ...TABS[0],
+        rows: TABS[0].rows.map((r) =>
+          r.marks ? { ...r, marks: { email: { ...r.marks.email, status: "applied" as const } } } : r,
+        ),
+      },
+      TABS[1],
+    ];
+    rerender(<LeadSheet runId="run-1" tabs={applied} changes={[]} userEdits={[]} editable busyId={null} onAct={vi.fn()} />);
+    expect(screen.getByText("ana@acme.io")).toBeInTheDocument();
+    expect(screen.queryByText("No rows match.")).not.toBeInTheDocument();
+  });
+
+  it("allows no cell edit while the workbook rebuilds", () => {
+    rebuilding = true;
+    renderSheet();
+    fireEvent.click(screen.getByText("Acme"));
+    expect(screen.queryByRole("textbox", { name: "Company name, row 2" })).not.toBeInTheDocument();
   });
 
   it("doesn't save a cell left as it was", () => {

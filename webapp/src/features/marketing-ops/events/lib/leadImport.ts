@@ -14,11 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Lead import: the words the page uses for leadkit's identifiers, and small pure helpers.
+// Lead import: the words the page uses for change kinds and fields, and small pure helpers.
 
 import type { ChangeStatus, LeadChange, LeadImportRun, UserEdit } from "../leadImportTypes";
 
-/** A change kind, as the list names it. Mirrors leadkit's SUMMARY_LABELS in spirit. */
+/** A change kind, as the list names it. An unknown kind falls back to its id in words (see `kindLabel`). */
 export const KIND_LABEL: Record<string, string> = {
   split_name: "Name re-split",
   swap_fields: "Fields swapped",

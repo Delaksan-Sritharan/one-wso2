@@ -17,7 +17,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Box, Button, CircularProgress, InputAdornment, TextField, Typography } from "@wso2/oxygen-ui";
 import { Search } from "@wso2/oxygen-ui-icons-react";
-import { leadImportError, useSaveLeadEdits } from "../../api/useLeadImport";
+import { leadImportError, useLeadImportRebuilding, useSaveLeadEdits } from "../../api/useLeadImport";
 import type { LeadChange, SheetColumn, SheetMark, SheetRow, SheetTab, UserEdit } from "../leadImportTypes";
 import { CHANGE_STATUS_LABEL, changeActions, fieldLabel, kindLabel } from "../lib/leadImport";
 import { cellKey, filterCounts, filterRows, type SheetFilter } from "../lib/leadSheet";
@@ -38,6 +38,8 @@ const FILTERS: { key: SheetFilter; label: string; title: string }[] = [
   { key: "edited", label: "Edited by you", title: "Rows with a cell you edited" },
 ];
 
+/** The converted List Import Template for one run as an editable sheet: tabs, search,
+ *  row filters, cell edits, and a tooltip on each marked cell to confirm or undo it. */
 export default function LeadSheet({
   runId,
   tabs,
@@ -57,6 +59,11 @@ export default function LeadSheet({
   onAct: ActOn;
 }) {
   const { mutateAsync: save } = useSaveLeadEdits();
+  // One rebuild at a time, shared with the change list: a new edit or action waits until
+  // the workbook from the last one is back. Opening another action blurs an open cell
+  // editor first, which commits it, so no typed value is lost.
+  const rebuilding = useLeadImportRebuilding();
+  const canChange = editable && !rebuilding;
   const [tabName, setTabName] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<SheetFilter>("all");
@@ -65,8 +72,14 @@ export default function LeadSheet({
   const [error, setError] = useState<string | null>(null);
 
   const tab = tabs.find((t) => t.name === tabName) ?? tabs[0];
-  const rows = useMemo(() => (tab ? filterRows(tab.rows, query, filter) : []), [tab, query, filter]);
   const counts = useMemo(() => (tab ? filterCounts(tab.rows) : null), [tab]);
+  // A filter whose last row went away (say, the last pending change was applied) shows
+  // all rows instead of an empty grid with no pill selected.
+  const activeFilter: SheetFilter = counts && counts[filter] > 0 ? filter : "all";
+  const rows = useMemo(
+    () => (tab ? filterRows(tab.rows, query, activeFilter) : []),
+    [tab, query, activeFilter],
+  );
 
   const editCell = useCallback(
     async (row: SheetRow, column: SheetColumn, value: string) => {
@@ -106,11 +119,11 @@ export default function LeadSheet({
         mark={mark}
         change={changesById.get(mark.id)}
         edit={editsById.get(mark.id)}
-        editable={editable && busyId === null}
+        editable={canChange && busyId === null}
         onAct={onAct}
       />
     ),
-    [changesById, editsById, editable, busyId, onAct],
+    [changesById, editsById, canChange, busyId, onAct],
   );
 
   if (!tab || !counts) return <Empty>No leads were written to the workbook.</Empty>;
@@ -157,7 +170,7 @@ export default function LeadSheet({
               ...f,
               count: counts[f.key],
             }))}
-            value={filter}
+            value={activeFilter}
             onChange={setFilter}
           />
         </Box>
@@ -176,12 +189,12 @@ export default function LeadSheet({
           </Box>
         ) : (
           <LeadSheetGrid
-            key={`${tab.name}|${filter}|${query}`}
+            key={`${tab.name}|${activeFilter}|${query}`}
             tab={tab.name}
             columns={tab.columns}
             rows={rows}
             drafts={drafts}
-            editable={editable}
+            editable={canChange}
             onEdit={onEdit}
             describeMark={describeMark}
           />

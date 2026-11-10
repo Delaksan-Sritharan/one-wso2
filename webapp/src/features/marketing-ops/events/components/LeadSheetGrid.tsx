@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { memo, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { alpha, Box, InputBase, MenuItem, Select, Tooltip, useTheme } from "@wso2/oxygen-ui";
 import type { SheetColumn, SheetMark, SheetRow } from "../leadImportTypes";
 import { cellKey, columnWidth, markTone, visibleRange, type MarkTone } from "../lib/leadSheet";
@@ -63,18 +63,35 @@ export default function LeadSheetGrid({
 }: LeadSheetGridProps) {
   const [scrollTop, setScrollTop] = useState(0);
   const [editing, setEditing] = useState<Editing | null>(null);
+  // Set only when Enter or Escape ends an edit, so focus returns to that cell and a
+  // keyboard user carries on from it. Leaving the cell (blur, Tab) keeps focus where it went.
+  const refocus = useRef<Editing | null>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
   const toneSx = useToneSx();
   const { first, last } = visibleRange(scrollTop, VIEWPORT, ROW_HEIGHT, rows.length, OVERSCAN);
   const width = GUTTER + columns.reduce((sum, c) => sum + columnWidth(c), 0);
 
   const commit = useCallback(
-    (row: SheetRow, column: SheetColumn, value: string) => {
+    (row: SheetRow, column: SheetColumn, value: string, byKey: boolean) => {
+      if (byKey) refocus.current = { email: row.email, column: column.key };
       setEditing(null);
       onEdit(row, column, value);
     },
     [onEdit],
   );
-  const cancel = useCallback(() => setEditing(null), []);
+  const cancel = useCallback((row: SheetRow, column: SheetColumn, byKey: boolean) => {
+    if (byKey) refocus.current = { email: row.email, column: column.key };
+    setEditing(null);
+  }, []);
+
+  useEffect(() => {
+    const target = refocus.current;
+    if (editing !== null || !target) return;
+    refocus.current = null;
+    tableRef.current
+      ?.querySelector<HTMLElement>(`td[data-cell="${CSS.escape(`${target.email}|${target.column}`)}"]`)
+      ?.focus();
+  }, [editing]);
 
   return (
     <Box
@@ -84,6 +101,7 @@ export default function LeadSheetGrid({
     >
       <Box
         component="table"
+        ref={tableRef}
         sx={{ borderCollapse: "separate", borderSpacing: 0, tableLayout: "fixed", width, fontSize: 12 }}
       >
         <colgroup>
@@ -172,8 +190,8 @@ interface RowProps {
   editingColumn: string | null;
   toneSx: Record<MarkTone, object>;
   onStart: (editing: Editing) => void;
-  onCommit: (row: SheetRow, column: SheetColumn, value: string) => void;
-  onCancel: () => void;
+  onCommit: (row: SheetRow, column: SheetColumn, value: string, byKey: boolean) => void;
+  onCancel: (row: SheetRow, column: SheetColumn, byKey: boolean) => void;
   describeMark: (mark: SheetMark) => ReactNode;
 }
 
@@ -207,8 +225,8 @@ const SheetRowView = memo(function SheetRowView({
                 value={row.cells[index]}
                 options={column.options}
                 label={`${column.label}, row ${row.row}`}
-                onCommit={(value) => onCommit(row, column, value)}
-                onCancel={onCancel}
+                onCommit={(value, byKey) => onCommit(row, column, value, byKey)}
+                onCancel={(byKey) => onCancel(row, column, byKey)}
               />
             </Box>
           );
@@ -218,7 +236,9 @@ const SheetRowView = memo(function SheetRowView({
           <Box
             component="td"
             key={column.key}
-            tabIndex={canEdit ? 0 : undefined}
+            data-cell={`${row.email}|${column.key}`}
+            // -1: not a Tab stop, but focus can return here after Enter or Escape.
+            tabIndex={canEdit ? 0 : -1}
             aria-label={canEdit ? `${column.label}, row ${row.row}: ${shown || "blank"}` : undefined}
             onClick={canEdit ? () => onStart({ email: row.email, column: column.key }) : undefined}
             onKeyDown={
@@ -252,7 +272,8 @@ const SheetRowView = memo(function SheetRowView({
   );
 });
 
-/** Free text, or the template's dropdown. Settles once: Enter, a pick or leaving saves. */
+/** Free text, or the template's dropdown. Settles once: Enter, a pick or leaving saves.
+ *  `byKey` tells the grid that a key (not a blur) ended the edit. */
 function CellEditor({
   value,
   options,
@@ -263,8 +284,8 @@ function CellEditor({
   value: string;
   options: string[] | null;
   label: string;
-  onCommit: (value: string) => void;
-  onCancel: () => void;
+  onCommit: (value: string, byKey: boolean) => void;
+  onCancel: (byKey: boolean) => void;
 }) {
   const settled = useRef(false);
   const settle = (action: () => void) => {
@@ -281,8 +302,8 @@ function CellEditor({
         fullWidth
         value={value}
         inputProps={{ "aria-label": label }}
-        onChange={(e) => settle(() => onCommit(String(e.target.value)))}
-        onClose={() => settle(onCancel)}
+        onChange={(e) => settle(() => onCommit(String(e.target.value), true))}
+        onClose={(e) => settle(() => onCancel(e.type === "keydown"))}
         sx={{ fontSize: 12, height: ROW_HEIGHT - 1, borderRadius: 0 }}
       >
         {["", ...options].map((option) => (
@@ -299,10 +320,12 @@ function CellEditor({
       fullWidth
       defaultValue={value}
       inputProps={{ "aria-label": label }}
-      onBlur={(e) => settle(() => onCommit(e.target.value))}
+      onBlur={(e) => settle(() => onCommit(e.target.value, false))}
       onKeyDown={(e) => {
-        if (e.key === "Enter") settle(() => onCommit((e.target as HTMLInputElement).value));
-        if (e.key === "Escape") settle(onCancel);
+        // An Enter that confirms an IME composition (CJK names, say) is not a commit.
+        if (e.nativeEvent.isComposing) return;
+        if (e.key === "Enter") settle(() => onCommit((e.target as HTMLInputElement).value, true));
+        if (e.key === "Escape") settle(() => onCancel(true));
       }}
       sx={{ fontSize: 12, px: 1, height: ROW_HEIGHT - 1, boxShadow: (t) => `inset 0 0 0 2px ${t.palette.primary.main}` }}
     />

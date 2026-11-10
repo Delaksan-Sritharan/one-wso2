@@ -22,6 +22,8 @@ import type { SheetColumn, SheetMark, SheetRow } from "../leadImportTypes";
  *  cell holds the workbook's own value again, but can still be redone from it. */
 export type MarkTone = "pending" | "claude" | "edited" | "off";
 
+/** The tone of a marked cell. A user edit is `edited` while applied; a change is `pending`
+ *  while it waits for a person and `claude` once applied. Anything undone or dismissed is `off`. */
 export function markTone(mark: SheetMark): MarkTone {
   if (mark.kind === "user_edit") return mark.status === "applied" ? "edited" : "off";
   if (mark.status === "pending") return "pending";

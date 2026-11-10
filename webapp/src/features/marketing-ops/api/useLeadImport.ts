@@ -23,7 +23,7 @@
 // A conversion runs in the background on the server (30 s to a few minutes); the run
 // query polls while it is processing and stops once it is ready or failed.
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAsgardeo } from "@asgardeo/react";
 import { authedGet, authedPost, fetchWithReauth, HttpError } from "@api/http";
 import { describeError, httpRetry } from "@api/errors";
@@ -48,6 +48,8 @@ const KEY = {
   runs: ["marketing-ops", "events", "lead-import", "runs"] as const,
   run: (id: string) => ["marketing-ops", "events", "lead-import", "run", id] as const,
   sheet: (id: string) => ["marketing-ops", "events", "lead-import", "sheet", id] as const,
+  /** Mutations that rebuild a run's workbook: confirm/undo and cell edits. */
+  rebuild: ["marketing-ops", "events", "lead-import", "rebuild"] as const,
 };
 
 const POLL_MS = 3000;
@@ -179,12 +181,20 @@ function useAfterRebuild() {
   };
 }
 
+/** True while a confirm/undo or a cell edit is rebuilding the workbook. The page allows
+ *  one rebuild at a time: two in flight could answer out of order, and the older detail
+ *  would replace the newer one. */
+export function useLeadImportRebuilding(): boolean {
+  return useIsMutating({ mutationKey: KEY.rebuild }) > 0;
+}
+
 /** Confirm or undo changes (or user edits) by id. The server replays the saved plan (no
  *  Claude call, a few seconds) and returns the new detail. */
 export function useApplyLeadChanges() {
   const { getAccessToken } = useBase();
   const afterRebuild = useAfterRebuild();
   return useMutation({
+    mutationKey: KEY.rebuild,
     mutationFn: async ({ id, confirm, undo }: { id: string; confirm: string[]; undo: string[] }) =>
       authedPost<LeadImportDetail>(urls.eventsLeadImportApply(id), await getAccessToken(), {
         confirm,
@@ -200,6 +210,7 @@ export function useSaveLeadEdits() {
   const { getAccessToken } = useBase();
   const afterRebuild = useAfterRebuild();
   return useMutation({
+    mutationKey: KEY.rebuild,
     mutationFn: async ({ id, cells }: { id: string; cells: CellEdit[] }) =>
       authedPost<LeadImportDetail>(urls.eventsLeadImportEdits(id), await getAccessToken(), {
         cells,

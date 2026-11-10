@@ -24,8 +24,9 @@ import type { LeadImportRun } from "../leadImportTypes";
 const remove = vi.fn();
 const upload = vi.fn();
 let runs: LeadImportRun[] = [];
+let options: { claude_configured: boolean } | undefined;
 vi.mock("../../api/useLeadImport", () => ({
-  useLeadImportOptions: () => ({ data: undefined }),
+  useLeadImportOptions: () => ({ data: options }),
   useLeadImportRuns: () => ({ data: runs, isLoading: false, isError: false }),
   useUploadLeadFile: () => ({ mutateAsync: upload, isPending: false }),
   useDownloadLeadFile: () => ({ mutateAsync: vi.fn() }),
@@ -59,6 +60,7 @@ function run(id: string, overrides: Partial<LeadImportRun> = {}): LeadImportRun 
 describe("choosing the sheet type", () => {
   beforeEach(() => {
     runs = [];
+    options = undefined;
   });
 
   function chooseFile(container: HTMLElement, name: string) {
@@ -79,6 +81,15 @@ describe("choosing the sheet type", () => {
     expect(convertButton().hasAttribute("disabled")).toBe(true);
     chooseType("Booth Scan");
     expect(convertButton().hasAttribute("disabled")).toBe(false);
+  });
+
+  it("offers no upload when the server cannot convert files", () => {
+    options = { claude_configured: false };
+    const { container } = render(<LeadImport onOpen={vi.fn()} />);
+    chooseFile(container, "Summit - Booth.csv");
+    chooseType("Booth Scan");
+    expect(screen.getByText(/isn't available on this server/)).toBeTruthy();
+    expect(convertButton().hasAttribute("disabled")).toBe(true);
   });
 
   it("is quiet when the file name matches the sheet type", () => {

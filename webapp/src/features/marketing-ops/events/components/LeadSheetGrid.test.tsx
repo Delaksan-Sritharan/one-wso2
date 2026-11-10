@@ -90,6 +90,36 @@ describe("LeadSheetGrid", () => {
     expect(props.onEdit).toHaveBeenCalledWith(props.rows[0], COLUMNS[1], "Acme SA");
   });
 
+  it("does not save on an Enter that confirms an IME composition", () => {
+    const props = renderGrid();
+    fireEvent.click(screen.getByText("Acme 0"));
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "株式会社" } });
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    expect(props.onEdit).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(props.onEdit).toHaveBeenCalledWith(props.rows[0], COLUMNS[1], "株式会社");
+  });
+
+  it("returns focus to the cell after Enter or Escape, not after the cell is left", () => {
+    renderGrid();
+    fireEvent.click(screen.getByText("Acme 0"));
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Escape" });
+    expect(document.activeElement).toBe(screen.getByRole("cell", { name: "Company name, row 2: Acme 0" }));
+
+    fireEvent.click(screen.getByText("Acme 1"));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Acme Two" } });
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
+    expect(document.activeElement?.getAttribute("data-cell")).toBe("p1@acme.io|company");
+
+    fireEvent.click(screen.getByText("Acme 2"));
+    const input = screen.getByRole("textbox");
+    input.focus();
+    fireEvent.blur(input);
+    expect(document.activeElement?.getAttribute("data-cell")).not.toBe("p2@acme.io|company");
+  });
+
   it("offers the template's list for a dropdown column", () => {
     const props = renderGrid();
     fireEvent.click(screen.getByRole("cell", { name: "Hot Lead, row 2: blank" }));

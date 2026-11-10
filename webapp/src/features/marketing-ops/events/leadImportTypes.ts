@@ -16,9 +16,9 @@
 
 // Lead import — the shapes /api/events/lead-import returns.
 //
-// `result` is leadkit.ai's result JSON (contract 2) with server paths reduced
-// to file names and a `files` map added. Only the fields this page reads are typed;
-// the backend's lead_import/api.py and leadkit's ai/README.md document the rest.
+// `result` is the conversion result JSON, with server paths reduced to file names and
+// a `files` map added. Only the fields this page reads are typed; the Marketing Ops
+// backend owns the full shape.
 
 export type LeadImportStatus = "processing" | "ready" | "failed";
 export type LeadImportFileKind = "workbook" | "rejects" | "warnings" | "changes";
