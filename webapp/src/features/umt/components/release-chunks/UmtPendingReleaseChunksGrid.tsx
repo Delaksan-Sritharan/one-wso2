@@ -76,7 +76,8 @@ import {
   ChunkCell,
   ChunkLine,
 } from "./umtReleaseChunkGridPrimitives";
-import { UMT_CHUNK_GRID_BORDERED_SX, UMT_CHUNK_GRID_PAPER_SX } from "./umtReleaseChunkGridSx";
+import { UMT_GRID_PAPER_SX } from "../../lib/umtGrid";
+import { UMT_CHUNK_GRID_BORDERED_SX } from "./umtReleaseChunkGridSx";
 import { useChunkGridPagination } from "./useChunkGridPagination";
 
 const { DataGrid: DataGridComponent } = DataGrid;
@@ -184,7 +185,7 @@ function statusLevelOf(
     (candidate) =>
       candidate.productName === level.productName &&
       candidate.productVersion === level.productVersion &&
-      candidate.channel === level.channel,
+      (candidate.channel ?? null) === (level.channel ?? null),
   );
 }
 
@@ -604,7 +605,7 @@ export default function UmtPendingReleaseChunksGrid() {
         </ErrorNotice>
       )}
 
-      <Paper variant="outlined" sx={UMT_CHUNK_GRID_PAPER_SX}>
+      <Paper variant="outlined" sx={UMT_GRID_PAPER_SX}>
         {chunks.isFetching && !chunks.isPending && (
           <LinearProgress
             sx={{ left: 0, position: "absolute", right: 0, top: 0, zIndex: 4 }}
@@ -867,35 +868,41 @@ function TgBuildRetriggerButton({
   );
 }
 
-// A retrigger for one update level. Like every other build action on this
-// screen it starts a job outside the app, so it asks first.
-function LevelBuildRetriggerButton({
-  label,
-  title,
-  successMessage,
-  canRetrigger,
-  chunkId,
-  level,
-  trigger,
-}: {
+interface LevelBuildRetriggerProps {
   label: string;
   title: string;
   successMessage: string;
-  canRetrigger: boolean;
   chunkId: number;
   level: UmtReleaseChunkUpdateLevel;
   trigger: ReturnType<typeof useUmtTriggerProductBuild>;
-}) {
+}
+
+// A retrigger for one update level. Like every other build action on this
+// screen it starts a job outside the app, so it asks first.
+//
+// Still a line, even with nothing to offer: the levels below it have to stay
+// on the same rows as their names and statuses in the columns beside. The
+// control, and the state of its dialog, exist only while the level can be
+// retriggered. A status that hides the button discards them, so a level that
+// becomes retriggerable again does not reopen the dialog unasked.
+function LevelBuildRetriggerButton({
+  canRetrigger,
+  ...props
+}: LevelBuildRetriggerProps & { canRetrigger: boolean }) {
+  if (!canRetrigger) return <ChunkLine />;
+  return <LevelBuildRetriggerControl {...props} />;
+}
+
+function LevelBuildRetriggerControl({
+  label,
+  title,
+  successMessage,
+  chunkId,
+  level,
+  trigger,
+}: LevelBuildRetriggerProps) {
   const { showSuccess, showError } = useNotifications();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  // Still a line, even with nothing to offer: the levels below it have to
-  // stay on the same rows as their names and statuses in the columns beside.
-  // A status that hides the button also closes its dialog for good, so a
-  // level that becomes retriggerable again does not reopen it unasked.
-  if (!canRetrigger) {
-    if (confirmOpen) setConfirmOpen(false);
-    return <ChunkLine />;
-  }
   const levelName = `${level.productName ?? "N/A"} ${level.productVersion ?? ""}`.trim();
 
   async function handleConfirm() {

@@ -46,7 +46,8 @@ import { umtPaths } from "../lib/umtPaths";
 import UmtShell from "../components/UmtShell";
 import type { UmtBackLinkState } from "../lib/umtBackLink";
 import { ChunkCell, ChunkLine } from "../components/release-chunks/umtReleaseChunkGridPrimitives";
-import { UMT_CHUNK_GRID_PAPER_SX, UMT_CHUNK_GRID_SX } from "../components/release-chunks/umtReleaseChunkGridSx";
+import { UMT_CHUNK_GRID_SX } from "../components/release-chunks/umtReleaseChunkGridSx";
+import { UMT_GRID_PAPER_SX } from "../lib/umtGrid";
 
 const { DataGrid: DataGridComponent } = DataGrid;
 
@@ -250,7 +251,7 @@ function UmtCreateReleaseChunkForm() {
         Select the UATStaging updates to include in a new release chunk.
       </Typography>
 
-      <Paper variant="outlined" sx={UMT_CHUNK_GRID_PAPER_SX}>
+      <Paper variant="outlined" sx={UMT_GRID_PAPER_SX}>
         {uatStaging.isFetching && !uatStaging.isPending && (
           <LinearProgress sx={{ left: 0, position: "absolute", right: 0, top: 0, zIndex: 4 }} />
         )}

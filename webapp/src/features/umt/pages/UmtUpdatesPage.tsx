@@ -56,7 +56,7 @@ import {
 } from "../api/umtUpdates";
 import { useUmtUpdates } from "../api/useUmtUpdates";
 import { formatCalendarDate, formatDate } from "../lib/umtDates";
-import { gridCellContentSx } from "../lib/umtGrid";
+import { gridCellContentSx, UMT_FROSTED_HEADER_SX, UMT_GRID_PAPER_BLUR_RESET_SX } from "../lib/umtGrid";
 import { umtLifecycleState } from "../lib/umtLifecycleState";
 import { writePersistedSelectedTab } from "../lib/umtLocalState";
 import { umtPaths } from "../lib/umtPaths";
@@ -66,7 +66,6 @@ import { useUmtUpdatesView } from "../lib/useUmtUpdatesView";
 import UmtCreateUpdateDialog from "../components/UmtCreateUpdateDialog";
 import UmtShell from "../components/UmtShell";
 import UmtUpdateFiltersDrawer from "../components/UmtUpdateFiltersDrawer";
-import { UMT_FROSTED_HEADER_SX } from "../components/release-chunks/umtReleaseChunkGridSx";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
@@ -323,11 +322,10 @@ function UmtUpdatesBody() {
       <Paper
         variant="outlined"
         sx={{
-          backdropFilter: "none",
+          ...UMT_GRID_PAPER_BLUR_RESET_SX,
           minWidth: 0,
           overflow: "hidden",
           position: "relative",
-          WebkitBackdropFilter: "none",
         }}
       >
         {search.isFetching && !search.isPending && <LinearProgress sx={{ left: 0, position: "absolute", right: 0, top: 0, zIndex: 4 }} />}
