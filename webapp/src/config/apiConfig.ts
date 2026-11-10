@@ -2036,6 +2036,13 @@ export const cado2ServiceUrls = {
   // are chosen from these only.
   opportunityContacts: (opportunityId: string): string =>
     `${cado2BackendUrl}/opportunities/${encodeSegment(opportunityId)}/contacts`,
+  // The opportunity's product lines as they are in Salesforce now (D147); with
+  // the quote's price book and currency, checked for loading (D150).
+  opportunityLines: (opportunityId: string, check?: { pricebookId: string; currency: string }): string => {
+    const base = `${cado2BackendUrl}/opportunities/${encodeSegment(opportunityId)}/products`;
+    if (!check) return base;
+    return `${base}?${new URLSearchParams({ pricebookId: check.pricebookId, currency: check.currency }).toString()}`;
+  },
   // One page of a price book's products in a currency. Paged server-side by
   // limit/offset (Salesforce stops at offset 2000).
   products: (
@@ -2057,12 +2064,22 @@ export const cado2ServiceUrls = {
   quoteSettings: `${cado2BackendUrl}/quote-settings`,
   pricingPreview: `${cado2BackendUrl}/pricing/preview`,
   quotes: `${cado2BackendUrl}/quotes`,
-  // My Quotes: the caller's own quotes.
-  // scope "mine" (the default) or "all" (every AM's quotes, D70).
-  quoteList: (status: string, scope = "mine"): string => {
-    const q = new URLSearchParams({ limit: "200" });
-    if (status) q.set("status", status);
-    if (scope !== "mine") q.set("scope", scope);
+  // The Quotes page: scope "mine" (the default) or "all" (every AM's quotes,
+  // D70), one page at a time, searched and sorted by the backend (D148);
+  // byAccount pages accounts, for the tree.
+  quoteList: (p: {
+    scope: string;
+    q: string;
+    sort: string;
+    order: string;
+    byAccount: boolean;
+    limit: number;
+    offset: number;
+  }): string => {
+    const q = new URLSearchParams({ limit: String(p.limit), offset: String(p.offset), sort: p.sort, order: p.order });
+    if (p.scope !== "mine") q.set("scope", p.scope);
+    if (p.byAccount) q.set("group", "account");
+    if (p.q) q.set("q", p.q);
     return `${cado2BackendUrl}/quotes?${q.toString()}`;
   },
   quote: (quoteId: number): string => `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}`,
@@ -2093,6 +2110,9 @@ export const cado2ServiceUrls = {
     `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/submit`,
   quoteSync: (quoteId: number, version: number): string =>
     `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/sync`,
+  // What a sync would change on the opportunity (D138).
+  quoteSyncPreview: (quoteId: number, version: number): string =>
+    `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/sync/preview`,
   quoteRecall: (quoteId: number, version: number): string =>
     `${cado2BackendUrl}/quotes/${encodeSegment(quoteId)}/versions/${encodeSegment(version)}/recall`,
   // A version's order form documents: GET lists them, POST issues the order form.
@@ -2125,8 +2145,6 @@ export const cado2ServiceUrls = {
   approvalMatrix: `${cado2BackendUrl}/admin/approval-matrix`,
   approvalMatrixChanges: `${cado2BackendUrl}/admin/approval-matrix/changes`,
   approvalMatrixProducts: `${cado2BackendUrl}/admin/approval-matrix/products`,
-  adminCurrencies: `${cado2BackendUrl}/admin/currencies`,
-  adminCurrency: (code: string): string => `${cado2BackendUrl}/admin/currencies/${encodeSegment(code)}`,
   adminApprovalSlas: `${cado2BackendUrl}/admin/approval-slas`,
   adminApprovalSlaChanges: `${cado2BackendUrl}/admin/approval-slas/changes`,
   productCategories: `${cado2BackendUrl}/admin/product-categories`,
@@ -2145,13 +2163,11 @@ export const cado2ServiceUrls = {
   // Deal Desk writes the special terms during its approval (D128).
   specialTerms: (quoteId: number, versionNumber: number): string =>
     `${cado2BackendUrl}/quotes/${quoteId}/versions/${versionNumber}/special-terms`,
-  // Deal Desk and Legal lenses, and "Looks fine" on their notes (D129).
+  // Deal Desk and Legal lenses (D129, D140).
   review: (quoteId: number, versionNumber: number): string =>
     `${cado2BackendUrl}/quotes/${quoteId}/versions/${versionNumber}/review`,
   // The Deal Desk board, a column at a time (D130).
   deskColumn: (column: string, query: string): string => `${cado2BackendUrl}/desk/columns/${column}${query ? `?${query}` : ""}`,
-  reviewMarks: (quoteId: number, versionNumber: number): string =>
-    `${cado2BackendUrl}/quotes/${quoteId}/versions/${versionNumber}/review/marks`,
   // Supporting documents (DGD-10): the Admin's library of PDFs, and what a
   // quote adds after its order form.
   supportingDocuments: `${cado2BackendUrl}/supporting-documents`,

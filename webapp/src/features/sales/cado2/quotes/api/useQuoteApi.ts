@@ -28,6 +28,7 @@ import { problemOf } from "./errors";
 import { httpRetry } from "@api/errors";
 import { cado2ServiceUrls } from "@config/apiConfig";
 import { useCado2Basis } from "@features/sales/cado2/api/cado2Basis";
+import { DEFAULT_SORT, type QuoteSort } from "@features/sales/cado2/quotes/list/quoteListModel";
 import type {
   Account,
   BundleChildren,
@@ -41,8 +42,10 @@ import type {
   DraftResponse,
   Issue,
   Opportunity,
+  OpportunityLines,
   OpportunityQuote,
   PricebookOption,
+  SyncPreview,
   PricingFormula,
   PricingPreview,
   Product,
@@ -110,6 +113,20 @@ export function useOpportunityContacts(opportunityId: string | null) {
   );
 }
 
+/** The opportunity's product lines as they are in Salesforce now (D147): read fresh while `enabled`. */
+export function useOpportunityLines(
+  opportunityId: string | null,
+  enabled: boolean,
+  check?: { pricebookId: string; currency: string },
+) {
+  const usable = check && check.pricebookId && check.currency ? check : undefined;
+  return useAuthedQuery<OpportunityLines>(
+    ["opportunity-lines", opportunityId, usable ?? null],
+    enabled && opportunityId ? cado2ServiceUrls.opportunityLines(opportunityId, usable) : null,
+    "live",
+  );
+}
+
 /** How many products one page of the Add-line list loads. */
 export const PRODUCT_PAGE = 50;
 
@@ -125,7 +142,7 @@ export function useLegalConfig() {
   });
 }
 
-/** Legal writes the non-standard terms (and may reword the special terms) during their approval. */
+/** Legal writes the non-standard terms (and may override the special terms, D139) during their approval. */
 export function useWriteLegalTerms(quoteId: number, versionNumber: number) {
   const { getToken, key } = useCado2Basis();
   const queryClient = useQueryClient();
@@ -140,7 +157,7 @@ export function useWriteLegalTerms(quoteId: number, versionNumber: number) {
 export function useWriteSpecialTerms(quoteId: number, versionNumber: number) {
   const { getToken, key } = useCado2Basis();
   const queryClient = useQueryClient();
-  return useMutation<DraftResponse, Error, { enabled: boolean; specialTerms: string }>({
+  return useMutation<DraftResponse, Error, { specialTerms: string }>({
     mutationFn: async (body) =>
       cado2Send<DraftResponse>("PUT", cado2ServiceUrls.specialTerms(quoteId, versionNumber), await getToken(), body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: key() }),
@@ -194,8 +211,9 @@ export function usePricebooks(currency: string) {
   return useAuthedQuery<PricebookOption[]>(["pricebooks", currency], currency ? cado2ServiceUrls.pricebooks(currency) : null);
 }
 
-export function useCurrencies() {
-  return useAuthedQuery<string[]>(["currencies"], cado2ServiceUrls.currencies);
+/** The quote currencies: those Salesforce's price books price in (D143). Read when enabled. */
+export function useCurrencies(enabled = true) {
+  return useAuthedQuery<string[]>(["currencies"], enabled ? cado2ServiceUrls.currencies : null);
 }
 
 /** The quote rules shown ahead of time, e.g. the validity period. */
@@ -216,9 +234,50 @@ export function usePricingFormulas(): UseQueryResult<PricingFormula[], Error> {
   return useAuthedQuery<PricingFormula[]>(["pricing-formulas"], cado2ServiceUrls.pricingFormulas);
 }
 
-/** My Quotes: the caller's own quotes, filtered by the latest version's status. */
-export function useQuoteList(status = "", scope: QuoteScope = "mine") {
-  return useAuthedQuery<QuoteList>(["quotes", "list", scope, status], cado2ServiceUrls.quoteList(status, scope), "live");
+/** Rows on a page of the Quotes list (D148). */
+export const QUOTE_PAGE = 50;
+/** Accounts on a page of the tree, each with all its quotes (D148). */
+export const ACCOUNT_PAGE = 20;
+
+export interface QuoteListQuery {
+  readonly search?: string;
+  readonly sort?: QuoteSort;
+  /** Page accounts, each with all its quotes, instead of quotes (the tree). */
+  readonly byAccount?: boolean;
+  /** From 0. */
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+/**
+ * A page of the Quotes list (D70): the caller's quotes or everyone's,
+ * searched, sorted and paged by the backend (D148): by quote, or by account
+ * for the tree, so an account never splits across pages. The previous page
+ * stays on screen while the next loads.
+ */
+export function useQuoteList(scope: QuoteScope = "mine", query: QuoteListQuery = {}) {
+  const { getToken, ready, key } = useCado2Basis();
+  const byAccount = query.byAccount ?? false;
+  const limit = query.limit ?? (byAccount ? ACCOUNT_PAGE : QUOTE_PAGE);
+  const sort = query.sort ?? DEFAULT_SORT;
+  const url = cado2ServiceUrls.quoteList({
+    scope,
+    q: query.search?.trim() ?? "",
+    sort: sort.key,
+    order: sort.dir,
+    byAccount,
+    limit,
+    offset: (query.page ?? 0) * limit,
+  });
+  return useQuery<QuoteList, Error>({
+    queryKey: key("quotes", "list", url),
+    queryFn: async () => authedGet<QuoteList>(url, await getToken()),
+    enabled: ready,
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    refetchOnMount: "always",
+    retry: httpRetry,
+  });
 }
 
 /** A quote with its version list and the caller's actions. */
@@ -390,6 +449,15 @@ export function useSubmitVersion() {
       void queryClient.invalidateQueries({ queryKey: key("quotes") });
     },
   });
+}
+
+/** What syncing a saved draft would change on its opportunity (D138); read live, when enabled. */
+export function useSyncPreview(quoteId: number | null, version: number | null, enabled: boolean) {
+  return useAuthedQuery<SyncPreview>(
+    ["sync-preview", quoteId, version],
+    enabled && quoteId !== null && version !== null ? cado2ServiceUrls.quoteSyncPreview(quoteId, version) : null,
+    "live",
+  );
 }
 
 /** "Sync to Salesforce" (D77): writes a saved draft of the primary quote to its opportunity. */

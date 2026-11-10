@@ -18,11 +18,14 @@ import { Fragment, type JSX, type ReactNode } from "react";
 import { alpha, Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@wso2/oxygen-ui";
 import { CircleAlertIcon, PencilIcon } from "@wso2/oxygen-ui-icons-react";
 import { orderForm, type SheetLine } from "@features/sales/cado2/quotes/sheet/sheetModel";
-import { durationShort, formatDate } from "@features/sales/cado2/quotes/form/draftForm";
+import { commissionRatesText, durationShort, formatDate } from "@features/sales/cado2/quotes/form/draftForm";
 import { formatMoney } from "@features/sales/cado2/utils/money";
 import { visuallyHidden } from "@features/sales/cado2/utils/visuallyHidden";
 
 const num = { fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" } as const;
+
+/** A unit price after its discount, to the cent: 32,000 less 5% → "30400.00". */
+const afterDiscount = (price: string, pct: string) => (Math.round(Number(price) * (100 - Number(pct))) / 100).toFixed(2);
 
 interface OrderFormTableProps {
   readonly lines: readonly SheetLine[];
@@ -33,6 +36,8 @@ interface OrderFormTableProps {
   readonly below?: (index: number) => ReactNode;
   /** A partner-led quote's commission %, e.g. "15": adds the commission and net rows. */
   readonly commissionPercent?: string | null;
+  /** D151: each year's rate, when they differ. */
+  readonly commissionRates?: readonly string[] | null;
   /** The totals box's label. */
   readonly totalLabel?: string;
   /** False inside a year: the Products card closes with the totals over every year. */
@@ -65,6 +70,7 @@ export default function OrderFormTable({
   actions,
   below,
   commissionPercent = null,
+  commissionRates = null,
   flagUncategorised = false,
   totalLabel = "Total order value",
   showTotals = true,
@@ -146,13 +152,19 @@ export default function OrderFormTable({
                 Comes with {l.parentName}
               </Typography>
             ) : null}
-            {/* How a formula line's unit price was worked out (D81); it has no discount. */}
+            {/* How a formula line's unit price was worked out (D81), and
+                what its discount brings it to (D149). */}
             {l.formula ? (
               <Typography variant="caption" color="text.secondary" display="block" aria-label="Priced by formula">
                 Formula {l.formula.version}:{" "}
                 <Box component="span" sx={{ fontFamily: "monospace" }}>
                   {l.formula.explanation}
                 </Box>
+              </Typography>
+            ) : null}
+            {l.formula && Number(l.discountPercent) > 0 ? (
+              <Typography variant="caption" display="block" sx={{ color: "primary.main" }} aria-label="After discount">
+                After {l.discountPercent}% discount: {formatMoney(afterDiscount(l.unitPrice, l.discountPercent))}
               </Typography>
             ) : null}
           </TableCell>
@@ -166,12 +178,12 @@ export default function OrderFormTable({
           <TableCell align="right" sx={num}>
             {Number(l.discountPercent) ? `${l.discountPercent}%` : "–"}
           </TableCell>
-          {/* Each line's term (D113): its dates, its length below like the
-              SKU under the name; a one-off line shows its date and "One-time". */}
+          {/* Each line's term (D113): its start and end (D146), its length
+              below like the SKU under the name; a one-off line "One-time". */}
           <TableCell sx={{ whiteSpace: "nowrap" }}>
             {!l.startDate
               ? "–"
-              : l.recurring && l.endDate
+              : l.endDate
                 ? `${formatDate(l.startDate)} – ${formatDate(l.endDate)}`
                 : formatDate(l.startDate)}
             {l.startDate && (!l.recurring || l.endDate) ? (
@@ -317,7 +329,12 @@ export default function OrderFormTable({
             <>
               <Box sx={{ pt: 0.75 }}>
                 {summaryRow(totalLabel, form.total)}
-                {summaryRow(`Partner commission (${commissionPercent}%)`, form.commission, false, "− ")}
+                {summaryRow(
+                  `Partner commission (${commissionRates?.length ? commissionRatesText(commissionRates) : `${commissionPercent}%`})`,
+                  form.commission,
+                  false,
+                  "− ",
+                )}
               </Box>
               {summaryRow("Net order value", form.netOrderValue, true)}
             </>

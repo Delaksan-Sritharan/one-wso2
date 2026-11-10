@@ -32,12 +32,13 @@ import type {
   DraftResponse,
   LineCategory,
   LineFormula,
+  OpportunityLineLoad,
   Partner,
   PricingMethod,
   PricingPreview,
 } from "@features/sales/cado2/quotes/api/quoteTypes";
 import { sumMoney } from "@features/sales/cado2/utils/money";
-import { isEmptyLegalText } from "@features/sales/cado2/utils/legalRichText";
+import { cleanLegalText, isEmptyLegalText } from "@features/sales/cado2/utils/legalRichText";
 
 /**
  * Contact: none yet, or one of the opportunity's contacts in Salesforce
@@ -112,7 +113,12 @@ export interface LineValue {
   discount: string;
   /** The contract year the line belongs to, 1-based. */
   yearNumber: number;
-  /** Within its year; "" = the year's own start / end. A one-off is charged on its start. */
+  /**
+   * A one-off line's dates within its year, as picked: they stay put when the
+   * term moves ("" only for a line not yet dated: the year's start, and the
+   * end its start). Always "" for a recurring line, which covers its whole
+   * year (D146).
+   */
   startDate: string;
   endDate: string;
   /**
@@ -134,6 +140,39 @@ export interface LineValue {
 let lineKeys = 0;
 /** A new line's key, unique in the page. */
 export const newLineKey = () => `line-${Date.now().toString(36)}-${++lineKeys}`;
+
+/**
+ * A clean Salesforce line as it goes into the quote (D150): Year 1, priced
+ * from the quote's price book, with its quantity, a sales price above the
+ * book and its discount. A recurring line covers the whole year (D146).
+ */
+export function lineFromSalesforce(l: OpportunityLineLoad): LineValue {
+  return {
+    lineId: null,
+    pricebookEntryId: l.pricebookEntryId,
+    productId: l.productId,
+    productName: l.productName,
+    productCode: l.productCode ?? "",
+    productDescription: l.productDescription ?? "",
+    pricebookId: l.pricebookId,
+    pricebookName: l.pricebookName,
+    unitPrice: l.unitPrice,
+    category: l.category as LineCategory,
+    categorySource: "MAPPED",
+    recurring: l.recurring,
+    classification: l.classification ?? "",
+    unitOfMeasure: "",
+    quantity: String(Number(l.quantity)),
+    discount: String(Number(l.discount)),
+    yearNumber: 1,
+    startDate: "",
+    endDate: "",
+    salesPrice: l.salesPrice ? String(Number(l.salesPrice)) : "",
+    key: newLineKey(),
+    parentKey: "",
+    bundleFixedQuantity: null,
+  };
+}
 
 /** A bundle parent's children, in order. */
 export const childrenOf = (lines: readonly LineValue[], key: string) => lines.filter((l) => l.parentKey !== "" && l.parentKey === key);
@@ -188,6 +227,11 @@ export interface DraftFormValues {
   billingFrequency: BillingFrequency | "";
   /** Partner-led quotes only: the partner's commission %, "" until entered. */
   partnerCommissionPercent: string;
+  /**
+   * D151: each contract year's commission, in order, when they differ; [] =
+   * partnerCommissionPercent for every year.
+   */
+  partnerCommissionByYear: string[];
   lines: LineValue[];
   // Step 3
   netTermsDays: "" | "30" | "45" | "60";
@@ -261,6 +305,7 @@ export function emptyDraftForm(): DraftFormValues {
     lastYearEndDate: "",
     billingFrequency: "ANNUAL",
     partnerCommissionPercent: "",
+    partnerCommissionByYear: [],
     lines: [],
     netTermsDays: "",
     poNumber: "",
@@ -427,15 +472,20 @@ export function lastYearEndProblem(start: string, count: number, lastEnd: string
   return "";
 }
 
-/** A line's dates: its own, else its year's; a one-off ends on its start. Null without its year. */
+/**
+ * A line's dates (D146): a recurring line its whole year; a one-off line its
+ * own, the start defaulting to the year's and the end to the start. Null
+ * without its year.
+ */
 export function lineDates(
   l: Pick<LineValue, "yearNumber" | "startDate" | "endDate" | "recurring">,
   years: readonly ContractYear[],
 ): { start: string; end: string } | null {
   const y = years[l.yearNumber - 1];
   if (!y) return null;
+  if (l.recurring) return { start: y.start, end: y.end };
   const start = l.startDate || y.start;
-  return { start, end: l.recurring ? l.endDate || y.end : start };
+  return { start, end: l.endDate || start };
 }
 
 /** Why a line's dates are not allowed in its year, or "". */
@@ -521,19 +571,29 @@ export const insertIndex = (lines: readonly Pick<LineValue, "yearNumber">[], n: 
   lines.reduce((at, l, i) => (l.yearNumber <= n ? i + 1 : at), 0);
 
 /**
- * Shortens (or restores) the last year: its products' dates that would fall
- * after the new end are pulled back within it.
+ * The last year's end, as stored: "" when it's a full 12 months. Its recurring
+ * lines follow it; its one-off lines keep their dates, and it can't end
+ * before them (lastYearEarliestEnd, D146).
  */
-export function setLastYearEnd(v: Pick<DraftFormValues, "startDate" | "yearCount" | "lines">, end: string) {
-  const last = contractYears(v.startDate, v.yearCount, end).at(-1);
-  if (!last) return { lastYearEndDate: end, lines: v.lines };
-  const lines = v.lines.map((l) => {
-    if (l.yearNumber !== v.yearCount) return l;
-    const startDate = l.startDate && l.startDate > last.end ? "" : l.startDate;
-    const endDate = l.endDate && l.endDate > last.end ? "" : l.endDate;
-    return startDate === l.startDate && endDate === l.endDate ? l : { ...l, startDate, endDate };
-  });
-  return { lastYearEndDate: end === contractYears(v.startDate, v.yearCount).at(-1)?.end ? "" : end, lines };
+export function setLastYearEnd(v: Pick<DraftFormValues, "startDate" | "yearCount">, end: string) {
+  return end === contractYears(v.startDate, v.yearCount).at(-1)?.end ? "" : end;
+}
+
+/**
+ * The earliest the last year may end (D146): the latest end of its one-off
+ * lines, with that line's product; null when none holds it back.
+ */
+export function lastYearEarliestEnd(
+  v: Pick<DraftFormValues, "startDate" | "yearCount" | "lastYearEndDate" | "lines">,
+): { date: string; productName: string } | null {
+  const years = formYears(v);
+  let earliest: { date: string; productName: string } | null = null;
+  for (const l of v.lines) {
+    if (l.recurring || l.yearNumber !== v.yearCount) continue;
+    const d = lineDates(l, years);
+    if (d && (!earliest || d.end > earliest.date)) earliest = { date: d.end, productName: l.productName };
+  }
+  return earliest;
 }
 
 // ---------------------------------------------------------------------------
@@ -612,8 +672,7 @@ export function fromVersion(res: DraftResponse): DraftFormValues {
   // The last year's end only when shortened: a full year is the default.
   const lastEnd = v.years?.at(-1)?.endDate ?? "";
   const fullEnd = contractYears(start, yearCount).at(-1)?.end ?? "";
-  // Each line keeps its year; its dates only when narrowed within it.
-  const yearOf = (n: number | null) => (v.years ?? []).find((y) => y.yearNumber === n);
+  // Each line keeps its year; a one-off line its own dates.
   const shipTo = res.version.addresses.find((a) => a.type === "SHIP_TO");
   return {
     ...emptyDraftForm(),
@@ -646,6 +705,7 @@ export function fromVersion(res: DraftResponse): DraftFormValues {
     lastYearEndDate: lastEnd && lastEnd !== fullEnd ? lastEnd : "",
     billingFrequency: v.billingFrequency ?? "ANNUAL",
     partnerCommissionPercent: v.partnerCommissionPercent ? String(Number(v.partnerCommissionPercent)) : "",
+    partnerCommissionByYear: (v.partnerCommissionByYear ?? []).map((r) => String(Number(r))),
     lines: v.lines.map((l) => ({
       lineId: l.id,
       pricebookEntryId: l.pricebookEntryId,
@@ -669,8 +729,10 @@ export function fromVersion(res: DraftResponse): DraftFormValues {
       quantity: String(l.quantity),
       discount: String(Number(l.discretionaryDiscountPercent)),
       yearNumber: l.yearNumber ?? 0,
-      startDate: l.startDate && l.startDate !== yearOf(l.yearNumber)?.startDate ? l.startDate : "",
-      endDate: l.recurring && l.endDate && l.endDate !== yearOf(l.yearNumber)?.endDate ? l.endDate : "",
+      // A one-off line's real dates, kept when the term moves (D146). A
+      // recurring line takes its year's.
+      startDate: !l.recurring ? (l.startDate ?? "") : "",
+      endDate: !l.recurring ? (l.endDate ?? "") : "",
       salesPrice: l.salesPrice && Number(l.salesPrice) !== Number(l.unitPrice) ? String(Number(l.salesPrice)) : "",
       key: `saved-${l.id}`,
       parentKey: l.parentLineNumber ? `saved-${v.lines.find((p) => p.lineNumber === l.parentLineNumber)?.id ?? ""}` : "",
@@ -743,7 +805,45 @@ export function commissionProblem(value: string): string {
 
 /** The commission to send: only on a partner-led quote, and only once valid. */
 function commissionInput(v: DraftFormValues): string | undefined {
+  if (v.partnerCommissionByYear.length > 0) return undefined;
   return isPartnerLed(v) && !commissionProblem(v.partnerCommissionPercent) ? v.partnerCommissionPercent.trim() : undefined;
+}
+
+/** The rates per year to send (D151): partner-led, set, and every one valid. */
+export function commissionByYearInput(v: Pick<DraftFormValues, "partnerCommissionByYear" | "dealType">): string[] | undefined {
+  const rates = v.partnerCommissionByYear;
+  return isPartnerLed(v) && rates.length > 0 && rates.every((r) => !commissionProblem(r)) ? rates.map((r) => r.trim()) : undefined;
+}
+
+/** Rates per year in words, equal years together (D151): "Year 1: 15% · Years 2–3: 10%". */
+export function commissionRatesText(rates: readonly string[]): string {
+  const parts: string[] = [];
+  for (let i = 0; i < rates.length; ) {
+    let j = i;
+    while (j + 1 < rates.length && Number(rates[j + 1]) === Number(rates[i])) j++;
+    parts.push(`${j > i ? `Years ${i + 1}–${j + 1}` : `Year ${i + 1}`}: ${Number(rates[i])}%`);
+    i = j + 1;
+  }
+  return parts.join(" · ");
+}
+
+/**
+ * The rates per year after a year is added, cloned or deleted (D151): a new
+ * year takes the last year's rate, a clone its year's, a deleted year's goes.
+ * Down to one year, there's one rate again (returned as single).
+ */
+export function commissionAfterYearChange(
+  rates: readonly string[],
+  change: { readonly add: true } | { readonly clone: number } | { readonly remove: number },
+): { byYear: string[]; single: string | null } {
+  if (rates.length === 0) return { byYear: [], single: null };
+  const next =
+    "add" in change
+      ? [...rates, rates[rates.length - 1]]
+      : "clone" in change
+        ? [...rates, rates[change.clone - 1] ?? rates[rates.length - 1]]
+        : rates.filter((_, i) => i !== change.remove - 1);
+  return next.length > 1 ? { byYear: next, single: null } : { byYear: [], single: next[0] ?? rates[0] };
 }
 
 /** The years of a request, and the billing (every quote, D88). */
@@ -755,12 +855,15 @@ function termInput(v: DraftFormValues) {
   };
 }
 
-/** A line's year, dates and sales price in a request: each only when set (the backend defaults them). */
+/**
+ * A line's year, dates and sales price in a request: each only when set (the
+ * backend defaults them). A recurring line sends no dates: it covers its year (D146).
+ */
 function linePlace(l: LineValue) {
   return {
     yearNumber: l.yearNumber,
-    startDate: opt(l.startDate),
-    endDate: l.recurring ? opt(l.endDate) : undefined,
+    startDate: l.recurring ? undefined : opt(l.startDate),
+    endDate: l.recurring ? undefined : opt(l.endDate),
     salesPrice: opt(l.salesPrice),
   };
 }
@@ -790,8 +893,14 @@ export function toDraftInput(v: DraftFormValues, expectedUpdatedAt?: string): Dr
     defaultPricebookId: opt(v.defaultPricebookId),
     subscriptionStartDate: opt(v.startDate),
     ...termInput(v),
-    partnerCommissionPercent: isPartnerLed(v) ? opt(v.partnerCommissionPercent) : undefined,
+    partnerCommissionPercent: isPartnerLed(v) && v.partnerCommissionByYear.length === 0 ? opt(v.partnerCommissionPercent) : undefined,
+    partnerCommissionByYear: commissionByYearInput(v),
     netTermsDays: v.netTermsDays ? Number(v.netTermsDays) : undefined,
+    specialTerms: {
+      enabled: v.specialTermsEnabled,
+      // Rich text (2026-10-24), cleaned; the editor's empty value is none.
+      text: v.specialTermsEnabled ? opt(cleanLegalText(v.specialTerms)) : undefined,
+    },
     // No longer used: section 04 is per product type.
     governingTerms: { enabled: false },
     termsOnPremNonStandard: v.termsOnPremNonStandard,
@@ -841,6 +950,7 @@ export function toPreviewBody(v: DraftFormValues): object | null {
     lastYearEndDate: opt(v.lastYearEndDate),
     billingFrequency: v.billingFrequency,
     partnerCommissionPercent: commissionInput(v),
+    partnerCommissionByYear: commissionByYearInput(v),
     lines: lines.map((l) => ({
       pricebookEntryId: l.pricebookEntryId,
       quantity: Number(l.quantity),
@@ -988,6 +1098,7 @@ const STEP_2_FIELDS = [
   "yearCount",
   "lastYearEndDate",
   "partnerCommissionPercent",
+  "partnerCommissionByYear",
 ];
 
 /** Commercials (D86): billing and payment terms first. */
@@ -999,7 +1110,6 @@ const STEP_3_FIELDS = [
   "shipTo",
   "contacts.billing",
   "contacts.security",
-  "justification",
 ];
 
 /** Legal: section 04, the partner agreement and the special terms. */
@@ -1011,5 +1121,7 @@ export function stepOfField(field: string): number {
   if (field === "lines" || field.startsWith("lines[") || field === "salesforce" || STEP_2_FIELDS.includes(field)) return 1;
   if (STEP_3_FIELDS.some((f) => field === f || field.startsWith(f + ".") || field.startsWith(f + "["))) return 2;
   if (STEP_4_FIELDS.some((f) => field === f || field.startsWith(f + "."))) return 3;
+  // The justification is written on Review, just above Submit (D141).
+  if (field === "justification") return 4;
   return 0;
 }

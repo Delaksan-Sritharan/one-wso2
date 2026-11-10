@@ -119,6 +119,86 @@ export interface RenewalStart {
 /** First Sale, Renewal or Expansion; any other record type is OTHER. */
 export type DealKind = "FIRST_SALE" | "RENEWAL" | "EXPANSION" | "OTHER";
 
+/**
+ * A product line on the opportunity in Salesforce (D147). Money is an exact
+ * decimal string in the opportunity's currency; null when Salesforce has none.
+ */
+export interface OpportunityLineView {
+  readonly id: string;
+  readonly productName: string | null;
+  readonly productCode: string | null;
+  /** Exact decimal, e.g. "4". */
+  readonly quantity: string | null;
+  /** Per unit. */
+  readonly salesPrice: string | null;
+  /** Percent, e.g. "25". */
+  readonly discount: string | null;
+  readonly commissionPercent: string | null;
+  /** The whole line after discount: quantity × sales price × (1 − discount %). */
+  readonly totalPrice: string | null;
+  readonly serviceStartDate: string | null;
+  readonly serviceEndDate: string | null;
+  /** The line's failed checks (D150); empty when it passes or wasn't checked. */
+  readonly problems: readonly LineProblem[] | null;
+  /** The line's product in the quote's price book, as it would load; null when not in the book (D150). */
+  readonly load: OpportunityLineLoad | null;
+}
+
+/** A failed check (D150): a short label to see at a glance, and the full sentence. */
+export interface LineProblem {
+  readonly short: string;
+  readonly detail: string;
+}
+
+/**
+ * A Salesforce line's product in the quote's price book, with the line's
+ * Salesforce values (D150): what "Load into quote" adds when every line
+ * passes.
+ */
+export interface OpportunityLineLoad {
+  readonly pricebookEntryId: string;
+  readonly productId: string;
+  readonly productName: string;
+  readonly productCode: string | null;
+  readonly productDescription: string | null;
+  readonly pricebookId: string;
+  readonly pricebookName: string;
+  /** The quote's price book's price. */
+  readonly unitPrice: string;
+  /** The Salesforce sales price when it differs from the book; null otherwise, and on a formula line. */
+  readonly salesPrice: string | null;
+  /** Salesforce's, exact, e.g. "2.5". */
+  readonly quantity: string;
+  readonly discount: string;
+  /** The Admin's mapping; "" when not mapped. */
+  readonly category: string;
+  readonly classification: string | null;
+  readonly recurring: boolean;
+  /** Priced by an Admin's formula (D81): its Salesforce price is ignored. */
+  readonly formula: boolean;
+}
+
+/** Whether an auto-generated renewal's Salesforce lines load in one go (D150). */
+export interface RenewalCheck {
+  /** The opportunity's own problems, e.g. its term. */
+  readonly problems: readonly LineProblem[];
+  /** Every line and the opportunity pass. */
+  readonly canLoad: boolean;
+  readonly isRenewal: boolean;
+  readonly subsStartDate: string | null;
+  readonly subsEndDate: string | null;
+  readonly pricebookName: string | null;
+}
+
+/** The opportunity's product lines as they are in Salesforce now (D147). */
+export interface OpportunityLines {
+  /** The opportunity's currency, which the lines are priced in. */
+  readonly currency: string | null;
+  readonly lines: readonly OpportunityLineView[];
+  /** Null when the quote's price book wasn't sent (D150). */
+  readonly check: RenewalCheck | null;
+}
+
 /** A contact on the opportunity, with its roles there, e.g. "Economic Buyer" (D124). */
 export interface Contact {
   readonly id: string;
@@ -293,10 +373,16 @@ export interface LegalView {
   readonly partnerName: string;
   readonly contractDate: string | null;
   readonly sections: LegalSections;
-  /** What section 06 says: Legal's wording when they changed it, else the AM's; null when off. */
+  /** What section 06 says (D139): Legal's override, else Deal Desk's, else the AM's; null when off. */
   readonly specialTerms: string | null;
+  /** Whose text specialTerms is. */
+  readonly specialTermsBy?: "AM" | "DEAL_DESK" | "LEGAL";
   readonly specialTermsByLegal: boolean;
+  /** The AM's text; Deal Desk's override (null when none); who wrote each override. */
   readonly amSpecialTerms: string | null;
+  readonly deskSpecialTerms?: string | null;
+  readonly deskSpecialTermsByEmail?: string | null;
+  readonly legalSpecialTermsByEmail?: string | null;
   readonly frozen: boolean;
 }
 
@@ -485,8 +571,11 @@ export interface DraftInput {
   readonly partnerContractDate?: string;
   /** Partner-led quotes only: one % for every line. */
   readonly partnerCommissionPercent?: string;
+  /** D151: one % per contract year, in order, when they differ; replaces partnerCommissionPercent. */
+  readonly partnerCommissionByYear?: string[];
   readonly netTermsDays?: number;
-  // No specialTerms: Deal Desk writes them during its approval (D128).
+  /** The AM's special terms (D139); Deal Desk and Legal may override them during approval. */
+  readonly specialTerms: { readonly enabled: boolean; readonly text?: string };
   readonly governingTerms: {
     readonly enabled: boolean;
     readonly text?: string;
@@ -640,8 +729,10 @@ export interface VersionView {
   readonly termsSaasNonStandard?: boolean;
   readonly partnerContractName?: string | null;
   readonly partnerContractDate?: string | null;
-  /** "15.00" on a partner-led quote with a commission; null otherwise. */
+  /** "15.00" on a partner-led quote with a commission; null otherwise. Year 1's with rates per year. */
   readonly partnerCommissionPercent?: string | null;
+  /** D151: each year's rate, in order, when they differ; null with one rate. */
+  readonly partnerCommissionByYear?: string[] | null;
   readonly billingFrequency: BillingFrequency | null;
   readonly netTermsDays: number | null;
   readonly specialTerms: {
@@ -695,6 +786,8 @@ export interface QuoteView {
   readonly isPrimary: boolean;
   /** The caller may "Sync to Salesforce": sync on, primary, may change it (D77). */
   readonly canSync?: boolean;
+  /** An Admin switched the Salesforce sync on (D84): shown greyed on a non-primary draft (D137). */
+  readonly syncSwitchOn?: boolean;
   /** The last sync to Salesforce (D77); null until the first. */
   readonly sfSyncedAt?: string | null;
   readonly sfSyncedByEmail?: string | null;
@@ -786,7 +879,7 @@ export interface AuditEvent {
     | "ORDER_FORM_ATTACH_FAILED"
     // The AM changed the supporting documents (DGD-10); metadata: before, after.
     | "SUPPORTING_DOCUMENTS_CHANGED"
-    // Deal Desk wrote the special terms during its step (D128); metadata: specialTerms (any now).
+    // Deal Desk overrode the special terms during its step (D139; D128: wrote them); metadata: override.
     | "SPECIAL_TERMS_WRITTEN";
   readonly versionNumber: number | null;
   readonly actorEmail: string;
@@ -868,6 +961,8 @@ export interface OpportunityQuote {
   readonly tcv: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  /** When it was last synced to the opportunity (D77); null when never. */
+  readonly syncedAt?: string | null;
 }
 
 /** What AMs may do with quotes they don't own (D69). */
@@ -876,3 +971,32 @@ export type QuoteAccess = "VIEW" | "VIEW_EDIT";
 /** Whose quotes the Quotes page lists (D70): the caller's own, or everyone's. */
 export type QuoteScope = "mine" | "all";
 
+
+/** One field a sync writes (D138): Salesforce now → after. Plain strings: dates YYYY-MM-DD, amounts with 2 decimals. */
+export interface SyncFieldChange {
+  /** pricebook, currency, subsStartDate, subsEndDate; quantity, salesPrice, discount (the total), serviceStartDate, serviceEndDate, commission. */
+  readonly field: string;
+  readonly before: string | null;
+  readonly after: string | null;
+  readonly changed: boolean;
+}
+
+export type SyncChange = "ADDED" | "CHANGED" | "REMOVED" | "UNCHANGED";
+
+/** One product on the quote or the opportunity. */
+export interface SyncProductChange {
+  readonly productName: string;
+  readonly change: SyncChange;
+  readonly fields: readonly SyncFieldChange[];
+}
+
+/** What syncing would change on the opportunity (D138). */
+export interface SyncPreview {
+  readonly opportunityName: string | null;
+  /** The amounts' currency: the quote's. */
+  readonly currency: string;
+  readonly opportunity: readonly SyncFieldChange[];
+  readonly products: readonly SyncProductChange[];
+  /** Changed opportunity fields, and products added, changed or removed. */
+  readonly changes: number;
+}

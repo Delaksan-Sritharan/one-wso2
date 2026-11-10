@@ -14,9 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { JSX } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { AdapterDateFns, DatePickers } from "@wso2/oxygen-ui";
@@ -29,6 +29,16 @@ import ProductsStep from "./ProductsStep";
 
 // D72: products brought in from the opportunity.
 
+// The opportunity's line items in Salesforce (D147).
+const sfLine = { id: "00kA", productName: "API Manager", productCode: null, quantity: "4", salesPrice: "9000", discount: "25", totalPrice: "27000.00", commissionPercent: null, serviceStartDate: null, serviceEndDate: null, problems: null, load: null };
+const opportunityLines: { currency: string; lines: unknown[]; check: unknown } = { currency: "USD", lines: [sfLine], check: null };
+// The quotes on the opportunity (D150: none synced to it yet).
+const opportunityQuotes: { data: unknown[] } = { data: [] };
+const sfLoad = {
+  pricebookEntryId: "01uAPIM", productId: "01tAPIM", productName: "API Manager", productCode: "P-APIM", productDescription: null,
+  pricebookId: "01sUSD", pricebookName: "USD Price Book", unitPrice: "8000", salesPrice: "9000", quantity: "4", discount: "25",
+  category: "SUBSCRIPTION", classification: "PS", recurring: true, formula: false,
+};
 const empty = {
   data: [],
   error: null,
@@ -38,6 +48,8 @@ const empty = {
 };
 vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
   useAccountOpportunities: () => empty,
+  useOpportunityLines: () => ({ ...empty, data: opportunityLines }),
+  useOpportunityQuotes: () => ({ ...empty, data: opportunityQuotes.data }),
   usePricingFormulas: () => empty,
   useBundleChildren: () => ({ data: { children: [], missing: [] }, isFetching: false }),
   useCurrencies: () => ({ ...empty, data: ["USD"] }),
@@ -112,6 +124,78 @@ function Harness({
 }
 
 describe("ProductsStep (Products & Pricing)", () => {
+  beforeEach(() => {
+    opportunityQuotes.data = [];
+  });
+
+  // D150: only an auto-generated renewal's inherited lines, until a quote is synced to it.
+  it("shows the Salesforce line items only on a renewal never synced from QuickQuote", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Harness values={{ opportunityId: "006A", opportunityName: "Acme renewal" }} />);
+    expect(screen.queryByRole("button", { name: "Import renewal products" })).toBeNull(); // a first sale
+    unmount();
+
+    opportunityQuotes.data = [{ quoteId: 9, syncedAt: "2026-11-01T10:00:00Z" }];
+    const synced = render(<Harness values={{ opportunityId: "006A", opportunityName: "Acme renewal", dealKind: "RENEWAL" }} />);
+    expect(screen.queryByRole("button", { name: "Import renewal products" })).toBeNull(); // its lines came from QuickQuote
+    synced.unmount();
+
+    opportunityQuotes.data = [{ quoteId: 10, syncedAt: null }]; // this quote, never synced
+    render(<Harness values={{ opportunityId: "006A", opportunityName: "Acme renewal", dealKind: "RENEWAL" }} />);
+    await user.click(screen.getByRole("button", { name: "Import renewal products" }));
+    const dialog = within(screen.getByRole("dialog", { name: /Import renewal products from Salesforce/ }));
+    expect(dialog.getByText(/Acme renewal/)).toBeInTheDocument();
+    expect(dialog.getByText("API Manager")).toBeInTheDocument();
+    await user.click(dialog.getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText("WSO2 Gateway")).toBeInTheDocument(); // the quote's own lines untouched
+  });
+
+  // D150: a clean renewal's lines replace the quote's, in the opportunity's one year.
+  it("loads a clean renewal's line items into the quote", async () => {
+    const user = userEvent.setup();
+    opportunityLines.lines = [{ ...sfLine, problems: [], load: sfLoad }];
+    opportunityLines.check = { problems: [], canLoad: true, isRenewal: true, subsStartDate: "2027-02-01", subsEndDate: "2028-01-31", pricebookName: "USD Price Book" };
+    try {
+      render(<Harness values={{ opportunityId: "006A", opportunityName: "Acme renewal", dealKind: "RENEWAL", yearCount: 2 }} />);
+      await user.click(screen.getByRole("button", { name: "Import renewal products" }));
+      expect(screen.getByText("Replaces the 2 products already on this quote.")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Load into quote" }));
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(screen.getByLabelText("Loaded from Salesforce")).toHaveTextContent("Loaded 1 product from Salesforce. Check them, then save the draft.");
+      expect(screen.queryByText("WSO2 Gateway")).toBeNull(); // replaced
+      expect(screen.getByText("API Manager")).toBeInTheDocument();
+      expect(screen.getByLabelText("Quantities")).toHaveTextContent(/=4$/);
+      expect(screen.getByRole("button", { name: /Add Year 2/ })).toBeInTheDocument(); // down to one year
+    } finally {
+      opportunityLines.lines = [sfLine];
+      opportunityLines.check = null;
+    }
+  });
+
+  // D151: a rate per year, from the Partner Commission card.
+  it("splits the commission into a rate per year, and back to one after asking", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Harness values={{ dealType: "PARTNER", partnerCommissionPercent: "10", yearCount: 1 }} />);
+    expect(screen.queryByRole("checkbox", { name: "Different rate per year" })).toBeNull(); // one year
+    unmount();
+
+    render(<Harness values={{ dealType: "PARTNER", partnerCommissionPercent: "10", yearCount: 3 }} />);
+    await user.click(screen.getByRole("checkbox", { name: "Different rate per year" }));
+    const perYear = within(screen.getByLabelText("Commission per year"));
+    expect(perYear.getAllByRole("textbox").map((t) => (t as HTMLInputElement).value)).toEqual(["10", "10", "10"]);
+    const year1 = perYear.getByRole("textbox", { name: "Year 1" });
+    await user.clear(year1);
+    await user.type(year1, "15");
+
+    await user.click(screen.getByRole("checkbox", { name: "Different rate per year" }));
+    expect(screen.getByText("Every year will use Year 1's 15%.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Use 15%" }));
+    expect(screen.queryByLabelText("Commission per year")).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Commission" })).toHaveValue("15");
+  });
+
   // D78: products can be added and kept before the start date; they are
   // priced once it is chosen.
   it("lets the AM add products before the start date is chosen", () => {
@@ -157,7 +241,7 @@ describe("ProductsStep (Products & Pricing)", () => {
     expect(screen.queryByRole("button", { name: "Delete Year 1" })).toBeNull();
     unmount();
     render(<Harness />);
-    expect(screen.getByRole("region", { name: "Year 1" })).toHaveTextContent("2 products");
+    expect(screen.getByRole("region", { name: "Year 1" })).not.toHaveTextContent(/\d+ products?/); // no product count (2026-11-08)
     expect(screen.queryByRole("button", { name: "Delete Year 1" })).toBeNull();
   });
 

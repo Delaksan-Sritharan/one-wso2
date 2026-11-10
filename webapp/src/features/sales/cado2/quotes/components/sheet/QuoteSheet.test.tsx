@@ -149,12 +149,23 @@ describe("Order form", () => {
     expect(screen.getByRole("region", { name: "Order totals" })).toHaveTextContent("Total order value · all 3 years (USD)119,540.00");
     // Each year closes with its own total, inside its table.
     expect(rows.at(-1)).toContain("Year 1 total (USD)119,540.00");
-    expect(screen.getByRole("region", { name: "Year 1" })).toHaveTextContent("4 products");
+    expect(screen.getByRole("region", { name: "Year 1" })).not.toHaveTextContent(/\d+ products?/); // no product count (2026-11-08)
     expect(screen.getAllByText("No products in this year.")).toHaveLength(2);
   });
 
   // 2026-10-12 (amends D53): a line shows its product's name and SKU only; the
   // description is shown when choosing the product.
+  // D149: a formula line's discount, and what it brings its price to.
+  it("shows a formula line's discount and its price after it", () => {
+    const support = { ...line(3, "Enterprise Support", "SUPPORT", "30400.00", "30400.00"), unitPrice: "32000.00", discountPercent: "5",
+      formula: { version: "v3 · 15 Oct 2026", explanation: "max(25,000, 10% × 320,000)" } };
+    render(<QuoteSheet sheet={{ ...threeYears, lines: [support] }} />);
+    const row = within(screen.getByRole("table", { name: "Products" })).getByText("Enterprise Support").closest("tr") as HTMLElement;
+    expect(within(row).getByLabelText("Priced by formula")).toHaveTextContent("Formula v3 · 15 Oct 2026: max(25,000, 10% × 320,000)");
+    expect(within(row).getByLabelText("After discount")).toHaveTextContent("After 5% discount: 30,400.00");
+    expect(within(row).getByText("5%")).toBeInTheDocument();
+  });
+
   it("shows a line's product name and SKU, not its description", () => {
     const described = { ...threeYears.lines[0], productCode: "GW-SKU", productDescription: "Based on the number of gateways." };
     render(<QuoteSheet sheet={{ ...threeYears, lines: [described, ...threeYears.lines.slice(1)] }} />);
@@ -218,6 +229,22 @@ describe("Partner commission", () => {
   it("shows the schedule's billing net of commission", () => {
     render(<QuoteSheet sheet={{ ...partner, years: partner.years.map((y) => ({ ...y, netBilling: "1.00" })) }} />);
     expect(within(screen.getByRole("table", { name: "Yearly schedule" })).getByText("Billed, net of commission")).toBeInTheDocument();
+  });
+
+  // D151: rates per year, in the totals label and a row of the schedule.
+  it("shows a rate per year in the totals and the yearly schedule", () => {
+    const perYear = {
+      ...partner,
+      partnerCommissionRates: ["15", "10", "10"],
+      years: partner.years.map((y, i) => ({ ...y, commission: ["7047.00", "5440.00", "5444.00"][i], netBilling: "1.00" })),
+    };
+    render(<QuoteSheet sheet={perYear} />);
+    expect(screen.getByRole("region", { name: "Order totals" }).textContent).toContain(
+      "Partner commission (Year 1: 15% · Years 2–3: 10%) (USD)− 17,931.00",
+    );
+    const schedule = within(screen.getByRole("table", { name: "Yearly schedule" }));
+    const row = schedule.getByText("Partner commission").closest("tr") as HTMLElement;
+    expect(row.textContent).toBe("Partner commission− 7,047.0015%− 5,440.0010%− 5,444.0010%");
   });
 
   it("says a one-off line is one-time in the Term column (D85, D94)", () => {
@@ -338,8 +365,12 @@ describe("LegalSection", () => {
       contractDate: "2024-03-12",
       partnerName: "Acme Reseller",
       specialTerms: "Legal's wording",
+      specialTermsBy: "LEGAL",
       specialTermsByLegal: true,
       amSpecialTerms: "AM's wording",
+      deskSpecialTerms: "Deal Desk's wording",
+      deskSpecialTermsByEmail: "priya@wso2.com",
+      legalSpecialTermsByEmail: "anna@wso2.com",
       frozen: true,
     },
   };
@@ -354,18 +385,30 @@ describe("LegalSection", () => {
     expect(legal.getByText("Legal writes these terms during their approval.")).toBeInTheDocument();
     expect(legal.getByText("Auto Renewal")).toBeInTheDocument();
     expect(legal.getByText("Legal's wording")).toBeInTheDocument();
-    expect(legal.getByText(/Reworded by Legal during their approval/)).toBeInTheDocument();
+    expect(legal.getByText(/Overridden by anna \(Legal\)/)).toBeInTheDocument();
   });
 
-  // D109: both texts on the version Legal reworded; the AM's behind a toggle.
-  it("shows the wording before Legal's on request", () => {
+  // D109, D139: every text kept; the earlier ones behind their own links.
+  it("shows Deal Desk's text and the AM's on request", () => {
     render(<QuoteSheet sheet={withLegal} />);
     const legal = within(screen.getByRole("region", { name: "Legal" }));
     expect(legal.queryByText("AM's wording")).toBeNull();
-    fireEvent.click(legal.getByRole("button", { name: "Show the wording before Legal's" }));
+    fireEvent.click(legal.getByRole("button", { name: "Show Deal Desk's text" }));
+    expect(legal.getByText("Deal Desk's wording")).toBeInTheDocument();
+    fireEvent.click(legal.getByRole("button", { name: "Show what the AM wrote" }));
     expect(legal.getByText("AM's wording")).toBeInTheDocument();
-    fireEvent.click(legal.getByRole("button", { name: "Hide the wording before Legal's" }));
+    expect(legal.queryByText("Deal Desk's wording")).toBeNull();
+    fireEvent.click(legal.getByRole("button", { name: "Hide what the AM wrote" }));
     expect(legal.queryByText("AM's wording")).toBeNull();
+  });
+
+  it("says Deal Desk overrode the AM's, with nothing about Legal", () => {
+    const desk = { ...withLegal, legal: { ...withLegal.legal!, specialTerms: "Deal Desk's wording", specialTermsBy: "DEAL_DESK" as const, specialTermsByLegal: false } };
+    render(<QuoteSheet sheet={desk} />);
+    const legal = within(screen.getByRole("region", { name: "Legal" }));
+    expect(legal.getByText(/Overridden by priya \(Deal Desk\)/)).toBeInTheDocument();
+    expect(legal.queryByRole("button", { name: "Show Deal Desk's text" })).toBeNull();
+    expect(legal.getByRole("button", { name: "Show what the AM wrote" })).toBeInTheDocument();
   });
 
   it("isn't shown without the legal texts", () => {

@@ -52,6 +52,7 @@ import {
   type AddressValue,
   type ContactValue,
   type DraftFormValues,
+  commissionByYearInput,
 } from "@features/sales/cado2/quotes/form/draftForm";
 
 export type ContactRole = "BILLING" | "SECURITY";
@@ -88,7 +89,7 @@ export interface SheetLine {
   readonly unitOfMeasure: string | null;
   /** The unit price charged: the sales price, which is the list price unless raised. */
   readonly unitPrice: string;
-  /** e.g. "10" for 10%; "0" when none, and always on a formula line. */
+  /** e.g. "10" for 10%; "0" when none. A formula line's is off its formula price (D149). */
   readonly discountPercent: string;
   /**
    * A formula line's version and how it worked the unit price out (D81, D82):
@@ -149,8 +150,10 @@ export interface QuoteSheet {
   /** Whether any line recurs, i.e. the quote has a subscription term. */
   readonly recurring: boolean;
   readonly billingFrequency: BillingFrequency | null;
-  /** e.g. "15" on a partner-led quote with a commission; null otherwise. */
+  /** e.g. "15" on a partner-led quote with a commission; null otherwise. Year 1's with rates per year. */
   readonly partnerCommissionPercent: string | null;
+  /** D151: each year's rate when they differ, e.g. ["15", "10", "10"]; null with one rate. */
+  readonly partnerCommissionRates?: readonly string[] | null;
   /** Billing, then security; null when not chosen. */
   readonly contacts: readonly [SheetContact | null, SheetContact | null];
   readonly lines: readonly SheetLine[];
@@ -177,11 +180,16 @@ export interface SheetLegal {
   readonly contractName: string;
   readonly contractDate: string;
   readonly partnerName: string;
-  /** Section 06 as it prints: Legal's wording when they changed it. */
+  /** Section 06 as it prints (D139): Legal's override, else Deal Desk's, else the AM's. */
   readonly specialTerms: string | null;
+  /** Whose text it is: AM, DEAL_DESK or LEGAL. */
+  readonly specialTermsBy: "AM" | "DEAL_DESK" | "LEGAL";
   readonly specialTermsByLegal: boolean;
-  /** What the AM wrote, when Legal reworded it. */
+  /** What the AM wrote; Deal Desk's override (null when none); who wrote each override. */
   readonly amSpecialTerms: string | null;
+  readonly deskSpecialTerms: string | null;
+  readonly deskSpecialTermsByEmail: string | null;
+  readonly legalSpecialTermsByEmail: string | null;
   readonly frozen: boolean;
 }
 
@@ -262,6 +270,7 @@ export function sheetFromVersion(res: DraftResponse): QuoteSheet {
     recurring: hasRecurring(v.lines),
     billingFrequency: v.billingFrequency,
     partnerCommissionPercent: v.partnerCommissionPercent ? String(Number(v.partnerCommissionPercent)) : null,
+    partnerCommissionRates: v.partnerCommissionByYear?.length ? v.partnerCommissionByYear.map((r) => String(Number(r))) : null,
     contacts: [contact("BILLING"), contact("SECURITY")],
     lines: v.lines.map((l) => ({
       number: l.lineNumber,
@@ -301,8 +310,12 @@ export function sheetFromVersion(res: DraftResponse): QuoteSheet {
           contractDate: v.legal.contractDate ?? "",
           partnerName: v.legal.partnerName,
           specialTerms: v.legal.specialTerms,
+          specialTermsBy: v.legal.specialTermsBy ?? (v.legal.specialTermsByLegal ? "LEGAL" : "AM"),
           specialTermsByLegal: v.legal.specialTermsByLegal,
           amSpecialTerms: v.legal.amSpecialTerms,
+          deskSpecialTerms: v.legal.deskSpecialTerms ?? null,
+          deskSpecialTermsByEmail: v.legal.deskSpecialTermsByEmail ?? null,
+          legalSpecialTermsByEmail: v.legal.legalSpecialTermsByEmail ?? null,
           frozen: v.legal.frozen,
         }
       : null,
@@ -352,8 +365,12 @@ function formLegal(v: DraftFormValues, cfg: LegalConfig): SheetLegal {
     contractDate: v.partnerContractDate,
     partnerName: v.partner?.name ?? "",
     specialTerms: v.specialTermsEnabled ? blank(v.specialTerms) : null,
+    specialTermsBy: "AM",
     specialTermsByLegal: false,
     amSpecialTerms: null,
+    deskSpecialTerms: null,
+    deskSpecialTermsByEmail: null,
+    legalSpecialTermsByEmail: null,
     frozen: false,
   };
 }
@@ -392,8 +409,17 @@ export function sheetFromForm(
     }),
     recurring,
     billingFrequency: v.billingFrequency || null,
-    partnerCommissionPercent:
-      isPartnerLed(v) && !commissionProblem(v.partnerCommissionPercent) ? String(Number(v.partnerCommissionPercent)) : null,
+    // With rates per year (D151) the single rate reads as Year 1's.
+    partnerCommissionPercent: !isPartnerLed(v)
+      ? null
+      : v.partnerCommissionByYear.length > 0
+        ? commissionByYearInput(v)
+          ? String(Number(v.partnerCommissionByYear[0]))
+          : null
+        : !commissionProblem(v.partnerCommissionPercent)
+          ? String(Number(v.partnerCommissionPercent))
+          : null,
+    partnerCommissionRates: isPartnerLed(v) && commissionByYearInput(v) ? v.partnerCommissionByYear.map((r) => String(Number(r))) : null,
     contacts: [contacts[0], contacts[1]],
     lines: v.lines.map((l, i) => {
       const p = preview?.lines[i];
@@ -412,7 +438,7 @@ export function sheetFromForm(
         quantity: l.quantity,
         unitOfMeasure: blank(l.unitOfMeasure),
         unitPrice: byFormula ? (p.unitPrice ?? l.unitPrice) : l.salesPrice || l.unitPrice,
-        discountPercent: byFormula ? "0" : String(Number(l.discount || "0")),
+        discountPercent: String(Number(l.discount || "0")),
         formula: byFormula ? formulaOf(p.formula) : null,
         yearNumber: l.yearNumber,
         startDate: dates?.start ?? null,

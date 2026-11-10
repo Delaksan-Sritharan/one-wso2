@@ -31,6 +31,7 @@ import {
   ChartColumnIcon,
   ChevronsDownUpIcon,
   ChevronsUpDownIcon,
+  CloudDownloadIcon,
   CopyIcon,
   PackageIcon,
   PencilIcon,
@@ -43,17 +44,21 @@ import ScheduleTable from "@features/sales/cado2/quotes/components/sheet/Schedul
 import YearSections, { OrderTotalsFooter, type SectionYear } from "@features/sales/cado2/quotes/components/sheet/YearSections";
 import { useCollapsedYears } from "@features/sales/cado2/quotes/components/sheet/useCollapsedYears";
 import { hasYearlySchedule, orderForm, sheetFromForm } from "@features/sales/cado2/quotes/sheet/sheetModel";
-import type { PricingPreview } from "@features/sales/cado2/quotes/api/quoteTypes";
+import type { OpportunityLineLoad, PricingPreview, RenewalCheck } from "@features/sales/cado2/quotes/api/quoteTypes";
+import { useOpportunityQuotes } from "@features/sales/cado2/quotes/api/useQuoteApi";
 import {
   addYear,
   childQuantity,
+  commissionAfterYearChange,
   childrenOf,
   cloneYear,
   contractYears,
   deleteYear,
   insertIndex,
   isPartnerLed,
+  lastYearEarliestEnd,
   lastYearEndProblem,
+  lineFromSalesforce,
   MAX_YEARS,
   setLastYearEnd,
   type ContractYear,
@@ -63,6 +68,7 @@ import {
 import AddLineDialog from "@features/sales/cado2/quotes/components/AddLineDialog";
 import TermCard from "@features/sales/cado2/quotes/components/TermCard";
 import LastYearEnd from "@features/sales/cado2/quotes/components/LastYearEnd";
+import OpportunityLinesDialog from "@features/sales/cado2/quotes/components/OpportunityLinesDialog";
 import PartnerCommissionCard from "@features/sales/cado2/quotes/components/PartnerCommissionCard";
 import PricingSetupCard from "@features/sales/cado2/quotes/components/PricingSetupCard";
 import { useFieldIssue } from "@features/sales/cado2/quotes/components/fieldIssues";
@@ -125,6 +131,33 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
     index: null,
     year: 1,
   });
+  // D150: an auto-generated renewal's inherited line items in Salesforce,
+  // until a quote has been synced to it (its lines then came from
+  // QuickQuote). First sales and expansions add products, or clone a quote.
+  const opportunityQuotes = useOpportunityQuotes(values.opportunityId || null);
+  const showSalesforceLines =
+    Boolean(values.opportunityId) &&
+    values.dealKind === "RENEWAL" &&
+    opportunityQuotes.data !== undefined &&
+    !opportunityQuotes.data.some((q) => q.syncedAt);
+  const [viewingLines, setViewingLines] = useState(false);
+  const [loaded, setLoaded] = useState<number | null>(null);
+  // Clean lines replace any already added (the dialog warns); the term
+  // becomes the opportunity's one year, so each recurring line covers it.
+  const onLoad = (loads: OpportunityLineLoad[], check: RenewalCheck) => {
+    if (check.subsStartDate) setValue("startDate", check.subsStartDate, { shouldDirty: true });
+    setValue("yearCount", 1, { shouldDirty: true });
+    setValue("lastYearEndDate", "", { shouldDirty: true });
+    // One year: one commission rate again (D151).
+    const rates = getValues("partnerCommissionByYear");
+    if (rates.length > 0) {
+      setValue("partnerCommissionPercent", rates[0], { shouldDirty: true });
+      setValue("partnerCommissionByYear", [], { shouldDirty: true });
+    }
+    replace(loads.map(lineFromSalesforce));
+    setLoaded(loads.length);
+    setViewingLines(false);
+  };
   const fold = useCollapsedYears();
   const linesIssue = useFieldIssue("lines");
   const yearsIssue = useFieldIssue("years");
@@ -193,16 +226,22 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
   };
   // Year changes rewrite the count, the last year's end and, for clone and
   // delete, the lines together.
-  const setYears = (next: { yearCount: number; lastYearEndDate: string; lines?: LineValue[] }) => {
+  // A year's rate follows the year (D151): added, cloned or deleted with it.
+  const setYears = (
+    next: { yearCount: number; lastYearEndDate: string; lines?: LineValue[] },
+    change?: Parameters<typeof commissionAfterYearChange>[1],
+  ) => {
     setValue("yearCount", next.yearCount, { shouldDirty: true });
     setValue("lastYearEndDate", next.lastYearEndDate, { shouldDirty: true });
     if (next.lines) replace(next.lines);
+    const rates = getValues("partnerCommissionByYear");
+    if (change && rates.length > 0) {
+      const after = commissionAfterYearChange(rates, change);
+      setValue("partnerCommissionByYear", after.byYear, { shouldDirty: true });
+      if (after.single !== null) setValue("partnerCommissionPercent", after.single, { shouldDirty: true });
+    }
   };
-  const changeLastEnd = (end: string) => {
-    const next = setLastYearEnd(getValues(), end);
-    setValue("lastYearEndDate", next.lastYearEndDate, { shouldDirty: true });
-    if (next.lines !== getValues("lines")) replace(next.lines);
-  };
+  const changeLastEnd = (end: string) => setValue("lastYearEndDate", setLastYearEnd(getValues(), end), { shouldDirty: true });
 
   const addButton = (n: number, label = "Product") => (
     <Button
@@ -244,7 +283,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
                 size="small"
                 startIcon={<CopyIcon size={14} />}
                 disabled={recurring === 0 || emptyYear !== null || values.yearCount >= MAX_YEARS || !values.startDate}
-                onClick={() => setYears(cloneYear(getValues(), n))}
+                onClick={() => setYears(cloneYear(getValues(), n), { clone: n })}
               >
                 Clone
               </Button>
@@ -259,7 +298,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
               size="small"
               aria-label={`Delete Year ${n}`}
               onClick={() => {
-                setYears(deleteYear(getValues(), n));
+                setYears(deleteYear(getValues(), n), { remove: n });
                 fold.reset();
               }}
             >
@@ -275,7 +314,14 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
   // header is clickable (2026-10-26); a problem with it shows above its products.
   const yearEnd = (n: number) =>
     n === values.yearCount && values.startDate && years[n - 1]?.end ? (
-      <LastYearEnd yearNumber={n} start={years[n - 1].start} end={years[n - 1].end} fullEnd={fullLastEnd} onChange={changeLastEnd} />
+      <LastYearEnd
+        yearNumber={n}
+        start={years[n - 1].start}
+        end={years[n - 1].end}
+        fullEnd={fullLastEnd}
+        earliest={lastYearEarliestEnd(values)}
+        onChange={changeLastEnd}
+      />
     ) : null;
   const yearTop = (n: number) =>
     n === values.yearCount && (lastProblem || lastEndIssue) ? <Alert severity="error">{lastProblem || lastEndIssue}</Alert> : null;
@@ -297,7 +343,12 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
       {/* Partner-led: the commission, right above the products whose totals it
           changes (D91); shown before any product too. */}
       {isPartnerLed(values) ? (
-        <PartnerCommissionCard commission={total.commission} total={total.total} currency={currency} />
+        <PartnerCommissionCard
+          commission={total.commission}
+          total={total.total}
+          currency={currency}
+          yearCommissions={Array.from({ length: values.yearCount }, (_, i) => preview?.years.find((y) => y.yearNumber === i + 1)?.commission)}
+        />
       ) : null}
 
       {/* When it starts and where the years take it, right above the products
@@ -308,20 +359,41 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
         title="Products"
         icon={<PackageIcon size={18} />}
         aside={
-          years.length > 1 ? (
-            <Button
-              size="small"
-              startIcon={anyFolded ? <ChevronsUpDownIcon size={14} /> : <ChevronsDownUpIcon size={14} />}
-              onClick={() => fold.toggleAll(years.map((y) => y.number))}
-            >
-              {anyFolded ? "Expand all" : "Collapse all"}
-            </Button>
+          showSalesforceLines || years.length > 1 ? (
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {/* D150: the renewal's inherited products, to import. */}
+              {showSalesforceLines ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<CloudDownloadIcon size={14} />}
+                  onClick={() => setViewingLines(true)}
+                  title="Import the products this renewal inherited in Salesforce"
+                >
+                  Import renewal products
+                </Button>
+              ) : null}
+              {years.length > 1 ? (
+                <Button
+                  size="small"
+                  startIcon={anyFolded ? <ChevronsUpDownIcon size={14} /> : <ChevronsDownUpIcon size={14} />}
+                  onClick={() => fold.toggleAll(years.map((y) => y.number))}
+                >
+                  {anyFolded ? "Expand all" : "Collapse all"}
+                </Button>
+              ) : null}
+            </Stack>
           ) : undefined
         }
       >
         {yearsIssue ? (
           <Alert severity="error" sx={{ mb: 2 }}>
             {yearsIssue}
+          </Alert>
+        ) : null}
+        {loaded !== null ? (
+          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setLoaded(null)} aria-label="Loaded from Salesforce">
+            Loaded {loaded === 1 ? "1 product" : `${loaded} products`} from Salesforce. Check them, then save the draft.
           </Alert>
         ) : null}
         {orphans.length ? (
@@ -420,7 +492,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
                     size="small"
                     startIcon={<PlusIcon size={14} />}
                     disabled={emptyYear !== null}
-                    onClick={() => setYears(addYear(getValues()))}
+                    onClick={() => setYears(addYear(getValues()), { add: true })}
                   >
                     Add Year {values.yearCount + 1}
                   </Button>
@@ -438,6 +510,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
                 lines={sheet.lines}
                 currency={currency}
                 commissionPercent={sheet.partnerCommissionPercent}
+                commissionRates={sheet.partnerCommissionRates}
                 yearCount={values.yearCount}
               />
             ) : null}
@@ -448,7 +521,12 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
 
       {hasYearlySchedule(sheet) ? (
         <SectionCard title="Yearly Schedule" icon={<ChartColumnIcon size={18} />}>
-          <ScheduleTable years={sheet.years} lines={sheet.lines} netOfCommission={sheet.partnerCommissionPercent !== null} />
+          <ScheduleTable
+            years={sheet.years}
+            lines={sheet.lines}
+            netOfCommission={sheet.partnerCommissionPercent !== null}
+            commissionRates={sheet.partnerCommissionRates ?? (sheet.partnerCommissionPercent ? [sheet.partnerCommissionPercent] : null)}
+          />
         </SectionCard>
       ) : null}
 
@@ -466,6 +544,16 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
           onClose={() => setEditing({ open: false, index: null, year: 1 })}
         />
       ) : null}
+      <OpportunityLinesDialog
+        open={viewingLines}
+        opportunityId={values.opportunityId || null}
+        opportunityName={values.opportunityName}
+        pricebookId={values.defaultPricebookId}
+        currency={currency}
+        productCount={values.lines.length}
+        onLoad={onLoad}
+        onClose={() => setViewingLines(false)}
+      />
     </Stack>
   );
 }

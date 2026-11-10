@@ -65,6 +65,7 @@ import {
   type BundlePicksValue,
 } from "@features/sales/cado2/quotes/form/bundlePicks";
 import {
+  durationText,
   formatDate,
   LINE_CATEGORIES,
   lineDatesProblem,
@@ -116,6 +117,49 @@ type CardPricing =
   | { kind: "PRICE_BOOK" }
   | { kind: "KEPT_FORMULA"; formula: LineFormula }
   | { kind: "FORMULA"; formula: PricingFormula };
+
+/**
+ * A formula line's discount (D149): the formula price, the discount and the
+ * price after it, per unit. A new line's formula price is worked out on the
+ * quote, so only the discount is said.
+ */
+function FormulaDiscount({
+  currency,
+  formulaPrice,
+  discount,
+}: {
+  currency: string;
+  formulaPrice: string | null;
+  discount: string;
+}): JSX.Element {
+  const pct = Number(discount);
+  if (!formulaPrice) {
+    return (
+      <Typography variant="body2" color="text.secondary" aria-label="Price after discount">
+        {pct}% off the formula price, once it&apos;s worked out on the quote.
+      </Typography>
+    );
+  }
+  const price = Number(formulaPrice);
+  const off = Math.round(price * pct) / 100;
+  const row = (label: string, value: string, bold = false) => (
+    <Stack direction="row" justifyContent="space-between" spacing={2} sx={{ fontWeight: bold ? 700 : 400 }}>
+      <span>{label}</span>
+      <Box component="span" sx={{ fontVariantNumeric: "tabular-nums" }}>
+        {value}
+      </Box>
+    </Stack>
+  );
+  return (
+    <Box aria-label="Price after discount" sx={{ p: 1.25, borderRadius: 1, bgcolor: "action.hover", typography: "body2" }}>
+      {row("Formula price", `${currency} ${formatMoney(price.toFixed(2))}`)}
+      {row(`Discount ${pct}%`, `− ${currency} ${formatMoney(off.toFixed(2))}`)}
+      <Box sx={{ borderTop: 1, borderColor: "divider", mt: 0.5, pt: 0.5 }}>
+        {row("Price after discount, per unit", `${currency} ${formatMoney((price - off).toFixed(2))}`, true)}
+      </Box>
+    </Box>
+  );
+}
 
 /**
  * The chosen product and its price, shown prominently (the price can't be
@@ -271,9 +315,11 @@ export default function AddLineDialog({
   // The unit price charged: "" = the list price.
   const [salesPrice, setSalesPrice] = useState(line?.salesPrice ?? "");
   const [tried, setTried] = useState(false);
-  // Its dates within the year, shown filled in; saved as "" when they are the year's own.
+  // A one-off line's dates within the year (D146), shown filled in: the
+  // end follows the start until the AM picks one. A recurring line has none.
   const [startDate, setStartDate] = useState(line?.startDate || year?.start || "");
-  const [endDate, setEndDate] = useState(line?.endDate || year?.end || "");
+  const [pickedEnd, setEndDate] = useState(line?.endDate ?? "");
+  const endDate = pickedEnd || startDate;
   const formulas = usePricingFormulas();
   const isChild = Boolean(line?.parentKey);
   // A new product's bundle, or an edited parent's (its picks, D131): what
@@ -323,7 +369,7 @@ export default function AddLineDialog({
     : inForce
       ? { kind: "FORMULA", formula: inForce }
       : { kind: "PRICE_BOOK" };
-  // A formula line has no discount.
+  // A formula sets the price; the AM's discount is taken off it (D149).
   const formula = kept ? kept.method === "FORMULA" : Boolean(inForce);
   // What the AM can move the kept line to, if the pricing in force differs.
   const moveTo = !kept
@@ -363,17 +409,18 @@ export default function AddLineDialog({
     pricebookEntryId: keepsExisting ? line.pricebookEntryId : entry ? entry.id : "",
     category: mapped ?? category,
     quantity,
-    discount: formula ? "0" : discount,
+    discount,
   });
   const recurring = keepsExisting ? line.recurring : (product?.recurring ?? true);
-  const datesProblem = !year
-    ? ""
-    : !startDate || (recurring && !endDate)
-      ? "Choose the dates"
-      : lineDatesProblem(
-          { yearNumber: year.number, startDate, endDate: recurring ? endDate : "", recurring },
-          Array.from({ length: year.number }, () => year),
-        );
+  const datesProblem =
+    !year || recurring
+      ? ""
+      : !startDate
+        ? "Choose the dates"
+        : lineDatesProblem(
+            { yearNumber: year.number, startDate, endDate, recurring },
+            Array.from({ length: year.number }, () => year),
+          );
   // The list price the sales price can't go below: the price book's (a kept
   // line's stored one); a formula line has no sales price.
   const listPrice = keepsExisting ? keptUnitPrice : (entry?.unitPrice ?? "");
@@ -422,12 +469,13 @@ export default function AddLineDialog({
       categorySource: source,
       unitOfMeasure: uom.trim(),
       quantity: String(Number(quantity)),
-      discount: formula ? "0" : discount.trim() || "0",
+      discount: discount.trim() || "0",
       unitPrice: keepsExisting ? keptUnitPrice : base.unitPrice,
       useLatestPricing: keepsExisting && moved ? true : undefined,
       salesPrice: formula || !salesPrice.trim() || Number(salesPrice) === Number(listPrice) ? "" : String(Number(salesPrice)),
-      startDate: year && startDate !== year.start ? startDate : "",
-      endDate: year && recurring && endDate !== year.end ? endDate : "",
+      // A one-off line's real dates, kept when the term moves (D146).
+      startDate: year && !recurring ? startDate : "",
+      endDate: year && !recurring ? endDate : "",
     };
     // Its bundle comes with it: same year and dates, the quantity its rule
     // says (D125: fixed, or the parent's), no discount, priced from the same
@@ -445,8 +493,8 @@ export default function AddLineDialog({
               {
                 ...kept,
                 yearNumber: saved.yearNumber,
-                startDate: saved.startDate,
-                endDate: kept.recurring ? saved.endDate : "",
+                startDate: kept.recurring ? "" : saved.startDate,
+                endDate: kept.recurring ? "" : saved.endDate,
                 quantity: childQuantity(saved.quantity, p.fixedQuantity),
                 bundleFixedQuantity: p.fixedQuantity,
               },
@@ -472,8 +520,8 @@ export default function AddLineDialog({
               quantity: childQuantity(saved.quantity, p.fixedQuantity),
               discount: "0",
               yearNumber: saved.yearNumber,
-              startDate: saved.startDate,
-              endDate: p.recurring ? saved.endDate : "",
+              startDate: p.recurring ? "" : saved.startDate,
+              endDate: p.recurring ? "" : saved.endDate,
               salesPrice: "",
               key: newLineKey(),
               parentKey: saved.key,
@@ -690,12 +738,11 @@ export default function AddLineDialog({
               />
               <TextField
                 label="Discount"
-                value={formula ? "0" : discount}
+                value={discount}
                 onChange={(e) => setDiscount(e.target.value)}
                 size="small"
-                disabled={Boolean(formula)}
-                error={Boolean(show("discount")) && !formula}
-                helperText={formula ? "No discount on formula-priced products" : show("discount")}
+                error={Boolean(show("discount"))}
+                helperText={show("discount") ?? (formula ? "Off the formula price" : undefined)}
                 slotProps={{
                   input: {
                     endAdornment: <InputAdornment position="end">%</InputAdornment>,
@@ -703,20 +750,42 @@ export default function AddLineDialog({
                 }}
               />
             </Stack>
+            {formula && !problems.discount && Number(discount) > 0 ? (
+              <FormulaDiscount
+                currency={currency}
+                formulaPrice={pricing.kind === "KEPT_FORMULA" ? keptUnitPrice : null}
+                discount={discount}
+              />
+            ) : null}
           </Group>
-          {/* Its dates within its year: the whole year
-              unless narrowed; a one-off is charged on its start. A bundle
-              child keeps its parent's. */}
+          {/* Its dates within its year (D146): a recurring line covers all
+              of it; a one-off line has a start and an end inside it,
+              charged once. A bundle child keeps its parent's. */}
           {isChild ? (
             <Typography variant="body2" color="text.secondary">
               Comes with {parentName ?? "its bundle's product"}: same year and dates, and removed only with it.
             </Typography>
+          ) : year && recurring ? (
+            <Group icon={<CalendarDaysIcon size={14} />} title={`Dates in Year ${year.number}`}>
+              <Box sx={{ bgcolor: "action.hover", borderRadius: 1, px: 1.5, py: 1.25 }}>
+                <Typography variant="body2">
+                  Covers the whole of Year {year.number}:{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {formatDate(year.start)} – {formatDate(year.end)}
+                  </Box>{" "}
+                  · {durationText(year.start, year.end)}
+                </Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                Charged every year: its dates follow the year.
+              </Typography>
+            </Group>
           ) : year ? (
             <Group icon={<CalendarDaysIcon size={14} />} title={`Dates in Year ${year.number}`}>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 {[
-                  { label: recurring ? "Start" : "Charged on", value: startDate, set: setStartDate },
-                  ...(recurring ? [{ label: "End", value: endDate, set: setEndDate }] : []),
+                  { label: "Start", value: startDate, set: setStartDate },
+                  { label: "End", value: endDate, set: setEndDate },
                 ].map((f) => (
                   <DatePicker
                     key={f.label}
@@ -730,7 +799,8 @@ export default function AddLineDialog({
                 ))}
               </Stack>
               <Typography variant="caption" color={tried && datesProblem ? "error" : "text.secondary"}>
-                {(tried && datesProblem) || `Year ${year.number} runs ${formatDate(year.start)} – ${formatDate(year.end)}`}
+                {(tried && datesProblem) ||
+                  `One-time: charged once, in full. Year ${year.number} runs ${formatDate(year.start)} – ${formatDate(year.end)}`}
               </Typography>
             </Group>
           ) : null}

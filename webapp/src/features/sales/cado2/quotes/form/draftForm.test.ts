@@ -21,6 +21,9 @@ import {
   commissionProblem,
   durationText,
   emptyDraftForm,
+  lineFromSalesforce,
+  commissionAfterYearChange,
+  commissionRatesText,
   endDateFor,
   addYear,
   cloneYear,
@@ -34,7 +37,9 @@ import {
   splitStreet,
   stepOfField,
   storedPricing,
+  lastYearEarliestEnd,
   lastYearEndProblem,
+  lineDates,
   lineDatesProblem,
   deleteYear,
   insertIndex,
@@ -242,20 +247,24 @@ describe("toDraftInput", () => {
     });
     expect(input.shipTo).toBeUndefined();
     expect(input.shipToSameAsBillTo).toBe(true);
-    expect(input).not.toHaveProperty("specialTerms"); // Deal Desk's (D128)
+    expect(input.specialTerms).toEqual({ enabled: false, text: undefined });
   });
 
-  it("sends the years, a shortened last year, and each line's own dates", () => {
+  it("sends the years, a shortened last year, and a one-off line's own dates (D146)", () => {
     const v = filled();
     const input = toDraftInput({
       ...v,
       yearCount: 2,
       lastYearEndDate: "2028-06-30",
-      lines: [{ ...v.lines[0], yearNumber: 2, startDate: "2028-03-01" }, { ...v.lines[1], recurring: false, endDate: "2027-05-01" }],
+      lines: [
+        { ...v.lines[0], yearNumber: 2, startDate: "2028-03-01" },
+        { ...v.lines[1], recurring: false, startDate: "2027-03-01", endDate: "2027-03-05" },
+      ],
     });
     expect(input).toMatchObject({ yearCount: 2, lastYearEndDate: "2028-06-30" });
-    expect(input.lines[0]).toMatchObject({ yearNumber: 2, startDate: "2028-03-01", endDate: undefined });
-    expect(input.lines[1]).toMatchObject({ yearNumber: 1, endDate: undefined }); // a one-off has no end
+    // A recurring line covers its whole year: no dates sent.
+    expect(input.lines[0]).toMatchObject({ yearNumber: 2, startDate: undefined, endDate: undefined });
+    expect(input.lines[1]).toMatchObject({ yearNumber: 1, startDate: "2027-03-01", endDate: "2027-03-05" });
     expect(toDraftInput({ ...v, yearCount: 0 }).yearCount).toBeUndefined();
   });
 
@@ -277,7 +286,9 @@ describe("toPreviewBody", () => {
     expect(toPreviewBody({ ...filled(), yearCount: 0 })).toBeNull();
     expect(toPreviewBody({ ...filled(), lastYearEndDate: "2030-01-01" })).toBeNull(); // Year 3 over 12 months
     const v = filled();
-    expect(toPreviewBody({ ...v, lines: [{ ...v.lines[0], startDate: "2028-01-01" }] })).toBeNull(); // outside Year 1
+    // A one-off line outside Year 1; a recurring line's own dates are ignored (D146).
+    expect(toPreviewBody({ ...v, lines: [{ ...v.lines[0], recurring: false, startDate: "2028-01-01" }] })).toBeNull();
+    expect(toPreviewBody({ ...v, lines: [{ ...v.lines[0], startDate: "2028-01-01" }] })).not.toBeNull();
   });
 
   it("prices a line waiting for its category too (D72, D76)", () => {
@@ -330,21 +341,39 @@ describe("contract years", () => {
     expect(lastYearEndProblem("2027-01-01", 2, "2027-12-31")).toMatch(/on or after it starts/);
   });
 
-  it("keeps a line's dates within its own year", () => {
-    const years = contractYears("2027-01-01", 2);
-    expect(lineDatesProblem(line(2, true, "2028-04-01"), years)).toBe("");
-    expect(lineDatesProblem(line(2, true, "2027-06-01"), years)).toMatch(/within Year 2/);
-    expect(lineDatesProblem(line(1, true, "2027-06-01", "2027-05-01"), years)).toMatch(/before the start/);
+  it("keeps a one-off line's dates within its own year (D146)", () => {
+    const years = contractYears("2027-01-01", 2, "2028-06-30");
+    expect(lineDatesProblem(line(2, false, "2028-04-01", "2028-04-14"), years)).toBe("");
+    expect(lineDatesProblem(line(2, false, "2027-06-01"), years)).toMatch(/within Year 2/);
+    expect(lineDatesProblem(line(2, false, "2028-06-01", "2028-07-15"), years)).toMatch(/within Year 2/); // past the short year
+    expect(lineDatesProblem(line(1, false, "2027-06-01", "2027-05-01"), years)).toMatch(/before the start/);
+  });
+
+  // The tester's case (2026-11-08): a one-off line on its year's first day
+  // stays put when the term start moves, and is flagged instead of following.
+  it("keeps a one-off line's dates when the term start moves (D146)", () => {
+    const training = line(1, false, "2026-11-06", "2026-11-10");
+    expect(lineDatesProblem(training, contractYears("2026-11-06", 1))).toBe("");
+    const moved = contractYears("2026-12-06", 1);
+    expect(lineDates(training, moved)).toEqual({ start: "2026-11-06", end: "2026-11-10" });
+    expect(lineDatesProblem(training, moved)).toMatch(/within Year 1/);
+  });
+
+  it("gives a recurring line its whole year, a one-off line its own dates (D146)", () => {
+    const years = contractYears("2027-01-01", 2, "2028-06-30");
+    expect(lineDates(line(2, true, "2028-04-01", "2028-05-01"), years)).toEqual({ start: "2028-01-01", end: "2028-06-30" });
+    expect(lineDates(line(2, false, "2028-04-01"), years)).toEqual({ start: "2028-04-01", end: "2028-04-01" }); // the end: its start
+    expect(lineDates(line(2, false), years)).toEqual({ start: "2028-01-01", end: "2028-01-01" });
   });
 
   it("clones only a year's recurring lines into a new last year, as new lines", () => {
-    const v = { ...filled(), yearCount: 2, lastYearEndDate: "2028-06-30", lines: [line(1), line(1, false), line(2, true, "2028-03-01")] };
+    const v = { ...filled(), yearCount: 2, lastYearEndDate: "2028-06-30", lines: [line(1), line(1, false), line(2)] };
     const next = cloneYear(v, 2);
     expect(next.yearCount).toBe(3);
     expect(next.lastYearEndDate).toBe(""); // Year 2 is a full year again
     const copies = next.lines.slice(3);
     expect(copies).toHaveLength(1);
-    expect(copies[0]).toMatchObject({ yearNumber: 3, lineId: null, startDate: "2029-03-01", endDate: "" });
+    expect(copies[0]).toMatchObject({ yearNumber: 3, lineId: null, startDate: "", endDate: "" });
     expect(cloneYear(v, 1).lines.slice(3).map((l) => l.recurring)).toEqual([true]); // the one-off stays behind
   });
 
@@ -353,7 +382,7 @@ describe("contract years", () => {
   });
 
   it("deletes any year; later years move up 12 months, with their products' own dates", () => {
-    const v = { ...filled(), yearCount: 3, lastYearEndDate: "2029-06-30", lines: [line(1), line(2), line(3, true, "2029-03-01")] };
+    const v = { ...filled(), yearCount: 3, lastYearEndDate: "2029-06-30", lines: [line(1), line(2), line(3, false, "2029-03-01")] };
     const next = deleteYear(v, 2);
     expect(next.yearCount).toBe(2);
     expect(next.lastYearEndDate).toBe("2028-06-30"); // the short last year keeps its length
@@ -370,13 +399,26 @@ describe("contract years", () => {
     expect(insertIndex([{ yearNumber: 2 }], 1)).toBe(0);
   });
 
-  it("pulls the last year's products back within a shortened year", () => {
-    const v = { ...filled(), yearCount: 2, lines: [line(2, true, "2028-09-01", "2028-11-30"), line(1)] };
-    const next = setLastYearEnd(v, "2028-06-30");
-    expect(next.lastYearEndDate).toBe("2028-06-30");
-    expect(next.lines[0]).toMatchObject({ startDate: "", endDate: "" });
-    expect(next.lines[1]).toBe(v.lines[1]);
-    expect(setLastYearEnd(v, "2028-12-31").lastYearEndDate).toBe(""); // a full year again
+  it("stores a shortened last year's end, and none for a full year", () => {
+    const v = { ...filled(), yearCount: 2 };
+    expect(setLastYearEnd(v, "2028-06-30")).toBe("2028-06-30");
+    expect(setLastYearEnd(v, "2028-12-31")).toBe(""); // a full year again
+  });
+
+  it("won't let the last year end before its one-off lines (D146)", () => {
+    const v = {
+      ...filled(),
+      yearCount: 2,
+      lastYearEndDate: "",
+      lines: [
+        { ...line(2, false, "2028-03-01", "2028-06-14"), productName: "Configuration Review" },
+        { ...line(2, false, "2028-02-01"), productName: "Training" },
+        { ...line(2, true), productName: "Gateway" }, // recurring: follows the year
+        { ...line(1, false, "2027-11-01", "2027-12-20"), productName: "Earlier" },
+      ],
+    };
+    expect(lastYearEarliestEnd(v)).toEqual({ date: "2028-06-14", productName: "Configuration Review" });
+    expect(lastYearEarliestEnd({ ...v, lines: [line(2, true)] })).toBeNull();
   });
 
   it("says the duration in words, as the backend does (D85)", () => {
@@ -543,6 +585,25 @@ describe("fromVersion", () => {
             startDate: "2027-01-01",
             endDate: "2027-04-30",
           },
+          {
+            id: 56,
+            lineNumber: 2,
+            pricebookEntryId: "01uT",
+            productName: "Training",
+            productCode: null,
+            pricebookId: "01sFY26",
+            pricebookName: "FY26",
+            unitPrice: "1260",
+            unitOfMeasure: null,
+            quantity: 5,
+            category: "PROFESSIONAL_SERVICE",
+            discretionaryDiscountPercent: "0.00",
+            recurring: false,
+            classification: "TR",
+            yearNumber: 1,
+            startDate: "2027-01-01",
+            endDate: "2027-01-01",
+          },
         ],
       },
       issues: [],
@@ -564,9 +625,11 @@ describe("fromVersion", () => {
       lineId: 55,
       discount: "10",
       yearNumber: 1,
-      startDate: "", // the year's own start
-      endDate: "2027-04-30", // narrowed within the year
+      startDate: "", // a recurring line takes its year's (D146)
+      endDate: "",
     });
+    // A one-off line keeps its real dates, its year's first day included.
+    expect(v.lines[1]).toMatchObject({ startDate: "2027-01-01", endDate: "2027-01-01" });
     expect(v.partner?.name).toBe("Acme");
   });
 });
@@ -746,5 +809,55 @@ describe("Year 1 always there", () => {
   it("won't delete the only year", () => {
     const v = { yearCount: 1, lastYearEndDate: "2027-06-30", lines: [] };
     expect(deleteYear(v, 1)).toEqual({ yearCount: 1, lastYearEndDate: "2027-06-30", lines: [] });
+  });
+});
+
+// D150: a Salesforce line as it goes into the quote.
+describe("lineFromSalesforce", () => {
+  const load = {
+    pricebookEntryId: "01uAS", productId: "01tAS", productName: "API Manager Analytics", productCode: "P-APIM-AN",
+    productDescription: null, pricebookId: "01sQQ", pricebookName: "QuickQuote USD 2027", unitPrice: "15000",
+    salesPrice: "16500.00", quantity: "2", discount: "5.50", category: "SUBSCRIPTION", classification: "PS",
+    recurring: true, formula: false,
+  };
+
+  it("keeps the quantity, a raised sales price and the discount, in Year 1, priced from the quote's book", () => {
+    const l = lineFromSalesforce(load);
+    expect(l).toMatchObject({
+      lineId: null, pricebookEntryId: "01uAS", productId: "01tAS", productName: "API Manager Analytics", productCode: "P-APIM-AN",
+      productDescription: "", pricebookId: "01sQQ", unitPrice: "15000", salesPrice: "16500", quantity: "2", discount: "5.5",
+      category: "SUBSCRIPTION", categorySource: "MAPPED", recurring: true, yearNumber: 1, startDate: "", endDate: "", parentKey: "",
+    });
+    expect(l.key).not.toBe("");
+  });
+
+  it("leaves the price to the book, or the formula, when nothing was raised", () => {
+    expect(lineFromSalesforce({ ...load, salesPrice: null, formula: true }).salesPrice).toBe("");
+  });
+});
+
+// D151: a partner's commission per contract year.
+describe("commission per year", () => {
+  it("follows the years: a new year takes the last rate, a clone its year's, a deleted year's goes", () => {
+    expect(commissionAfterYearChange(["15", "10"], { add: true })).toEqual({ byYear: ["15", "10", "10"], single: null });
+    expect(commissionAfterYearChange(["15", "10"], { clone: 1 })).toEqual({ byYear: ["15", "10", "15"], single: null });
+    expect(commissionAfterYearChange(["15", "10", "12"], { remove: 2 })).toEqual({ byYear: ["15", "12"], single: null });
+    expect(commissionAfterYearChange(["15", "10"], { remove: 1 })).toEqual({ byYear: [], single: "10" }); // one year: one rate
+    expect(commissionAfterYearChange([], { add: true })).toEqual({ byYear: [], single: null });
+  });
+
+  it("says the rates in words, equal years together", () => {
+    expect(commissionRatesText(["15", "10", "10"])).toBe("Year 1: 15% · Years 2–3: 10%");
+    expect(commissionRatesText(["10", "12.5", "10"])).toBe("Year 1: 10% · Year 2: 12.5% · Year 3: 10%");
+  });
+
+  it("sends the rates per year instead of the single rate, once every one is valid", () => {
+    const v = { ...emptyDraftForm(), dealType: "PARTNER" as const, yearCount: 3, partnerCommissionPercent: "15" };
+    expect(toDraftInput({ ...v, partnerCommissionByYear: ["15", "10", "10"] })).toMatchObject({
+      partnerCommissionPercent: undefined,
+      partnerCommissionByYear: ["15", "10", "10"],
+    });
+    expect(toDraftInput({ ...v, partnerCommissionByYear: ["15", "", "10"] }).partnerCommissionByYear).toBeUndefined();
+    expect(toDraftInput(v)).toMatchObject({ partnerCommissionPercent: "15", partnerCommissionByYear: undefined });
   });
 });

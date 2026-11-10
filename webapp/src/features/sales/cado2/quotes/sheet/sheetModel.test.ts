@@ -99,7 +99,7 @@ describe("sheetFromForm", () => {
     expect(fromForm.previousOpportunityCount).toBe(1);
   });
 
-  it("takes a formula line's price and explanation from the preview, with no discount (D81)", () => {
+  it("takes a formula line's price and explanation from the preview, and keeps its discount (D81, D149)", () => {
     const form = fromVersion(fullPartnerQuote);
     const preview = {
       rulesVersion: "2026-09-M9",
@@ -123,7 +123,7 @@ describe("sheetFromForm", () => {
     const line = sheetFromForm(form, preview, null).lines[0];
     expect(line).toMatchObject({
       unitPrice: "25000.00",
-      discountPercent: "0",
+      discountPercent: String(Number(form.lines[0].discount || "0")),
       formula: { version: "v3 · 15 Oct 2026", explanation: "max(25,000, 648)" },
     });
 

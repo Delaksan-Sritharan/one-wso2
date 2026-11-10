@@ -20,10 +20,13 @@ import userEvent from "@testing-library/user-event";
 import type { JSX } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import type { QuoteListItem } from "@features/sales/cado2/quotes/api/quoteTypes";
+import type { QuoteListQuery } from "@features/sales/cado2/quotes/api/useQuoteApi";
+import { quoteStatusLabel } from "@features/sales/cado2/quotes/lifecycle/lifecycle";
 import { ready } from "@features/sales/cado2/quotes/testing/fixtures";
 import MyQuotesPage from "./MyQuotesPage";
 
-// The Quotes page (D70): tabs, status chips, list and tree layouts.
+// The Quotes page (D70): tabs, status chips, list and tree layouts. The
+// backend searches, sorts and pages (D148); `served` stands in for it.
 
 const query = () => ({
   data: undefined as unknown,
@@ -46,8 +49,48 @@ const deleteDraft = {
   error: null,
 };
 
+const PAGE = 50;
+const ACCOUNTS = 20;
+const sortText: Record<string, (q: QuoteListItem) => string> = {
+  quote: (q) => q.quoteNumber ?? "",
+  account: (q) => q.accountName ?? "",
+  opportunity: (q) => q.opportunityName ?? "",
+  status: (q) => quoteStatusLabel(q.status, q.versionNumber),
+  owner: (q) => q.ownerEmail,
+  created: (q) => q.createdAt,
+  updated: (q) => q.updatedAt,
+};
+/** The backend's GET /quotes over a tab's quotes: search, sort, page. */
+function served(scope: "mine" | "all", query: QuoteListQuery = {}) {
+  const base = lists[scope];
+  const data = base.data as { items: QuoteListItem[] } | undefined;
+  if (!data) return base;
+  const term = (query.search ?? "").trim().toLowerCase();
+  const sort = query.sort ?? { key: "updated", dir: "desc" };
+  const sign = sort.dir === "asc" ? 1 : -1;
+  const matched = data.items
+    .filter((q) => !term || [q.quoteNumber, q.accountName, q.opportunityName, q.ownerEmail].some((f) => f?.toLowerCase().includes(term)))
+    .map((q, i) => ({ q, i }))
+    .sort((a, b) => sign * sortText[sort.key](a.q).localeCompare(sortText[sort.key](b.q), undefined, { sensitivity: "base" }) || a.i - b.i)
+    .map((x) => x.q);
+  if (query.byAccount) {
+    // An account sits where its first quote would, with all its quotes.
+    const accounts = [...new Set(matched.map((q) => q.sfAccountId))];
+    const from = (query.page ?? 0) * ACCOUNTS;
+    const shown = new Set(accounts.slice(from, from + ACCOUNTS));
+    const items = [...shown].flatMap((a) => matched.filter((q) => q.sfAccountId === a));
+    return { ...base, data: { items, total: accounts.length } };
+  }
+  const limit = query.limit ?? PAGE;
+  const from = (query.page ?? 0) * limit;
+  return { ...base, data: { items: matched.slice(from, from + limit), total: matched.length } };
+}
+
+vi.mock("@hooks/useDebouncedValue", () => ({ useDebouncedValue: <T,>(v: T) => v }));
 vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
-  useQuoteList: (_status: string, scope: "mine" | "all") => lists[scope],
+  QUOTE_PAGE: 50,
+  ACCOUNT_PAGE: 20,
+  useQuoteList: (scope: "mine" | "all", query?: QuoteListQuery) => served(scope, query),
   useSetPrimary: () => setPrimary,
   useOpportunityQuotes: () => ({
     data: [],
@@ -384,6 +427,65 @@ describe("Quotes page", () => {
     expect(screen.getByRole("tab", { name: /All quotes/ })).toHaveAttribute("aria-selected", "true");
     expect(bodyRows()).toHaveLength(everyone.length);
     expect(screen.queryByRole("link", { name: "New Quote" })).not.toBeInTheDocument();
+  });
+
+  // D148: 50 rows a page; the count is every match.
+  it("pages through more quotes than fit on one page", async () => {
+    const many = Array.from({ length: 120 }, (_, i) => item(i + 1, { quoteNumber: `Q-26-${String(i + 1).padStart(5, "0")}` }));
+    Object.assign(lists.mine, { data: { items: many, total: many.length } });
+    renderPage();
+    const user = userEvent.setup();
+
+    expect(screen.getByRole("tab", { name: "My quotes 120" })).toBeInTheDocument();
+    expect(bodyRows()).toHaveLength(50);
+    expect(screen.getByText("1–50 of 120")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("101–120 of 120")).toBeInTheDocument();
+    expect(bodyRows()).toHaveLength(20);
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+
+    // A search starts again from the first page, and finds a quote past it.
+    await user.type(screen.getByRole("textbox", { name: "Search quotes" }), "Q-26-00119");
+    expect(screen.getByText("1–1 of 1")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "My quotes 120" })).toBeInTheDocument(); // still the whole count
+  }, 15_000); // 50 rows twice and a typed search: slow when every test file runs at once
+
+  // D148: the tree pages accounts, so an account's quotes stay together.
+  it("pages the tree by account, each account with all its quotes", async () => {
+    const accounts = Array.from({ length: 25 }, (_, i) =>
+      item(i + 1, {
+        sfAccountId: `001A${i + 1}`,
+        accountName: `Account ${i + 1}`,
+        sfOpportunityId: `006A${i + 1}`,
+        opportunityName: `Deal ${i + 1}`,
+        updatedAt: new Date(Date.UTC(2026, 9, 1, 0, 100 - i)).toISOString(),
+      }),
+    );
+    // Account 1's other quote is the oldest of all: in a list by quote it
+    // would be on the last page.
+    const oldest = item(99, {
+      sfAccountId: "001A1",
+      accountName: "Account 1",
+      sfOpportunityId: "006A1",
+      opportunityName: "Deal 1",
+      updatedAt: "2026-01-01T00:00:00Z",
+    });
+    Object.assign(lists.mine, { data: { items: [...accounts, oldest], total: 26 } });
+    renderPage("/sales/cado2/quotes?layout=tree");
+    const user = userEvent.setup();
+    const tree = "Quotes by account and opportunity";
+
+    expect(screen.getByText("Accounts 1–20 of 25")).toBeInTheDocument();
+    expect(within(table(tree)).getByRole("link", { name: "Q-26-00001" })).toBeInTheDocument();
+    expect(within(table(tree)).getByRole("link", { name: "Q-26-000099" })).toBeInTheDocument(); // with its account
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Accounts 21–25 of 25")).toBeInTheDocument();
+    expect(within(table(tree)).getAllByRole("link")).toHaveLength(5);
+
+    await user.click(screen.getByRole("button", { name: "List" }));
+    expect(screen.getByText("1–26 of 26")).toBeInTheDocument(); // back to quotes, from page 1
   });
 
   it("welcomes a rep with no quotes", () => {

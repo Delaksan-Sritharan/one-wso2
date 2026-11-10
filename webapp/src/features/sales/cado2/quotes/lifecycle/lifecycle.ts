@@ -26,7 +26,7 @@ import type {
   OpportunityQuote,
   VersionStatus,
 } from "@features/sales/cado2/quotes/api/quoteTypes";
-import { BILLING_LABEL, durationText, formatDate } from "@features/sales/cado2/quotes/form/draftForm";
+import { BILLING_LABEL, durationText, formatDate, commissionRatesText } from "@features/sales/cado2/quotes/form/draftForm";
 import { formatMoney } from "@features/sales/cado2/utils/money";
 import { legalPlainText } from "@features/sales/cado2/utils/legalRichText";
 import { roleLabel } from "@features/sales/cado2/approvals/model/approvalText";
@@ -134,8 +134,14 @@ export function compareVersions(a: DraftResponse, b: DraftResponse): CompareRow[
     (v.subscriptionStartDate && v.subscriptionEndDate && durationText(v.subscriptionStartDate, v.subscriptionEndDate)) || DASH;
   add("Products", "Subscription term", termText(va), termText(vb));
   add("Products", "End date", formatDate(va.subscriptionEndDate), formatDate(vb.subscriptionEndDate));
-  const commission = (p: string | null | undefined) => (p ? `${Number(p)}%` : DASH);
-  add("Products", "Partner commission", commission(va.partnerCommissionPercent), commission(vb.partnerCommissionPercent));
+  // One rate, or a rate per year (D151).
+  const commission = (v: typeof va) =>
+    v.partnerCommissionByYear?.length
+      ? commissionRatesText(v.partnerCommissionByYear)
+      : v.partnerCommissionPercent
+        ? `${Number(v.partnerCommissionPercent)}%`
+        : DASH;
+  add("Products", "Partner commission", commission(va), commission(vb));
 
   const la = keyed(va.lines);
   const lb = keyed(vb.lines);
@@ -323,6 +329,9 @@ function eventText({ event: e, count }: HistoryEntry): string {
     }
     // D128: written by Deal Desk during its approval.
     case "SPECIAL_TERMS_WRITTEN":
+      // D139: Deal Desk's override (metadata.override); before it, D128's writing (metadata.specialTerms).
+      if (meta.override === false) return `Deal Desk went back to the AM's special terms on ${v.toLowerCase()}`;
+      if (meta.override === true) return `Deal Desk overrode the special terms of ${v.toLowerCase()}`;
       return meta.specialTerms === false ? `Deal Desk removed the special terms of ${v.toLowerCase()}` : `Deal Desk wrote the special terms of ${v.toLowerCase()}`;
     default:
       return e.eventType;

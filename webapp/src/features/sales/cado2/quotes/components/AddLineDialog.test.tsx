@@ -67,6 +67,8 @@ vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
 }));
 
 const quoteBook = { id: "01s1", name: "FY26 USD" };
+// A shortened last year (D146 tests).
+const shortYear3 = { number: 3, start: "2028-01-01", end: "2028-06-30" };
 
 // Support priced by an Admin's formula (D81), when a test sets it.
 const supportFormula = {
@@ -480,7 +482,7 @@ describe("AddLineDialog", () => {
 
 // A click outside the dialog doesn't throw the typed line away (2026-10-13).
 describe("AddLineDialog — closing", () => {
-  it("shows a formula product's formula instead of a price, and allows no discount (D81)", async () => {
+  it("shows a formula product's formula instead of a price, and takes a discount off it (D81, D149)", async () => {
     formulas.list = [supportFormula];
     try {
       const onSave = renderDialog();
@@ -494,9 +496,12 @@ describe("AddLineDialog — closing", () => {
       expect(card.getByText("$1 = 25000 · $2 = 10% · $3 = total of WSO2 API Manager")).toBeInTheDocument();
 
       const discount = screen.getByRole("textbox", { name: "Discount" });
-      expect(discount).toBeDisabled();
-      expect(discount).toHaveValue("0");
-      expect(screen.getByText("No discount on formula-priced products")).toBeInTheDocument();
+      expect(discount).toBeEnabled();
+      expect(screen.getByText("Off the formula price")).toBeInTheDocument();
+      await user.clear(discount);
+      await user.type(discount, "5");
+      // A new line's formula price is worked out on the quote.
+      expect(screen.getByLabelText("Price after discount")).toHaveTextContent("5% off the formula price, once it's worked out on the quote.");
       // A formula's price can't be overridden.
       expect(screen.getByRole("textbox", { name: "Sales price" })).toBeDisabled();
       expect(screen.getByText("Priced by formula: the price can't be changed")).toBeInTheDocument();
@@ -506,7 +511,7 @@ describe("AddLineDialog — closing", () => {
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({
           productId: support.id,
-          discount: "0",
+          discount: "5",
           salesPrice: "",
           unitOfMeasure: "Annual, higher of 25,000 or 10% of subscription",
         }),
@@ -529,7 +534,14 @@ describe("AddLineDialog — closing", () => {
       expect(card.queryByText("per unit, from the price book")).toBeNull();
       expect(card.getByText("Formula v3 · 15 Oct 2026")).toBeInTheDocument();
       expect(card.getByText("= max(25,000, 4,140,000 × 10%)")).toBeInTheDocument();
-      expect(screen.getByRole("textbox", { name: "Discount" })).toBeDisabled();
+      // D149: the discount is taken off the formula price, shown worked out.
+      const discount = screen.getByRole("textbox", { name: "Discount" });
+      expect(discount).toBeEnabled();
+      await userEvent.setup().clear(discount);
+      await userEvent.setup().type(discount, "5");
+      expect(screen.getByLabelText("Price after discount")).toHaveTextContent(
+        "Formula priceUSD 414,000.00Discount 5%− USD 20,700.00Price after discount, per unitUSD 393,300.00",
+      );
 
       expect(screen.getByText(/This formula was removed on 16 Oct 2026/)).toBeInTheDocument();
       const user = userEvent.setup();
@@ -570,10 +582,81 @@ describe("AddLineDialog — closing", () => {
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: "Use the formula" }));
       expect(within(screen.getByLabelText("Chosen product")).getByText("By formula")).toBeInTheDocument();
-      expect(screen.getByRole("textbox", { name: "Discount" })).toBeDisabled();
+      expect(screen.getByRole("textbox", { name: "Discount" })).toBeEnabled(); // D149
     } finally {
       formulas.list = [];
     }
+  });
+
+  // D146: a recurring line covers its whole year (here a shortened last
+  // year); it has no date fields and saves none.
+  it("shows a recurring line's whole year instead of date fields", async () => {
+    const onSave = vi.fn();
+    const line = { ...savedSupportLine(), yearNumber: 3, keepPricing: undefined, unitPrice: "25000" };
+    render(
+      <DatePickers.LocalizationProvider dateAdapter={AdapterDateFns}>
+        <AddLineDialog open line={line} currency="USD" pricebook={quoteBook} year={shortYear3} onSave={onSave} onClose={vi.fn()} />
+      </DatePickers.LocalizationProvider>,
+    );
+    expect(screen.getByText(/Covers the whole of Year 3/)).toBeInTheDocument();
+    expect(screen.getByText("1 Jan 2028 – 30 Jun 2028")).toBeInTheDocument();
+    expect(screen.getByText(/6 months/)).toBeInTheDocument();
+    expect(screen.queryByText("Charged on")).toBeNull();
+    expect(screen.queryByText("Start")).toBeNull();
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Save product" }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ startDate: "", endDate: "" }), null);
+  });
+
+  // D146: a one-off line has a start and an end, both within its year.
+  it("asks a one-off line for a start and an end within its year", async () => {
+    const onSave = vi.fn();
+    const oneOff = (endDate: string) => ({
+      ...savedSupportLine(),
+      yearNumber: 3,
+      keepPricing: undefined,
+      unitPrice: "1260",
+      recurring: false,
+      classification: "TR",
+      startDate: "2028-03-01",
+      endDate,
+    });
+    const { unmount } = render(
+      <DatePickers.LocalizationProvider dateAdapter={AdapterDateFns}>
+        <AddLineDialog open line={oneOff("2028-07-15")} currency="USD" pricebook={quoteBook} year={shortYear3} onSave={onSave} onClose={vi.fn()} />
+      </DatePickers.LocalizationProvider>,
+    );
+    expect(screen.queryByText("Charged on")).toBeNull();
+    expect(screen.getAllByText("Start").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("End").length).toBeGreaterThan(0);
+    expect(screen.getByText(/One-time: charged once, in full/)).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Save product" }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText("Dates must fall within Year 3: 1 Jan 2028 – 30 Jun 2028")).toBeInTheDocument();
+    unmount();
+
+    render(
+      <DatePickers.LocalizationProvider dateAdapter={AdapterDateFns}>
+        <AddLineDialog open line={oneOff("2028-03-14")} currency="USD" pricebook={quoteBook} year={shortYear3} onSave={onSave} onClose={vi.fn()} />
+      </DatePickers.LocalizationProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Save product" }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ startDate: "2028-03-01", endDate: "2028-03-14" }), null);
+  });
+
+  // Starting on the year's first day, its real dates are saved, not "the
+  // year's start": they stay put when the term start moves (D146).
+  it("saves a one-off line's real dates even on its year's first day", async () => {
+    const onSave = vi.fn();
+    const line = { ...savedSupportLine(), yearNumber: 3, keepPricing: undefined, unitPrice: "1260", recurring: false, startDate: "", endDate: "" };
+    render(
+      <DatePickers.LocalizationProvider dateAdapter={AdapterDateFns}>
+        <AddLineDialog open line={line} currency="USD" pricebook={quoteBook} year={shortYear3} onSave={onSave} onClose={vi.fn()} />
+      </DatePickers.LocalizationProvider>,
+    );
+    await userEvent.setup().click(screen.getByRole("button", { name: "Save product" }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ startDate: "2028-01-01", endDate: "2028-01-01" }), null);
   });
 
   it("stays open on a click outside it; Cancel closes it", async () => {
