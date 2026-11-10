@@ -994,7 +994,10 @@ export default function App() {
             <Route path="events" element={<EventsSettingsPage />} />
             <Route path="events-notifications" element={<EventsNotificationsPage />} />
           </Route>
-          <Route path="marketing-ops/events/lead-import" element={<EventsLeadImportPage />} />
+          {/* Events → Lead Import. Held back by the `eventsLeadImport` preview flag. */}
+          {isPreviewEnabled("eventsLeadImport") && (
+            <Route path="marketing-ops/events/lead-import" element={<EventsLeadImportPage />} />
+          )}
           <Route path="marketing-ops/events/mine" element={<EventsMinePage />} />
           <Route path="marketing-ops/events/review" element={<EventsReviewPage />} />
           {/* Event Platform — event agendas, speakers and swag shops, a different

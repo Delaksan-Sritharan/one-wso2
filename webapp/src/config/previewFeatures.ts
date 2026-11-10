@@ -77,6 +77,14 @@ export type PreviewFeature =
    */
   | "marketingCalendar"
   /**
+   * Marketing Ops → Events → Lead Import, which converts a raw event lead file
+   * into the filled List Import Template: its rail entry and the
+   * `/marketing-ops/events/lead-import` route. Held back until the MOP
+   * lead-import backend is live in production. My Submissions and Review
+   * Queue, the rest of Events, are unaffected.
+   */
+  | "eventsLeadImport"
+  /**
    * Amplify, the whole app: its launcher tile, its rail group (Celebrate,
    * New Post, Current Posts) and every route under `/amplify`. Held back until
    * the Amplify API proxy is live for the phase 1 pilot. Who sees New Post and

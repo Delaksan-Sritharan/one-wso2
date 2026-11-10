@@ -189,14 +189,19 @@ export const MARKETING_OPS_APPS: readonly MenuApp[] = [
       // operation's router is gated on `events`. See access_map.yaml.
       // First, because it is the first step: a raw lead file becomes the filled
       // List Import Template here, which is what My Submissions then takes. Same
-      // `events` capability as My Submissions.
-      {
-        id: "mops-events-lead-import",
-        label: "Lead Import",
-        desc: "Convert a raw event lead file — any layout, any language — into the filled List Import Template.",
-        requires: ["admin"],
-        path: "/marketing-ops/events/lead-import",
-      },
+      // `events` capability as My Submissions. Hidden until the
+      // `eventsLeadImport` preview flag is on.
+      ...(isPreviewEnabled("eventsLeadImport")
+        ? [
+            {
+              id: "mops-events-lead-import",
+              label: "Lead Import",
+              desc: "Convert a raw event lead file — any layout, any language — into the filled List Import Template.",
+              requires: ["admin" as const],
+              path: "/marketing-ops/events/lead-import",
+            },
+          ]
+        : []),
       {
         id: "mops-events-mine",
         label: "My Submissions",
