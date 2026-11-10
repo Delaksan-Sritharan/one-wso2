@@ -51,6 +51,9 @@ import { LETTER_KEYS } from "../meddpicc/util/meddpiccFormat";
 import type { LetterKey } from "../meddpicc/types";
 import { formatDateTime, splitParticipants } from "../util/salesTime";
 
+/** Stands in for the recording of a meeting listed without recording parts. Never a real part id. */
+const DEFAULT_RECORDING = -1;
+
 /**
  * One meeting: the recording, and the context around it.
  *
@@ -109,6 +112,10 @@ export default function MeetingDetailPage() {
   const transcripts = useMemo(() => attachedParts(meeting?.transcripts), [meeting]);
   const notes = useMemo(() => attachedParts(meeting?.smartNotes), [meeting]);
   const selected = recordings.find((r) => r.id === chosenRecordingId) ?? recordings[0] ?? null;
+  // The recording transcript lines are placed on and highlighted against. A meeting listed
+  // without recording parts (a meet-app from before parts, or no recording at all) still has
+  // one default recording, so its lines stay clickable and seek the player, as before parts.
+  const playingId = selected?.id ?? DEFAULT_RECORDING;
 
   // Every transcript, each line placed on the recording it was spoken during. Shared by the
   // Transcript tab and the timeline, from one set of cached queries.
@@ -122,12 +129,12 @@ export default function MeetingDetailPage() {
         label: transcripts.length > 1 ? partLabel(transcripts[i], i, "Transcript") : null,
         lines: (query.data?.lines ?? []).map((line) => ({
           line,
-          place: placeLine(line, recordings, selected?.id ?? null),
+          place: placeLine(line, recordings, playingId),
         })),
         isLoading: query.isLoading,
         error: query.error,
       })),
-    [transcriptQueries, transcripts, recordings, selected],
+    [transcriptQueries, transcripts, recordings, playingId],
   );
   // The timeline draws the lines spoken during the recording being played, timed from its
   // start. Without parts (a meeting from before they were listed) it reads the transcript
@@ -358,7 +365,7 @@ export default function MeetingDetailPage() {
               {tab === "transcript" && (
                 <TranscriptPanel
                   sections={sections}
-                  selectedRecordingId={selected?.id ?? null}
+                  selectedRecordingId={playingId}
                   currentTime={currentTime}
                   onSeek={seekLine}
                 />

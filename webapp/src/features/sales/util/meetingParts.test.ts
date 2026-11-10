@@ -61,6 +61,10 @@ describe("placeLine", () => {
     expect(placeLine(line("2026-10-25T10:25:00Z"), [first, second], 1)).toBeNull();
   });
 
+  it("places every line on the fallback recording when the meeting lists none", () => {
+    expect(placeLine(line("2026-10-25T10:35:00Z", 42), [], -1)).toEqual({ recordingId: -1, offsetSeconds: 42 });
+  });
+
   it("falls back to the line's own offset when the recordings have no times", () => {
     const untimed = [part(1, null), part(2, null)];
     expect(partsAreTimed(untimed)).toBe(false);
