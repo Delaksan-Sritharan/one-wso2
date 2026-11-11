@@ -48,6 +48,11 @@ export function noteText(n: ReviewNote, role: LensRole): NoteText {
       title = "Support plan";
       detail = first;
       break;
+    case "LEGACY_SUPPORT":
+      // D155: a Support line whose product isn't on Admin → Support Plans.
+      title = "Legacy support";
+      detail = first;
+      break;
     case "SPECIAL_TERMS":
       if (role === "DEAL_DESK") {
         // D139: the AM wrote them; Deal Desk checks them.

@@ -63,6 +63,13 @@ describe("support plan check (D155)", () => {
     expect(yearHasEnterprise(lines, plans, 4)).toBe(false);
   });
 
+  it("counts a legacy support line (Support, not set up) as the year's plan", () => {
+    expect(supportProblems([sub(1), of("01tLEGACY", 1)], plans)).toEqual([]);
+    expect(supportProblems([sub(1), of("01tLEGACY", 1), of("01tENT", 1)], plans)).toEqual([]);
+    // Classified as a subscription, it isn't recognised as support.
+    expect(supportProblems([sub(1), { productId: "01tLEGACY", category: "SUBSCRIPTION" as const, yearNumber: 1 }], plans)).toHaveLength(1);
+  });
+
   it("makes a support product a quantity-1 line in its year; a one-off covers the year", () => {
     const product = {
       id: "01tSTD", name: "Standard", productCode: "SU-S", description: null, family: null, unitOfMeasure: null, productUnit: null,

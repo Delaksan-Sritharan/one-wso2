@@ -51,6 +51,12 @@ describe("noteText", () => {
       detail: support,
       who: "Only Deal Desk checks this",
     });
+    const legacy = "Line 2 · WSO2 Premium Support (2019): a support product that isn't on Admin → Support Plans (legacy support). Check it's still right for this customer.";
+    expect(noteText(note({ rule: "LEGACY_SUPPORT", lineNumber: 2, roles: [], reasons: [legacy] }), "DEAL_DESK")).toEqual({
+      title: "Legacy support",
+      detail: legacy,
+      who: "Only Deal Desk checks this",
+    });
   });
 });
 

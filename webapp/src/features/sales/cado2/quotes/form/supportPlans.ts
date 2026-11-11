@@ -17,7 +17,9 @@
 // The support plan check (D155): each contract year with a subscription
 // should have exactly one Enterprise or Standard Support line, and Premium
 // only with Enterprise. A warning, never a block; the backend gives Deal
-// Desk the same problems as notes. Nothing is added by itself.
+// Desk the same problems as notes. Nothing is added by itself. A legacy
+// support line (in Support, not on Admin → Support Plans) counts as the
+// year's plan; Deal Desk gets a note on it.
 
 import type { Product, SupportPlans } from "@features/sales/cado2/quotes/api/quoteTypes";
 import { newLineKey, type LineValue } from "./draftForm";
@@ -56,22 +58,23 @@ const joinAnd = (items: readonly string[]) =>
  */
 export function supportProblems(lines: readonly CheckedLine[], plans: SupportPlans | null | undefined): SupportProblem[] {
   if (!supportCheckOn(plans)) return [];
-  const years = new Map<number, { subscription: boolean; premium: boolean; plans: string[] }>();
+  const years = new Map<number, { subscription: boolean; premium: boolean; legacy: boolean; plans: string[] }>();
   for (const l of lines) {
     if (!l.yearNumber) continue;
-    const y = years.get(l.yearNumber) ?? { subscription: false, premium: false, plans: [] };
+    const y = years.get(l.yearNumber) ?? { subscription: false, premium: false, legacy: false, plans: [] };
     years.set(l.yearNumber, y);
     const role = supportRole(l.productId, plans);
     if (role === "ENTERPRISE") y.plans.push("Enterprise");
     else if (role === "STANDARD") y.plans.push("Standard");
     else if (role === "PREMIUM") y.premium = true;
+    else if (l.category === "SUPPORT") y.legacy = true;
     else if (l.category === "SUBSCRIPTION") y.subscription = true;
   }
   const out: SupportProblem[] = [];
   for (const n of [...years.keys()].sort((a, b) => a - b)) {
     const y = years.get(n)!;
     if (!y.subscription) continue;
-    if (y.plans.length === 0) {
+    if (y.plans.length === 0 && !y.legacy) {
       out.push({ year: n, kind: "NONE", message: `Year ${n} has no Enterprise or Standard Support.` });
     } else if (y.plans.length > 1) {
       out.push({ year: n, kind: "SEVERAL", message: `Year ${n} has ${y.plans.length} support plans (${joinAnd(y.plans)}). Keep one.` });
