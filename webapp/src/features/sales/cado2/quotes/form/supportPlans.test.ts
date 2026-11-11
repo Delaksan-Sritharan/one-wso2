@@ -52,7 +52,7 @@ describe("support plan check (D155)", () => {
       of("01tPRE", 5), // no subscription: not checked
     ];
     expect(supportProblems(lines, plans).map((p) => p.message)).toEqual([
-      "Year 1 has no Enterprise or Standard Support.",
+      "Year 1 has no support plan.",
       "Year 3 has 2 support plans (Standard and Enterprise). Keep one.",
       "Year 4 has Premium Support without Enterprise Support.",
     ]);

@@ -52,9 +52,9 @@ const joinAnd = (items: readonly string[]) =>
   items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 
 /**
- * Each year with a Subscription line: no Enterprise or Standard Support,
- * more than one, or Premium without Enterprise. E.g. "Year 1 has no
- * Enterprise or Standard Support."
+ * Each year with a Subscription line: no support plan (no Enterprise,
+ * Standard or legacy support line), more than one Enterprise or Standard
+ * line, or Premium without Enterprise. E.g. "Year 1 has no support plan."
  */
 export function supportProblems(lines: readonly CheckedLine[], plans: SupportPlans | null | undefined): SupportProblem[] {
   if (!supportCheckOn(plans)) return [];
@@ -75,7 +75,7 @@ export function supportProblems(lines: readonly CheckedLine[], plans: SupportPla
     const y = years.get(n)!;
     if (!y.subscription) continue;
     if (y.plans.length === 0 && !y.legacy) {
-      out.push({ year: n, kind: "NONE", message: `Year ${n} has no Enterprise or Standard Support.` });
+      out.push({ year: n, kind: "NONE", message: `Year ${n} has no support plan.` });
     } else if (y.plans.length > 1) {
       out.push({ year: n, kind: "SEVERAL", message: `Year ${n} has ${y.plans.length} support plans (${joinAnd(y.plans)}). Keep one.` });
     }

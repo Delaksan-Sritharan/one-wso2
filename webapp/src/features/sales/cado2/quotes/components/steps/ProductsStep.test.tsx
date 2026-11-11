@@ -154,7 +154,7 @@ describe("ProductsStep (Products & Pricing)", () => {
     const user = userEvent.setup();
     render(<Harness />);
     const warning = screen.getByRole("alert", { name: "Support plan" });
-    expect(warning).toHaveTextContent("Year 1 has no Enterprise or Standard Support.");
+    expect(warning).toHaveTextContent("Year 1 has no support plan.");
     expect(screen.queryByText("WSO2 Enterprise Support Plan")).toBeNull();
 
     await user.click(within(warning).getByRole("button", { name: "Add Enterprise Support" }));
@@ -199,9 +199,14 @@ describe("ProductsStep (Products & Pricing)", () => {
     expect(screen.queryByRole("button", { name: "Import renewal products" })).toBeNull(); // a first sale
     unmount();
 
-    opportunityQuotes.data = [{ quoteId: 9, syncedAt: "2026-11-01T10:00:00Z" }];
+    // Its lines came from QuickQuote: the button stays, disabled, saying why.
+    opportunityQuotes.data = [{ quoteId: 9, quoteNumber: "Q-26-00040", syncedAt: "2026-11-01T10:00:00Z" }];
     const synced = render(<Harness values={{ opportunityId: "006A", opportunityName: "Acme renewal", dealKind: "RENEWAL" }} />);
-    expect(screen.queryByRole("button", { name: "Import renewal products" })).toBeNull(); // its lines came from QuickQuote
+    expect(screen.getByRole("button", { name: "Import renewal products" })).toBeDisabled();
+    await user.hover(screen.getByRole("button", { name: "Import renewal products" }).parentElement!);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Q-26-00040 was synced to this opportunity on 1 Nov 2026, so its products in Salesforce come from QuickQuote: there are no inherited products to import.",
+    );
     synced.unmount();
 
     opportunityQuotes.data = [{ quoteId: 10, syncedAt: null }]; // this quote, never synced

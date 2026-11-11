@@ -68,6 +68,7 @@ import {
   cloneYear,
   contractYears,
   deleteYear,
+  formatDate,
   insertIndex,
   isPartnerLed,
   lastYearEarliestEnd,
@@ -149,11 +150,14 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
   // until a quote has been synced to it (its lines then came from
   // QuickQuote). First sales and expansions add products, or clone a quote.
   const opportunityQuotes = useOpportunityQuotes(values.opportunityId || null);
-  const showSalesforceLines =
-    Boolean(values.opportunityId) &&
-    values.dealKind === "RENEWAL" &&
-    opportunityQuotes.data !== undefined &&
-    !opportunityQuotes.data.some((q) => q.syncedAt);
+  const isRenewal = Boolean(values.opportunityId) && values.dealKind === "RENEWAL" && opportunityQuotes.data !== undefined;
+  // A quote already synced to it: the button stays, disabled, saying why,
+  // so renewals don't look different for no reason (2026-11-11).
+  const syncedQuote = isRenewal ? (opportunityQuotes.data?.find((q) => q.syncedAt) ?? null) : null;
+  const showSalesforceLines = isRenewal && !syncedQuote;
+  const importBlocked = syncedQuote
+    ? `${syncedQuote.quoteNumber ?? "A QuickQuote quote"} was synced to this opportunity on ${formatDate(syncedQuote.syncedAt!.slice(0, 10))}, so its products in Salesforce come from QuickQuote: there are no inherited products to import.`
+    : "";
   const [viewingLines, setViewingLines] = useState(false);
   const [loaded, setLoaded] = useState<number | null>(null);
   // Clean lines replace any already added (the dialog warns); the term
@@ -430,7 +434,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
         title="Products"
         icon={<PackageIcon size={18} />}
         aside={
-          showSalesforceLines || years.length > 1 ? (
+          isRenewal || years.length > 1 ? (
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {/* D150: the renewal's inherited products, to import. */}
               {showSalesforceLines ? (
@@ -443,6 +447,14 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
                 >
                   Import renewal products
                 </Button>
+              ) : syncedQuote ? (
+                <Tooltip title={importBlocked}>
+                  <span>
+                    <Button size="small" variant="outlined" startIcon={<CloudDownloadIcon size={14} />} disabled>
+                      Import renewal products
+                    </Button>
+                  </span>
+                </Tooltip>
               ) : null}
               {years.length > 1 ? (
                 <Button
