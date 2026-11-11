@@ -31,7 +31,6 @@ import { useCado2Basis } from "@features/sales/cado2/api/cado2Basis";
 import { DEFAULT_SORT, type QuoteSort } from "@features/sales/cado2/quotes/list/quoteListModel";
 import type {
   Account,
-  BundleChildren,
   LegalConfig,
   ActiveLegalEntity,
   Contact,
@@ -165,16 +164,15 @@ export function useWriteSpecialTerms(quoteId: number, versionNumber: number) {
 }
 
 /**
- * The children a bundle parent brings, priced from the quote's
- * book; none for a product without a bundle. Idle until a product is chosen.
+ * Particular products of the quote's price book, each with that book's price
+ * only: the support plans' (D155). Idle until there are ids.
  */
-export function useBundleChildren(productId: string | null, currency: string, pricebookId: string) {
+export function useProductsByIds(ids: readonly string[], currency: string, pricebookId: string) {
   const { getToken, ready, key } = useCado2Basis();
-  return useQuery<BundleChildren, Error>({
-    queryKey: key("bundle-children", productId, currency, pricebookId),
-    queryFn: async () =>
-      authedGet<BundleChildren>(cado2ServiceUrls.bundleChildren(productId!, currency, pricebookId), await getToken()),
-    enabled: ready && Boolean(productId && currency && pricebookId),
+  return useQuery<Product[], Error>({
+    queryKey: key("products-by-ids", [...ids].sort().join(","), currency, pricebookId),
+    queryFn: async () => authedGet<Product[]>(cado2ServiceUrls.productsByIds(currency, pricebookId, ids), await getToken()),
+    enabled: ready && ids.length > 0 && Boolean(currency && pricebookId),
     staleTime: LOOKUP_STALE_MS,
     retry: httpRetry,
   });

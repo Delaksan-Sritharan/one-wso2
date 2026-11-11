@@ -48,7 +48,7 @@ interface YearSectionsProps {
   /** A line's buttons and problems, by its position in `lines`. */
   readonly lineActions?: (index: number) => ReactNode;
   readonly below?: (index: number) => ReactNode;
-  readonly flagUncategorised?: boolean;
+  readonly flagNotSetUp?: boolean;
 }
 
 /**
@@ -73,7 +73,7 @@ export default function YearSections({
   empty,
   lineActions,
   below,
-  flagUncategorised = false,
+  flagNotSetUp = false,
 }: YearSectionsProps): JSX.Element {
   return (
     <Box sx={{ borderTop: 1, borderColor: "divider" }}>
@@ -85,7 +85,14 @@ export default function YearSections({
         // Only the last year can be shorter than 12 months; say so beside its dates.
         const short = y.start && y.end && durationShort(y.start, y.end) !== "1Y" ? durationText(y.start, y.end) : "";
         return (
-          <Box key={y.number} component="section" aria-label={`Year ${y.number}`} sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Box
+            key={y.number}
+            component="section"
+            aria-label={`Year ${y.number}`}
+            // A Deal Desk note about the year points here, e.g. its support plan (D155).
+            data-note-target={`year:${y.number}`}
+            sx={{ borderBottom: 1, borderColor: "divider" }}
+          >
             {/* The row folds the year on a click; the toggle itself (keyboard,
                 screen readers) holds only its name, and the controls in the row
                 (a clickable end date, the actions) sit beside it, not inside a
@@ -156,7 +163,7 @@ export default function YearSections({
                     commissionPercent={commissionPercent}
                     showTotals={false}
                     closingTotalLabel={y.number ? `Year ${y.number} total` : "Total"}
-                    flagUncategorised={flagUncategorised}
+                    flagNotSetUp={flagNotSetUp}
                     actions={lineActions ? (k) => lineActions(indexes[k]) : undefined}
                     below={below ? (k) => below(indexes[k]) : undefined}
                   />

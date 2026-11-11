@@ -36,8 +36,6 @@ describe("noteText", () => {
   });
 
   it("words Deal Desk's own checks and what is written, not marked", () => {
-    expect(noteText(note({ rule: "AM_CATEGORY", roles: [], reasons: ["Line 2 · Migration: category chosen by the AM: Professional Service"] }), "DEAL_DESK"))
-      .toEqual({ title: "Category chosen by the AM", detail: "Professional Service", who: "Only Deal Desk checks this" });
     expect(noteText(note({ rule: "RENEWAL_START", lineNumber: 0, roles: [], reasons: ["Starts 1 Mar 2027, not 1 Feb 2027, the day after APIM ends"] }), "DEAL_DESK").title)
       .toBe("Start date");
     expect(noteText(note({ rule: "GOVERNING_TERMS", lineNumber: 0, roles: [], yoursToWrite: true }), "LEGAL").who).toBe("Yours to write");
@@ -46,6 +44,19 @@ describe("noteText", () => {
       .toEqual({ title: "Special terms from the AM", detail: "Check them, override if needed", who: "Legal approves after you" });
     expect(noteText(note({ rule: "SPECIAL_TERMS", lineNumber: 0, roles: [], reasons: ["The quote includes special terms"] }), "LEGAL"))
       .toEqual({ title: "Special terms", detail: "The quote includes special terms", who: "Why you're asked" });
+    // D155: a year's support plan, warned to the AM, checked by Deal Desk.
+    const support = "Year 1 has no support plan. Check the customer's support (a renewal may keep a legacy plan).";
+    expect(noteText(note({ rule: "SUPPORT_PLAN", lineNumber: 0, roles: [], reasons: [support] }), "DEAL_DESK")).toEqual({
+      title: "Support plan",
+      detail: support,
+      who: "Only Deal Desk checks this",
+    });
+    const legacy = "Line 2 · WSO2 Premium Support (2019): a support product that isn't on Admin → Support Plans (legacy support). Check it's still right for this customer.";
+    expect(noteText(note({ rule: "LEGACY_SUPPORT", lineNumber: 2, roles: [], reasons: [legacy] }), "DEAL_DESK")).toEqual({
+      title: "Legacy support",
+      detail: legacy,
+      who: "Only Deal Desk checks this",
+    });
   });
 });
 

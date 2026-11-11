@@ -100,11 +100,8 @@ vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
 }));
 const writeSpecial = mutation();
 
-/** The submitted quote with every product mapped: no category chosen by the AM. */
-const allMapped: DraftResponse = {
-  ...submitted,
-  version: { ...submitted.version, lines: submitted.version.lines.map((l) => ({ ...l, categorySource: "MAPPED" as const })) },
-};
+/** The submitted quote. */
+const allMapped: DraftResponse = submitted;
 
 // D139: the AM's special terms, with no override yet.
 const withSpecialTerms: DraftResponse = {
@@ -134,7 +131,7 @@ function show(q: QuoteView, ...vs: DraftResponse[]) {
 
 /** Opens the quote page as if from another page, e.g. My Approvals. */
 function showFrom(from: string | undefined, q: QuoteView, ...vs: DraftResponse[]) {
-  showAt(`/sales/cado2/quotes/5/quote${from === "approvals" ? "?from=approvals" : ""}`, q, ...vs);
+  showAt(`/sales/quickquote/quotes/5/quote${from === "approvals" ? "?from=approvals" : ""}`, q, ...vs);
 }
 
 function showAt(url: string, q: QuoteView, ...vs: DraftResponse[]) {
@@ -145,9 +142,9 @@ function showAt(url: string, q: QuoteView, ...vs: DraftResponse[]) {
     <Cado2ToastProvider>
       <MemoryRouter initialEntries={[url]}>
         <Routes>
-          <Route path="sales/cado2/quotes/:quoteId/:tab" element={<QuoteDetailPage />} />
-          <Route path="sales/cado2/quotes/:quoteId/versions/:version/edit" element={<p>wizard</p>} />
-          <Route path="sales/cado2/quotes" element={<p>My Quotes page</p>} />
+          <Route path="sales/quickquote/quotes/:quoteId/:tab" element={<QuoteDetailPage />} />
+          <Route path="sales/quickquote/quotes/:quoteId/versions/:version/edit" element={<p>wizard</p>} />
+          <Route path="sales/quickquote/quotes" element={<p>My Quotes page</p>} />
         </Routes>
       </MemoryRouter>
     </Cado2ToastProvider>,
@@ -196,7 +193,7 @@ describe("QuoteDetailPage — primary quote", () => {
     show(submitted.quote, submitted);
 
     const panel = screen.getByRole("region", { name: "This Opportunity's Quotes" });
-    expect(within(panel).getByRole("link", { name: "Q-26-00031" })).toHaveAttribute("href", "/sales/cado2/quotes/3/quote");
+    expect(within(panel).getByRole("link", { name: "Q-26-00031" })).toHaveAttribute("href", "/sales/quickquote/quotes/3/quote");
     // The current quote: a shaded row, not a link, "This quote" under its number (2026-10-14).
     const rows = within(panel).getAllByRole("listitem");
     expect(rows[1]).toHaveAttribute("aria-current", "true");
@@ -227,20 +224,20 @@ describe("QuoteDetailPage — primary quote", () => {
 describe("QuoteDetailPage — lifecycle", () => {
   it("goes back to My Approvals when opened from there, else to Quotes", () => {
     showFrom("approvals", submitted.quote, submitted);
-    expect(screen.getByRole("link", { name: /My Approvals/ })).toHaveAttribute("href", "/sales/cado2/approvals");
+    expect(screen.getByRole("link", { name: /My Approvals/ })).toHaveAttribute("href", "/sales/quickquote/approvals");
     cleanup();
     show(submitted.quote, submitted);
-    expect(screen.getByRole("link", { name: /Quotes/ })).toHaveAttribute("href", "/sales/cado2/quotes");
+    expect(screen.getByRole("link", { name: /Quotes/ })).toHaveAttribute("href", "/sales/quickquote/quotes");
   });
 
   it("goes back to the Quote Report, with its filters, when opened from there", () => {
-    const back = "/sales/cado2/insights/report?q=north&status=SUBMITTED";
-    showAt(`/sales/cado2/quotes/5/quote?${new URLSearchParams({ from: "insights", back })}`, submitted.quote, submitted);
+    const back = "/sales/quickquote/insights/report?q=north&status=SUBMITTED";
+    showAt(`/sales/quickquote/quotes/5/quote?${new URLSearchParams({ from: "insights", back })}`, submitted.quote, submitted);
     expect(screen.getByRole("link", { name: /Quote Report/ })).toHaveAttribute("href", back);
     cleanup();
     // Only an Insights address is accepted as the way back.
-    showAt(`/sales/cado2/quotes/5/quote?${new URLSearchParams({ from: "insights", back: "https://evil.example" })}`, submitted.quote, submitted);
-    expect(screen.getByRole("link", { name: /Quotes/ })).toHaveAttribute("href", "/sales/cado2/quotes");
+    showAt(`/sales/quickquote/quotes/5/quote?${new URLSearchParams({ from: "insights", back: "https://evil.example" })}`, submitted.quote, submitted);
+    expect(screen.getByRole("link", { name: /Quotes/ })).toHaveAttribute("href", "/sales/quickquote/quotes");
   });
 
   it("offers Recall in the menu on a submitted quote, with no main button", async () => {
@@ -339,6 +336,17 @@ describe("QuoteDetailPage — lifecycle", () => {
     expect(await screen.findByText("My Quotes page")).toBeInTheDocument();
   });
 
+  // 2026-11-11: a draft synced to Salesforce can't be deleted; the quote is closed instead.
+  it("doesn't delete a draft that was synced to Salesforce", async () => {
+    show({ ...ready.quote, sfSyncedAt: "2026-11-10T12:14:54Z", sfSyncedVersion: 1 }, ready);
+    const user = userEvent.setup();
+    await openMenu(user);
+    const item = screen.getByRole("menuitem", { name: /Delete draft/ });
+    expect(item).toHaveAttribute("aria-disabled", "true");
+    expect(item).toHaveTextContent("Synced to Salesforce: close the quote instead");
+    expect(screen.getByRole("menuitem", { name: /Close quote/ })).not.toHaveAttribute("aria-disabled");
+  });
+
   it("deletes a later draft, and the version before it is the latest again", async () => {
     const v2: DraftResponse = { ...ready, version: { ...ready.version, versionNumber: 2 } };
     const q: QuoteView = {
@@ -363,7 +371,7 @@ describe("QuoteDetailPage — lifecycle", () => {
   it("gives a draft one main button, Edit draft, and puts the destructive actions last in the menu", async () => {
     show(ready.quote, ready);
     const user = userEvent.setup();
-    expect(screen.getByRole("link", { name: "Edit draft" })).toHaveAttribute("href", "/sales/cado2/quotes/5/versions/1/edit");
+    expect(screen.getByRole("link", { name: "Edit draft" })).toHaveAttribute("href", "/sales/quickquote/quotes/5/versions/1/edit");
     // The status is with the title, not among the actions.
     expect(within(screen.getByLabelText("About this quote")).queryByRole("button", { name: "Close quote" })).toBeNull();
     await openMenu(user);
@@ -574,46 +582,6 @@ describe("QuoteDetailPage — lifecycle", () => {
     expect(decide.mutate).toHaveBeenCalledWith(expect.objectContaining({ stepId: 2, outcome: "return" }), expect.anything());
   });
 
-  it("shows a rep-chosen category on its line and in Deal Desk's summary, nowhere else", async () => {
-    const user = userEvent.setup();
-    const [first, ...rest] = submitted.version.lines;
-    const mixed: DraftResponse = {
-      ...submitted,
-      version: {
-        ...submitted.version,
-        lines: [{ ...first, categorySource: "REP" }, ...rest.map((l) => ({ ...l, categorySource: "MAPPED" as const }))],
-      },
-    };
-    workflow.data = {
-      status: "IN_PROGRESS", createdAt: "2026-10-01T09:00:00Z", completedAt: null,
-      steps: [{
-        stepId: 11, role: "DEAL_DESK", roleLabel: "Deal Desk", branches: [], dependsOn: [], status: "PENDING",
-        requestedAt: null, actedAt: null, actedByEmail: null, comment: null, canAct: true, cantActReason: null, triggers: [],
-      }],
-    };
-    show({ ...submitted.quote, actions: [] }, mixed);
-
-    // No tag on the line (D93); only a point in Deal Desk's summary.
-    expect(screen.queryByText("Category chosen by AM")).toBeNull();
-    const points = within(screen.getByRole("region", { name: "Your approval as Deal Desk" })).getByRole("list", { name: "What's non-standard" });
-    expect(points).toHaveTextContent(`Line ${first.lineNumber} · ${first.productName}`);
-    expect(points).toHaveTextContent("Category chosen by the AM");
-    // Nowhere else: no warning box, and nothing in the approval dialog.
-    expect(screen.queryByRole("region", { name: "Categories chosen by the AM" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Approve" }));
-    expect(screen.getByRole("dialog")).not.toHaveTextContent(/category/i);
-  });
-
-  it("shows no category notice when every product is mapped", () => {
-    const allMapped: DraftResponse = {
-      ...submitted,
-      version: { ...submitted.version, lines: submitted.version.lines.map((l) => ({ ...l, categorySource: "MAPPED" as const })) },
-    };
-    show(submitted.quote, allMapped);
-    expect(screen.queryByRole("region", { name: "Categories chosen by the AM" })).toBeNull();
-    expect(screen.queryByText("Category chosen by AM")).toBeNull();
-  });
-
   it("explains a closed quote", () => {
     const closed: DraftResponse = {
       ...ready,
@@ -651,8 +619,8 @@ describe("QuoteDetailPage — versions and history", () => {
 
     const table = screen.getByRole("table", { name: "Versions" });
     // The draft opens in edit mode; any other version is viewed here (2026-10-13).
-    expect(within(table).getByRole("link", { name: "Edit draft" })).toHaveAttribute("href", "/sales/cado2/quotes/5/versions/2/edit");
-    expect(within(table).getByRole("link", { name: "View" })).toHaveAttribute("href", "/sales/cado2/quotes/5/quote?version=1");
+    expect(within(table).getByRole("link", { name: "Edit draft" })).toHaveAttribute("href", "/sales/quickquote/quotes/5/versions/2/edit");
+    expect(within(table).getByRole("link", { name: "View" })).toHaveAttribute("href", "/sales/quickquote/quotes/5/quote?version=1");
 
     const diff = screen.getByRole("table", { name: "Comparison" });
     expect(within(diff).getByText("WSO2 Gateway · Quantity")).toBeInTheDocument();
@@ -664,18 +632,18 @@ describe("QuoteDetailPage — versions and history", () => {
 
   // View mode (2026-10-13): an older version is shown here, read-only, with no actions.
   it("shows an older version with a way back to the latest, and no actions", () => {
-    showAt("/sales/cado2/quotes/5/quote?version=1", v2.quote, recalledV1, v2);
+    showAt("/sales/quickquote/quotes/5/quote?version=1", v2.quote, recalledV1, v2);
 
     expect(screen.getByText("Q-26-00005 · Version 1")).toBeInTheDocument();
     expect(screen.getByText("Recalled")).toBeInTheDocument();
     expect(screen.getByText(/You're viewing version 1\. The latest is version 2\. Clone copies this version; other actions apply to the latest\./)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View latest version" })).toHaveAttribute("href", "/sales/cado2/quotes/5/quote");
+    expect(screen.getByRole("link", { name: "View latest version" })).toHaveAttribute("href", "/sales/quickquote/quotes/5/quote");
     expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Edit draft" })).toBeNull();
   });
 
   it("ignores a version that doesn't exist and shows the latest", () => {
-    showAt("/sales/cado2/quotes/5/quote?version=9", v2.quote, recalledV1, v2);
+    showAt("/sales/quickquote/quotes/5/quote?version=9", v2.quote, recalledV1, v2);
 
     expect(screen.getByRole("link", { name: "Edit draft" })).toBeInTheDocument();
     expect(screen.queryByText(/You're viewing version/)).toBeNull();
@@ -926,7 +894,7 @@ describe("QuoteDetailPage — lenses", () => {
       status: "IN_PROGRESS", createdAt: "2026-10-06T09:00:00Z", completedAt: null,
       steps: [step("DEAL_DESK", 11, { status: "PENDING", canAct: true }), step("REGIONAL_DIRECTOR", 12, { roleLabel: "Regional Director · NA" })],
     };
-    deskLens([note({}), note({ key: "AM_CATEGORY.L1", rule: "AM_CATEGORY", reasons: ["Line 1 · WSO2 API Manager: category chosen by the AM: Subscription"], roles: [] })]);
+    deskLens([note({}), note({ key: "RENEWAL_START", rule: "RENEWAL_START", reasons: ["Starts 2 Feb 2027, not 1 Feb 2027, the day after Acme 2026 ends"], roles: [] })]);
     show({ ...submitted.quote, actions: [] }, allMapped);
 
     expect(screen.queryByRole("button", { name: "As Submitted" })).toBeNull();
@@ -935,7 +903,7 @@ describe("QuoteDetailPage — lenses", () => {
     const discount = within(notes).getByRole("article", { name: "18% discount" });
     expect(discount).toHaveTextContent("Above the Account Manager's 15% limit");
     expect(discount).toHaveTextContent("Regional Director · NA approves after you");
-    expect(within(notes).getByRole("article", { name: "Category chosen by the AM" })).toHaveTextContent("Only Deal Desk checks this");
+    expect(within(notes).getByRole("article", { name: "Start date" })).toHaveTextContent("Only Deal Desk checks this");
     // The decision is a card of its own; the old "Your approval" box is gone.
     const decision = screen.getByRole("region", { name: "Your decision as Deal Desk" });
     expect(decision).not.toHaveTextContent("After you");
@@ -1047,11 +1015,11 @@ describe("QuoteDetailPage — lenses", () => {
   // D130: "Recall as Deal Desk" on the board opens the quote with its Recall confirmation, once.
   it("opens the confirmation the board asked for, with a Deal Desk back link", async () => {
     const user = userEvent.setup();
-    showAt("/sales/cado2/quotes/5/quote?from=desk&do=recall", { ...submitted.quote, actions: ["RECALL"] }, submitted);
+    showAt("/sales/quickquote/quotes/5/quote?from=desk&do=recall", { ...submitted.quote, actions: ["RECALL"] }, submitted);
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent(/Recall version 1\?/);
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull(); // once, not again
-    expect(screen.getByRole("link", { name: /Deal Desk/ })).toHaveAttribute("href", "/sales/cado2/desk");
+    expect(screen.getByRole("link", { name: /Deal Desk/ })).toHaveAttribute("href", "/sales/quickquote/desk");
   });
 });

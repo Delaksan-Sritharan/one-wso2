@@ -86,7 +86,13 @@ import { nextHint, reachableStep, stepChecks } from "@features/sales/cado2/quote
 import PageHeader from "@features/sales/cado2/components/page-header/PageHeader";
 import ActingAsChip from "@features/sales/cado2/quotes/components/detail/ActingAsChip";
 import StatusChip from "@features/sales/cado2/components/status-chip/StatusChip";
-import { STATUS_COLOR, STATUS_LABEL, quoteLabel } from "@features/sales/cado2/quotes/lifecycle/lifecycle";
+import {
+  STATUS_COLOR,
+  STATUS_LABEL,
+  SYNCED_DRAFT_NOTE,
+  quoteLabel,
+  syncedDraft,
+} from "@features/sales/cado2/quotes/lifecycle/lifecycle";
 import { cado2Paths } from "@features/sales/cado2/cado2Paths";
 
 const { LocalizationProvider } = DatePickers;
@@ -186,7 +192,7 @@ export default function QuoteWizardPage(): JSX.Element {
     PREVIEW_DEBOUNCE_MS,
   );
   const preview = usePricingPreview(previewBody);
-  // Lined up with the form's lines: lines waiting for a category aren't priced (D72).
+  // Lined up with the form's lines, one for one.
   const priced = useMemo(
     () => alignPreview(preview.data?.kind === "priced" ? preview.data.preview : null, values.lines),
     [preview.data, values.lines],
@@ -197,19 +203,15 @@ export default function QuoteWizardPage(): JSX.Element {
   );
   const stored = useMemo(() => (saved ? storedPricing(saved) : null), [saved]);
 
-  // A product mapped (or unmapped) since its line was added: the preview
-  // priced it with the Admin's current mapping, so the form follows.
+  // A classification set up or changed since its line was added: the
+  // preview priced it with the Admin's current setting (D152), so the form
+  // follows.
   useEffect(() => {
     if (!editable || !priced) return;
     priced.lines.forEach((p, i) => {
       const l = form.getValues(`lines.${i}`);
-      if (!p || !l || l.pricebookEntryId !== p.pricebookEntryId || !p.categorySource) return;
-      if (p.categorySource === "MAPPED" && p.category && (l.category !== p.category || l.categorySource !== "MAPPED")) {
-        form.setValue(`lines.${i}.category`, p.category, { shouldDirty: true });
-        form.setValue(`lines.${i}.categorySource`, "MAPPED", { shouldDirty: true });
-      } else if (p.categorySource === "REP" && l.categorySource === "MAPPED") {
-        form.setValue(`lines.${i}.categorySource`, "REP", { shouldDirty: true });
-      }
+      if (!p || !l || l.pricebookEntryId !== p.pricebookEntryId || p.category === undefined) return;
+      if (l.category !== p.category) form.setValue(`lines.${i}.category`, p.category, { shouldDirty: true });
     });
   }, [editable, priced, form]);
 
@@ -533,7 +535,16 @@ export default function QuoteWizardPage(): JSX.Element {
                     actions={[]}
                     destructive={
                       saved && saved.version.status === "DRAFT" && saved.quote.actions.includes("CLOSE")
-                        ? [{ label: "Delete draft", icon: <Trash2Icon size={16} />, disabled: busy, onClick: () => setDeleting(true) }]
+                        ? [
+                            {
+                              label: "Delete draft",
+                              icon: <Trash2Icon size={16} />,
+                              disabled: busy || syncedDraft(saved.quote, saved.version.versionNumber),
+                              // A synced draft can't be deleted (2026-11-11).
+                              detail: syncedDraft(saved.quote, saved.version.versionNumber) ? SYNCED_DRAFT_NOTE : undefined,
+                              onClick: () => setDeleting(true),
+                            },
+                          ]
                         : []
                     }
                   />

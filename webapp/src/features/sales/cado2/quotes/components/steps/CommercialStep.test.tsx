@@ -43,7 +43,6 @@ const line = (discount: string): LineValue => ({
   pricebookName: "FY26 USD",
   unitPrice: "1000",
   category: "SUBSCRIPTION",
-  categorySource: "MAPPED",
   recurring: true,
   classification: "PS",
   unitOfMeasure: "Gateways",
@@ -54,8 +53,6 @@ const line = (discount: string): LineValue => ({
   endDate: "",
   salesPrice: "",
   key: `k-${Math.random()}`,
-  parentKey: "",
-  bundleFixedQuantity: null,
 });
 
 function Harness({ lines, values = {} }: { lines: LineValue[]; values?: Partial<DraftFormValues> }) {

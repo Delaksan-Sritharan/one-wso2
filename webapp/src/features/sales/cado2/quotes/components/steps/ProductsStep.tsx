@@ -20,6 +20,8 @@ import {
   Alert,
   Box,
   Button,
+  Menu,
+  MenuItem,
   Stack,
   TableCell,
   TableRow,
@@ -27,8 +29,10 @@ import {
   Typography,
   IconButton,
 } from "@wso2/oxygen-ui";
+import ErrorNotice from "@components/error-notice/ErrorNotice";
 import {
   ChartColumnIcon,
+  ChevronDownIcon,
   ChevronsDownUpIcon,
   ChevronsUpDownIcon,
   CloudDownloadIcon,
@@ -45,15 +49,27 @@ import YearSections, { OrderTotalsFooter, type SectionYear } from "@features/sal
 import { useCollapsedYears } from "@features/sales/cado2/quotes/components/sheet/useCollapsedYears";
 import { hasYearlySchedule, orderForm, sheetFromForm } from "@features/sales/cado2/quotes/sheet/sheetModel";
 import type { OpportunityLineLoad, PricingPreview, RenewalCheck } from "@features/sales/cado2/quotes/api/quoteTypes";
-import { useOpportunityQuotes } from "@features/sales/cado2/quotes/api/useQuoteApi";
+import {
+  useOpportunityQuotes,
+  usePricingFormulas,
+  useProductsByIds,
+  useQuoteSettings,
+} from "@features/sales/cado2/quotes/api/useQuoteApi";
+import {
+  lineFromProduct,
+  supportCheckOn,
+  supportProblems,
+  yearHasEnterprise,
+  yearHasPremium,
+} from "@features/sales/cado2/quotes/form/supportPlans";
+import { unitOfMeasureFor } from "@features/sales/cado2/utils/pricingFormula";
 import {
   addYear,
-  childQuantity,
   commissionAfterYearChange,
-  childrenOf,
   cloneYear,
   contractYears,
   deleteYear,
+  formatDate,
   insertIndex,
   isPartnerLed,
   lastYearEarliestEnd,
@@ -135,11 +151,14 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
   // until a quote has been synced to it (its lines then came from
   // QuickQuote). First sales and expansions add products, or clone a quote.
   const opportunityQuotes = useOpportunityQuotes(values.opportunityId || null);
-  const showSalesforceLines =
-    Boolean(values.opportunityId) &&
-    values.dealKind === "RENEWAL" &&
-    opportunityQuotes.data !== undefined &&
-    !opportunityQuotes.data.some((q) => q.syncedAt);
+  const isRenewal = Boolean(values.opportunityId) && values.dealKind === "RENEWAL" && opportunityQuotes.data !== undefined;
+  // A quote already synced to it: the button stays, disabled, saying why,
+  // so renewals don't look different for no reason (2026-11-11).
+  const syncedQuote = isRenewal ? (opportunityQuotes.data?.find((q) => q.syncedAt) ?? null) : null;
+  const showSalesforceLines = isRenewal && !syncedQuote;
+  const importBlocked = syncedQuote
+    ? `${syncedQuote.quoteNumber ?? "A QuickQuote quote"} was synced to this opportunity on ${formatDate(syncedQuote.syncedAt!.slice(0, 10))}, so its products in Salesforce come from QuickQuote: there are no inherited products to import.`
+    : "";
   const [viewingLines, setViewingLines] = useState(false);
   const [loaded, setLoaded] = useState<number | null>(null);
   // Clean lines replace any already added (the dialog warns); the term
@@ -183,47 +202,66 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
   const sheet = useMemo(() => sheetFromForm(values, preview, null), [values, preview]);
   const total = orderForm(sheet.lines, sheet.partnerCommissionPercent);
 
-  const onSave = (line: LineValue, children: LineValue[] | null) => {
-    const lines = getValues("lines");
-    if (editing.index === null) {
-      // After its year's lines, its bundle right below it.
-      const at = insertIndex(lines, line.yearNumber);
-      if (!children?.length) insert(at, line);
-      else replace([...lines.slice(0, at), line, ...children, ...lines.slice(at)]);
-    } else if (children !== null) {
-      // An edited parent whose picks may have changed (D131): its children
-      // are replaced by what the dialog sends, right below it.
-      const rest = lines.filter((l) => l.parentKey !== line.key);
-      const at = rest.findIndex((l) => l.key === line.key);
-      replace([...rest.slice(0, at), line, ...children, ...rest.slice(at + 1)]);
-    } else if (childrenOf(lines, line.key).length > 0) {
-      // A parent's children keep its year and dates, and those with the
-      // parent's quantity follow it (D125).
-      replace(
-        lines.map((l, i) =>
-          i === editing.index
-            ? line
-            : l.parentKey === line.key
-              ? {
-                  ...l,
-                  yearNumber: line.yearNumber,
-                  startDate: line.startDate,
-                  endDate: l.recurring ? line.endDate : "",
-                  quantity: childQuantity(line.quantity, l.bundleFixedQuantity),
-                }
-              : l,
-        ),
-      );
-    } else update(editing.index, line);
+  const onSave = (line: LineValue) => {
+    if (editing.index === null) insert(insertIndex(getValues("lines"), line.yearNumber), line);
+    else update(editing.index, line);
     setEditing({ open: false, index: null, year: 1 });
   };
-  // Removing a bundle parent removes its children; a child leaves only with it.
-  const removeLine = (i: number) => {
-    const lines = getValues("lines");
-    const key = lines[i].key;
-    if (childrenOf(lines, key).length === 0) remove(i);
-    else replace(lines.filter((l, k) => k !== i && l.parentKey !== key));
+
+  // D155: each year with a subscription is checked for its support plan; a
+  // warning with one-click adds, never a block, never added by itself.
+  const settings = useQuoteSettings();
+  const plans = settings.data?.supportPlans ?? null;
+  const supportOn = supportCheckOn(plans);
+  const supportIds = supportOn
+    ? [plans.enterprise?.productId, plans.standard?.productId, ...plans.premium.map((p) => p.productId)].filter(
+        (id): id is string => Boolean(id),
+      )
+    : [];
+  const supportProducts = useProductsByIds(supportIds, currency, values.defaultPricebookId);
+  const formulas = usePricingFormulas();
+  const supportIssues = supportProblems(values.lines, plans);
+  const [premiumMenu, setPremiumMenu] = useState<{ anchor: HTMLElement; year: number } | null>(null);
+  // A support product as a line in a year: quantity 1, priced from the book
+  // (its formula, if any; the unit of measure with %LIST_PRICE% filled in).
+  const supportLine = (productId: string, year: SectionYear): LineValue | null => {
+    const p = supportProducts.data?.find((x) => x.id === productId);
+    if (!p) return null;
+    const f = formulas.data?.find((x) => x.productId === p.id && x.status === "ACTIVE");
+    return lineFromProduct(p, year, f ? unitOfMeasureFor(f.unitOfMeasure, p.pricebookEntries[0]?.unitPrice ?? "") : "");
   };
+  // Why a support product can't be added: not priced in the book, or its
+  // classification isn't set up (as the product dialog says, D152).
+  const notPriced = (productId: string) => {
+    if (supportProducts.isPending) return "Loading…";
+    const p = supportProducts.data?.find((x) => x.id === productId);
+    if (!p || p.pricebookEntries.length === 0) return `Not in ${values.defaultPricebookName || "the quote's price book"} in ${currency}`;
+    return p.classificationProblem ?? "";
+  };
+  const addSupport = (productId: string, n: number) => {
+    const year = years.find((y) => y.number === n);
+    const line = year ? supportLine(productId, year) : null;
+    if (line) insert(insertIndex(getValues("lines"), n), line);
+  };
+  const supportButton = (label: string, productId: string, n: number, primary: boolean) => {
+    const why = notPriced(productId);
+    return (
+      <Tooltip key={label} title={why}>
+        <span>
+          <Button
+            size="small"
+            variant={primary ? "outlined" : "text"}
+            color="inherit"
+            disabled={Boolean(why) || !ready}
+            onClick={() => addSupport(productId, n)}
+          >
+            {label}
+          </Button>
+        </span>
+      </Tooltip>
+    );
+  };
+
   // Year changes rewrite the count, the last year's end and, for clone and
   // delete, the lines together.
   // A year's rate follows the year (D151): added, cloned or deleted with it.
@@ -263,9 +301,24 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
     const deletable = values.yearCount > 1;
     if (empty && !deletable) return null;
     const recurring = ofYear.filter((l) => l.recurring).length;
+    // Premium Support, offered in a year with Enterprise Support until it
+    // has one (D155).
+    const premium =
+      supportOn && plans.premium.length > 0 && yearHasEnterprise(values.lines, plans, n) && !yearHasPremium(values.lines, plans, n);
     return (
       <>
         {empty ? null : addButton(n)}
+        {premium ? (
+          <Button
+            size="small"
+            endIcon={<ChevronDownIcon size={14} />}
+            disabled={!ready}
+            aria-haspopup="menu"
+            onClick={(e) => setPremiumMenu({ anchor: e.currentTarget, year: n })}
+          >
+            Add Premium Support
+          </Button>
+        ) : null}
         {empty ? null : (
           <Tooltip
             title={
@@ -323,8 +376,33 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
         onChange={changeLastEnd}
       />
     ) : null;
-  const yearTop = (n: number) =>
-    n === values.yearCount && (lastProblem || lastEndIssue) ? <Alert severity="error">{lastProblem || lastEndIssue}</Alert> : null;
+  const yearTop = (n: number) => {
+    const ofYear = supportIssues.filter((p) => p.year === n);
+    const lastEnd = n === values.yearCount && (lastProblem || lastEndIssue);
+    if (!lastEnd && ofYear.length === 0) return null;
+    return (
+      <Stack spacing={1}>
+        {lastEnd ? <Alert severity="error">{lastProblem || lastEndIssue}</Alert> : null}
+        {ofYear.map((p) => (
+          <Alert
+            key={p.kind}
+            severity="warning"
+            aria-label="Support plan"
+            action={
+              p.kind === "NONE" && plans ? (
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  {plans.enterprise ? supportButton("Add Enterprise Support", plans.enterprise.productId, n, true) : null}
+                  {plans.standard ? supportButton("Add Standard Support", plans.standard.productId, n, false) : null}
+                </Stack>
+              ) : undefined
+            }
+          >
+            {p.message}
+          </Alert>
+        ))}
+      </Stack>
+    );
+  };
   // The first year without products, if any: it's filled before another is added.
   const emptyYear = years.find((y) => !values.lines.some((l) => l.yearNumber === y.number))?.number ?? null;
 
@@ -359,7 +437,7 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
         title="Products"
         icon={<PackageIcon size={18} />}
         aside={
-          showSalesforceLines || years.length > 1 ? (
+          isRenewal || years.length > 1 ? (
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {/* D150: the renewal's inherited products, to import. */}
               {showSalesforceLines ? (
@@ -372,6 +450,14 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
                 >
                   Import renewal products
                 </Button>
+              ) : syncedQuote ? (
+                <Tooltip title={importBlocked}>
+                  <span>
+                    <Button size="small" variant="outlined" startIcon={<CloudDownloadIcon size={14} />} disabled>
+                      Import renewal products
+                    </Button>
+                  </span>
+                </Tooltip>
               ) : null}
               {years.length > 1 ? (
                 <Button
@@ -390,6 +476,22 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
           <Alert severity="error" sx={{ mb: 2 }}>
             {yearsIssue}
           </Alert>
+        ) : null}
+        {/* A failed lookup says so, rather than looking like "off" or "not a renewal". */}
+        {settings.error ? (
+          <ErrorNotice error={settings.error} onRetry={() => void settings.refetch()} retrying={settings.isFetching} sx={{ mb: 2 }}>
+            Couldn&apos;t load the support plans, so this quote&apos;s support isn&apos;t checked.
+          </ErrorNotice>
+        ) : null}
+        {values.dealKind === "RENEWAL" && opportunityQuotes.error ? (
+          <ErrorNotice
+            error={opportunityQuotes.error}
+            onRetry={() => void opportunityQuotes.refetch()}
+            retrying={opportunityQuotes.isFetching}
+            sx={{ mb: 2 }}
+          >
+            Couldn&apos;t check this renewal&apos;s quotes, so Import renewal products isn&apos;t offered.
+          </ErrorNotice>
         ) : null}
         {loaded !== null ? (
           <Alert severity="success" sx={{ mb: 2 }} onClose={() => setLoaded(null)} aria-label="Loaded from Salesforce">
@@ -457,30 +559,15 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
                       <PencilIcon size={16} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip
-                    title={
-                      values.lines[i].parentKey
-                        ? `Comes with ${sheet.lines[i]?.parentName ?? "its bundle's product"}: remove that to remove it`
-                        : childrenOf(values.lines, values.lines[i].key).length
-                          ? "Remove, with the products that come with it"
-                          : "Remove"
-                    }
-                  >
-                    <span>
-                      <IconButton
-                        size="small"
-                        aria-label={`Remove line ${i + 1}`}
-                        disabled={Boolean(values.lines[i].parentKey)}
-                        onClick={() => removeLine(i)}
-                      >
-                        <Trash2Icon size={16} />
-                      </IconButton>
-                    </span>
+                  <Tooltip title="Remove">
+                    <IconButton size="small" aria-label={`Remove line ${i + 1}`} onClick={() => remove(i)}>
+                      <Trash2Icon size={16} />
+                    </IconButton>
                   </Tooltip>
                 </>
               )}
               below={(i) => <LineIssue key={fields[i]?.id} index={i} />}
-              flagUncategorised
+              flagNotSetUp
             />
             {/* The next year once every year has products, so empty years
                 don't pile up. */}
@@ -538,12 +625,28 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
           currency={currency}
           pricebook={{ id: values.defaultPricebookId, name: values.defaultPricebookName }}
           year={editingYear && editingYear.start ? (editingYear as ContractYear) : null}
-          parentName={editing.index === null ? null : sheet.lines[editing.index]?.parentName}
-          currentChildren={editing.index === null ? [] : childrenOf(getValues("lines"), getValues(`lines.${editing.index}`).key)}
           onSave={onSave}
           onClose={() => setEditing({ open: false, index: null, year: 1 })}
         />
       ) : null}
+      <Menu
+        anchorEl={premiumMenu?.anchor ?? null}
+        open={premiumMenu !== null}
+        onClose={() => setPremiumMenu(null)}
+      >
+        {(plans?.premium ?? []).map((p) => (
+          <MenuItem
+            key={p.productId}
+            disabled={Boolean(notPriced(p.productId))}
+            onClick={() => {
+              if (premiumMenu) addSupport(p.productId, premiumMenu.year);
+              setPremiumMenu(null);
+            }}
+          >
+            {p.code ? `${p.name} · ${p.code}` : p.name}
+          </MenuItem>
+        ))}
+      </Menu>
       <OpportunityLinesDialog
         open={viewingLines}
         opportunityId={values.opportunityId || null}

@@ -139,10 +139,12 @@ describe("stepChecks", () => {
     expect(products({ dealType: "DIRECT", partnerCommissionPercent: "" })).toEqual([]);
   });
 
-  it("needs a category on every line brought in from Salesforce (D72)", () => {
+  it("stops a line whose classification isn't set up (D152)", () => {
     const v = complete();
     const lines = v.lines.map((l, i) => (i === 0 ? { ...l, category: "" as const } : l));
-    expect(stepChecks({ ...v, lines })[1].map((c) => c.message)).toContain("Choose the category of 1 product");
+    expect(stepChecks({ ...v, lines })[1].map((c) => c.message)).toContain(
+      "1 product can't be quoted: its classification isn't set up",
+    );
   });
 
   it("needs no term when no product recurs in Salesforce (D76)", () => {

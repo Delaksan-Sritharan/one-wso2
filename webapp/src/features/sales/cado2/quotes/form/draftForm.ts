@@ -24,7 +24,6 @@ import type {
   Address,
   AddressInput,
   BillingFrequency,
-  CategorySource,
   ContactInput,
   DealKind,
   DealType,
@@ -96,14 +95,16 @@ export interface LineValue {
   pricebookId: string;
   pricebookName: string;
   unitPrice: string;
-  /** "" = a product pulled from the opportunity that waits for the AM's category (D72). */
-  category: LineCategory | "";
-  /** MAPPED: set by the Admin's product mapping and locked; REP: the rep chose. */
-  categorySource: CategorySource;
   /**
-   * Charged every year (else once), from the product's Salesforce
-   * classification, as the backend says (D76). The category only places the
-   * line in an order-form section.
+   * The line's group on the order form, from its product's Salesforce
+   * classification (D152); "" when that classification isn't set up, so the
+   * line can't be quoted.
+   */
+  category: LineCategory | "";
+  /**
+   * Charged every year (else once), from the same classification, as the
+   * backend says (D152). The category only places the line in an order-form
+   * section.
    */
   recurring: boolean;
   /** The product's Salesforce classification (e.g. PS, CL); "" when unknown. CL is SaaS, PS on-prem. */
@@ -128,13 +129,6 @@ export interface LineValue {
   salesPrice: string;
   /** The line's own key in the form, stable as lines move. */
   key: string;
-  /** A bundle child: its parent line's key; "" otherwise. It follows the parent's year and dates and leaves with it. */
-  parentKey: string;
-  /**
-   * A bundle child's quantity rule (D125): always this many, or null for its
-   * parent's quantity, following it. The AM can't change a child's quantity.
-   */
-  bundleFixedQuantity: number | null;
 }
 
 let lineKeys = 0;
@@ -157,8 +151,7 @@ export function lineFromSalesforce(l: OpportunityLineLoad): LineValue {
     pricebookId: l.pricebookId,
     pricebookName: l.pricebookName,
     unitPrice: l.unitPrice,
-    category: l.category as LineCategory,
-    categorySource: "MAPPED",
+    category: l.category as LineCategory | "",
     recurring: l.recurring,
     classification: l.classification ?? "",
     unitOfMeasure: "",
@@ -169,16 +162,8 @@ export function lineFromSalesforce(l: OpportunityLineLoad): LineValue {
     endDate: "",
     salesPrice: l.salesPrice ? String(Number(l.salesPrice)) : "",
     key: newLineKey(),
-    parentKey: "",
-    bundleFixedQuantity: null,
   };
 }
-
-/** A bundle parent's children, in order. */
-export const childrenOf = (lines: readonly LineValue[], key: string) => lines.filter((l) => l.parentKey !== "" && l.parentKey === key);
-
-/** A bundle child's quantity from its rule (D125): its fixed quantity, or its parent's. */
-export const childQuantity = (parentQuantity: string, fixed: number | null) => (fixed === null ? parentQuantity : String(fixed));
 
 /** The most contract years a quote can have (D85). */
 export const MAX_YEARS = 10;
@@ -367,11 +352,11 @@ export function endDateFor(start: string, years: number): string {
 /** Lines with a discount above 0%; any makes the justification required. */
 export const discountedLines = (lines: readonly { discount: string }[]) => lines.filter((l) => Number(l.discount) > 0).length;
 
-/** The line categories, as the AM chooses them (D46, D72). */
+/** The groups, in the order form's words; a product's comes from its classification (D152). */
 export const LINE_CATEGORIES: readonly { value: LineCategory; label: string }[] = [
   { value: "SUBSCRIPTION", label: "Subscription" },
   { value: "SUPPORT", label: "Support" },
-  { value: "PROFESSIONAL_SERVICE", label: "Professional Service" },
+  { value: "PROFESSIONAL_SERVICE", label: "Professional Services" },
 ];
 
 /** Subscription and Support lines repeat yearly; a Professional Service doesn't. */
@@ -519,17 +504,12 @@ export function cloneYear(v: Pick<DraftFormValues, "startDate" | "yearCount" | "
   const to = years[yearCount - 1];
   const gap = yearCount - from;
   const within = (d: string, fallback: string) => (d ? (d < to.start ? to.start : d > to.end ? to.end : d) : fallback);
-  // Recurring products, with their bundle children (whatever they are);
-  // a child whose parent stays behind stays too.
-  const ofYear = v.lines.filter((l) => l.yearNumber === from);
-  const parents = new Set(ofYear.filter((l) => !l.parentKey && l.recurring).map((l) => l.key));
-  const keys = new Map(ofYear.map((l) => [l.key, newLineKey()]));
-  const copies = ofYear
-    .filter((l) => (l.parentKey ? parents.has(l.parentKey) : l.recurring))
+  // Recurring products only.
+  const copies = v.lines
+    .filter((l) => l.yearNumber === from && l.recurring)
     .map((l) => ({
       ...l,
-      key: keys.get(l.key)!,
-      parentKey: l.parentKey ? keys.get(l.parentKey)! : "",
+      key: newLineKey(),
       // A new line: priced as today, not kept to the copied line's pricing (D82).
       keepPricing: undefined,
       useLatestPricing: undefined,
@@ -722,7 +702,6 @@ export function fromVersion(res: DraftResponse): DraftFormValues {
       pricebookName: l.pricebookName,
       unitPrice: l.unitPrice,
       category: l.category,
-      categorySource: l.categorySource ?? "REP",
       recurring: l.recurring,
       classification: l.classification ?? "",
       unitOfMeasure: l.unitOfMeasure ?? "",
@@ -735,8 +714,6 @@ export function fromVersion(res: DraftResponse): DraftFormValues {
       endDate: !l.recurring ? (l.endDate ?? "") : "",
       salesPrice: l.salesPrice && Number(l.salesPrice) !== Number(l.unitPrice) ? String(Number(l.salesPrice)) : "",
       key: `saved-${l.id}`,
-      parentKey: l.parentLineNumber ? `saved-${v.lines.find((p) => p.lineNumber === l.parentLineNumber)?.id ?? ""}` : "",
-      bundleFixedQuantity: l.parentLineNumber ? (l.bundleFixedQuantity ?? null) : null,
     })),
     netTermsDays: (["30", "45", "60"] as const).find((n) => String(v.netTermsDays) === n) ?? "",
     poNumber: v.poNumber ?? "",
@@ -920,14 +897,11 @@ export function toDraftInput(v: DraftFormValues, expectedUpdatedAt?: string): Dr
       keepSnapshotFromLineId: l.lineId ?? undefined,
       pricebookEntryId: l.pricebookEntryId,
       quantity: Number(l.quantity),
-      category: l.category,
       discretionaryDiscountPercent: l.discount.trim() || "0",
       unitOfMeasure: opt(l.unitOfMeasure),
       // A saved line the AM moved to the pricing in force (D82).
       useLatestFormula: l.lineId !== null && l.useLatestPricing ? true : undefined,
       ...linePlace(l),
-      // A bundle child names its parent by position.
-      parentIndex: l.parentKey ? v.lines.findIndex((p) => p.key === l.parentKey) : undefined,
     })),
   };
 }
@@ -954,7 +928,6 @@ export function toPreviewBody(v: DraftFormValues): object | null {
     lines: lines.map((l) => ({
       pricebookEntryId: l.pricebookEntryId,
       quantity: Number(l.quantity),
-      category: l.category,
       discretionaryDiscountPercent: l.discount.trim() || "0",
       ...linePlace(l),
       keepPricing:
@@ -977,7 +950,7 @@ export function toPreviewBody(v: DraftFormValues): object | null {
  */
 export function storedPricing(res: DraftResponse): PricingPreview | null {
   const v = res.version;
-  // Every line is priced, a line waiting for its category included (D75); one
+  // Every line is priced, one whose classification isn't set up included; one
   // unpriced means the quote isn't priced.
   const pricedLines = v.lines;
   if (!v.subscriptionStartDate || pricedLines.length === 0 || pricedLines.some((l) => l.schedule.length === 0)) return null;
@@ -1003,7 +976,7 @@ export function storedPricing(res: DraftResponse): PricingPreview | null {
     totals: v.totals,
     years,
     smallDeal: v.smallDeal ?? null,
-    // Aligned with the version's lines, one for one (a line waiting for its category is priced too, D75).
+    // Aligned with the version's lines, one for one (a line whose classification isn't set up is priced too).
     lines: v.lines.map((l) => ({
       pricebookEntryId: l.pricebookEntryId,
       yearNumber: l.yearNumber ?? undefined,

@@ -79,11 +79,9 @@ export interface SheetLine {
   /** The product's description, without the name if it repeats it. */
   readonly productDescription: string | null;
   readonly pricebookName: string;
-  /** "" = not chosen yet (D72): listed under "Uncategorised". */
+  /** Its group, from its classification (D152); "" = not set up: listed under "Not set up". */
   readonly category: LineCategory | "";
-  /** The rep chose the category, because the product isn't mapped: Deal Desk verifies it. */
-  readonly categoryByRep: boolean;
-  /** Charged every year of the term, from its product's Salesforce classification (D76). */
+  /** Charged every year of the term, from its product's Salesforce classification (D152). */
   readonly recurring: boolean;
   readonly quantity: string;
   readonly unitOfMeasure: string | null;
@@ -101,8 +99,6 @@ export interface SheetLine {
   /** Its dates within its year; a one-off is dated on its start. Null until it has a year and a start. */
   readonly startDate: string | null;
   readonly endDate: string | null;
-  /** A bundle child: its parent's product name; null otherwise. */
-  readonly parentName: string | null;
   /** From the pricing, when the quote can be priced. */
   readonly annualList: string | null;
   readonly annualNet: string | null;
@@ -279,7 +275,6 @@ export function sheetFromVersion(res: DraftResponse): QuoteSheet {
       productDescription: descriptionAfterName(l.productName, l.productDescription),
       pricebookName: l.pricebookName,
       category: l.category,
-      categoryByRep: l.categorySource !== "MAPPED",
       recurring: l.recurring,
       quantity: String(l.quantity),
       unitOfMeasure: blank(l.unitOfMeasure),
@@ -289,7 +284,6 @@ export function sheetFromVersion(res: DraftResponse): QuoteSheet {
       yearNumber: l.yearNumber ?? 0,
       startDate: l.startDate,
       endDate: l.endDate,
-      parentName: l.parentLineNumber ? (v.lines.find((p) => p.lineNumber === l.parentLineNumber)?.productName ?? null) : null,
       annualList: pricing ? l.annualList : null,
       annualNet: pricing ? l.annualNet : null,
       arr: pricing ? l.arr : null,
@@ -433,7 +427,6 @@ export function sheetFromForm(
         productDescription: descriptionAfterName(l.productName, l.productDescription),
         pricebookName: l.pricebookName,
         category: l.category,
-        categoryByRep: l.categorySource !== "MAPPED",
         recurring: l.recurring,
         quantity: l.quantity,
         unitOfMeasure: blank(l.unitOfMeasure),
@@ -443,7 +436,6 @@ export function sheetFromForm(
         yearNumber: l.yearNumber,
         startDate: dates?.start ?? null,
         endDate: dates?.end ?? null,
-        parentName: l.parentKey ? (v.lines.find((p) => p.key === l.parentKey)?.productName ?? null) : null,
         annualList: p?.annualList ?? null,
         annualNet: p?.annualNet ?? null,
         arr: p?.arr ?? null,

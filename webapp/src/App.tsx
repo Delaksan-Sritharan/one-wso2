@@ -1045,7 +1045,7 @@ export default function App() {
           {/* Sales → CadO2, the quote tool. Its whole route tree, behind the `cado2`
               preview flag; Cado2Shell resolves access for every page. See
               @features/sales/cado2/routes and docs/ported-apps/cado2.md. */}
-          {isPreviewEnabled("cado2") && cado2Routes}
+          {isPreviewEnabled("quickquote") && cado2Routes}
           {/* Deals — MEDDPICC per Opportunity, from the MEDDPICC backend (shows a
               not-connected state when ONE_WSO2_ECHO_BACKEND_URL is unset). */}
           <Route path="sales/deals" element={<SalesDealsPage />} />

@@ -39,12 +39,18 @@ export function noteText(n: ReviewNote, role: LensRole): NoteText {
   let title: string;
   let detail: string;
   switch (n.rule) {
-    case "AM_CATEGORY":
-      title = "Category chosen by the AM";
-      detail = first.slice(first.lastIndexOf(": ") + 2);
-      break;
     case "RENEWAL_START":
       title = "Start date";
+      detail = first;
+      break;
+    case "SUPPORT_PLAN":
+      // D155: the AM was warned, not stopped; Deal Desk checks.
+      title = "Support plan";
+      detail = first;
+      break;
+    case "LEGACY_SUPPORT":
+      // D155: a Support line whose product isn't on Admin → Support Plans.
+      title = "Legacy support";
       detail = first;
       break;
     case "SPECIAL_TERMS":

@@ -127,7 +127,7 @@ describe("Approval Operations (D106, v2)", () => {
     expect(screen.getByText("EU, NA")).toBeInTheDocument();
     expect(screen.getByLabelText("CEO: average 44 h, SLA 24 h")).toBeInTheDocument();
     expect(screen.getByText("SLA (24 h)")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Q-26-90032" })).toHaveAttribute("href", "/sales/cado2/quotes/32/approvals");
+    expect(screen.getByRole("link", { name: "Q-26-90032" })).toHaveAttribute("href", "/sales/quickquote/quotes/32/approvals");
     expect(screen.getByText(/now with CEO/)).toBeInTheDocument();
   });
 
@@ -224,7 +224,7 @@ describe("Quote Report (D106)", () => {
   });
 
   it("opens a quote in the side panel from its row, keeping the results", async () => {
-    render(<MemoryRouter initialEntries={["/sales/cado2/insights/report?q=north"]}><QuoteReportTab filters={DEFAULT_FILTERS} onChange={vi.fn()} /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={["/sales/quickquote/insights/report?q=north"]}><QuoteReportTab filters={DEFAULT_FILTERS} onChange={vi.fn()} /></MemoryRouter>);
     expect(screen.queryByRole("complementary", { name: "Quote summary" })).toBeNull();
     const user = userEvent.setup();
     await user.click(screen.getByRole("row", { name: /Show Q-26-00031 in the side panel/ }));
@@ -245,7 +245,7 @@ describe("Quote Report (D106)", () => {
     expect(panel.getByText("12.5% discretionary")).toBeInTheDocument();
     expect(panel.getByRole("link", { name: "Open full quote" })).toHaveAttribute(
       "href",
-      `/sales/cado2/quotes/31/quote?${new URLSearchParams({ from: "insights", back: "/sales/cado2/insights/report?q=north" })}`,
+      `/sales/quickquote/quotes/31/quote?${new URLSearchParams({ from: "insights", back: "/sales/quickquote/insights/report?q=north" })}`,
     );
     // The results stay on screen; Esc closes the panel.
     expect(screen.getByRole("table", { name: "Quote report" })).toBeInTheDocument();
@@ -272,7 +272,7 @@ describe("Quote Report (D106)", () => {
   });
 
   it("doesn't link the quote number: the row opens the side panel instead", () => {
-    render(<MemoryRouter initialEntries={["/sales/cado2/insights/report"]}><QuoteReportTab filters={DEFAULT_FILTERS} onChange={vi.fn()} /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={["/sales/quickquote/insights/report"]}><QuoteReportTab filters={DEFAULT_FILTERS} onChange={vi.fn()} /></MemoryRouter>);
     const table = within(screen.getByRole("table", { name: "Quote report" }));
     expect(table.getByText("Q-26-00031")).toBeInTheDocument();
     expect(table.queryByRole("link")).toBeNull();

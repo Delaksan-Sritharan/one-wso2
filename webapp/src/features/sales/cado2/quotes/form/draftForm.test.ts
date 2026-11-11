@@ -145,7 +145,6 @@ function filled(): DraftFormValues {
         pricebookName: "FY26",
         unitPrice: "360",
         category: "SUBSCRIPTION",
-        categorySource: "REP",
         recurring: true,
         classification: "PS",
         unitOfMeasure: "",
@@ -156,8 +155,6 @@ function filled(): DraftFormValues {
         endDate: "",
         salesPrice: "",
         key: `k-${Math.random()}`,
-        parentKey: "",
-        bundleFixedQuantity: null,
       },
       {
         lineId: null,
@@ -169,7 +166,6 @@ function filled(): DraftFormValues {
         pricebookName: "FY26",
         unitPrice: "4800",
         category: "SUBSCRIPTION",
-        categorySource: "REP",
         recurring: true,
         classification: "PS",
         unitOfMeasure: "Portals",
@@ -180,8 +176,6 @@ function filled(): DraftFormValues {
         endDate: "",
         salesPrice: "",
         key: `k-${Math.random()}`,
-        parentKey: "",
-        bundleFixedQuantity: null,
       },
     ],
   };
@@ -204,7 +198,6 @@ describe("toDraftInput", () => {
       keepSnapshotFromLineId: 11,
       pricebookEntryId: "01uA",
       quantity: 20,
-      category: "SUBSCRIPTION",
       discretionaryDiscountPercent: "10",
       unitOfMeasure: undefined,
       useLatestFormula: undefined,
@@ -291,12 +284,13 @@ describe("toPreviewBody", () => {
     expect(toPreviewBody({ ...v, lines: [{ ...v.lines[0], startDate: "2028-01-01" }] })).not.toBeNull();
   });
 
-  it("prices a line waiting for its category too (D72, D76)", () => {
+  it("prices a line whose classification isn't set up too, and never sends a category (D152)", () => {
     const v = filled();
     const waiting = { ...v, lines: [...v.lines, { ...v.lines[0], pricebookEntryId: "01uWAIT", category: "" as const }] };
-    const body = toPreviewBody(waiting) as { lines: { pricebookEntryId: string; category: string }[] };
-    expect(body.lines.at(-1)).toMatchObject({ pricebookEntryId: "01uWAIT", category: "" });
-    // An uncategorised product still needs a year.
+    const body = toPreviewBody(waiting) as { lines: { pricebookEntryId: string; category?: string }[] };
+    expect(body.lines.at(-1)).toMatchObject({ pricebookEntryId: "01uWAIT" });
+    expect(body.lines.every((l) => !("category" in l))).toBe(true);
+    // It still needs a year.
     expect(toPreviewBody({ ...v, yearCount: 0, lines: [{ ...v.lines[0], category: "" }] })).toBeNull();
   });
 
@@ -432,32 +426,6 @@ describe("contract years", () => {
     expect(durationText("2027-03-05", "2027-03-04")).toBe("");
   });
 
-});
-
-describe("bundles", () => {
-  const base = () => filled().lines[0];
-  const parent = { ...base(), key: "p", parentKey: "", yearNumber: 1 };
-  const child = { ...base(), pricebookEntryId: "01uC", key: "c", parentKey: "p", yearNumber: 1, recurring: false };
-
-  it("names a child's parent by position when saving", () => {
-    const input = toDraftInput({ ...filled(), lines: [base(), parent, child] });
-    expect(input.lines[2].parentIndex).toBe(1);
-    expect(input.lines[1].parentIndex).toBeUndefined();
-  });
-
-  it("clones a recurring parent with its children, as new linked lines", () => {
-    const next = cloneYear({ ...filled(), yearCount: 1, lines: [parent, child] }, 1);
-    const [p2, c2] = next.lines.slice(2);
-    expect(p2.yearNumber).toBe(2);
-    expect(c2).toMatchObject({ yearNumber: 2, parentKey: p2.key, pricebookEntryId: "01uC" }); // a one-off child comes along
-    expect(p2.key).not.toBe("p");
-  });
-
-  it("leaves a child behind with its non-recurring parent", () => {
-    const oneOff = { ...parent, recurring: false };
-    const recurringChild = { ...child, recurring: true };
-    expect(cloneYear({ ...filled(), yearCount: 1, lines: [oneOff, recurringChild] }, 1).lines).toHaveLength(2);
-  });
 });
 
 describe("sales price", () => {
@@ -826,7 +794,7 @@ describe("lineFromSalesforce", () => {
     expect(l).toMatchObject({
       lineId: null, pricebookEntryId: "01uAS", productId: "01tAS", productName: "API Manager Analytics", productCode: "P-APIM-AN",
       productDescription: "", pricebookId: "01sQQ", unitPrice: "15000", salesPrice: "16500", quantity: "2", discount: "5.5",
-      category: "SUBSCRIPTION", categorySource: "MAPPED", recurring: true, yearNumber: 1, startDate: "", endDate: "", parentKey: "",
+      category: "SUBSCRIPTION", recurring: true, yearNumber: 1, startDate: "", endDate: "",
     });
     expect(l.key).not.toBe("");
   });

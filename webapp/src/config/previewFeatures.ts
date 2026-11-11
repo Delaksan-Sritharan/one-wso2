@@ -24,7 +24,7 @@
  * branching the build or holding work out of `main`.
  *
  * ```js
- * ONE_WSO2_PREVIEW_FEATURES: { cado2: true },
+ * ONE_WSO2_PREVIEW_FEATURES: { quickquote: true },
  * ```
  *
  * ## Absent means off
@@ -55,13 +55,14 @@
  */
 export type PreviewFeature =
   /**
-   * Sales → CadO2, the whole quote tool: its rail group (My Quotes, My
-   * Approvals, Admin), every route under `/sales/cado2`, and its backend
+   * Sales → QuickQuote (code name CadO2), the whole quote tool: its rail
+   * group (My Quotes, My Approvals, Admin), every route under
+   * `/sales/quickquote`, and its backend
    * calls. Held back as a whole until every screen is in place. CadO2's own
    * `/me` roles still decide who sees which item once this is on. See
    * docs/ported-apps/cado2.md.
    */
-  | "cado2"
+  | "quickquote"
   /**
    * Legal → NDA, the PDF generator — its rail entry and the `/legal/nda`
    * route. Held back until it is ready for production. Due Diligence, the
