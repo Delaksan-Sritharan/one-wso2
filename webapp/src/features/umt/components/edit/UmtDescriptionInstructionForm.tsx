@@ -355,7 +355,7 @@ export default function UmtDescriptionInstructionForm({
       sortable: false,
       renderCell: (params) => (
         <GridCellContent alignTop>
-          <Box sx={{ whiteSpace: "pre-wrap" }}>{params.row.description}</Box>
+          <Box sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{params.row.description}</Box>
         </GridCellContent>
       ),
     },
@@ -366,7 +366,7 @@ export default function UmtDescriptionInstructionForm({
       sortable: false,
       renderCell: (params) => (
         <GridCellContent alignTop>
-          <Box sx={{ whiteSpace: "pre-wrap" }}>{params.row.instruction}</Box>
+          <Box sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{params.row.instruction}</Box>
         </GridCellContent>
       ),
     },
