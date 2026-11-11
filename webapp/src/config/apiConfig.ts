@@ -1836,6 +1836,12 @@ export const amplifyServiceUrls = {
   dashboardParticipation: `${amplifyBackendUrl}/dashboards/participation`,
   dashboardExport: `${amplifyBackendUrl}/dashboards/export`,
   dashboardPeople: `${amplifyBackendUrl}/dashboards/people`,
+  // POST re-queues a FAILED Novera announcement by campaign id (CAN_ADMIN only, 409 if it is not FAILED).
+  adminAnnouncementRetry: (campaignId: string) =>
+    `${amplifyBackendUrl}/admin/announcements/${encodeURIComponent(campaignId)}/retry`,
+  // POST queues the Novera announcement for a post that has none (CAN_ADMIN only, 409 once one exists).
+  adminAnnouncementSend: (campaignId: string) =>
+    `${amplifyBackendUrl}/admin/announcements/${encodeURIComponent(campaignId)}/send`,
   dashboardGlance: `${amplifyBackendUrl}/dashboards/glance`,
   dashboardScorecard: `${amplifyBackendUrl}/dashboards/scorecard`,
   connectStart: `${amplifyBackendUrl}/connections/linkedin/start`,

@@ -21,7 +21,7 @@ const mutate = vi.fn();
 vi.mock("../api/useAmplifyMutations", () => ({ useRequestShare: () => ({ mutate, isPending: false }) }));
 vi.mock("../api/useAmplifyData", () => ({
   useAmplifyCategories: () => ({ data: [{ code: "PRODUCT", label: "Product" }] }),
-  useAmplifyConfig: () => ({ linkedinOrgUrn: "urn:li:organization:1", privacyNoticeUrl: "https://example.test/privacy", postLinkOrigins: ["https://www.linkedin.com", "https://linkedin.com"] }),
+  useAmplifyConfig: () => ({ linkedinOrgUrn: "urn:li:organization:1", privacyNoticeUrl: "https://example.test/privacy", campaignLinkOrigins: ["https://www.linkedin.com", "https://linkedin.com"] }),
 }));
 vi.mock("@context/notifications/NotificationsContext", () => ({
   useNotifications: () => ({ showError: vi.fn(), showSuccess: vi.fn() }),
