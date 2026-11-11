@@ -61,6 +61,7 @@ import {
 } from "../../api/useUmtReleaseChunks";
 import { useUmtGate } from "../../api/useUmtGate";
 import {
+  umtAnsweredBuildStatus,
   umtCanRetriggerBuild,
   umtCanRetriggerCstBuild,
   umtReleaseChunkRowAction,
@@ -150,31 +151,34 @@ function releaseReadinessAnswered(readiness: UmtReleaseReadiness, showWarning: (
 // list the same ones, and a positional match that slips shows one product's
 // build status against another product's name with nothing to reveal it.
 //
-// Two kinds of "missing" stay apart. A product the status response does not
-// mention reads as not triggered, since there is no build to report; a
-// product it mentions without a TG status reads as a failure, which is what
-// an empty status on a build that should have one means.
+// Every build status on a row comes from the build status request alone.
+// Until that request answers, when it fails, or when its answer does not list
+// the level, there is no status and the cell reads N/A. A level the answer
+// lists without a status reads as a failure.
 function tgBuildStatusOf(
   status: UmtReleaseChunkRowStatus | undefined,
   level: UmtReleaseChunkUpdateLevel,
-): string {
-  if (!status?.buildStatus) return "UNKNOWN";
+): string | undefined {
   const match = statusLevelOf(status, level);
-  if (!match) return "UNKNOWN";
-  return match.tgBuildStatus || "N/A";
+  return match && umtAnsweredBuildStatus(match.tgBuildStatus);
 }
 
-// One update level's product build status. The list that loads the chunks
-// carries one too, but only the build status request is read again while the
-// page is open, so its value wins, even when it is null. The list's value
-// stands in until that request has answered, for a level the answer does not
-// list, and for a level the answer lists without a build status.
+// One update level's product build status, read the same way as its TG build
+// status. The list that loads the chunks carries one too, but it is not read:
+// it only has a value once the level's product build has been triggered.
 function productBuildStatusOf(
   status: UmtReleaseChunkRowStatus | undefined,
   level: UmtReleaseChunkUpdateLevel,
-): string | null | undefined {
+): string | undefined {
   const match = statusLevelOf(status, level);
-  return match?.buildStatus !== undefined ? match.buildStatus : level.buildStatus;
+  return match && umtAnsweredBuildStatus(match.buildStatus);
+}
+
+// The chunk's CST build status, from the same request: N/A with no answer, and
+// a failure for an answer without one.
+function cstBuildStatusOf(status: UmtReleaseChunkRowStatus | undefined): string | undefined {
+  const answer = status?.buildStatus;
+  return answer && umtAnsweredBuildStatus(answer.overallCstBuildStatus);
 }
 
 function statusLevelOf(
@@ -406,7 +410,11 @@ export default function UmtPendingReleaseChunksGrid() {
             <ChunkCell divided>
               {params.row.updateLevels.map((level, index) => (
                 <ChunkLine key={index}>
-                  <BuildStatusChip status={productBuildStatusOf(status, level)} />
+                  {status?.buildStatusLoading ? (
+                    <Skeleton variant="text" width={80} />
+                  ) : (
+                    <BuildStatusChip status={productBuildStatusOf(status, level)} />
+                  )}
                 </ChunkLine>
               ))}
             </ChunkCell>
@@ -502,11 +510,7 @@ export default function UmtPendingReleaseChunksGrid() {
                 {status?.buildStatusLoading ? (
                   <Skeleton variant="text" width={80} />
                 ) : (
-                  <BuildStatusChip
-                    status={
-                      status?.buildStatus?.overallCstBuildStatus ?? "UNKNOWN"
-                    }
-                  />
+                  <BuildStatusChip status={cstBuildStatusOf(status)} />
                 )}
               </ChunkLine>
             </ChunkCell>
@@ -524,8 +528,7 @@ export default function UmtPendingReleaseChunksGrid() {
                 params: DataGrid.GridRenderCellParams<UmtReleaseChunk>,
               ) => {
                 const status = rowStatuses[params.row.id];
-                const cstStatus =
-                  status?.buildStatus?.overallCstBuildStatus ?? "UNKNOWN";
+                const cstStatus = cstBuildStatusOf(status);
                 return (
                   <ChunkCell>
                     <ChunkLine>

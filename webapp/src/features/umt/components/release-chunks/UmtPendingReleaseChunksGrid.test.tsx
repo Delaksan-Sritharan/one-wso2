@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { CHUNK_LINE_HEIGHT } from "./umtReleaseChunkGridSx";
 
@@ -42,6 +42,42 @@ const CHUNK = {
   ],
 };
 
+interface StatusResponseLevel {
+  productName: string;
+  productVersion: string;
+  buildStatus?: string;
+  tgBuildStatus?: string;
+}
+
+interface StatusResponse {
+  id: number;
+  updateIds: number[];
+  overallCstBuildStatus?: string;
+  updateLevels: StatusResponseLevel[];
+}
+
+// The build status response for CHUNK. A test that needs another answer, or
+// none at all, replaces it; each test starts from this one.
+function statusResponse(): StatusResponse {
+  return {
+    id: 42,
+    updateIds: [101, 102],
+    overallCstBuildStatus: "SUCCESS",
+    // Deliberately the reverse of the chunk's own order, and named: the
+    // two endpoints are matched on product, so ordering must not matter.
+    updateLevels: [
+      { productName: "wso2is", productVersion: "7.0.0", buildStatus: "SUCCESS", tgBuildStatus: "SUCCESS" },
+      { productName: "wso2am", productVersion: "4.2.0", buildStatus: "UNSTABLE", tgBuildStatus: "UNSTABLE" },
+    ],
+  };
+}
+
+let buildStatus: StatusResponse | undefined;
+
+beforeEach(() => {
+  buildStatus = statusResponse();
+});
+
 vi.mock("../../api/useUmtGate", () => ({
   useUmtGate: () => ({
     isAuthorized: true,
@@ -68,17 +104,7 @@ vi.mock("../../api/useUmtReleaseChunks", () => ({
   useUmtReleaseChunkRowStatuses: () => ({
     42: {
       buildStatusLoading: false,
-      buildStatus: {
-        id: 42,
-        updateIds: [101, 102],
-        overallCstBuildStatus: "SUCCESS",
-        // Deliberately the reverse of the chunk's own order, and named: the
-        // two endpoints are matched on product, so ordering must not matter.
-        updateLevels: [
-          { productName: "wso2is", productVersion: "7.0.0", tgBuildStatus: "SUCCESS" },
-          { productName: "wso2am", productVersion: "4.2.0", tgBuildStatus: "UNSTABLE" },
-        ],
-      },
+      buildStatus,
       chunkStatus: { id: 42, updateIds: [101, 102], status: "created" },
     },
   }),
@@ -121,6 +147,10 @@ function cellLines(field: string): HTMLElement[] {
   const chunkCell = cell.firstElementChild;
   if (!chunkCell) throw new Error(`cell for column "${field}" is empty`);
   return [...chunkCell.children] as HTMLElement[];
+}
+
+function lineTexts(field: string): (string | null)[] {
+  return cellLines(field).map((line) => line.textContent);
 }
 
 describe("UmtPendingReleaseChunksGrid", () => {
@@ -174,6 +204,44 @@ describe("UmtPendingReleaseChunksGrid", () => {
 
     expect(products).toEqual(["wso2am (4.2.0)", "wso2is (7.0.0)"]);
     expect(tgStatuses).toEqual(["Unstable", "Successful"]);
+  });
+
+  it("shows N/A in every status column while the build status request has no answer", () => {
+    buildStatus = undefined;
+    render(<UmtPendingReleaseChunksGrid />);
+
+    // The chunk list carries product build statuses of its own (UNSTABLE and
+    // SUCCESS), and they must not stand in for the missing answer.
+    expect(lineTexts("buildStatus")).toEqual(["N/A", "N/A"]);
+    expect(lineTexts("tgBuildStatus")).toEqual(["N/A", "N/A"]);
+    expect(lineTexts("cstBuildStatus")).toEqual(["N/A"]);
+  });
+
+  it("shows N/A for a level the answer does not list", () => {
+    buildStatus = {
+      ...statusResponse(),
+      updateLevels: statusResponse().updateLevels.filter((level) => level.productName !== "wso2am"),
+    };
+    render(<UmtPendingReleaseChunksGrid />);
+
+    expect(lineTexts("buildStatus")).toEqual(["N/A", "Successful"]);
+    expect(lineTexts("tgBuildStatus")).toEqual(["N/A", "Successful"]);
+  });
+
+  it("shows Failed for a status the answer leaves out", () => {
+    buildStatus = {
+      id: 42,
+      updateIds: [101, 102],
+      updateLevels: statusResponse().updateLevels.map(({ productName, productVersion }) => ({
+        productName,
+        productVersion,
+      })),
+    };
+    render(<UmtPendingReleaseChunksGrid />);
+
+    expect(lineTexts("buildStatus")).toEqual(["Failed", "Failed"]);
+    expect(lineTexts("tgBuildStatus")).toEqual(["Failed", "Failed"]);
+    expect(lineTexts("cstBuildStatus")).toEqual(["Failed"]);
   });
 
   it("rules under a group title only where the group has titles beneath it", () => {
