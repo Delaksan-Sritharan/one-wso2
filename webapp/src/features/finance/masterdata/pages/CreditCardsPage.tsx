@@ -17,7 +17,7 @@
 import { useEffect } from "react";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import MasterDataScreen from "../MasterDataScreen";
-import { MASTER_DATA_SNACK } from "../masterDataCopy";
+import { MASTER_DATA_SNACK } from "../masterDataUiText";
 import { useEmployeeEmails, useMasterDataList } from "../useMasterData";
 
 /**

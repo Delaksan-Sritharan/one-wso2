@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MasterDataAccessLevel } from "../masterdata/useMasterDataAccess";
 
 /** The four master-data rail ids, which answer as one. */
@@ -244,6 +244,30 @@ describe("the cc-admin item", () => {
   it("replaces the cc-settings rail item", () => {
     expect(FINANCE_ITEM_IDS.has("cc-admin")).toBe(true);
     expect(FINANCE_ITEM_IDS.has("cc-settings")).toBe(false);
+  });
+});
+
+describe("the cc-autofill-rules item", () => {
+  // Out of preview: a leftover flag in an environment's config must not hide it.
+  it("offers Autofill Rules to card holders, whatever the old preview flag says", () => {
+    roles.cc = ["cc_owner"];
+    const saved = window.config;
+    window.config = { ...(saved ?? {}), ONE_WSO2_PREVIEW_FEATURES: { ccTaggingRules: false } } as Window["config"];
+    try {
+      expect(gate().canSee("cc-autofill-rules")).toBe(true);
+    } finally {
+      window.config = saved;
+    }
+  });
+
+  // A lead or Finance user without a card of their own has no rules to keep.
+  it.each([["lead"], ["finance"]])("keeps it from a %s without a card", (role) => {
+    roles.cc = [role];
+    expect(gate().canSee("cc-autofill-rules")).toBe(false);
+  });
+
+  it("is a Finance rail item", () => {
+    expect(FINANCE_ITEM_IDS.has("cc-autofill-rules")).toBe(true);
   });
 });
 

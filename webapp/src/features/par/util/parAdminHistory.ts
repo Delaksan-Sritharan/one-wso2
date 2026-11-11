@@ -112,6 +112,17 @@ export const legacyCycleListHasSpecialRatings = (cycleName: string): boolean =>
 // so a row without a name never borrows another row's.
 export const legacyEmployeeName = (record: ParLegacyHistory): string => record.employeeName?.trim() || record.employeeEmail;
 
+// Keeps the items where `term` (already trimmed and lower-cased) appears in
+// any of `fields(item)`, ranked by the first field that matched. The sort is
+// stable, so the input order holds within a rank.
+export function rankSearchMatches<T>(items: readonly T[], term: string, fields: (item: T) => readonly unknown[]): T[] {
+  return items
+    .map((item) => ({ item, rank: fields(item).findIndex((value) => String(value).toLowerCase().includes(term)) }))
+    .filter(({ rank }) => rank !== -1)
+    .sort((a, b) => a.rank - b.rank)
+    .map(({ item }) => item);
+}
+
 // The overall rating every admin legacy grid shows. Same resolver
 // ParLegacyRecordDetail uses, so a record can't show a different rating in a
 // list than once opened; each cycle has its own rating scale, so this can't

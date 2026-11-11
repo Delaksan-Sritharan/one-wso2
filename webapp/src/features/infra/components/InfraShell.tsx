@@ -26,12 +26,14 @@ export default function InfraShell({
   title,
   subtitle,
   requireAuthorized = true,
+  center = false,
   children,
 }: {
   eyebrow?: { icon: LucideIcon; label: string };
   title: string;
   subtitle?: string;
   requireAuthorized?: boolean;
+  center?: boolean;
   children: ReactNode;
 }) {
   const configured = isInfraBackendConfigured();
@@ -45,7 +47,20 @@ export default function InfraShell({
     !gate.isAuthorized;
 
   return (
-    <Box>
+    <Box
+      sx={
+        center
+          ? {
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "flex-start",
+              textAlign: "center",
+            }
+          : undefined
+      }
+    >
       {eyebrow && (
         <Chip
           icon={<eyebrow.icon size={14} />}

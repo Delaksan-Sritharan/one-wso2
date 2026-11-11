@@ -40,7 +40,7 @@ import LeaveDateField from "../components/LeaveDateField";
 import { useLeaveAppConfig, useLeaveUserInfo, useLeaves } from "../api/useLeaveData";
 import { useSubmitLeave } from "../api/useLeaveMutations";
 import { describeError } from "../util/leaveError";
-import { SABBATICAL, SnackMessage } from "../util/leaveCopy";
+import { SABBATICAL, SnackMessage } from "../util/leaveUiText";
 import { formatNice, parseIso, todayIso } from "../util/leaveDates";
 import {
   eligibilityGapDays,

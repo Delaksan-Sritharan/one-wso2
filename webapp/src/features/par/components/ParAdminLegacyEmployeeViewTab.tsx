@@ -17,7 +17,7 @@
 import { useMemo } from "react";
 import { Avatar, Box, DataGrid, IconButton, InputAdornment, Stack, TextField, Tooltip, Typography } from "@wso2/oxygen-ui";
 import { EyeIcon, SearchIcon } from "@wso2/oxygen-ui-icons-react";
-import { isLegacyEmployeeParDone, isLegacyLeadFeedbackDone, legacyEmployeeName, legacyOverallRating } from "../util/parAdminHistory";
+import { isLegacyEmployeeParDone, isLegacyLeadFeedbackDone, legacyEmployeeName, legacyOverallRating, rankSearchMatches } from "../util/parAdminHistory";
 import ParStatusChip from "./ParStatusChip";
 import { ParGridToolbar } from "./parGridToolbar";
 import type { ParLegacyHistory } from "../api/types";
@@ -53,17 +53,21 @@ export default function ParAdminLegacyEmployeeViewTab({
   thumbnailFor: (email: string) => string | undefined;
   onOpenRecord: (record: ParLegacyHistory) => void;
 }) {
+  // Searching a name also matches every row that person leads, so matches
+  // are ranked: employee name, then email, then lead, then department. The
+  // sort is stable, so the cycle's own order holds within each rank, and a
+  // column sort the admin picks still takes over.
   const filteredRows = useMemo(() => {
     const term = searchText.trim().toLowerCase();
-    return term
-      ? records.filter(
-          (row) =>
-            legacyEmployeeName(row).toLowerCase().includes(term) ||
-            row.employeeEmail.toLowerCase().includes(term) ||
-            (row.reviewerName ?? "").toLowerCase().includes(term) ||
-            (row.department ?? "").toLowerCase().includes(term),
-        )
-      : records;
+    if (!term) return records;
+    // The raw name, not legacyEmployeeName: that falls back to the email, so
+    // a nameless row (shown as "-") would rank its email match as a name match.
+    return rankSearchMatches(records, term, (row) => [
+      row.employeeName?.trim() ?? "",
+      row.employeeEmail,
+      row.reviewerName ?? "",
+      row.department ?? "",
+    ]);
   }, [records, searchText]);
 
   const columns = useMemo<DataGrid.GridColDef<ParLegacyHistory>[]>(

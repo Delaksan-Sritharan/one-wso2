@@ -33,9 +33,9 @@ import { ChevronDownIcon } from "@wso2/oxygen-ui-icons-react";
 import { authedGet, authedPut } from "@api/http";
 import { describeError } from "@api/errors";
 import { infraServiceUrls } from "@config/apiConfig";
-import { INFRA_EYEBROW } from "@constants/infraApps";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { useIdTokenClaims } from "@features/security/grc/hooks/useIdTokenClaims";
+import { INFRA_EYEBROW } from "@constants/infraApps";
 import InfraShell from "../components/InfraShell";
 import { primaryBtnSx } from "../components/infraUi";
 import { useInfraGate } from "../api/useInfraGate";
@@ -137,7 +137,7 @@ function DefaultRepositoryAccess() {
     if (!isConnected) {
         return (
         <Typography variant="body2" color="text.secondary">
-            Connect with GitHub from the home page to see default repository access.
+            Connect with GitHub from GitHub Connection to see default repository access.
         </Typography>
         );
     }

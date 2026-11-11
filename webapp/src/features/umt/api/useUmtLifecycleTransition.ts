@@ -44,5 +44,11 @@ export function useUmtLifecycleTransition(id: string) {
         queryClient.invalidateQueries({ queryKey: ["umt-update-product-analysis"] }),
       ]);
     },
+    // A rejected transition usually means this tab's copy of the update is
+    // stale (e.g. a promotion it hasn't seen started), so it is re-read and
+    // the controls follow the update's real state.
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ["umt-update"] });
+    },
   });
 }

@@ -15,10 +15,9 @@
 // under the License.
 
 import { describe, expect, it } from "vitest";
-import { DAY_PORTION_LABEL, GENERIC_LABEL, LEAVE_TOOLTIP, SnackMessage, leaveTypeLabel } from "./leaveCopy";
+import { DAY_PORTION_LABEL, GENERIC_LABEL, LEAVE_TOOLTIP, SnackMessage, leaveTypeLabel } from "./leaveUiText";
 
-// The source names the same leave type differently per location. Collapsing
-// them — which the port had done — renames leave for three of four locations.
+// Each location names some leave types its own way, so one name for all would be wrong for most locations.
 describe("leaveTypeLabel", () => {
   it("names casual leave the way each location names it", () => {
     expect(leaveTypeLabel("Sri Lanka", "casual")).toBe("Casual/Annual");
@@ -52,7 +51,6 @@ describe("leaveTypeLabel", () => {
   });
 
   it("falls back to Sri Lanka for an unknown or missing location", () => {
-    // Matches the source's EmployeeLocation.LK default branch.
     expect(leaveTypeLabel("Atlantis", "casual")).toBe("Casual/Annual");
     expect(leaveTypeLabel(null, "casual")).toBe("Casual/Annual");
     expect(leaveTypeLabel(undefined, "casual")).toBe("Casual/Annual");
@@ -72,16 +70,15 @@ describe("GENERIC_LABEL", () => {
     }
   });
 
-  it("reproduces the source's odd mapping of annual to Casual/Annual", () => {
-    // GeneralLeave.tsx:80. Reads oddly; it is what the source says, and the
-    // entitlement warning is built from it.
+  it("labels annual leave Casual/Annual, the same as casual leave", () => {
+    // The entitlement warning is built from this label.
     expect(GENERIC_LABEL.annual).toBe("Casual/Annual");
     expect(GENERIC_LABEL.casual).toBe("Casual/Annual");
   });
 });
 
-describe("the rest of the transcribed copy", () => {
-  it("keeps the source's day-portion wording", () => {
+describe("the rest of the leave text", () => {
+  it("names the day portions", () => {
     expect(DAY_PORTION_LABEL.full).toBe("Full Day");
     expect(DAY_PORTION_LABEL.first).toBe("First Half");
     expect(DAY_PORTION_LABEL.second).toBe("Second Half");
@@ -92,12 +89,11 @@ describe("the rest of the transcribed copy", () => {
     expect(LEAVE_TOOLTIP.rtt).toBe("Réduction du Temps de Travail");
   });
 
-  it("keeps the source's result messages verbatim", () => {
+  it("keeps the result messages word for word", () => {
     expect(SnackMessage.success.submitLeaveMessage).toBe("Leave request submitted successfully");
     expect(SnackMessage.success.cancelLeaveMessage).toBe("Leave cancelled successfully");
     expect(SnackMessage.error.submitLeaveMessage).toBe("Failed to submit leave request");
-    // No trailing exclamation mark — the source's Apply view adds one by
-    // bypassing this constant, which is its own inconsistency, not ours.
+    // Unlike the Apply form's own SUBMIT_SUCCESS, the shared message has no exclamation mark.
     expect(SnackMessage.success.submitLeaveMessage).not.toMatch(/!$/);
   });
 });

@@ -45,7 +45,7 @@ host injects a fresh `config.js` per environment.
 | `npm run check:prod-pdf` | check that the NDA PDF downloads under the production CSP (`vite build` + `vite preview` + Chrome) |
 | `npm test` | run the test suite once (`vitest run`) |
 | `npm run test:watch` | tests in watch mode |
-| `npm run lint` | ESLint |
+| `npm run lint` | ESLint (cached in `.eslintcache`; delete it after upgrading an ESLint plugin, since plugin upgrades don't clear it) |
 
 Before opening a PR: `npx tsc -b && npm test && npm run lint`.
 
@@ -54,6 +54,12 @@ Before opening a PR: `npx tsc -b && npm test && npm run lint`.
 Runtime config is read from `window.config`, set by `public/config.js`.
 [`public/config.js.example`](public/config.js.example) is the full, commented list of keys. Build-time
 env vars use the `ONE_WSO2_` prefix (`vite.config.ts`).
+
+### Build-time keys
+
+| Key | Description | Example |
+|---|---|---|
+| `ONE_WSO2_CSP_AUTH_ORIGINS` | Comma-separated `https://host[:port]` origins added to the production CSP's `connect-src` and `frame-src`. The policy is baked into the build while `window.config` is not, so a deployment that signs in through an identity server outside the default allowlist (ThunderID or another non-Asgardeo OIDC server) must name that origin here and rebuild. Entries must be https origins — the build fails on anything else. | `https://id.internal.example.com` |
 
 ### App-wide keys
 
@@ -66,7 +72,7 @@ env vars use the `ONE_WSO2_` prefix (`vite.config.ts`).
 | `ONE_WSO2_ASGARDEO_MYACCOUNT_URL` | optional; defaults to the auth base URL with `api.` swapped for `myaccount.` | |
 | `ONE_WSO2_THEME` | `wso2` (default), `acrylicOrange`, `acrylicPurple`, `classic`, `highContrast`, `paleIndigo`, `paleGray` | `wso2` |
 | `ONE_WSO2_IDLE_AUTO_SIGN_OUT` | optional; `true` signs out 30 minutes after inactivity instead of waiting at the idle prompt | `false` |
-| `ONE_WSO2_PREVIEW_FEATURES` | features built but not released; absent or `false` hides them | `{ infra: false }` |
+| `ONE_WSO2_PREVIEW_FEATURES` | features built but not released; absent or `false` hides them | `{ quickquote: false }` |
 
 ### Feature backends
 

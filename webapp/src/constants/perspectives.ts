@@ -39,6 +39,14 @@ import {
   LucideLayoutGrid,
   RefreshCw,
   MegaphoneIcon,
+  CirclePlusIcon,
+  TrophyIcon,
+  Volume2Icon,
+  LayoutDashboardIcon,
+  ChartColumnIcon,
+  ActivityIcon,
+  GaugeIcon,
+  EyeIcon,
   NetworkIcon,
   RadioIcon,
   SatelliteDishIcon,
@@ -443,19 +451,22 @@ export const PROMOTION_CYCLE_HISTORY_ITEM_ID = "promotion-cycle-history";
 // Marketing Ops backend's own /api/me. Whatever renders these sections must ask
 // that gate, not just read `requires`.
 //
-// ISAC leads the rail. It is NOT in MARKETING_OPS_APPS, deliberately: that
-// registry is the set of operations this webapp implements, and every item in it
-// resolves to a route we own. ISAC is a separate application that One WSO2 only
+// The Marketing Calendar leads the rail, then ISAC. ISAC is NOT in
+// MARKETING_OPS_APPS, deliberately: that registry is the set of operations this
+// webapp implements, and every item in it resolves to a route we own. ISAC is a separate application that One WSO2 only
 // points at, so it belongs here — where the rail is assembled — rather than in a
 // registry that also feeds the overview page's cards and the capability gate.
 //
 // It is omitted entirely when its URL isn't configured. A rail item that goes
 // nowhere is worse than one that isn't there.
+const MARKETING_OPS_APP_SECTIONS = appsToSections(MARKETING_OPS_APPS);
+const isMarketingCalendar = (section: PerspectiveSection) => section.id === "sec-app-marketing-calendar";
 const MARKETING_OPS_SECTIONS: PerspectiveSection[] = [
+  ...MARKETING_OPS_APP_SECTIONS.filter(isMarketingCalendar),
   ...(isIsacConfigured()
     ? [{ id: "mops-isac", label: "ISAC", icon: SatelliteDishIcon, externalUrl: isacUrl }]
     : []),
-  ...appsToSections(MARKETING_OPS_APPS),
+  ...MARKETING_OPS_APP_SECTIONS.filter((section) => !isMarketingCalendar(section)),
 ];
 
 // The Me home landing. The landing page itself already is the ported
@@ -489,6 +500,60 @@ const ME_SECTIONS: PerspectiveSection[] = [
   ...appsToSections(ME_PAR_APPS),
   // promotion-app's employee portal.
   ...appsToSections(ME_PROMOTION_APPS),
+];
+
+// Amplify — employees share official WSO2 LinkedIn posts and earn points;
+// PO and Marketing register those posts. Phase 1 screens only (see
+// docs/requirements "Phase 1 - WSO2 Amplify User Experience").
+//
+// New Post and Current Posts are for the ONE_WSO2_AMPLIFY_BACKEND_URL
+// backend's CAN_CAMPAIGN grant only (GET /me) — see useAmplifyEditorAccess
+// and AmplifyEditorRoute. Everyone else neither sees the rows nor opens the
+// routes.
+export const AMPLIFY_CELEBRATE_PATH = "/amplify/celebrate";
+export const AMPLIFY_NEW_POST_PATH = "/amplify/new-post";
+export const AMPLIFY_CURRENT_POSTS_PATH = "/amplify/current-posts";
+export const AMPLIFY_NEW_POST_ITEM_ID = "amplify-new-post";
+export const AMPLIFY_CURRENT_POSTS_ITEM_ID = "amplify-current-posts";
+export const AMPLIFY_EDITOR_ITEM_IDS: ReadonlySet<string> = new Set([
+  AMPLIFY_NEW_POST_ITEM_ID,
+  AMPLIFY_CURRENT_POSTS_ITEM_ID,
+]);
+
+// Dashboarding: boards for anyone the ONE_WSO2_AMPLIFY_BACKEND_URL backend
+// grants CAN_DASHBOARD (by default PO, Marketing, SLT and Admin). A plain
+// employee neither sees the group nor opens the routes — see
+// useAmplifyDashboardAccess and AmplifyDashboardRoute. At A Glance comes first.
+export const AMPLIFY_DASHBOARDS_PATH = "/amplify/dashboards";
+export const AMPLIFY_DASHBOARD_GLANCE_PATH = `${AMPLIFY_DASHBOARDS_PATH}/glance`;
+export const AMPLIFY_DASHBOARD_OPERATIONS_PATH = `${AMPLIFY_DASHBOARDS_PATH}/operations`;
+export const AMPLIFY_DASHBOARD_POSTS_PATH = `${AMPLIFY_DASHBOARDS_PATH}/posts`;
+export const AMPLIFY_DASHBOARD_PARTICIPATION_PATH = `${AMPLIFY_DASHBOARDS_PATH}/participation`;
+export const AMPLIFY_DASHBOARD_SCORECARD_PATH = `${AMPLIFY_DASHBOARDS_PATH}/scorecard`;
+export const AMPLIFY_DASHBOARDING_GROUP_ID = "amplify-dashboarding";
+
+const AMPLIFY_DASHBOARD_SECTIONS: PerspectiveSection[] = [
+  { id: "amplify-dashboard-glance", label: "At A Glance", icon: EyeIcon, path: AMPLIFY_DASHBOARD_GLANCE_PATH },
+  { id: "amplify-dashboard-operations", label: "Operations", icon: ActivityIcon, path: AMPLIFY_DASHBOARD_OPERATIONS_PATH },
+  { id: "amplify-dashboard-posts", label: "Post Performance", icon: ChartColumnIcon, path: AMPLIFY_DASHBOARD_POSTS_PATH },
+  { id: "amplify-dashboard-participation", label: "Participation", icon: UsersIcon, path: AMPLIFY_DASHBOARD_PARTICIPATION_PATH },
+  { id: "amplify-dashboard-scorecard", label: "Scorecard", icon: GaugeIcon, path: AMPLIFY_DASHBOARD_SCORECARD_PATH },
+];
+export const AMPLIFY_DASHBOARD_ITEM_IDS: ReadonlySet<string> = new Set(AMPLIFY_DASHBOARD_SECTIONS.map((s) => s.id));
+
+// Celebrate and the editor rows stay flat, like Knowledge: the rail is always
+// open on Amplify's screens. Dashboarding is the one collapsible group.
+const AMPLIFY_SECTIONS: PerspectiveSection[] = [
+  { id: "amplify-celebrate", label: "Celebrate", icon: TrophyIcon, path: AMPLIFY_CELEBRATE_PATH },
+  { id: AMPLIFY_NEW_POST_ITEM_ID, label: "New Post", icon: CirclePlusIcon, path: AMPLIFY_NEW_POST_PATH },
+  { id: AMPLIFY_CURRENT_POSTS_ITEM_ID, label: "Current Posts", icon: Volume2Icon, path: AMPLIFY_CURRENT_POSTS_PATH },
+  {
+    id: AMPLIFY_DASHBOARDING_GROUP_ID,
+    label: "Dashboarding",
+    icon: LayoutDashboardIcon,
+    alwaysGroup: true,
+    children: AMPLIFY_DASHBOARD_SECTIONS,
+  },
 ];
 
 // Knowledge's one item so far. Its own perspective (not nested under Me)
@@ -793,6 +858,21 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
     forwardsToFirstItem: true,
     sections: KNOWLEDGE_SECTIONS,
   },
+  // Amplify, held behind its preview flag until the phase 1 pilot. Its landing
+  // forwards to Celebrate, the first row everyone can see.
+  ...(isPreviewEnabled("amplify")
+    ? [
+        {
+          key: "amplify",
+          label: "Amplify",
+          icon: TrophyIcon,
+          access: true,
+          path: "/amplify",
+          forwardsToFirstItem: true,
+          sections: AMPLIFY_SECTIONS,
+        },
+      ]
+    : []),
   // Download Stats is the first engineering tool (ADR 0001). It is not under
   // Infra Portal: Infra is GitHub administration, and this is release
   // downloads, package downloads, and repository stats. It is an app inside
@@ -812,22 +892,16 @@ export const PERSPECTIVES: readonly PerspectiveDef[] = [
       UMT_SECTION,
     ],
   },
-  // Held behind a preview flag, whole perspective and all, until it's ready
-  // for production. With the flag off the entry does not exist, so the waffle,
-  // landing options, and favourites stay clean.
-  ...(isPreviewEnabled("infra")
-  ? [
-      {
-        key: "infra",
-        label: "Infrastructure",
-        icon: ServerIcon,
-        access: true,
-        path: "/infra",
-        externallyGated: true,
-        sections: appsToSections(INFRA_APPS),
-      },
-    ]
-  : []),
+  {
+    key: "infra",
+    label: "Infrastructure",
+    icon: ServerIcon,
+    access: true,
+    path: "/infra",
+    externallyGated: true,
+    forwardsToFirstItem: true,
+    sections: appsToSections(INFRA_APPS),
+  },
   // Marketing Ops — UNLOCKED. Ported so far: Utilities (UTM + Asset Name
   // generators and their Marketing Admin panels) and Ad Campaigns → Analytics.
   // Still in Marketing Ops itself: Email Workbench, Events, CRM Upload — those

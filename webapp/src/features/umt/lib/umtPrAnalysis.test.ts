@@ -127,16 +127,26 @@ describe("prAnalysisStatusMessage", () => {
     });
   });
 
-  it("splits a failed status into readable detail lines with error tone", () => {
-    const result = prAnalysisStatusMessage("FAILED_TIMEOUT: Request timed out while cloning repo");
-    expect(result.tone).toBe("error");
-    expect(result.lines[0]).toBe("PR Analysis task was failed.");
-    expect(result.lines.slice(1).join(" ")).not.toContain(":");
+  it("splits the failure reason into readable detail lines with error tone", () => {
+    const result = prAnalysisStatusMessage("FAILED", "Clone failed: Request timed out while cloning repo");
+    expect(result).toEqual({
+      lines: ["PR Analysis task was failed.", "Clone failed", "Request timed out while cloning repo"],
+      tone: "error",
+    });
   });
 
   it("does not split a colon inside a URL", () => {
-    const result = prAnalysisStatusMessage("failed: see https://ci.example.com/job/1");
+    const result = prAnalysisStatusMessage("FAILED", "Build failed: see https://ci.example.com/job/1");
     expect(result.lines).toContain("see https://ci.example.com/job/1");
+  });
+
+  it("shows only the failure line when there is no reason", () => {
+    for (const error of [null, undefined, ""]) {
+      expect(prAnalysisStatusMessage("FAILED", error)).toEqual({
+        lines: ["PR Analysis task was failed."],
+        tone: "error",
+      });
+    }
   });
 });
 

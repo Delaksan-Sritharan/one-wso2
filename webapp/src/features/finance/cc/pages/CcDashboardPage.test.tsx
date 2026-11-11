@@ -17,9 +17,10 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render as rtlRender, screen, waitFor } from "@testing-library/react";
+import { cleanup, render as rtlRender, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import userEvent from "@testing-library/user-event";
+import { resetReminderLock } from "../ccReminderLock";
 import { localIsoMonth } from "@utils/localDate";
 
 vi.mock("@hooks/useAccessToken", () => ({ useAccessToken: () => async () => "token" }));
@@ -36,10 +37,40 @@ const role = { privileges: ["employee"] as string[] };
 const asked = {
   summary: [] as { dateFrom: string | undefined; ownedCardsOnly: boolean; leadEmail?: string }[],
   compliance: [] as { ownedCardsOnly: boolean; enabled: boolean }[],
-  managerCompliance: [] as { enabled: boolean }[],
+  cardLeadCompliance: [] as { enabled: boolean }[],
   leadSummary: [] as { enabled: boolean }[],
   leadTeam: [] as { leadEmail: string | undefined }[],
 };
+
+const cardLeadFixture = {
+  leadEmail: "lead@wso2.com",
+  leadName: "Lead Person",
+  cardHolderCount: 1,
+  outstandingAmount: 700,
+  transactionCount: 2,
+  avgPendingDays: 20,
+  bucket0To7: 0,
+  bucket8To14: 0,
+  bucket15To30: 1,
+  bucket30Plus: 1,
+  cardHolders: [
+    {
+      employeeEmail: "late@wso2.com",
+      cardHolderName: "Late Filer",
+      outstandingAmount: 700,
+      transactionCount: 2,
+      avgDaysToSubmit: 41.5,
+      bucket0To7: 0,
+      bucket8To14: 0,
+      bucket15To30: 1,
+      bucket30Plus: 1,
+    },
+  ],
+};
+
+// Extra card-lead rows, added only by the test that needs two sends to overlap.
+// Left empty by default so the row-count assertions keep reading one lead.
+const extraCardLeads: typeof cardLeadFixture[] = [];
 
 const leadFixtures = {
   leads: [
@@ -71,14 +102,15 @@ const leadFixtures = {
 };
 
 // The reminder's only side effect. Recorded so a test can prove WHAT went up:
-// the manager and the range, never a message body built on this side.
-const reminderCalls: { managerEmail: string; dateFrom?: string }[] = [];
-const sendReminder = vi.fn(async (args: { managerEmail: string; dateFrom?: string }) => {
+// the lead and the range, never a message body built on this side. The reminder
+// goes to the lead alone; the text here mirrors what the backend confirms with.
+const reminderCalls: { leadEmail: string; dateFrom?: string }[] = [];
+const sendReminder = vi.fn(async (args: { leadEmail: string; dateFrom?: string }) => {
   reminderCalls.push(args);
   return "Reminder sent to Lead Person.";
 });
 vi.mock("../useCcMutations", () => ({
-  useCcManagerReminder: () => ({ mutateAsync: sendReminder }),
+  useCcCardLeadReminder: () => ({ mutateAsync: sendReminder }),
 }));
 
 vi.mock("../useCc", () => ({
@@ -154,36 +186,10 @@ vi.mock("../useCc", () => ({
       isError: false,
     };
   },
-  useCcManagerCompliance: (_dateFrom: string | undefined, enabled: boolean) => {
-    asked.managerCompliance.push({ enabled });
+  useCcCardLeadCompliance: (_dateFrom: string | undefined, enabled: boolean) => {
+    asked.cardLeadCompliance.push({ enabled });
     return {
-      data: [
-        {
-          managerEmail: "lead@wso2.com",
-          managerName: "Lead Person",
-          reportCount: 1,
-          outstandingAmount: 700,
-          transactionCount: 2,
-          avgPendingDays: 20,
-          bucket0To7: 0,
-          bucket8To14: 0,
-          bucket15To30: 1,
-          bucket30Plus: 1,
-          reports: [
-            {
-              employeeEmail: "late@wso2.com",
-              cardHolderName: "Late Filer",
-              outstandingAmount: 700,
-              transactionCount: 2,
-              avgDaysToSubmit: 41.5,
-              bucket0To7: 0,
-              bucket8To14: 0,
-              bucket15To30: 1,
-              bucket30Plus: 1,
-            },
-          ],
-        },
-      ],
+      data: [cardLeadFixture, ...extraCardLeads],
       isLoading: false,
       isError: false,
     };
@@ -208,13 +214,18 @@ beforeEach(() => {
   role.privileges = ["employee"];
   asked.summary.length = 0;
   asked.compliance.length = 0;
-  asked.managerCompliance.length = 0;
+  asked.cardLeadCompliance.length = 0;
   asked.leadSummary.length = 0;
   asked.leadTeam.length = 0;
   notify.showSuccess.mockClear();
   notify.showError.mockClear();
   sendReminder.mockClear();
   reminderCalls.length = 0;
+  extraCardLeads.length = 0;
+  // The reminder lock is module-scoped so it outlives a page unmount, which
+  // means it outlives a test too: the specs below deliberately leave a send
+  // open, and without this the next one starts with that row still held.
+  resetReminderLock();
 });
 
 // index.tsx:63-65 — only a lead or finance gets the company-wide view and the
@@ -413,54 +424,202 @@ describe("the cardholder table", () => {
   });
 });
 
-// CcDashboardPage.tsx:659-760 — "Group by: Reporting Manager" rolls the backlog
-// up under each manager, and each row can be expanded or copied as a reminder.
-describe("the reporting-manager grouping", () => {
-  const groupByManager = async () => {
+// "Group by: Card Lead" rolls the backlog up under the lead the credit card master
+// data maps each card to, and each row can be expanded or sent a reminder.
+describe("the card-lead grouping", () => {
+  const groupByCardLead = async () => {
     role.privileges = ["employee", "finance"];
     render();
     await userEvent.click(screen.getByRole("combobox", { name: "Group by" }));
-    await userEvent.click(screen.getByRole("option", { name: "Group by: Reporting Manager" }));
+    await userEvent.click(screen.getByRole("option", { name: "Group by: Card Lead" }));
   };
 
-  it("swaps the card-holder rows for one row per reporting manager", async () => {
-    await groupByManager();
+  it("swaps the card-holder rows for one row per card lead", async () => {
+    await groupByCardLead();
     const row = screen.getByText("Lead Person").closest("tr") as HTMLElement;
     expect(row).toHaveTextContent("700");
-    // Their reports stay folded away until the row is expanded.
+    // Their card holders stay folded away until the row is expanded.
     expect(screen.queryByText("Late Filer")).not.toBeInTheDocument();
   });
 
-  it("expands a manager into the individual reports behind them", async () => {
-    await groupByManager();
-    await userEvent.click(screen.getByRole("button", { name: "Expand reports" }));
+  it("expands a lead into the individual card holders behind them", async () => {
+    await groupByCardLead();
+    await userEvent.click(screen.getByRole("button", { name: "Expand card holders" }));
     expect(screen.getByText("Late Filer")).toBeInTheDocument();
   });
 
   // The figures are deliberately NOT sent: the dashboard caches its summary for
   // five minutes, so a body built here could chase a card holder who has since
   // submitted. The backend reads the backlog itself at send time.
-  it("asks the backend to send, passing only the manager and the range", async () => {
-    await groupByManager();
+  it("asks the backend to send, passing only the lead and the range", async () => {
+    await groupByCardLead();
 
     await userEvent.click(screen.getByRole("button", { name: "Email reminder" }));
 
     await waitFor(() => expect(sendReminder).toHaveBeenCalledTimes(1));
-    expect(reminderCalls[0].managerEmail).toBe("lead@wso2.com");
-    expect(Object.keys(reminderCalls[0])).toEqual(["managerEmail", "dateFrom"]);
+    expect(reminderCalls[0].leadEmail).toBe("lead@wso2.com");
+    expect(Object.keys(reminderCalls[0])).toEqual(["leadEmail", "dateFrom"]);
   });
 
   it("confirms the send with the sentence the backend returned", async () => {
-    await groupByManager();
+    await groupByCardLead();
 
     await userEvent.click(screen.getByRole("button", { name: "Email reminder" }));
 
-    await waitFor(() => expect(notify.showSuccess).toHaveBeenCalledWith("Reminder sent to Lead Person."));
+    await waitFor(() =>
+      expect(notify.showSuccess).toHaveBeenCalledWith("Reminder sent to Lead Person."),
+    );
+  });
+
+  // Finance asked to be able to chase the same lead a second and third time, so
+  // the button has to come back after a send rather than locking the row.
+  it("lets the same lead be reminded again, counting the follow-ups", async () => {
+    await groupByCardLead();
+
+    await userEvent.click(screen.getByRole("button", { name: "Email reminder" }));
+    await waitFor(() => expect(sendReminder).toHaveBeenCalledTimes(1));
+
+    const again = await screen.findByRole("button", { name: "Email another reminder" });
+    expect(again).toBeEnabled();
+    await userEvent.click(again);
+
+    await waitFor(() => expect(sendReminder).toHaveBeenCalledTimes(2));
+    expect(reminderCalls.map((call) => call.leadEmail)).toEqual(["lead@wso2.com", "lead@wso2.com"]);
+  });
+
+  // Finance works down this list, so two sends overlap as soon as one request is
+  // slow. Holding "which send is in flight" in a single slot let whichever came
+  // back first clear the lock for the other — re-enabling a row whose request
+  // had not returned, so that lead could be mailed twice in one pass.
+  it("holds each lead's button on its own send, not on whichever finished last", async () => {
+    extraCardLeads.push({
+      ...cardLeadFixture,
+      leadEmail: "other@wso2.com",
+      leadName: "Other Lead",
+    });
+    // The first row's send hangs; the second's returns straight away.
+    let releaseFirst = () => {};
+    sendReminder.mockImplementationOnce(
+      (args: { leadEmail: string; dateFrom?: string }) =>
+        new Promise<string>((resolve) => {
+          reminderCalls.push(args);
+          releaseFirst = () => resolve("sent");
+        }),
+    );
+    await groupByCardLead();
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Email reminder" })[0]);
+    await userEvent.click(screen.getAllByRole("button", { name: "Email reminder" })[1]);
+    await waitFor(() => expect(sendReminder).toHaveBeenCalledTimes(2));
+
+    // The second row's send has come back, so it offers a follow-up...
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Email another reminder" })).toBeEnabled(),
+    );
+    // ...while the first row's request is still open, so it stays held.
+    const stillSending = screen.getAllByRole("button", { name: "Email reminder" });
+    expect(stillSending).toHaveLength(1);
+    expect(stillSending[0]).toBeDisabled();
+
+    releaseFirst();
+  });
+
+  // Switching Group by unmounts the card-lead table while a send is still open.
+  // The request carries on either way, so a lock that lives inside that table
+  // goes with it: coming back gave the row a fresh, empty set and the same lead
+  // could be mailed a second time off one pass.
+  it("keeps a lead held across a Group by switch while their send is still open", async () => {
+    let releaseSend = () => {};
+    sendReminder.mockImplementationOnce(
+      (args: { leadEmail: string; dateFrom?: string }) =>
+        new Promise<string>((resolve) => {
+          reminderCalls.push(args);
+          releaseSend = () => resolve("sent");
+        }),
+    );
+    await groupByCardLead();
+
+    await userEvent.click(screen.getByRole("button", { name: "Email reminder" }));
+    await waitFor(() => expect(sendReminder).toHaveBeenCalledTimes(1));
+
+    // Away to Card Holder and back, with the request still open.
+    await userEvent.click(screen.getByRole("combobox", { name: "Group by" }));
+    await userEvent.click(screen.getByRole("option", { name: "Group by: Card Holder" }));
+    await userEvent.click(screen.getByRole("combobox", { name: "Group by" }));
+    await userEvent.click(screen.getByRole("option", { name: "Group by: Card Lead" }));
+
+    // The remounted row still knows the send is in flight, so it stays held and
+    // cannot be clicked a second time. Asserted as disabled rather than by
+    // clicking: userEvent refuses a button with `pointer-events: none`, which
+    // is itself the guarantee being checked.
+    expect(screen.getByRole("button", { name: "Email reminder" })).toBeDisabled();
+    expect(sendReminder).toHaveBeenCalledTimes(1);
+
+    releaseSend();
+  });
+
+  // Leaving the dashboard unmounts the page, not the request. A lock held
+  // anywhere in the tree went with it, so coming back handed the row a fresh
+  // set and the same lead could be mailed a second time off one open send.
+  it("keeps a lead held when the page itself is left and reopened", async () => {
+    let releaseSend = () => {};
+    sendReminder.mockImplementationOnce(
+      (args: { leadEmail: string; dateFrom?: string }) =>
+        new Promise<string>((resolve) => {
+          reminderCalls.push(args);
+          releaseSend = () => resolve("sent");
+        }),
+    );
+    await groupByCardLead();
+    await userEvent.click(screen.getByRole("button", { name: "Email reminder" }));
+    await waitFor(() => expect(sendReminder).toHaveBeenCalledTimes(1));
+
+    // Off the dashboard and back, with the request still open.
+    cleanup();
+    await groupByCardLead();
+
+    expect(screen.getByRole("button", { name: "Email reminder" })).toBeDisabled();
+    expect(sendReminder).toHaveBeenCalledTimes(1);
+
+    releaseSend();
+  });
+
+  // The follow-up count labels the button, so losing it on a Group by switch
+  // told Finance a lead had never been chased when they just had been.
+  it("remembers the follow-up count across a Group by switch", async () => {
+    await groupByCardLead();
+    await userEvent.click(screen.getByRole("button", { name: "Email reminder" }));
+    await screen.findByRole("button", { name: "Email another reminder" });
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Group by" }));
+    await userEvent.click(screen.getByRole("option", { name: "Group by: Card Holder" }));
+    await userEvent.click(screen.getByRole("combobox", { name: "Group by" }));
+    await userEvent.click(screen.getByRole("option", { name: "Group by: Card Lead" }));
+
+    expect(
+      await screen.findByRole("button", { name: "Email another reminder" }),
+    ).toBeInTheDocument();
+  });
+
+  // "Unassigned" is a card the master data maps to no lead at all. A lead the
+  // directory holds no name for is a different thing: the reminder still goes
+  // somewhere, so the row has to say where.
+  it("names a lead by email when the master data carries no name for them", async () => {
+    extraCardLeads.push({
+      ...cardLeadFixture,
+      leadEmail: "nameless@wso2.com",
+      leadName: "",
+    });
+    await groupByCardLead();
+
+    expect(screen.getByText("nameless@wso2.com")).toBeInTheDocument();
+    const row = screen.getByText("nameless@wso2.com").closest("tr") as HTMLElement;
+    expect(row).not.toHaveTextContent("Unassigned");
   });
 
   it("reports a failed send rather than leaving the reader thinking it went", async () => {
     sendReminder.mockRejectedValueOnce(new Error("boom"));
-    await groupByManager();
+    await groupByCardLead();
 
     await userEvent.click(screen.getByRole("button", { name: "Email reminder" }));
 

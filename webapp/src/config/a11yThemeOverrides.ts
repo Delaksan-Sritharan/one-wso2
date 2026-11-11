@@ -107,6 +107,33 @@ export function withA11yOverrides(base: OxygenTheme): OxygenTheme {
     (baseComponents?.MuiChip as
       | { styleOverrides?: Record<string, unknown> }
       | undefined) ?? {};
+  const baseDataGrid =
+    (baseComponents?.MuiDataGrid as
+      | { styleOverrides?: Record<string, unknown> }
+      | undefined) ?? {};
+
+  // The DataGrid's Columns/Filters panel is painted from `background.paper`,
+  // which Oxygen makes translucent (the WSO2 dark paper is `#00000026`, 15%),
+  // so the grid's headers and rows read straight through the panel's
+  // checkboxes and inputs. Even with a blur they stay legible behind it, so
+  // the panel takes the page's own `background.default` instead, which is
+  // opaque in every Oxygen theme and colour scheme.
+  const solidPanel = ({
+    theme,
+  }: {
+    theme: {
+      vars?: { palette: { background: { default: string } } };
+      palette: { background: { default: string } };
+    };
+  }): Record<string, unknown> => ({
+    backgroundColor: (theme.vars ?? theme).palette.background.default,
+  });
+  // The grid's own menus (density selector, column header menu) are a Paper
+  // inside the grid's popper, painted from the same translucent
+  // `background.paper`, so they get the same solid fill.
+  const solidMenuPaper = (props: Parameters<typeof solidPanel>[0]): Record<string, unknown> => ({
+    "& .MuiPaper-root": solidPanel(props),
+  });
 
   return {
     ...base,
@@ -136,6 +163,14 @@ export function withA11yOverrides(base: OxygenTheme): OxygenTheme {
         styleOverrides: {
           ...baseChip.styleOverrides,
           outlinedPrimary: lightColorAndBorder,
+        },
+      },
+      MuiDataGrid: {
+        ...baseDataGrid,
+        styleOverrides: {
+          ...baseDataGrid.styleOverrides,
+          panelContent: solidPanel,
+          menu: solidMenuPaper,
         },
       },
     },

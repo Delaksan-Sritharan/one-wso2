@@ -16,7 +16,7 @@
 
 import { useMemo, useState, type JSX, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { alpha, Badge, Box, Link, List, Sidebar, Typography, useSidebar } from "@wso2/oxygen-ui";
+import { Badge, Box, GlobalStyles, Link, List, Sidebar, Typography, useSidebar } from "@wso2/oxygen-ui";
 import { ArrowUpRightIcon, BookOpenIcon, ExternalLinkIcon, SettingsIcon } from "@wso2/oxygen-ui-icons-react";
 import { Link as RouterLink, matchPath, useLocation, useNavigate } from "react-router";
 import ScreenBadgeLabel from "@components/screen-badge/ScreenBadgeLabel";
@@ -101,8 +101,29 @@ const ELLIPSIS_SX = {
 /** Size, in px, Oxygen's Sidebar.ItemIcon gives a row icon. */
 const RAIL_ICON_SIZE = 20;
 
-/** Diameter, in px, of the dot on a group's header. */
+/**
+ * Diameter, in px, of the dot on a group's header, and of the dot at the end of a collapsed-rail popup entry for a row
+ * without an icon.
+ */
 const GROUP_DOT_SIZE = 8;
+
+/**
+ * Moves a row's dot to the end of its entry in a group's collapsed-rail popup, for a row without an icon. Oxygen
+ * builds each entry from the row's icon and label alone, so the dot can only travel in the icon's slot; left there,
+ * it would push the label out of line with the others.
+ */
+const POPUP_END_DOT_STYLES = (
+  <GlobalStyles
+    styles={(theme) => ({
+      ".MuiListItemIcon-root:has(> [data-rail-end-dot])": {
+        position: "absolute",
+        right: theme.spacing(2),
+        top: "50%",
+        transform: "translateY(-50%)",
+      },
+    })}
+  />
+);
 
 /** What a screen reader hears for the dot on a group's header. */
 const GROUP_ATTENTION_TEXT = "Needs attention.";
@@ -281,6 +302,7 @@ export default function SideRail({ collapsed }: SideRailProps): JSX.Element {
       onSelect={onSelect}
       onToggleExpand={onToggleExpand}
     >
+      {POPUP_END_DOT_STYLES}
       {/* flex column: lets the pinned-to-bottom category below push itself to
           the foot of this scroll area with `mt: auto`, rather than flowing
           directly under the main one. showDividers off: Nav would otherwise
@@ -405,10 +427,9 @@ function SectionNode({
   resolveBadge: ResolveBadge;
   /**
    * True while this group holds the current route, which tints its icon so an
-   * expanded group signals that you are inside it, and outlines it while open
-   * (see GroupFrame). Oxygen computes an equivalent internally but only spends
-   * it when the rail is collapsed, and the child row carrying the highlight has
-   * no icon.
+   * expanded group signals that you are inside it. Oxygen computes an equivalent
+   * internally but only spends it when the rail is collapsed, and the child row
+   * carrying the highlight has no icon.
    *
    * It no longer makes the header non-interactive: the group opens itself on
    * navigation, and closing it again is the user's business.
@@ -468,7 +489,7 @@ function SectionNode({
       : groupNeedsAttention(section, resolveBadge, resolveVisible);
 
     return (
-      <GroupFrame id={section.id} current={containsActiveRoute}>
+      <GroupList>
         <Sidebar.Item id={section.id}>
           <Sidebar.ItemIcon
             sx={containsActiveRoute ? { color: "primary.main" } : undefined}
@@ -530,7 +551,7 @@ function SectionNode({
             );
           })}
         </Sidebar.Item>
-      </GroupFrame>
+      </GroupList>
     );
   }
 
@@ -589,7 +610,7 @@ function railGroupDot(): JSX.Element {
 
 /**
  * A row's icon, marked with a dot when the row has a badge to show on a collapsed rail. A row with
- * no icon gets the dot alone, so a group's collapsed-rail popup still marks it.
+ * no icon gets the dot alone, drawn at the end of its entry in a group's collapsed-rail popup.
  *
  * The icon is sized here: Sidebar.ItemIcon sizes only its direct child, which would be the Badge.
  *
@@ -599,77 +620,47 @@ function railGroupDot(): JSX.Element {
 function railIcon(Icon: PerspectiveSection["icon"], marked: boolean, spoken?: string): JSX.Element | null {
   const icon = Icon ? <Icon size={RAIL_ICON_SIZE} /> : null;
   if (!marked) return icon;
+  const said = spoken ? (
+    <Box component="span" sx={VISUALLY_HIDDEN_SX}>
+      {spoken}
+    </Box>
+  ) : null;
+  // With no icon to sit on, the dot goes to the end of the row; see POPUP_END_DOT_STYLES.
+  if (!icon) {
+    return (
+      <Box
+        component="span"
+        data-rail-end-dot
+        sx={{
+          display: "block",
+          width: GROUP_DOT_SIZE,
+          height: GROUP_DOT_SIZE,
+          borderRadius: "50%",
+          bgcolor: "primary.main",
+        }}
+      >
+        {said}
+      </Box>
+    );
+  }
   return (
-    <Badge
-      variant="dot"
-      color="primary"
-      overlap="circular"
-      // With no icon to sit on, the dot takes the icon's place instead of its corner.
-      sx={icon ? undefined : { "& .MuiBadge-badge": { position: "static", transform: "none" } }}
-    >
+    <Badge variant="dot" color="primary" overlap="circular">
       {icon}
-      {spoken ? (
-        <Box component="span" sx={VISUALLY_HIDDEN_SX}>
-          {spoken}
-        </Box>
-      ) : null}
+      {said}
     </Badge>
   );
 }
 
 /**
- * A faint outline and tint around the open group you are in, so its header and its screens read
- * as one unit. Nothing while the group is closed or the rail is collapsed.
+ * Holds a group's rows in their own list. Sidebar.Category lays its rows out in a list, so a
+ * group is an <li> holding a <ul>.
  *
- * Only that one group, not every open one: a group stays open once clicked, so outlining each
- * open group soon outlines all of them, and the outline stops saying where you are.
- *
- * The frame is always rendered and only its look changes: dropping it on close would give the
- * group a different parent, remount it, and cut Collapse's closing animation short. It is an
- * <li> holding its own <ul>, because Sidebar.Category lays its rows out in a list.
- *
- * The outline is drawn by a pseudo-element, never by a margin or border on the <li>: those take
- * room even while transparent, and pushed every row in the group 9px right of the icon and label
- * columns the rest of the rail uses — open, closed and collapsed. Oxygen insets each row by
- * spacing(1), so an outline at spacing(0.5) sits in that gutter, clear of a row's hover and
- * selected fill, without moving the row.
+ * The wrapper stays mounted while the group closes. Dropping it would give the group a different
+ * parent, remount it, and cut Collapse's closing animation short.
  */
-function GroupFrame({
-  id,
-  current,
-  children,
-}: {
-  id: string;
-  /** True while this group holds the current route. */
-  current: boolean;
-  children: ReactNode;
-}): JSX.Element {
-  const { collapsed, expandedMenus } = useSidebar();
-  const framed = current && !collapsed && Boolean(expandedMenus?.[id]);
+function GroupList({ children }: { children: ReactNode }): JSX.Element {
   return (
-    <Box
-      component="li"
-      sx={(theme) => ({
-        listStyle: "none",
-        position: "relative",
-        // Its own stacking context, so the outline can sit behind the rows without also sinking
-        // behind the rail's background.
-        isolation: "isolate",
-        py: framed ? 0.5 : 0,
-        my: framed ? 0.5 : 0,
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          inset: theme.spacing(0, 0.5),
-          zIndex: -1,
-          pointerEvents: "none",
-          border: "1px solid",
-          borderRadius: 1.5,
-          borderColor: framed ? alpha(theme.palette.primary.main, 0.24) : "transparent",
-          bgcolor: framed ? alpha(theme.palette.primary.main, 0.04) : "transparent",
-        },
-      })}
-    >
+    <Box component="li" sx={{ listStyle: "none" }}>
       <List disablePadding>{children}</List>
     </Box>
   );

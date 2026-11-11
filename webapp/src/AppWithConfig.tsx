@@ -16,11 +16,13 @@
 
 import { lazy, Suspense, useEffect } from "react";
 import { AsgardeoProvider, useAsgardeo } from "@asgardeo/react";
+import ThunderProvider from "@context/auth/ThunderProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router";
 import { authConfig } from "@config/authConfig";
 import { ThemePreferenceProvider } from "@context/theme/ThemePreferenceContext";
 import { PerspectiveProvider } from "@context/perspective/PerspectiveContext";
+import { RailBadgeProvider } from "@components/side-rail/RailBadgeProvider";
 import { NotificationsProvider } from "@context/notifications/NotificationsContext";
 import { HttpError } from "@api/http";
 import { registerAuthAccessors } from "@api/authBridge";
@@ -73,9 +75,18 @@ const queryClient = new QueryClient({
   },
 });
 
+// ThunderID (and other servers outside Asgardeo's URL layout) sign in through
+// ThunderProvider, picked when a discovery URL is configured. Asgardeo
+// deployments set no such URL and keep the stock provider.
+const AuthProvider = authConfig.wellKnownEndpoint ? ThunderProvider : AsgardeoProvider;
+
+/**
+ * The app inside the providers every screen needs: sign-in, queries, theme, routing, the active perspective, rail
+ * badges and notifications. In the silent sign-in frame, only the sign-in provider runs.
+ */
 export default function AppWithConfig() {
   return (
-    <AsgardeoProvider
+    <AuthProvider
       baseUrl={authConfig.baseUrl}
       clientId={authConfig.clientId}
       afterSignInUrl={authConfig.afterSignInUrl}
@@ -94,9 +105,11 @@ export default function AppWithConfig() {
             <ThemePreferenceProvider>
               <BrowserRouter>
                 <PerspectiveProvider>
-                  <NotificationsProvider>
-                    <App />
-                  </NotificationsProvider>
+                  <RailBadgeProvider>
+                    <NotificationsProvider>
+                      <App />
+                    </NotificationsProvider>
+                  </RailBadgeProvider>
                 </PerspectiveProvider>
               </BrowserRouter>
             </ThemePreferenceProvider>
@@ -108,6 +121,6 @@ export default function AppWithConfig() {
           </QueryClientProvider>
         </>
       )}
-    </AsgardeoProvider>
+    </AuthProvider>
   );
 }

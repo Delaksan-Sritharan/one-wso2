@@ -46,11 +46,13 @@ describe("saving a file", () => {
     expect(handed?.type).toBe("application/octet-stream");
   });
 
-  // MIS's Excel export and People Ops' employee report.
+  // MIS's Excel export, People Ops' employee report and Leave's sick notes.
   it("keeps the type of a format this app writes", () => {
     for (const type of [
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "text/csv;charset=utf-8",
+      "image/jpeg",
+      "image/png",
     ]) {
       saveBlob(new Blob(["x"], { type }), "export");
       expect(handed?.type, type).toBe(type);

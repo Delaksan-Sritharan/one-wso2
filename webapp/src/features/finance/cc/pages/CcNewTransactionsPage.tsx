@@ -14,7 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useMemo, useRef, useState } from "react";
+import { isCcBackendConfigured } from "@config/apiConfig";
+import { FINANCE_EYEBROW } from "@constants/financeApps";
+import { useNotifications } from "@context/notifications/NotificationsContext";
 import {
   Alert,
   Box,
@@ -32,23 +34,23 @@ import {
   Typography,
 } from "@wso2/oxygen-ui";
 import { CheckCircleIcon } from "@wso2/oxygen-ui-icons-react";
-import { FINANCE_GRID_SX } from "../../util/financeGridSx";
-import { useNotifications } from "@context/notifications/NotificationsContext";
-import { isCcBackendConfigured } from "@config/apiConfig";
+import { useMemo, useRef, useState } from "react";
 import FinanceShell from "../../components/FinanceShell";
 import { describeError } from "../../util/financeError";
 import { bareAmount, formatNice } from "../../util/financeFormat";
-import { CardMenu } from "../components/CardMenu";
-import { CcCategorisePanel, type CcCategorisePanelHandle } from "../CcCategorisePanel";
+import { FINANCE_GRID_SX } from "../../util/financeGridSx";
 import { CcBulkEditDialog } from "../CcBulkEditDialog";
-import { sortByCompleteness } from "../ccPendingSubmissions";
+import { CcCategorisePanel, type CcCategorisePanelHandle } from "../CcCategorisePanel";
 import { ToolbarNoExport as NewTxnToolbar } from "../ccGridToolbar";
+import { sortByCompleteness } from "../ccPendingSubmissions";
 import { selectedIds } from "../ccSelection";
-import { CC_SNACK } from "../ccCopy";
-import { useCcCardLabel, useCcEmployeeSubmit, useCcSaveDraft } from "../useCcMutations";
+import { type CcTransaction, ccTxnComplete } from "../ccTypes";
+import { CC_SNACK } from "../ccUiText";
+import { CardMenu } from "../components/CardMenu";
+import { CcAutoTaggedIcon } from "../components/CcAutoTaggedIcon";
+import { CcBillingEmailIcon } from "../components/CcBillingEmailIcon";
 import { useCcTransactions, useCcUserInfo, useCreditCards } from "../useCc";
-import { ccTxnComplete, type CcTransaction } from "../ccTypes";
-import { FINANCE_EYEBROW } from "@constants/financeApps";
+import { useCcCardLabel, useCcEmployeeSubmit, useCcSaveDraft } from "../useCcMutations";
 
 /**
  * One line, and no dashes. Which extra field a category asks for is something
@@ -57,6 +59,11 @@ import { FINANCE_EYEBROW } from "@constants/financeApps";
  * panel — neither of which may scroll on this screen.
  */
 const SUBTITLE = "Categorise your unsubmitted card transactions and submit them for lead approval.";
+
+/** The status column: room for the mail icon, the autofill mark and the ready tick, side by side. */
+const STATUS_COLUMN_WIDTH = 88;
+/** One icon's slot in the status column, kept when it's empty. */
+const STATUS_SLOT_SX = { width: 16, display: "flex", alignItems: "center" } as const;
 
 export default function CcNewTransactionsPage() {
   return (
@@ -87,6 +94,7 @@ type PendingAction =
   // way out and the reader is never offered the choice.
   | { type: "cardChange"; ccNumber: string };
 
+/** The reader's pending transactions on one card, beside the panel that categorises and submits them. */
 function NewTxnBody() {
   const userInfo = useCcUserInfo();
   const cards = useCreditCards();
@@ -220,7 +228,7 @@ function NewTxnBody() {
         setChecked(new Set());
         setEdits((prev) => {
           const next = { ...prev };
-          submittedIds.forEach((id) => delete next[id]);
+          for (const id of submittedIds) delete next[id];
           return next;
         });
       },
@@ -246,26 +254,41 @@ function NewTxnBody() {
         renderCell: (p) => bareAmount(p.value as number),
       },
       {
-        // :127-139 — a bare tick, nothing else. Whether a row is ready is the
-        // only thing the list has to say about categorisation; what was chosen
-        // is the panel's job.
+        // Only a mail icon on rows matched with a billing email, a mark on rows
+        // an autofill rule filled in, and a ready tick. What was chosen is the
+        // panel's job. Each has its own slot, so none shifts the others.
         field: "complete",
         headerName: "",
-        width: 46,
+        width: STATUS_COLUMN_WIDTH,
         sortable: false,
         filterable: false,
-        renderCell: (p) =>
-          ccTxnComplete(p.row) ? (
-            <Tooltip title="Ready to submit">
-              <Box component="span" sx={{ display: "inline-flex", alignItems: "center" }}>
-                <CheckCircleIcon
-                  size={16}
-                  aria-label={`Transaction ${p.row.id} is ready to submit`}
-                  style={{ color: "var(--oxygen-palette-success-main)" }}
-                />
-              </Box>
-            </Tooltip>
-          ) : null,
+        renderCell: (p) => (
+          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ height: "100%" }}>
+            <Box sx={STATUS_SLOT_SX}>
+              {p.row.billingEmailRef && (
+                <CcBillingEmailIcon txnId={p.row.id} billingEmailRef={p.row.billingEmailRef} tabIndex={p.tabIndex} />
+              )}
+            </Box>
+            <Box sx={STATUS_SLOT_SX}>
+              {p.row.taggingRuleId != null && (
+                <CcAutoTaggedIcon txnId={p.row.id} ruleId={p.row.taggingRuleId} tabIndex={p.tabIndex} />
+              )}
+            </Box>
+            <Box sx={STATUS_SLOT_SX}>
+              {ccTxnComplete(p.row) && (
+                <Tooltip title="Ready to submit">
+                  <Box component="span" sx={{ display: "inline-flex", alignItems: "center" }}>
+                    <CheckCircleIcon
+                      size={16}
+                      aria-label={`Transaction ${p.row.id} is ready to submit`}
+                      style={{ color: "var(--oxygen-palette-success-main)" }}
+                    />
+                  </Box>
+                </Tooltip>
+              )}
+            </Box>
+          </Stack>
+        ),
       },
     ],
     [],

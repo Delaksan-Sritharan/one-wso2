@@ -18,7 +18,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authedDelete, authedPatch, authedPost, HttpError } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { financeMasterDataServiceUrls } from "@config/apiConfig";
-import { MASTER_DATA_SNACK } from "./masterDataCopy";
+import { MASTER_DATA_SNACK } from "./masterDataUiText";
 import {
   MASTER_DATA_ENDPOINTS,
   MASTER_DATA_STATUS,

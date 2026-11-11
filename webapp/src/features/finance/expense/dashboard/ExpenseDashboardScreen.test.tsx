@@ -30,6 +30,7 @@ function queryState(over: {
   isFetching?: boolean;
   isError?: boolean;
   isSuccess?: boolean;
+  isPlaceholderData?: boolean;
   data?: unknown;
   error?: unknown;
 }) {
@@ -39,6 +40,7 @@ function queryState(over: {
     isFetching: false,
     isError: false,
     isSuccess: false,
+    isPlaceholderData: false,
     data: undefined,
     error: null,
     refetch: vi.fn(),
@@ -61,6 +63,9 @@ const asked = {
   subsidiaries: [] as boolean[],
   types: [] as boolean[],
   report: [] as boolean[],
+  // Every filter the report was asked for, so a test can read what the
+  // screen requested and not just whether it requested anything.
+  reportFilters: [] as { startDate?: string; endDate: string }[],
 };
 
 vi.mock("./useExpenseDashboard", () => ({
@@ -73,8 +78,9 @@ vi.mock("./useExpenseDashboard", () => ({
     asked.types.push(enabled);
     return queryState({ isSuccess: true, data: [] });
   },
-  useExpenseClaimsReport: (_filter: unknown, enabled = true) => {
+  useExpenseClaimsReport: (filter: { startDate?: string; endDate: string }, enabled = true) => {
     asked.report.push(enabled);
+    asked.reportFilters.push(filter);
     return reportState.current;
   },
 }));
@@ -108,6 +114,7 @@ beforeEach(() => {
   asked.subsidiaries.length = 0;
   asked.types.length = 0;
   asked.report.length = 0;
+  asked.reportFilters.length = 0;
   configured.value = true;
   appDataState.current = queryState({ isSuccess: true, data: FINANCE_APP_DATA });
   reportState.current = queryState({ isSuccess: true, data: populatedReport });
@@ -227,6 +234,44 @@ describe("a finance approver with everything loaded", () => {
 
     expect(screen.getByText(/no claims match the selected filters/i)).toBeInTheDocument();
     expect(aStat()).not.toBeInTheDocument();
+  });
+
+  // The backend builds this report by pulling every matching claim into
+  // memory and summing it there, so an open-ended first request is the
+  // slowest one the screen can make. Opening on a bounded period is the
+  // difference finance actually feels, and nothing else asserts it.
+  it("opens on a bounded period rather than asking for every claim ever filed", () => {
+    reportState.current = queryState({ isSuccess: true, data: emptyReport });
+
+    render(<ExpenseDashboardScreen />);
+
+    const first = asked.reportFilters[0];
+    expect(first.startDate).toEqual(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+    expect(first.startDate! <= first.endDate).toBe(true);
+  });
+
+  // keepPreviousData leaves the last filter's report on screen while the next
+  // one loads, but the heading, the caption and the CSV's title all read the
+  // newly applied period. Exporting in that window would label one period's
+  // figures with another's, which for a finance report is worse than waiting.
+  it("will not export while the report on screen is the previous filter's", () => {
+    reportState.current = queryState({
+      isSuccess: true,
+      data: populatedReport,
+      isPlaceholderData: true,
+    });
+
+    render(<ExpenseDashboardScreen />);
+
+    expect(screen.getByRole("button", { name: /Export/ })).toBeDisabled();
+  });
+
+  it("exports once the report matches the filters on screen", () => {
+    reportState.current = queryState({ isSuccess: true, data: populatedReport });
+
+    render(<ExpenseDashboardScreen />);
+
+    expect(screen.getByRole("button", { name: /Export/ })).toBeEnabled();
   });
 
   it("offers a retry when the report itself fails to load", () => {

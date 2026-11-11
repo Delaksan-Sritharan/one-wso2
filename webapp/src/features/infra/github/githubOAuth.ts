@@ -4,7 +4,7 @@ const STATE_KEY = "gh_oauth_state";
 const CODE_KEY = "gh_pending_oauth_code";
 const RESULT_KEY = "gh_connect_result";
 export const GITHUB_OAUTH_STATE_EXPIRY_MS = 5 * 60 * 1000;
-export const DEFAULT_GITHUB_RETURN_PATH = "/infra";
+export const DEFAULT_GITHUB_RETURN_PATH = "/infra/github/connection";
 
 export interface GitHubOAuthStoredState {
     state: string;

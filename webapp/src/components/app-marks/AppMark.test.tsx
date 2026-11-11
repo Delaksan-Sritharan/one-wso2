@@ -18,7 +18,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
-import { appMark } from "./appMarkRegistry";
+import { BRAND_MARK_KEYS, appMark } from "./appMarkRegistry";
 import { APP_MARK_TONES } from "./appMarkTones";
 
 const originalConfig = window.config;
@@ -55,11 +55,31 @@ describe("app marks", () => {
     vi.resetModules();
     window.config = {
       ...(window.config ?? {}),
-      ONE_WSO2_PREVIEW_FEATURES: { infra: true },
+      ONE_WSO2_PREVIEW_FEATURES: { amplify: true },
     } as Window["config"];
     const { PERSPECTIVES: allPerspectives } = await import("@constants/perspectives");
     const marked = allPerspectives.filter((p) => appMark(p.key)).map((p) => p.key);
-    expect(new Set(marked)).toEqual(new Set(Object.keys(APP_MARK_TONES)));
+    // A brand mark is the product's own logo, with its own colours: no tones.
+    const drawn = marked.filter((k) => !BRAND_MARK_KEYS.has(k));
+    expect(new Set(drawn)).toEqual(new Set(Object.keys(APP_MARK_TONES)));
+    // ...and every brand mark belongs to a real perspective.
+    expect(marked).toEqual(expect.arrayContaining([...BRAND_MARK_KEYS]));
+  });
+
+  it("shows a brand mark as its product's logo, at the size asked for, hidden from assistive tech", () => {
+    expect(BRAND_MARK_KEYS.size).toBeGreaterThan(0);
+    for (const key of BRAND_MARK_KEYS) {
+      const Mark = appMark(key)!;
+      const { container, unmount } = render(<Mark size={48} />);
+      const img = container.querySelector("img");
+      expect(img, key).not.toBeNull();
+      // ColorSchemeImage is a Box, so the size lands as CSS rather than attributes.
+      expect(getComputedStyle(img!).width, key).toBe("48px");
+      expect(getComputedStyle(img!).height, key).toBe("48px");
+      expect(img!.getAttribute("alt"), key).toBe("");
+      expect(img!.getAttribute("src"), key).toMatch(/^\/.+\.(png|svg)$/);
+      unmount();
+    }
   });
 
   it("draws something on every mark, at the size asked for", () => {

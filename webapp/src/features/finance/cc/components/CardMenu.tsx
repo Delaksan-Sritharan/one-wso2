@@ -16,11 +16,10 @@
  * under the License.
  */
 
-import { useState } from "react";
 import {
-  Badge,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -34,8 +33,12 @@ import {
   Typography,
 } from "@wso2/oxygen-ui";
 import { CreditCardIcon, PencilIcon } from "@wso2/oxygen-ui-icons-react";
+import { useState } from "react";
+import { type CcCreditCard, ccCardIsActive, ccCardName } from "../ccTypes";
 import { CcBankIcon } from "./CcBankIcon";
-import { ccCardName, type CcCreditCard } from "../ccTypes";
+
+/** Counts past this are shown as `99+`, so the pill stays beside the name. */
+const MAX_COUNT = 99;
 
 /**
  * The credit-card picker — a dropdown with a rename button beside it, as the
@@ -120,28 +123,39 @@ export function CardMenu({
                       gap: 2,
                     }}
                   >
-                    <Stack direction="row" alignItems="center" spacing={1}>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
                       <CcBankIcon bankCode={card.bankCode} />
-                      <Typography component="span" sx={{ fontSize: 13.5, fontWeight: 700 }}>
+                      <Typography
+                        component="span"
+                        noWrap
+                        sx={{ fontSize: 13.5, fontWeight: 700, minWidth: 0 }}
+                      >
                         {ccCardName(card.label, index)}
                       </Typography>
                       {count > 0 && (
-                        <Badge
-                          badgeContent={count}
+                        <Chip
+                          label={count > MAX_COUNT ? `${MAX_COUNT}+` : count}
+                          size="small"
                           color="primary"
-                          sx={{ ml: 1, "& .MuiBadge-badge": { fontSize: 10, height: 17, minWidth: 17 } }}
+                          sx={{
+                            flexShrink: 0,
+                            height: 17,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            "& .MuiChip-label": { px: 0.75 },
+                          }}
                         />
                       )}
-                      {/* Case-insensitively, the way `useCreditCards` decides
-                          which cards to keep — a backend "ACTIVE" reached the
-                          picker and was then labelled Inactive in its own row. */}
-                      {(card.status ?? "").toUpperCase() !== "ACTIVE" && (
+                      {!ccCardIsActive(card) && (
                         <Typography component="span" sx={{ fontSize: 11, color: "text.disabled" }}>
                           Inactive
                         </Typography>
                       )}
                     </Stack>
-                    <Typography component="span" sx={{ fontSize: 12, color: "text.secondary" }}>
+                    <Typography
+                      component="span"
+                      sx={{ fontSize: 12, color: "text.secondary", flexShrink: 0 }}
+                    >
                       {card.ccNumber}
                     </Typography>
                   </Box>

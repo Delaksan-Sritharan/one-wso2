@@ -39,7 +39,7 @@ import { LeaveTypeChip } from "../components/LeaveChips";
 import LeaveDateField from "../components/LeaveDateField";
 import type { DatabaseLeave, EmployeeStatus, LeaveFilter } from "../api/leaveTypes";
 import { useNotifications } from "@context/notifications/NotificationsContext";
-import { REPORT_VALIDATION_MESSAGE } from "../util/leaveCopy";
+import { REPORT_VALIDATION_MESSAGE } from "../util/leaveUiText";
 import { useLeaveEmployees, useLeaveUserInfo, useLeaves } from "../api/useLeaveData";
 import { useLeaveGate } from "../api/useLeaveGate";
 import { formatNice, startOfYearIso, todayIso } from "../util/leaveDates";

@@ -18,6 +18,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authedDelete, authedPost } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { leaveServiceUrls } from "@config/apiConfig";
+import { fileToBase64 } from "../util/fileToBase64";
 import type { CalculatedLeave, LeavePayload, LeaveValidationPayload } from "./leaveTypes";
 
 // POST /leaves?isValidationOnlyMode=true — returns computed working days +
@@ -76,6 +77,30 @@ export function useSubmitLeave() {
   });
 }
 
+// POST /leaves/sick-leave — JSON: `leave` (same body as POST /leaves) and
+// `sickNote` (the file as base64 text). Not multipart: Cloudflare in front of
+// the API gateway answers a request body carrying raw binary with a bot
+// challenge (403, no CORS header), which a browser request can't pass.
+export function useSubmitSickLeave() {
+  const getAccessToken = useAccessToken();
+  const qc = useQueryClient();
+  return useMutation<void, Error, { payload: LeavePayload; sickNote: File }>({
+    mutationFn: async ({ payload, sickNote }) => {
+      const body = { leave: payload, sickNote: await fileToBase64(sickNote) };
+      const accessToken = await getAccessToken();
+      await authedPost<unknown>(leaveServiceUrls.sickLeave, accessToken, body);
+    },
+    // Same effects as useSubmitLeave: balance, list and the copy-list config.
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["leaves"] }),
+        qc.invalidateQueries({ queryKey: ["leave-entitlement"] }),
+        qc.invalidateQueries({ queryKey: ["leave-app-config"] }),
+      ]);
+    },
+  });
+}
+
 // DELETE /leaves/{id} — cancels a leave (backend enforces the 30-day
 // window and ownership / people-ops rules).
 export function useCancelLeave() {
@@ -96,14 +121,19 @@ export function useCancelLeave() {
   });
 }
 
-// POST /leaves/{id}/{approve|reject} — lead action on a pending sabbatical.
+// POST /leaves/{id}/{approve|reject} — lead action on a pending leave. The body
+// is `{ reason }` when a reason is given, otherwise `{}` (sabbatical calls).
 export function useApproveLeave() {
   const getAccessToken = useAccessToken();
   const qc = useQueryClient();
-  return useMutation<void, Error, { id: number; action: "approve" | "reject" }>({
-    mutationFn: async ({ id, action }) => {
+  return useMutation<void, Error, { id: number; action: "approve" | "reject"; reason?: string }>({
+    mutationFn: async ({ id, action, reason }) => {
       const accessToken = await getAccessToken();
-      await authedPost<unknown>(leaveServiceUrls.leaveAction(id, action), accessToken, {});
+      await authedPost<unknown>(
+        leaveServiceUrls.leaveAction(id, action),
+        accessToken,
+        reason ? { reason } : {},
+      );
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["leaves"] });

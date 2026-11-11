@@ -16,7 +16,8 @@
 
 // The PR analysis is editable in both states of the Files Analysis step.
 // Analyze demotes a PRAnalyzed update first, uploads the pending manual files,
-// then submits; a completed analysis in Development advances the update.
+// then submits; the backend moves the update to PRAnalyzed once the analysis
+// and its product analysis have run.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -25,14 +26,10 @@ import type { UmtFileOperation, UmtUpdateSummary } from "../../../api/umtUpdates
 import type { UmtPendingManualUpload } from "../../../lib/umtPrAnalysis";
 
 const state = vi.hoisted(() => ({
-  status: "COMPLETED" as string | undefined,
   calls: [] as string[],
   transition: vi.fn(),
   upload: vi.fn(),
   start: vi.fn(),
-  advance: vi.fn(),
-  advancePending: false,
-  advanceFailed: false,
   // The operation of the one file a previous analysis left on the update.
   analyzedFileOperation: "Added",
   analysisFetching: false,
@@ -40,6 +37,7 @@ const state = vi.hoisted(() => ({
   analysisFailed: false,
   analysisError: null as unknown,
   analysisRefetch: vi.fn(),
+  showSuccess: vi.fn(),
   showError: vi.fn(),
 }));
 
@@ -77,20 +75,12 @@ vi.mock("../../../api/useUmtLifecycleTransition", () => ({
 }));
 
 vi.mock("../../../api/useUmtPrAnalysis", () => ({
-  UmtProductAnalysisFailedError: class extends Error {},
-  useUmtPrAnalysisStatus: () => ({ data: state.status }),
   useUmtStartPullRequestAnalysis: () => ({ isPending: false, mutateAsync: state.start }),
   useUmtUploadPullRequestAnalysisFile: () => ({ isPending: false, mutateAsync: state.upload }),
-  useUmtProceedFromPrAnalysis: () => ({
-    isPending: state.advancePending,
-    isError: state.advanceFailed,
-    mutateAsync: state.advance,
-    reset: vi.fn(),
-  }),
 }));
 
 vi.mock("@context/notifications/NotificationsContext", () => ({
-  useNotifications: () => ({ showSuccess: vi.fn(), showError: state.showError, showWarning: vi.fn() }),
+  useNotifications: () => ({ showSuccess: state.showSuccess, showError: state.showError, showWarning: vi.fn() }),
 }));
 
 vi.mock("./UmtPrAnalysisResults", () => ({
@@ -157,7 +147,6 @@ function renderStep(update: UmtUpdateSummary) {
 describe("UmtPrAnalysisStep", () => {
   beforeEach(() => {
     localStorage.clear();
-    state.status = "COMPLETED";
     state.calls = [];
     state.transition.mockReset().mockImplementation(async (next: string) => {
       state.calls.push(`transition:${next}`);
@@ -168,20 +157,17 @@ describe("UmtPrAnalysisStep", () => {
     state.start.mockReset().mockImplementation(async () => {
       state.calls.push("start");
     });
-    state.advance.mockReset().mockResolvedValue(undefined);
-    state.advancePending = false;
-    state.advanceFailed = false;
     state.analyzedFileOperation = "Added";
     state.analysisFetching = false;
     state.analysisLoaded = true;
     state.analysisFailed = false;
     state.analysisError = null;
     state.analysisRefetch.mockReset();
+    state.showSuccess.mockClear();
     state.showError.mockClear();
   });
 
   it("shows the inputs in Development, with no Proceed button and nothing running", () => {
-    state.status = "NONE";
     renderStep(summary("Development"));
 
     expect(screen.getByText("Update Type")).toBeInTheDocument();
@@ -190,20 +176,125 @@ describe("UmtPrAnalysisStep", () => {
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
-  it("keeps spinning through the product analysis, with the results held back", () => {
-    renderStep(summary("Development", { praStatus: "COMPLETED" }));
+  it.each(["QUEUED", "PROCESSING"])("says the PR analysis is running while it is %s", (praStatus) => {
+    renderStep(summary("Development", { praStatus, praPromotionPending: true }));
 
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
-    expect(screen.getByText("PR Analysis was successfully completed. Running product analysis…")).toBeInTheDocument();
-    expect(screen.queryByText("PR analysis results")).not.toBeInTheDocument();
+    expect(screen.getByText("Running PR analysis…")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
   });
 
-  it("stops spinning once the advance has failed", () => {
-    state.advanceFailed = true;
-    renderStep(summary("Development", { praStatus: "COMPLETED" }));
+  it("keeps running after the PR analysis completes, until the promotion is no longer pending", () => {
+    renderStep(summary("Development", { praStatus: "COMPLETED", praPromotionPending: true }));
+
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.getByText("PR analysis completed. Running product analysis…")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
+  });
+
+  it("disables Analyze in PRAnalyzed while the promotion is pending, says why, and holds the results back", () => {
+    renderStep(summary("PRAnalyzed", { praStatus: "COMPLETED", praPromotionPending: true }));
+
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
+    expect(screen.getByText("PR analysis completed. Running product analysis…")).toBeInTheDocument();
+    expect(screen.queryByText("PR analysis results")).not.toBeInTheDocument();
+    // The cached analysis may be from before this run, so the inputs wait for it to end.
+    expect(screen.getByRole("status", { name: "Loading pull request analysis" })).toBeInTheDocument();
+  });
+
+  it("enables Analyze in PRAnalyzed once no promotion is pending", () => {
+    renderStep(summary("PRAnalyzed", { praStatus: "COMPLETED", praPromotionPending: false }));
+    fireEvent.click(screen.getByRole("button", { name: "Add stub file" }));
+
+    expect(screen.queryByText("PR analysis completed. Running product analysis…")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeEnabled();
+  });
+
+  it("shows the results and announces the promotion once it ends in PRAnalyzed", () => {
+    const { rerender } = renderStep(summary("Development", { praStatus: "COMPLETED", praPromotionPending: true }));
+    expect(state.showSuccess).not.toHaveBeenCalled();
+
+    rerender(
+      <UmtPrAnalysisStep id="42" update={summary("PRAnalyzed", { praStatus: "COMPLETED", praPromotionPending: false })} />,
+    );
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(screen.queryByText("PR analysis results")).not.toBeInTheDocument();
+    expect(screen.getByText("PR analysis results")).toBeInTheDocument();
+    expect(state.showSuccess).toHaveBeenCalledTimes(1);
+    expect(state.showSuccess).toHaveBeenCalledWith("Update 42 advanced to PRAnalyzed.");
+    expect(state.transition).not.toHaveBeenCalled();
+  });
+
+  it("shows paError once the product analysis fails, and lets Analyze be run again without editing an input", async () => {
+    localStorage.setItem(
+      "one-wso2.umt-pr-analysis-prs.v1.42",
+      JSON.stringify([{ pr: "https://github.com/wso2/carbon/pull/999", preferredVersion: "" }]),
+    );
+    const { rerender } = renderStep(summary("Development", { praStatus: "COMPLETED", praPromotionPending: true }));
+
+    const failed = summary("Development", {
+      praStatus: "NONE",
+      praPromotionPending: false,
+      paError: "No applicable products were found",
+    });
+    rerender(<UmtPrAnalysisStep id="42" update={failed} />);
+
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.getByText("No applicable products were found")).toBeInTheDocument();
+    expect(state.showError).toHaveBeenCalledWith("No applicable products were found");
+    expect(state.showSuccess).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "Analyze" })).toBeEnabled());
+  });
+
+  it("still shows paError after a reload", () => {
+    localStorage.setItem(
+      "one-wso2.umt-pr-analysis-prs.v1.42",
+      JSON.stringify([{ pr: "https://github.com/wso2/carbon/pull/999", preferredVersion: "" }]),
+    );
+    renderStep(
+      summary("Development", {
+        praStatus: "COMPLETED",
+        praPromotionPending: false,
+        paError: "Promotion to PRAnalyzed failed: lifecycle refused",
+      }),
+    );
+
+    expect(screen.getByText("Promotion to PRAnalyzed failed: lifecycle refused")).toBeInTheDocument();
+    expect(state.showError).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeEnabled();
+  });
+
+  it("announces paError, not PRAnalyzed, when the demote after a failed product analysis fails too", () => {
+    const paError =
+      "Product analysis failed: Files API unavailable. Demotion to Development also failed, so the update is still in PRAnalyzed.";
+    const { rerender } = renderStep(summary("Development", { praStatus: "COMPLETED", praPromotionPending: true }));
+
+    rerender(
+      <UmtPrAnalysisStep
+        id="42"
+        update={summary("PRAnalyzed", { praStatus: "COMPLETED", praPromotionPending: false, paError })}
+      />,
+    );
+
+    expect(screen.getByText(paError)).toBeInTheDocument();
+    expect(state.showError).toHaveBeenCalledWith(paError);
+    expect(state.showSuccess).not.toHaveBeenCalled();
+  });
+
+  it("shows praError when the PR analysis fails", () => {
+    const { rerender } = renderStep(summary("Development", { praStatus: "PROCESSING", praPromotionPending: true }));
+
+    rerender(
+      <UmtPrAnalysisStep
+        id="42"
+        update={summary("Development", { praStatus: "FAILED", praError: "PR_MERGE_CONFLICT", praPromotionPending: false })}
+      />,
+    );
+
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.getByText("PR Analysis task was failed.")).toBeInTheDocument();
+    expect(screen.getByText("PR_MERGE_CONFLICT")).toBeInTheDocument();
+    expect(state.showSuccess).not.toHaveBeenCalled();
   });
 
   it("shows the results in PRAnalyzed once the product analysis has finished", () => {
@@ -214,32 +305,10 @@ describe("UmtPrAnalysisStep", () => {
   });
 
   it("shows the results as completed in PRAnalyzed even when praStatus isn't COMPLETED", () => {
-    state.status = "NONE";
     renderStep(summary("PRAnalyzed", { praStatus: "NONE" }));
 
     expect(screen.getByText("PR analysis results")).toBeInTheDocument();
     expect(screen.getByText("PR Analysis was successfully completed.")).toBeInTheDocument();
-  });
-
-  it("holds the results back in PRAnalyzed while the product analysis is still running", () => {
-    state.advancePending = true;
-    renderStep(summary("PRAnalyzed", { praStatus: "COMPLETED" }));
-
-    expect(screen.queryByText("PR analysis results")).not.toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
-  });
-
-  it("advances once a Development update's analysis has completed", () => {
-    const { rerender } = renderStep(summary("Development", { praStatus: "COMPLETED" }));
-    rerender(<UmtPrAnalysisStep id="42" update={summary("Development", { praStatus: "COMPLETED" })} />);
-
-    expect(state.advance).toHaveBeenCalledTimes(1);
-  });
-
-  it("doesn't advance a Development update whose analysis isn't completed", () => {
-    renderStep(summary("Development", { praStatus: "NONE" }));
-
-    expect(state.advance).not.toHaveBeenCalled();
   });
 
   it("holds the placeholder, not stale drafts, until a refetch of the analysis lands", () => {
@@ -323,23 +392,11 @@ describe("UmtPrAnalysisStep", () => {
   });
 
   it("doesn't hold up the inputs in Development while the analysis is missing", () => {
-    state.status = "NONE";
     state.analysisLoaded = false;
     renderStep(summary("Development"));
 
     expect(screen.queryByRole("status", { name: "Loading pull request analysis" })).not.toBeInTheDocument();
     expect(screen.getByText("Update Type")).toBeInTheDocument();
-  });
-
-  it("lets Analyze be run again after the advance has failed", async () => {
-    state.advanceFailed = true;
-    state.advance.mockRejectedValue(new Error("product analysis down"));
-    const { rerender } = renderStep(summary("PRAnalyzed", { praStatus: "COMPLETED" }));
-    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
-
-    rerender(<UmtPrAnalysisStep id="42" update={summary("Development", { praStatus: "COMPLETED" })} />);
-
-    await vi.waitFor(() => expect(screen.getByRole("button", { name: "Analyze" })).toBeEnabled());
   });
 
   it("keeps the inputs editable in PRAnalyzed, filled from the backend's analysis", () => {
@@ -355,7 +412,6 @@ describe("UmtPrAnalysisStep", () => {
     expect(screen.getByText("repository/components/dropins/a.jar")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Proceed" })).not.toBeInTheDocument();
-    expect(state.advance).not.toHaveBeenCalled();
   });
 
   it("keeps only the file path and operation of the analyzed manual files in the drafts", () => {
@@ -380,21 +436,20 @@ describe("UmtPrAnalysisStep", () => {
     const { rerender } = renderStep(summary("PRAnalyzed", { praStatus: "COMPLETED" }));
     expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
 
-    state.status = "NONE";
     rerender(<UmtPrAnalysisStep id="42" update={summary("Development", { praStatus: "NONE" })} />);
 
     await vi.waitFor(() => expect(screen.getByRole("button", { name: "Analyze" })).toBeEnabled());
   });
 
   it("lets Analyze be run again after a failed analysis, without editing an input", async () => {
-    state.status = "NONE";
     const { rerender } = renderStep(summary("Development", { praStatus: "NONE" }));
     fireEvent.click(screen.getByRole("button", { name: "Add stub file" }));
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
     await vi.waitFor(() => expect(state.start).toHaveBeenCalledTimes(1));
 
-    state.status = "FAILED_PR_MERGE_CONFLICT";
-    rerender(<UmtPrAnalysisStep id="42" update={summary("Development", { praStatus: "FAILED_PR_MERGE_CONFLICT" })} />);
+    rerender(
+      <UmtPrAnalysisStep id="42" update={summary("Development", { praStatus: "FAILED", praError: "PR_MERGE_CONFLICT" })} />,
+    );
 
     await vi.waitFor(() => expect(screen.getByRole("button", { name: "Analyze" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
@@ -402,16 +457,11 @@ describe("UmtPrAnalysisStep", () => {
   });
 
   it("keeps Analyze off after a completed analysis until an input changes", async () => {
-    state.status = "NONE";
     const { rerender } = renderStep(summary("Development", { praStatus: "NONE" }));
     fireEvent.click(screen.getByRole("button", { name: "Add stub file" }));
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
     await vi.waitFor(() => expect(state.start).toHaveBeenCalledTimes(1));
 
-    // A completed analysis in Development counts as still running, so the
-    // button is off for that reason alone. Check it once the update has moved
-    // on to PRAnalyzed and the analysis is loaded.
-    state.status = "COMPLETED";
     rerender(<UmtPrAnalysisStep id="42" update={summary("PRAnalyzed", { praStatus: "COMPLETED" })} />);
     await screen.findByText("repository/components/dropins/a.jar");
 
@@ -432,6 +482,19 @@ describe("UmtPrAnalysisStep", () => {
       expect(analyzeButton()).not.toBeInTheDocument();
     });
 
+    it("stays in PRAnalyzed with paError, so the failed product analysis can be run again", () => {
+      renderStep(
+        summary("PRAnalyzed", {
+          praStatus: "COMPLETED",
+          isInstructionsOnly: true,
+          paError: "Product analysis failed: Files API unavailable",
+        }),
+      );
+
+      expect(screen.getByText("Product analysis failed: Files API unavailable")).toBeInTheDocument();
+      expect(analyzeButton()).toBeEnabled();
+    });
+
     it("is not shown while the completed analysis is still loading", () => {
       state.analysisLoaded = false;
       renderStep(summary("PRAnalyzed", { praStatus: "COMPLETED", isInstructionsOnly: true }));
@@ -440,7 +503,6 @@ describe("UmtPrAnalysisStep", () => {
     });
 
     it("is there before the analysis has run", () => {
-      state.status = "NONE";
       renderStep(summary("Development", { praStatus: "NONE", isInstructionsOnly: true }));
 
       expect(analyzeButton()).toBeEnabled();
@@ -562,19 +624,6 @@ describe("UmtPrAnalysisStep", () => {
 
     await vi.waitFor(() => expect(state.start).toHaveBeenCalledTimes(1));
     expect(state.upload).toHaveBeenCalledTimes(3);
-  });
-
-  it("doesn't advance while Analyze is still running", async () => {
-    state.transition.mockImplementation(() => new Promise(() => {}));
-    const { rerender } = renderStep(summary("PRAnalyzed", { praStatus: "COMPLETED" }));
-
-    fireEvent.click(screen.getByRole("button", { name: "Add stub file" }));
-    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
-    await vi.waitFor(() => expect(state.transition).toHaveBeenCalledWith("Development"));
-
-    rerender(<UmtPrAnalysisStep id="42" update={summary("Development", { praStatus: "COMPLETED" })} />);
-
-    expect(state.advance).not.toHaveBeenCalled();
   });
 
   it("shows only the Development notice for a state past PRAnalyzed", () => {

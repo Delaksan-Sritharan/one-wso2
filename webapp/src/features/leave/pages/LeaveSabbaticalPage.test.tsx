@@ -461,15 +461,17 @@ describe("the my-history tab", () => {
   it("asks only for sabbatical leave", async () => {
     show(<SabbaticalHistoryTab />);
     await waitFor(() => expect(leaveFilters.length).toBeGreaterThan(0));
-    const historyFilter = leaveFilters.at(-1)!;
+    // The year's request; the other one only looks for leave booked ahead.
+    const historyFilter = leaveFilters.filter((f) => f.endDate).at(-1)!;
     expect(historyFilter.leaveCategory).toEqual(["sabbatical"]);
   });
 
-  it("keeps the source's statuses and ordering", async () => {
+  it("asks for every status, newest first", async () => {
     show(<SabbaticalHistoryTab />);
     await waitFor(() => expect(leaveFilters.length).toBeGreaterThan(0));
-    const historyFilter = leaveFilters.at(-1)!;
-    expect(historyFilter.statuses).toEqual(["APPROVED", "PENDING"]);
+    // The year's request; the other one only looks for leave booked ahead.
+    const historyFilter = leaveFilters.filter((f) => f.endDate).at(-1)!;
+    expect(historyFilter.statuses).toEqual(["APPROVED", "PENDING", "REJECTED", "CANCELLED"]);
     expect(historyFilter.orderBy).toBe("DESC");
   });
 

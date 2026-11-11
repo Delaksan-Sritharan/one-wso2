@@ -15,7 +15,7 @@
 // under the License.
 
 import { useAsgardeo } from "@asgardeo/react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authedGet } from "@api/http";
 import { httpRetry } from "@api/errors";
 import { isUmtBackendConfigured, umtServiceUrls } from "@config/apiConfig";
@@ -24,36 +24,55 @@ import { foldIdentityError, useAsgardeoSub } from "@hooks/useAsgardeoSub";
 import { umtShouldPollStagingTestResults } from "../lib/umtTesting";
 import { umtLifecycleState } from "../lib/umtLifecycleState";
 import { umtIsUpdateLocked } from "../lib/umtUpdateLock";
+import { isUmtPrAnalysisRunning } from "./umtTypes";
 import type { UmtUpdateSummary } from "./umtUpdates";
 
 export function useUmtUpdate(id: string | undefined) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
   const { state: subState, retry: retryIdentity } = useAsgardeoSub();
+  const queryClient = useQueryClient();
   const userSub = subState.status === "ready" ? subState.sub : undefined;
   const hasValidId = id !== undefined && /^\d+$/.test(id);
+  const queryKey = ["umt-update", userSub, id];
 
   const query = useQuery<UmtUpdateSummary>({
-    queryKey: ["umt-update", userSub, id],
+    queryKey,
     enabled:
       hasValidId &&
       isSignedIn &&
       isUmtBackendConfigured() &&
       Boolean(userSub),
-    queryFn: async () =>
-      authedGet<UmtUpdateSummary>(
-        umtServiceUrls.update(id as string),
-        await getAccessToken(),
-      ),
+    queryFn: async () => {
+      // Read the cached update *before* this fetch overwrites it, so a
+      // promotion that just ended is noticed by whichever fetch sees it first.
+      const previous = queryClient.getQueryData<UmtUpdateSummary>(queryKey);
+      const update = await authedGet<UmtUpdateSummary>(umtServiceUrls.update(id as string), await getAccessToken());
+      // The backend has moved the update to PRAnalyzed and stored its product
+      // analysis, or moved it back to Development, so everything those touch
+      // is re-read.
+      if (previous?.praPromotionPending && !update.praPromotionPending) {
+        void queryClient.invalidateQueries({ queryKey: ["umt-updates"] });
+        void queryClient.invalidateQueries({ queryKey: ["umt-update-lifecycle-history"] });
+        void queryClient.invalidateQueries({ queryKey: ["umt-update-product-analysis"] });
+        void queryClient.invalidateQueries({ queryKey: ["umt-update-pull-request-analysis"] });
+      }
+      return update;
+    },
     // The testing-environment states are transient and change server-side with
     // no client action: the Edit tab's Proceed gate and the Testing step both
     // read lifecycleState, so the update resource has to notice the transition
-    // itself. Mirrors useUmtPrAnalysisStatus's self-terminating poll. The same
-    // goes for a demotion from Staging, which keeps the update locked until it
-    // lands in Development.
+    // itself, stopping once it has. The same goes for a demotion from Staging,
+    // which keeps the update locked until it lands in Development, and for a
+    // PR analysis, which the backend carries on to PRAnalyzed by itself.
     refetchInterval: (query) => {
-      const lifecycleState = umtLifecycleState(query.state.data?.lifecycleState);
-      return umtShouldPollStagingTestResults(lifecycleState) || umtIsUpdateLocked(lifecycleState) ? 3000 : false;
+      const data = query.state.data;
+      const lifecycleState = umtLifecycleState(data?.lifecycleState);
+      return umtShouldPollStagingTestResults(lifecycleState) ||
+        umtIsUpdateLocked(lifecycleState) ||
+        (data !== undefined && isUmtPrAnalysisRunning(data))
+        ? 3000
+        : false;
     },
     retry: httpRetry,
   });

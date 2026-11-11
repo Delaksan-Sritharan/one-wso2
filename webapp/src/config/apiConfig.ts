@@ -437,9 +437,14 @@ export const leaveServiceUrls = {
   appConfigs: `${leaveBackendUrl}/app-configs`,
   leaves: `${leaveBackendUrl}/leaves`,
   leave: (id: number) => `${leaveBackendUrl}/leaves/${id}`,
-  // action = "approve" | "reject" (sabbatical only)
+  // action = "approve" | "reject" (sabbatical and Other Authorized)
   leaveAction: (id: number, action: "approve" | "reject") =>
     `${leaveBackendUrl}/leaves/${id}/${action}`,
+  // France sick leave: multipart POST that carries the sick note.
+  sickLeave: `${leaveBackendUrl}/leaves/sick-leave`,
+  sickNote: (id: number) => `${leaveBackendUrl}/leaves/${id}/sick-note`,
+  sickNotes: (startDate: string, endDate: string) =>
+    `${leaveBackendUrl}/sick-notes?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
   employees: `${leaveBackendUrl}/employees`,
   // `years` maps to the repeated ?years= query the leave app sends. Omitting
   // it lets the backend pick its own period, which is what the congés-payés
@@ -537,14 +542,15 @@ export const ccServiceUrls = {
   transactionSummary: `${ccBackendUrl}/transactions/new-transaction-summary`,
   submittedByCategory: `${ccBackendUrl}/transactions/submitted-transaction-summary`,
   cardHolderCompliance: `${ccBackendUrl}/transactions/card-holder-compliance-summary`,
-  // Admin view's "Group by: Reporting Manager" — the same backlog rolled up
-  // under each report's manager. Finance only, enforced server-side.
-  managerCompliance: `${ccBackendUrl}/transactions/manager-compliance-summary`,
-  // POST — emails one reporting manager their team's unsubmitted backlog, copying
-  // the caller. Takes only the manager and the date range: the backend reads the
-  // figures itself at send time, so a reminder never carries what this page last
-  // fetched. Finance only, enforced server-side.
-  managerReminder: `${ccBackendUrl}/transactions/manager-reminder`,
+  // Admin view's "Group by: Card Lead" — the same backlog rolled up under the lead
+  // each card is mapped to in the credit card master data. Finance only, enforced
+  // server-side.
+  cardLeadCompliance: `${ccBackendUrl}/transactions/card-lead-compliance-summary`,
+  // POST — emails one card lead the unsubmitted backlog of the card holders they
+  // approve for, copying the caller. Takes only the lead and the date range: the
+  // backend reads the figures itself at send time, so a reminder never carries what
+  // this page last fetched. Finance only, enforced server-side.
+  cardLeadReminder: `${ccBackendUrl}/transactions/card-lead-reminder`,
   // Lead view: every lead's approval backlog, and one lead's team within it.
   leadApprovalSummary: `${ccBackendUrl}/transactions/lead-approval-summary`,
   leadTeamCardHolders: `${ccBackendUrl}/transactions/lead-team-card-holder-summary`,
@@ -557,6 +563,9 @@ export const ccServiceUrls = {
   // funding sources it is charged against — userMenus.ts:244-252.
   jobNumberDetails: (jobNumber: string) =>
     `${ccBackendUrl}/travels/${encodeURIComponent(jobNumber)}`,
+  // Autofill rules: GET the caller's / POST one, and GET / PATCH / DELETE one.
+  taggingRules: `${ccBackendUrl}/tagging-rules`,
+  taggingRule: (id: number) => `${ccBackendUrl}/tagging-rules/${id}`,
   // GET base64 attachment / DELETE it.
   attachment: (id: number, attachmentType: string) =>
     `${ccBackendUrl}/transactions/${id}/attachments?attachmentType=${encodeURIComponent(attachmentType)}`,
@@ -711,9 +720,10 @@ export const umtServiceUrls = {
     `${umtBackendUrl}/update/${encodeURIComponent(id)}/dependency`,
   updatePullRequestAnalysis: (id: string | number) =>
     `${umtBackendUrl}/update/${encodeURIComponent(id)}/pullRequestAnalysis`,
-  // GET — polled while PR analysis is QUEUED/PROCESSING.
-  updatePullRequestAnalysisStatus: (id: string | number) =>
-    `${umtBackendUrl}/update/${encodeURIComponent(id)}/pullRequestAnalysisStatus`,
+  // POST — starts a PR analysis. With `promote`, the backend then moves the
+  // update to PRAnalyzed and runs its product analysis.
+  startPullRequestAnalysis: (id: string | number) =>
+    `${umtBackendUrl}/update/${encodeURIComponent(id)}/pullRequestAnalysis?promote=true`,
   // POST (multipart) — uploads one manually-added file for PR analysis.
   updatePullRequestAnalysisFile: (id: string | number) =>
     `${umtBackendUrl}/update/${encodeURIComponent(id)}/pullRequestAnalysis/file`,
@@ -1080,6 +1090,23 @@ export const marketingOpsServiceUrls = {
     `${marketingOpsBackendUrl}/api/events/review/submissions/${encodeURIComponent(id)}/export/${encodeURIComponent(tab)}`,
   eventsReviewExportAll: (id: string) =>
     `${marketingOpsBackendUrl}/api/events/review/submissions/${encodeURIComponent(id)}/export`,
+  // ---- events: lead import --------------------------------------------------
+  eventsLeadImportOptions: `${marketingOpsBackendUrl}/api/events/lead-import/options`,
+  eventsLeadImportRuns: `${marketingOpsBackendUrl}/api/events/lead-import/runs`,
+  eventsLeadImportUpload: (filename: string, sheetType: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs?filename=${encodeURIComponent(filename)}&sheet_type=${encodeURIComponent(sheetType)}`,
+  eventsLeadImportRun: (id: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}`,
+  eventsLeadImportApply: (id: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}/apply`,
+  eventsLeadImportSheet: (id: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}/sheet`,
+  eventsLeadImportEdits: (id: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}/edits`,
+  eventsLeadImportFinish: (id: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}/finish`,
+  eventsLeadImportFile: (id: string, kind: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}/files/${encodeURIComponent(kind)}`,
 
   // ---- crm-upload ----------------------------------------------------------------
   //
@@ -1111,6 +1138,12 @@ export const marketingOpsServiceUrls = {
     `${marketingOpsBackendUrl}/api/crm-upload/duplicates/${encodeURIComponent(id)}/resolve`,
   crmUploadTrigger: (kind: "leads" | "accounts") =>
     `${marketingOpsBackendUrl}/api/crm-upload/triggers/${kind}`,
+
+  // GitHub issues planned as events, content, social posts and emails, read live
+  // through the Engineering Entity Service on every call — nothing is cached server
+  // side. `from` and `to` are civil dates (YYYY-MM-DD), both included.
+  marketingCalendarItems: (from: string, to: string) =>
+    `${marketingOpsBackendUrl}/api/marketing-calendar/items?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
 
   // The remaining operation root — /api/audit — gets its builders added by the phase
   // that ports it, so this object never lists a URL nothing calls.
@@ -1520,6 +1553,12 @@ export const infraServiceUrls = {
   // GET, POST /repository-requests/{id}/comments — comment thread on a creation request.
   repositoryRequestComments: (id: number) =>
     `${infraBackendUrl}/repository-requests/${id}/comments`,
+  // PATCH /repository-requests/{id}/approve — approver/admin decision.
+  repositoryRequestApprove: (id: number) =>
+    `${infraBackendUrl}/repository-requests/${id}/approve`,
+  // PATCH /repository-requests/{id}/reject — body: { commentText }.
+  repositoryRequestReject: (id: number) =>
+    `${infraBackendUrl}/repository-requests/${id}/reject`,
   // POST /github/verify-and-persist-user — verify a GitHub user and persist their information.
   githubVerifyAndPersistUser: `${infraBackendUrl}/github/verify-and-persist-user`,
   // POST /set-default-repository-access — set the default repository access for the caller.
@@ -1757,6 +1796,52 @@ export const menuServiceUrls = {
   feedback: `${menuBackendUrl}/feedback`,
   // GET the current order, POST to place or change it, DELETE to cancel.
   dinner: `${menuBackendUrl}/dinner`,
+};
+
+// ---------------------------------------------------------------------------
+// Amplify API (amplify-api, reached only through its API proxy at the cell
+// edge). Employees share official WSO2 LinkedIn posts and earn points; PO and
+// Marketing register those posts.
+//
+// Trailing slashes stripped for the same reason as tilBackendUrl.
+export const amplifyBackendUrl: string = (
+  window.config?.ONE_WSO2_AMPLIFY_BACKEND_URL ?? ""
+).replace(/\/+$/, "");
+
+export function isAmplifyBackendConfigured(): boolean {
+  return Boolean(amplifyBackendUrl);
+}
+
+export const amplifyServiceUrls = {
+  // The caller, their amplify_* roles and LinkedIn connection status.
+  me: `${amplifyBackendUrl}/me`,
+  // GET a page (status, window, tag, page, size), priority first then newest.
+  // POST to register (PO/Marketing only, checked server-side); ?shareNow=true
+  // also starts a Run.
+  campaigns: `${amplifyBackendUrl}/campaigns`,
+  // PATCH with the version that was read (PO/Marketing only).
+  campaign: (id: string) => `${amplifyBackendUrl}/campaigns/${encodeURIComponent(id)}`,
+  // POST "share this for me" — one per campaign per employee.
+  shares: (id: string) => `${amplifyBackendUrl}/campaigns/${encodeURIComponent(id)}/shares`,
+  myShares: `${amplifyBackendUrl}/me/shares`,
+  categories: `${amplifyBackendUrl}/categories`,
+  // Company top N, the caller's standing and My Team.
+  leaderboard: `${amplifyBackendUrl}/leaderboard`,
+  // Teams or BUs ranked against each other (open to every employee, ADR-035).
+  leaderboardTop: `${amplifyBackendUrl}/leaderboard/top`,
+  leaderboardGroups: `${amplifyBackendUrl}/leaderboard/groups`,
+  // The boards under Dashboarding (CAN_DASHBOARD only, 403 for anyone else).
+  dashboardOperations: `${amplifyBackendUrl}/dashboards/operations`,
+  dashboardCampaigns: `${amplifyBackendUrl}/dashboards/campaigns`,
+  dashboardParticipation: `${amplifyBackendUrl}/dashboards/participation`,
+  dashboardExport: `${amplifyBackendUrl}/dashboards/export`,
+  dashboardPeople: `${amplifyBackendUrl}/dashboards/people`,
+  dashboardGlance: `${amplifyBackendUrl}/dashboards/glance`,
+  dashboardScorecard: `${amplifyBackendUrl}/dashboards/scorecard`,
+  connectStart: `${amplifyBackendUrl}/connections/linkedin/start`,
+  connectComplete: `${amplifyBackendUrl}/connections/linkedin/complete`,
+  connectRemove: `${amplifyBackendUrl}/connections/linkedin`,
+  connectDecline: `${amplifyBackendUrl}/connections/linkedin/decline`,
 };
 
 // ---------------------------------------------------------------------------
@@ -2154,18 +2239,27 @@ export const salesServiceUrls = {
   // The conversation as timed, speaker-attributed lines — what a synchronised transcript
   // is built from. 404 when the meeting predates the transcript resource name being stored,
   // in which case there is only the Drive document.
-  transcript: (meetingId: number): string =>
-    `${salesBackendUrl}/meetings/${meetingId}/transcript`,
+  //
+  // These three take an optional part id: a call holds a recording, transcript and smart
+  // notes for each time one was started, listed on the meeting. Without one, the backend
+  // serves the first.
+  transcript: (meetingId: number, transcriptId?: number): string =>
+    withPart(`${salesBackendUrl}/meetings/${meetingId}/transcript`, "transcriptId", transcriptId),
   // Gemini's notes, as plain text. Meet writes these only as a Google Doc.
-  smartNotes: (meetingId: number): string =>
-    `${salesBackendUrl}/meetings/${meetingId}/smart-notes`,
+  smartNotes: (meetingId: number, smartNoteId?: number): string =>
+    withPart(`${salesBackendUrl}/meetings/${meetingId}/smart-notes`, "smartNoteId", smartNoteId),
   // A signed, time-limited URL for streaming this meeting's recording. The URL it returns
   // points at drive-service, NOT here — streaming is deliberately not this backend's job.
   // 404 means either playback isn't configured or no recording is attached yet; the two
   // are distinguished by the message, and neither is an error worth a banner.
-  playback: (meetingId: number): string =>
-    `${salesBackendUrl}/meetings/${meetingId}/playback`,
+  playback: (meetingId: number, recordingId?: number): string =>
+    withPart(`${salesBackendUrl}/meetings/${meetingId}/playback`, "recordingId", recordingId),
 };
+
+/** Adds a part id as a query parameter, or leaves the URL as it is without one. */
+function withPart(url: string, name: string, partId: number | undefined): string {
+  return partId === undefined ? url : `${url}?${name}=${partId}`;
+}
 
 /**
  * Build the meetings URL with only the filters that are actually set.

@@ -52,10 +52,10 @@ import React, { useMemo, useRef, useState } from "react";
 import { describeError } from "../util/financeError";
 import { formatNice, money } from "../util/financeFormat";
 import { CC_ATTACHMENT_ACCEPT, CC_ATTACHMENT_MAX_BYTES, maxSizeLabel } from "../util/financeReceipts";
-import { CC_SNACK } from "./ccCopy";
 import { formatJobDate, normalizeJobNumber } from "./ccJobNumber";
 import { groupProductUnits } from "./ccPendingSubmissions";
 import type { CcFundingSource, CcJobNumberDetails, CcTransaction } from "./ccTypes";
+import { CC_SNACK } from "./ccUiText";
 
 export function FieldLabel({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
@@ -118,12 +118,28 @@ export function Placeholder() {
   return <span style={{ opacity: 0.6 }}>Select…</span>;
 }
 
+/** Marks a stored value the menus no longer offer, beside it in a list of options. */
+export function NoLongerOffered() {
+  return (
+    <Typography component="span" sx={{ ml: 1, fontSize: 11, color: "error.main" }}>
+      No longer offered
+    </Typography>
+  );
+}
+
+/** The select value standing for a stored product unit pair the menus no longer offer. */
+const UNAVAILABLE_PAIR = -1;
+
 /**
  * A select of product units, listed under headings for their business units. The value is the
  * unit's index in `productUnits`, not its name, because product unit names repeat across business
  * units.
  *
  * @param labelId - the id of the label naming the select, which {@link Field} passes in
+ * @param unavailable - a stored pair the units list no longer offers. While `value` is `null` it
+ *   shows as picked and marked as an error, and it is listed above the current units, marked,
+ *   until a current unit is picked
+ * @param noneLabel - when set, an option of this name comes first and picks no unit
  */
 export function ProductUnitSelect({
   value,
@@ -132,6 +148,8 @@ export function ProductUnitSelect({
   businessUnits,
   disabled,
   labelId,
+  unavailable,
+  noneLabel,
 }: {
   value: number | null;
   onChange: (index: number | null) => void;
@@ -139,17 +157,35 @@ export function ProductUnitSelect({
   businessUnits: string[];
   disabled?: boolean;
   labelId?: string;
+  unavailable?: { productUnit: string; businessUnit: string };
+  noneLabel?: string;
 }) {
   const groups = useMemo(() => groupProductUnits(productUnits, businessUnits), [productUnits, businessUnits]);
+  const showsUnavailable = value === null && Boolean(unavailable);
   return (
     <Select<number | "">
       labelId={labelId}
-      value={value ?? ""}
+      value={showsUnavailable ? UNAVAILABLE_PAIR : value ?? ""}
       disabled={disabled}
-      onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
+      error={showsUnavailable}
+      onChange={(e) => {
+        if (e.target.value === UNAVAILABLE_PAIR) return;
+        onChange(e.target.value === "" ? null : Number(e.target.value));
+      }}
       displayEmpty
-      renderValue={(v) => (v === "" ? <Placeholder /> : productUnits[Number(v)] ?? String(v))}
+      renderValue={(v) => {
+        if (v === "") return <Placeholder />;
+        if (v === UNAVAILABLE_PAIR) return unavailable?.productUnit;
+        return productUnits[Number(v)] ?? String(v);
+      }}
     >
+      {noneLabel && <MenuItem value="">{noneLabel}</MenuItem>}
+      {showsUnavailable && unavailable && (
+        <MenuItem value={UNAVAILABLE_PAIR} sx={{ color: "error.main" }}>
+          {unavailable.productUnit} · {unavailable.businessUnit}
+          <NoLongerOffered />
+        </MenuItem>
+      )}
       {groups.flatMap(([businessUnit, units]) => [
         <ListSubheader
           key={`h-${businessUnit}`}
@@ -278,18 +314,35 @@ export function SearchableSelect({
   disabled,
   onChange,
   labelId,
+  unavailable,
 }: {
   value: string;
   options: string[];
   disabled?: boolean;
   onChange: (value: string) => void;
   labelId?: string;
+  /** A stored value `options` no longer has. Listed first and marked, and an error while picked. */
+  unavailable?: string;
 }) {
+  const listed = unavailable && !options.includes(unavailable) ? [unavailable, ...options] : options;
   return (
     <Autocomplete
       size="small"
       disableClearable
-      options={options}
+      options={listed}
+      renderOption={(props, option) => {
+        const { key, ...rest } = props as typeof props & { key: string };
+        return option === unavailable ? (
+          <Box component="li" key={key} {...rest} sx={{ color: "error.main" }}>
+            {option}
+            <NoLongerOffered />
+          </Box>
+        ) : (
+          <li key={key} {...rest}>
+            {option}
+          </li>
+        );
+      }}
       // Passed straight through, not defaulted to `null` the way
       // `JobNumberAutocomplete` above defaults to `null` — that component's
       // `value` can itself be absent (`string | null`), where starting on
@@ -306,6 +359,7 @@ export function SearchableSelect({
         <TextField
           {...params}
           placeholder="Select…"
+          error={Boolean(unavailable) && value === unavailable}
           slotProps={{ htmlInput: { ...params.inputProps, "aria-labelledby": labelId } }}
         />
       )}
@@ -376,6 +430,9 @@ export function ReadOnlyField({
 export function CcSubmissionDetails({ txn }: { txn: CcTransaction }) {
   const [open, setOpen] = useState(false);
   const date = (iso: string | null) => (iso ? formatNice(iso) : null);
+  // Order matters: the grid below fills row by row across three columns, so
+  // the three people come first and each one's date follows in the same
+  // column position on the second row.
   const cells: { label: string; value: string | null; fallback: string }[] = [
     { label: "Submitted User", value: txn.employeeEmail, fallback: "(not provided)" },
     // One lead, not the whole assigned list — `leadEmail` can carry several.
@@ -405,7 +462,7 @@ export function CcSubmissionDetails({ txn }: { txn: CcTransaction }) {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
             gap: 1.25,
             mt: 1,
           }}
@@ -413,10 +470,13 @@ export function CcSubmissionDetails({ txn }: { txn: CcTransaction }) {
           {cells.map((c) => (
             <Box key={c.label} sx={{ minWidth: 0 }}>
               <FieldLabel>{c.label}</FieldLabel>
+              {/* Wraps instead of truncating, so a long email stays readable without hover. */}
               <Typography
-                sx={{ fontSize: 12, color: c.value ? "text.primary" : "text.disabled" }}
-                noWrap
-                title={c.value ?? undefined}
+                sx={{
+                  fontSize: 12,
+                  color: c.value ? "text.primary" : "text.disabled",
+                  overflowWrap: "anywhere",
+                }}
               >
                 {c.value || c.fallback}
               </Typography>

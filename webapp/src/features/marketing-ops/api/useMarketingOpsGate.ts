@@ -71,6 +71,7 @@ const ITEM_CAPABILITY: Record<
   "mops-email-blocks": "emailworkbench",
   // Phase 4 — `events` and `events-review` are siblings, not a hierarchy:
   // holding one does not imply the other.
+  "mops-events-lead-import": "events",
   "mops-events-mine": "events",
   "mops-events-review": "events-review",
   // Phase 5
@@ -91,6 +92,8 @@ const ITEM_CAPABILITY: Record<
   "mops-event-platform-speakers": "eventplatform",
   "mops-event-platform-admin": "eventplatform",
   "mops-event-platform-shop": ["eventplatform", "eventplatform-shop"],
+  // Marketing Calendar — read-only, so one capability covers the whole screen.
+  "mops-marketing-calendar": "marketingcalendar",
 };
 
 // Menu ids belonging to the Marketing Admin app. Gated on `isAdmin` alone

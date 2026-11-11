@@ -46,11 +46,8 @@ vi.mock("../api/useUmtLifecycleTransition", () => ({
 }));
 
 vi.mock("../api/useUmtPrAnalysis", () => ({
-  UmtProductAnalysisFailedError: class extends Error {},
-  useUmtPrAnalysisStatus: () => ({ data: "COMPLETED" }),
   useUmtStartPullRequestAnalysis: () => ({ isPending: false, mutateAsync: state.start }),
   useUmtUploadPullRequestAnalysisFile: () => ({ isPending: false, mutateAsync: vi.fn() }),
-  useUmtProceedFromPrAnalysis: () => ({ isPending: false, isError: false, mutateAsync: vi.fn(), reset: vi.fn() }),
 }));
 
 vi.mock("../components/edit/pr-analysis/UmtPrAnalysisResults", () => ({ default: () => null }));

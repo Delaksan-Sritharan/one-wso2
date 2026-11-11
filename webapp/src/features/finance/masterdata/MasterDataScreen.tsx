@@ -23,7 +23,7 @@ import FinanceShell from "../components/FinanceShell";
 import MasterDataDeleteDialog from "./MasterDataDeleteDialog";
 import MasterDataFormDialog from "./MasterDataFormDialog";
 import MasterDataGrid from "./MasterDataGrid";
-import { MASTER_DATA_FORM_COPY, MASTER_DATA_SNACK, MASTER_DATA_SUBTITLES } from "./masterDataCopy";
+import { MASTER_DATA_FORM_COPY, MASTER_DATA_SNACK, MASTER_DATA_SUBTITLES } from "./masterDataUiText";
 import { isFinanceMasterDataBackendConfigured } from "./useMasterData";
 import {
   MASTER_DATA_LABELS,

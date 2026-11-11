@@ -23,7 +23,7 @@ import {
   type LeaveType,
 } from "../api/leaveTypes";
 import { entitlementPeriodLabel } from "../util/leaveDates";
-import { leaveTypeLabel } from "../util/leaveCopy";
+import { leaveTypeLabel } from "../util/leaveUiText";
 
 // Entitled/consumed/remaining per quota-tracked leave type — ported from
 // leave-app's LeaveBalanceSummary.tsx. The caller is responsible for only

@@ -24,7 +24,7 @@ import {
   DialogTitle,
 } from "@wso2/oxygen-ui";
 import { useNotifications } from "@context/notifications/NotificationsContext";
-import { MASTER_DATA_DELETE_COPY, MASTER_DATA_SNACK } from "./masterDataCopy";
+import { MASTER_DATA_DELETE_COPY, MASTER_DATA_SNACK } from "./masterDataUiText";
 import { describeDeleteError, useDeleteMasterData } from "./useMasterDataMutations";
 import type { MasterDataRow, MasterDataTab } from "./masterDataTypes";
 

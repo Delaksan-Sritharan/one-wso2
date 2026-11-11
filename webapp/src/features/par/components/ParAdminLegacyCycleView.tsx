@@ -31,6 +31,7 @@ import {
   legacyEmployeeName,
   legacyOverallRating,
   legacySpecialRating,
+  rankSearchMatches,
   type LegacyTeamGroup,
 } from "../util/parAdminHistory";
 import ParAdminLegacyEmployeeViewTab from "./ParAdminLegacyEmployeeViewTab";
@@ -212,22 +213,24 @@ export default function ParAdminLegacyCycleView({
   const records = useMemo(() => history.data ?? [], [history.data]);
   const groups = useMemo(() => groupLegacyParticipantsByTeam(records), [records]);
   // Searches only the columns on screen: the internal id and, when hidden,
-  // the slot counts would otherwise match with no visible reason.
+  // the slot counts would otherwise match with no visible reason. Matches
+  // are ranked by the first column that matched, in this order (team, sub
+  // team, lead, department, BU, then the counts); the sort is stable, so the
+  // department/lead order holds within a rank, and a column sort the admin
+  // picks still takes over.
   const filteredGroups = useMemo(() => {
     const term = searchText.trim().toLowerCase();
     if (!term) return groups;
-    return groups.filter((g) =>
-      [
-        g.parBusinessUnit,
-        g.parDepartment,
-        g.parTeam,
-        g.parSubTeam,
-        g.parLeadEmail,
-        g.employeeParCompletion,
-        g.leadFeedbackCompletion,
-        ...(hasSpecialRatings ? [g.numberOf5pSlots, g.numberOf20pSlots] : []),
-      ].some((value) => String(value).toLowerCase().includes(term)),
-    );
+    return rankSearchMatches(groups, term, (g) => [
+      g.parTeam,
+      g.parSubTeam,
+      g.parLeadEmail,
+      g.parDepartment,
+      g.parBusinessUnit,
+      g.employeeParCompletion,
+      g.leadFeedbackCompletion,
+      ...(hasSpecialRatings ? [g.numberOf5pSlots, g.numberOf20pSlots] : []),
+    ]);
   }, [groups, searchText, hasSpecialRatings]);
   // Each record's rating and special rating, resolved once rather than in
   // every valueGetter call DataGrid makes while sorting and filtering.

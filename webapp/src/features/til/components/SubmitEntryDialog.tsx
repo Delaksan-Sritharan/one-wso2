@@ -42,7 +42,7 @@ import {
   type TilSubmission,
   type TilWhere,
 } from "../api/tilTypes";
-import { describeError } from "../util/tilError";
+import { describeError, isNetworkFailure, unsentEntryMessage } from "../util/tilError";
 import { isEmptyTilHtml, isSameTilHtml, normalizeTilSpaces, tilPlainTextLength } from "../util/tilRichText";
 import TilRichTextField from "./TilRichTextField";
 
@@ -170,6 +170,14 @@ export default function SubmitEntryDialog({
   const [customerFieldFocused, setCustomerFieldFocused] = useState(false);
   const customerFieldOpen = customerFieldFocused;
   const { showSuccess, showError } = useNotifications();
+  // A save that failed on the network is explained under the editor
+  // (`unsent`) rather than in a toast: the toast closes before that much can
+  // be read, and the dialog stays open with the entry still in it. The
+  // message is an alert, so a screen reader announces it as it did the toast.
+  const showSaveError = (err: Error) => {
+    if (!isNetworkFailure(err)) showError(describeError(err));
+  };
+  const unsent = unsentEntryMessage(entry ? update.error : create.error, Boolean(entry));
 
   // The byline is the signed-in user's own name — never typed, so it can't
   // be used to credit (or blame) someone else. Name only, not "(email)" --
@@ -208,6 +216,17 @@ export default function SubmitEntryDialog({
   };
 
   const close = () => {
+    // Cancel, Escape or the backdrop. A new entry that failed on the network
+    // keeps its draft through it, so its author can check the feed and come
+    // back to it. Only the error goes, so the next close clears it.
+    if (unsent && !entry) create.reset();
+    else reset();
+    onClose();
+  };
+
+  // After a save that went through. Not close(): a save's callbacks run with
+  // the render its click came from, where a failure before it is still `unsent`.
+  const closeSaved = () => {
     reset();
     onClose();
   };
@@ -229,9 +248,9 @@ export default function SubmitEntryDialog({
         {
           onSuccess: () => {
             showSuccess("Entry updated");
-            close();
+            closeSaved();
           },
-          onError: (err) => showError(describeError(err)),
+          onError: showSaveError,
         },
       );
       return;
@@ -247,9 +266,9 @@ export default function SubmitEntryDialog({
       {
         onSuccess: () => {
           showSuccess("Thanks for sharing what you learned!");
-          close();
+          closeSaved();
         },
-        onError: (err) => showError(describeError(err)),
+        onError: showSaveError,
       },
     );
   };
@@ -485,6 +504,11 @@ export default function SubmitEntryDialog({
               <Link component="button" type="button" variant="caption" onClick={whatLimit.retry}>
                 Try again
               </Link>
+            </Typography>
+          )}
+          {unsent && (
+            <Typography variant="caption" color="error" role="alert">
+              {unsent}
             </Typography>
           )}
         </Box>

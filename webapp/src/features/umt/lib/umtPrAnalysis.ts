@@ -15,7 +15,12 @@
 // under the License.
 
 import type JSZip from "jszip";
-import { UMT_PR_ANALYSIS_STATUS, isUmtPrAnalysisFailed, type UmtUpdateType } from "../api/umtTypes";
+import {
+  UMT_PR_ANALYSIS_STATUS,
+  isUmtPrAnalysisFailed,
+  isUmtPrAnalysisInFlight,
+  type UmtUpdateType,
+} from "../api/umtTypes";
 import type { UmtFileOperation } from "../api/umtUpdates";
 
 // `[0-9]+` not `[0-9]*` (a missing PR number is not a PR link) and anchored at
@@ -224,7 +229,7 @@ export function isPrAnalyzeDisabled(params: {
 }): boolean {
   const { status, hasNewInputsSinceLastAnalysis, updateType, pullRequestCount, manualFileCount } = params;
 
-  if (status === UMT_PR_ANALYSIS_STATUS.QUEUED || status === UMT_PR_ANALYSIS_STATUS.PROCESSING) return true;
+  if (isUmtPrAnalysisInFlight(status)) return true;
   // A failed analysis can be run again as it is, whatever has changed since:
   // waiting for an input to change would leave a transient failure stuck.
   if (!hasNewInputsSinceLastAnalysis && !isUmtPrAnalysisFailed(status)) return true;
@@ -237,12 +242,15 @@ export interface UmtPrAnalysisStatusMessage {
   tone: "error" | "success" | "primary";
 }
 
-// The failed-status detail is split on a colon not immediately followed by
+// The failure reason is split on a colon not immediately followed by
 // "//" (so it doesn't break URLs), or right before the phrase
 // "Request timed out".
 const PR_ANALYSIS_FAILURE_DETAIL_SPLIT = /(?::(?!\/\/)\s*)|(?=Request timed out)/g;
 
-export function prAnalysisStatusMessage(status: string | null | undefined): UmtPrAnalysisStatusMessage {
+export function prAnalysisStatusMessage(
+  status: string | null | undefined,
+  error?: string | null,
+): UmtPrAnalysisStatusMessage {
   if (status === UMT_PR_ANALYSIS_STATUS.QUEUED) {
     return { lines: ["PR Analysis task is queued."], tone: "primary" };
   }
@@ -253,7 +261,7 @@ export function prAnalysisStatusMessage(status: string | null | undefined): UmtP
     return { lines: ["PR Analysis was successfully completed."], tone: "success" };
   }
   if (isUmtPrAnalysisFailed(status)) {
-    const detail = (status ?? "")
+    const detail = (error ?? "")
       .split(PR_ANALYSIS_FAILURE_DETAIL_SPLIT)
       .map((part) => part.trim())
       .filter((part) => part.length > 0);

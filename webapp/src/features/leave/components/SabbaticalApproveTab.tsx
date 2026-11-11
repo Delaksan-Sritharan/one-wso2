@@ -42,7 +42,7 @@ import type { DatabaseLeave } from "../api/leaveTypes";
 import { useLeaveUserInfo, useLeaves } from "../api/useLeaveData";
 import { useApproveLeave } from "../api/useLeaveMutations";
 import { describeError } from "../util/leaveError";
-import { SABBATICAL, SnackMessage } from "../util/leaveCopy";
+import { SABBATICAL, SnackMessage } from "../util/leaveUiText";
 import { HeadCell } from "./SabbaticalTable";
 import { isoDay } from "../util/leaveDates";
 

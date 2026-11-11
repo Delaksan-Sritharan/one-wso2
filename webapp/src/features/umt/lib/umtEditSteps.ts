@@ -14,8 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import type { UmtLifecycle, UmtLifecycleState } from "../api/umtTypes";
-import type { UmtPullRequestAnalysis } from "../api/umtUpdates";
+import { isUmtPrAnalysisRunning, type UmtLifecycle, type UmtLifecycleState } from "../api/umtTypes";
+import type { UmtPullRequestAnalysis, UmtUpdateSummary } from "../api/umtUpdates";
 
 export type UmtEditStepId =
   | "files-analysis"
@@ -187,6 +187,15 @@ const LIFECYCLE_STATE_TO_STEP: Partial<Record<UmtLifecycleState, UmtEditStepId>>
 // the demote button) reads it from here so they always agree.
 export function isFilesAnalysisPrAnalyzed(lifecycleState: string | null | undefined): boolean {
   return lifecycleState === "PRAnalyzed";
+}
+
+// The product analysis exists once the update is in PRAnalyzed and the run
+// that promoted it there has finished. Until then the update reaches
+// PRAnalyzed with the product analysis still running.
+export function isFilesAnalysisProductAnalysisReady(
+  update: Pick<UmtUpdateSummary, "lifecycleState" | "praStatus" | "praPromotionPending">,
+): boolean {
+  return isFilesAnalysisPrAnalyzed(update.lifecycleState) && !isUmtPrAnalysisRunning(update);
 }
 
 // Development is the only state whose step proceeds, to Released. Completed

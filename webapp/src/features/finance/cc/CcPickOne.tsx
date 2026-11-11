@@ -17,14 +17,9 @@
  */
 
 import { FormControl, InputLabel, MenuItem, Select } from "@wso2/oxygen-ui";
+import { CC_FILTER_ALL } from "./ccTypes";
 
-/**
- * One "All / …" narrowing select, built from what is on screen.
- *
- * Shared by History and Approve, whose source screens both narrow by user and
- * card through the same FilterMenu (HistoryFilterPopover /
- * ApproveFilterPopover).
- */
+/** One "All / …" narrowing select, built from the values on screen. */
 export function CcPickOne({
   label,
   value,
@@ -64,7 +59,7 @@ export function CcPickOne({
         onChange={(e) => onChange(String(e.target.value))}
         sx={{ minWidth: 170 }}
       >
-        <MenuItem value="all">{emptyLabel ?? "All"}</MenuItem>
+        <MenuItem value={CC_FILTER_ALL}>{emptyLabel ?? "All"}</MenuItem>
         {options.map((o) => (
           <MenuItem key={o} value={o}>
             {optionLabel ? optionLabel(o) : o}

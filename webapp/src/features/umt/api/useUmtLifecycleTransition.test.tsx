@@ -70,4 +70,18 @@ describe("useUmtLifecycleTransition", () => {
       ]),
     );
   });
+
+  it("re-reads the update when the backend rejects the transition", async () => {
+    const { HttpError } = await import("@api/http");
+    authedPut.mockRejectedValueOnce(
+      new HttpError(umtServiceUrls.update("42"), 400, "The update is being promoted to PRAnalyzed after its PR analysis"),
+    );
+    const { result, invalidateQueries } = renderTransition("42");
+
+    await act(async () => {
+      await result.current.mutateAsync("Development").catch(() => {});
+    });
+
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["umt-update"] });
+  });
 });

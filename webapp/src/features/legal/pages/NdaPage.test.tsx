@@ -164,6 +164,27 @@ describe("NdaPage counterparty", () => {
     expect(screen.getByRole("textbox", { name: /Legal name/ })).toBeInTheDocument();
     expect(screen.queryByText(/Customer search isn't working right now/)).not.toBeInTheDocument();
   });
+
+  it("keeps the search list closed while the search fails, so it can't cover the warning", async () => {
+    const user = userEvent.setup();
+    renderPage({ isPending: false, isError: false, data: { canSearchSalesforce: true } }, { searchFails: true });
+    await user.type(screen.getByRole("combobox", { name: /Customer Name/ }), "num");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(screen.queryByText("No customers found")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Customer search isn't working right now/)).toHaveLength(1);
+  });
+
+  it("doesn't reopen the search list after a failed search once the field loses focus", async () => {
+    const user = userEvent.setup();
+    renderPage({ isPending: false, isError: false, data: { canSearchSalesforce: true } }, { searchFails: true });
+    await user.type(screen.getByRole("combobox", { name: /Customer Name/ }), "num");
+    // Leaving the field clears it, and an empty field runs no search, so the error ends.
+    search.failed = false;
+    await user.tab();
+    expect(screen.getByRole("combobox", { name: /Customer Name/ })).toHaveValue("");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(screen.queryByText("Type to search customers")).not.toBeInTheDocument();
+  });
 });
 
 describe("NdaPage counterparty and WSO2 company", () => {

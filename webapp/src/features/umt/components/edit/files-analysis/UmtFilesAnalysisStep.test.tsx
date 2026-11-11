@@ -14,29 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { UmtUpdateSummary } from "../../../api/umtUpdates";
 
-const state = vi.hoisted(() => ({ isAdvancing: false }));
-
-vi.mock("../../../api/useUmtPrAnalysis", () => ({
-  useUmtIsAdvancingToPrAnalyzed: () => state.isAdvancing,
-}));
 vi.mock("../pr-analysis/UmtPrAnalysisStep", () => ({ default: () => <div>PR analysis</div> }));
 vi.mock("../product-analysis/UmtProductAnalysisStep", () => ({ default: () => <div>Product analysis</div> }));
 
 const { default: UmtFilesAnalysisStep } = await import("./UmtFilesAnalysisStep");
 
-function renderStep(lifecycleState: string) {
-  render(<UmtFilesAnalysisStep id="42" update={{ id: 42, lifecycleState } as UmtUpdateSummary} />);
+function renderStep(lifecycleState: string, praStatus = "COMPLETED", paError?: string) {
+  render(<UmtFilesAnalysisStep id="42" update={{ id: 42, lifecycleState, praStatus, paError } as UmtUpdateSummary} />);
 }
 
 describe("UmtFilesAnalysisStep", () => {
-  beforeEach(() => {
-    state.isAdvancing = false;
-  });
-
   it("shows only the PR analysis in Development", () => {
     renderStep("Development");
 
@@ -51,9 +42,15 @@ describe("UmtFilesAnalysisStep", () => {
   });
 
   it("holds the product analysis back while the run that promoted the update is still going", () => {
-    state.isAdvancing = true;
-    renderStep("PRAnalyzed");
+    renderStep("PRAnalyzed", "PROCESSING");
 
+    expect(screen.queryByText("Product analysis")).not.toBeInTheDocument();
+  });
+
+  it("leaves the product analysis out in PRAnalyzed when it failed and the demote failed too", () => {
+    renderStep("PRAnalyzed", "COMPLETED", "Product analysis failed: Files API unavailable");
+
+    expect(screen.getByText("PR analysis")).toBeInTheDocument();
     expect(screen.queryByText("Product analysis")).not.toBeInTheDocument();
   });
 });

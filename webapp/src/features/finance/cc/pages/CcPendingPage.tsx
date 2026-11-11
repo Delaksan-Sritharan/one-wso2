@@ -39,7 +39,7 @@ import { useNotifications } from "@context/notifications/NotificationsContext";
 import { CardMenu } from "../components/CardMenu";
 import { CcCategorisePanel, type CcCategorisePanelHandle } from "../CcCategorisePanel";
 import { ToolbarNoExport as PendingToolbar } from "../ccGridToolbar";
-import { CC_SNACK } from "../ccCopy";
+import { CC_SNACK } from "../ccUiText";
 import { useCcTransactions, useCcUserInfo, useCreditCards } from "../useCc";
 import { useCcCardLabel, useCcSaveEdit } from "../useCcMutations";
 import type { CcTransaction } from "../ccTypes";

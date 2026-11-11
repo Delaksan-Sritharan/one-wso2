@@ -16,6 +16,10 @@
 
 import { describe, expect, it, vi } from "vitest";
 import {
+  AMPLIFY_CURRENT_POSTS_ITEM_ID,
+  AMPLIFY_DASHBOARD_ITEM_IDS,
+  AMPLIFY_EDITOR_ITEM_IDS,
+  AMPLIFY_NEW_POST_ITEM_ID,
   PERSPECTIVES,
   PROMOTION_LEAD_PORTAL_ITEM_ID,
   SRI_LANKA_ONLY_ITEM_IDS,
@@ -155,6 +159,46 @@ describe("foldVisibility", () => {
     );
 
     expect(folded.canSee({ id: "mops-email-create", requires: ["admin"] })).toBe(false);
+  });
+
+  it("claims the Amplify editor and dashboard rows, only on the Amplify perspective", () => {
+    const claim = claimOf("amplify");
+    expect(claim.kind).toBe("sections");
+    for (const id of [...AMPLIFY_EDITOR_ITEM_IDS, ...AMPLIFY_DASHBOARD_ITEM_IDS]) {
+      expect(claim.kind === "sections" && claim.ids.has(id)).toBe(true);
+    }
+    expect(claimsForPerspective("amplify")).toContain("amplify");
+    expect(claimsForPerspective("people")).not.toContain("amplify");
+  });
+
+  it("lets the Amplify adapter decide New Post and Dashboarding, and nothing else", () => {
+    const allowed = new Set<string>([AMPLIFY_NEW_POST_ITEM_ID]);
+    const folded = foldVisibility(
+      [adapter({ name: "amplify", canSee: (id) => allowed.has(id) })],
+      shell({
+        perspectiveKey: "amplify",
+        sectionIds: new Set([AMPLIFY_NEW_POST_ITEM_ID, AMPLIFY_CURRENT_POSTS_ITEM_ID, ...AMPLIFY_DASHBOARD_ITEM_IDS]),
+        capabilities: new Set(["admin"]),
+      }),
+    );
+
+    expect(folded.canSee({ id: AMPLIFY_NEW_POST_ITEM_ID })).toBe(true);
+    // Held back by the adapter even though this caller holds the admin capability.
+    expect(folded.canSee({ id: AMPLIFY_CURRENT_POSTS_ITEM_ID })).toBe(false);
+    for (const id of AMPLIFY_DASHBOARD_ITEM_IDS) expect(folded.canSee({ id })).toBe(false);
+  });
+
+  it("holds the Amplify rows back while the adapter is resolving", () => {
+    const folded = foldVisibility(
+      [adapter({ name: "amplify", canSee: () => false, resolving: true })],
+      shell({
+        perspectiveKey: "amplify",
+        sectionIds: new Set([AMPLIFY_NEW_POST_ITEM_ID]),
+      }),
+    );
+
+    expect(folded.resolving).toBe(true);
+    expect(folded.canSee({ id: AMPLIFY_NEW_POST_ITEM_ID })).toBe(false);
   });
 
   it("hides a claimed section when its adapter is not in play", () => {
@@ -331,20 +375,13 @@ describe("claimsForPerspective", () => {
     expect(claimsForPerspective("engineering")).toEqual(expect.arrayContaining(["engineering", "umt"]));
   });
 
-  it("covers infra when its flag is on, and promotion regardless", async () => {
-    const previous = window.config;
-    vi.resetModules();
-    window.config = {
-      ...(previous ?? {}),
-      ONE_WSO2_PREVIEW_FEATURES: { infra: true },
-    } as Window["config"];
-    const { PERSPECTIVES: flagged } = await import("@constants/perspectives");
-    const fold = await import("./visibilityFold");
-    const keys = flagged.map((perspective) => perspective.key);
-    expect(keys).toEqual(expect.arrayContaining(["infra", "engineering"]));
-    const people = flagged.find((perspective) => perspective.key === "people");
-    expect(fold.sectionIdsIn(people?.sections ?? []).has("promotion-lead-portal")).toBe(true);
-    expect(fold.claimsForPerspective("people")).toContain("promotion");
+  it("covers infra and promotion", () => {
+    expect(PERSPECTIVES.map((perspective) => perspective.key)).toEqual(
+      expect.arrayContaining(["infra", "engineering"]),
+    );
+    const people = PERSPECTIVES.find((perspective) => perspective.key === "people");
+    expect(sectionIdsIn(people?.sections ?? []).has("promotion-lead-portal")).toBe(true);
+    expect(claimsForPerspective("people")).toContain("promotion");
 
     const names = [
       "par",
@@ -363,12 +400,12 @@ describe("claimsForPerspective", () => {
       "subscriptions",
       "engineering",
     ] as const;
-    for (const perspective of flagged) {
-      const sectionIds = fold.sectionIdsIn(perspective.sections ?? []);
-      const inPlay = new Set(fold.claimsForPerspective(perspective.key));
+    for (const perspective of PERSPECTIVES) {
+      const sectionIds = sectionIdsIn(perspective.sections ?? []);
+      const inPlay = new Set(claimsForPerspective(perspective.key));
       for (const id of sectionIds) {
         for (const name of names) {
-          const claim = fold.claimOf(name);
+          const claim = claimOf(name);
           const covers =
             claim.kind === "sections"
               ? claim.ids.has(id)
@@ -376,12 +413,11 @@ describe("claimsForPerspective", () => {
           if (covers) expect(inPlay.has(name), `${perspective.key} ${id} claimed by ${name}`).toBe(true);
         }
       }
-      const adapters = fold.claimsForPerspective(perspective.key).map((name) => adapter({ name }));
-      expect(fold.claimConflicts(adapters, shell({ perspectiveKey: perspective.key, sectionIds })), perspective.key).toEqual(
+      const adapters = claimsForPerspective(perspective.key).map((name) => adapter({ name }));
+      expect(claimConflicts(adapters, shell({ perspectiveKey: perspective.key, sectionIds })), perspective.key).toEqual(
         [],
       );
     }
-    window.config = previous;
   });
 
   it("gives every real perspective a single owner per section", () => {

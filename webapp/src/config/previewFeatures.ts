@@ -24,7 +24,7 @@
  * branching the build or holding work out of `main`.
  *
  * ```js
- * ONE_WSO2_PREVIEW_FEATURES: { infra: true },
+ * ONE_WSO2_PREVIEW_FEATURES: { quickquote: true },
  * ```
  *
  * ## Absent means off
@@ -54,10 +54,6 @@
  * rather than a feature that is silently never enabled anywhere.
  */
 export type PreviewFeature =
-  /* The whole Infra Portal perspective. Still being ported, so the waffle
-   * tile, landing option, and `/infra` route stay hidden until this is on.
-   */
-  | "infra"
   /**
    * Sales → QuickQuote (code name CadO2), the whole quote tool: its rail
    * group (My Quotes, My Approvals, Admin), every route under
@@ -72,7 +68,36 @@ export type PreviewFeature =
    * route. Held back until it is ready for production. Due Diligence, the
    * rest of the Legal perspective, is unaffected.
    */
-  | "nda";
+  | "nda"
+  /**
+   * Marketing Ops → Marketing Calendar, the month view of events, content, social
+   * posts and emails planned in GitHub: its rail group, the
+   * `/marketing-ops/marketing-calendar` route, and its backend calls. Held back
+   * while the business owners settle which GitHub items it shows
+   * (digiops-marketing#1596).
+   */
+  | "marketingCalendar"
+  /**
+   * Marketing Ops → Events → Lead Import, which converts a raw event lead file
+   * into the filled List Import Template: its rail entry and the
+   * `/marketing-ops/events/lead-import` route. Held back until the MOP
+   * lead-import backend is live in production. My Submissions and Review
+   * Queue, the rest of Events, are unaffected.
+   */
+  | "eventsLeadImport"
+  /**
+   * Amplify, the whole app: its launcher tile, its rail group (Celebrate,
+   * New Post, Current Posts) and every route under `/amplify`. Held back until
+   * the Amplify API proxy is live for the phase 1 pilot. Who sees New Post and
+   * Current Posts is still decided by amplify-api's `CAN_CAMPAIGN` grant
+   * (GET /me) once this is on.
+   */
+  | "amplify"
+  /**
+   * Marketing Ops → Campaign Tracker → Pacing tab. The BudgetSyncPacingPanel
+   * is still being built out; this flag hides the tab until it is ready.
+   */
+  | "campaignTrackerPacing";
 
 /**
  * Whether a preview feature should be shown.

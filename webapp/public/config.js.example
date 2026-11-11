@@ -16,6 +16,12 @@ window.config = {
   // for myaccount. (Asgardeo Cloud convention).
   // ONE_WSO2_ASGARDEO_MYACCOUNT_URL: "https://myaccount.asgardeo.io/t/<your-org>",
 
+  // Optional — only for identity servers that don't follow Asgardeo's URL
+  // layout, such as ThunderID. Points the SDK at the server's OIDC discovery
+  // document so the issuer and logout endpoint match what the server uses.
+  // Setting it signs in through ThunderProvider instead of the stock AsgardeoProvider.
+  // ONE_WSO2_AUTH_WELL_KNOWN_URL: "https://<idp-host>/.well-known/openid-configuration",
+
   // UI
   ONE_WSO2_THEME: "wso2",
 
@@ -29,6 +35,12 @@ window.config = {
   // Today I Learned backend — the Knowledge perspective's learnings
   // feed.
   // ONE_WSO2_TIL_BACKEND_URL: "<your-til-backend-url>",
+
+  // Amplify API proxy — the Amplify app (Celebrate, New Post, Current Posts).
+  // Shown only while `amplify` is on in ONE_WSO2_PREVIEW_FEATURES below.
+  // ONE_WSO2_AMPLIFY_BACKEND_URL: "<your-amplify-api-proxy-url>",
+  // The LinkedIn company page, the privacy notice link and the allowed post-link origins are not set here:
+  // amplify-api sends them in GET /me (Choreo configs WSO2ORGANIZATIONURN, PRIVACYNOTICEURL, CAMPAIGNLINKORIGINS).
 
   // Subscriptions backend (PickMe Commute + LaaS opt-in/opt-out). The two
   // admin group names come from this backend's own /subscriptions/meta-info,
@@ -203,6 +215,6 @@ window.config = {
   // Each entry is deleted when its feature ships — a list that only grows
   // stops describing anything.
   //
-  // ONE_WSO2_PREVIEW_FEATURES: { infra: false, quickquote: false, nda: false },
+  // ONE_WSO2_PREVIEW_FEATURES: { infra: false, quickquote: false, nda: false, amplify: false, marketingCalendar: false, eventsLeadImport: false },
 
 };

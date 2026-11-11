@@ -82,10 +82,6 @@ vi.mock("@context/notifications/NotificationsContext", () => ({
   useNotifications: () => ({ showSuccess: vi.fn(), showError: vi.fn(), showWarning: vi.fn() }),
 }));
 
-vi.mock("../api/useUmtPrAnalysis", () => ({
-  useUmtIsAdvancingToPrAnalyzed: () => false,
-}));
-
 // Two log entries: the stay a saved pointer belongs to is the lifecycle state
 // plus the length of this log.
 vi.mock("../api/useUmtLifecycleHistory", () => ({

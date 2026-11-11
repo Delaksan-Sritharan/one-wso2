@@ -14,19 +14,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, Box, Button, Card, Chip, Typography } from "@wso2/oxygen-ui";
+import { Alert, Box, Button, Chip, Typography } from "@wso2/oxygen-ui";
 import { GitHub } from "@wso2/oxygen-ui-icons-react";
-import { Link as RouterLink } from "react-router";
 import { authedPost, authedPut } from "@api/http";
 import { describeError } from "@api/errors";
 import { infraServiceUrls, isGitHubOAuthConfigured } from "@config/apiConfig";
-import { INFRA_APPS } from "@constants/infraApps";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { useIdTokenClaims } from "@features/security/grc/hooks/useIdTokenClaims";
 import InfraShell from "../components/InfraShell";
 import InfraConfirmDialog from "../components/InfraConfirmDialog";
+import GitHubConnectionGuide from "../github/GitHubConnectionGuide";
 import { useInfraGate } from "../api/useInfraGate";
 import { useInfraUserInfo } from "../api/useInfraUserInfo";
 import type { GitHubVerifyResponse } from "../api/infraTypes";
@@ -50,11 +49,6 @@ export default function InfraHomePage() {
     const [connecting, setConnecting] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [verified, setVerified] = useState<GitHubConnectResult | null>(null);
-
-    const visible = INFRA_APPS.map((app) => ({
-        app,
-        items: app.items.filter((it) => gate.canSee(it.id)),
-    })).filter(({ items }) => items.length > 0);
 
     const jwtGithubUserId =
         typeof claims?.githubUserId === "string" ? claims.githubUserId : null;
@@ -125,8 +119,9 @@ export default function InfraHomePage() {
 
     return (
         <InfraShell
-        title="Infra Portal"
-        subtitle="GitHub requests, repository access and the Security Dashboard."
+        title="GitHub Connection"
+        subtitle="Connect your GitHub account to request repositories."
+        center
         >
         {connectError && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -135,7 +130,7 @@ export default function InfraHomePage() {
         )}
 
         {gate.isEmployee && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1.5, mb: 2 }}>
             {isConnected ? (
                 <Chip
                 icon={<GitHub size={14} />}
@@ -167,6 +162,8 @@ export default function InfraHomePage() {
             </Box>
         )}
 
+        {gate.isEmployee && <GitHubConnectionGuide />}
+
         <InfraConfirmDialog
             open={confirmOpen}
             title="Connect with GitHub"
@@ -175,7 +172,7 @@ export default function InfraHomePage() {
             onCancel={() => setConfirmOpen(false)}
             onConfirm={() => {
             setConfirmOpen(false);
-            startGitHubOAuth("/infra");
+            startGitHubOAuth("/infra/github/connection");
             }}
             body={
             <>
@@ -184,71 +181,6 @@ export default function InfraHomePage() {
             </>
             }
         />
-
-        {visible.map(({ app, items }) => (
-            <Box key={app.key}>
-            <SectionHeader>
-                <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
-                <app.icon size={14} />
-                <Box component="span">{app.name}</Box>
-                </Box>
-            </SectionHeader>
-            <Card variant="outlined" sx={{ p: 3, maxWidth: 480 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                {app.purpose}
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {items.map((it) => (
-                    <Box key={it.id} id={it.id} sx={{ scrollMarginTop: 14 }}>
-                    <Typography sx={{ fontWeight: 600, mb: 0.5 }}>{it.label}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {it.desc}
-                    </Typography>
-                    {it.path ? (
-                        <Button
-                        component={RouterLink}
-                        to={it.path}
-                        variant="outlined"
-                        size="small"
-                        sx={primaryBtnSx}
-                        >
-                        Open {it.label.toLowerCase()}
-                        </Button>
-                    ) : (
-                        <Typography variant="body2" color="text.disabled">
-                        Not here yet
-                        </Typography>
-                    )}
-                    </Box>
-                ))}
-                </Box>
-            </Card>
-            </Box>
-        ))}
         </InfraShell>
-    );
-}
-
-function SectionHeader({ children }: { children: ReactNode }) {
-    return (
-        <Typography
-        component="h2"
-        sx={{
-            fontSize: 11,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            color: "text.disabled",
-            fontWeight: 700,
-            mt: 3,
-            mb: 1.25,
-            display: "flex",
-            alignItems: "center",
-            gap: 1.25,
-            "&::before": { content: '""', width: 14, height: "1px", bgcolor: "divider" },
-            "&::after": { content: '""', flex: 1, height: "1px", bgcolor: "divider" },
-        }}
-        >
-        {children}
-        </Typography>
     );
 }

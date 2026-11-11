@@ -261,6 +261,28 @@ describe("ParAdminLegacyCycleView", () => {
     expect(screen.queryAllByRole("button", { name: "Open Group" })).toHaveLength(0);
   });
 
+  it("team search lists team matches first, then sub team, lead and department", () => {
+    const cycleName = "2016 Quarterly Review - Q3/Q4";
+    // Default order is department, then lead: A, B, C, Core Lead.
+    history.data = [
+      legacyRecord({ legacyHeaderId: 1, cycleName, department: "Core Ops", team: "Ops", reviewerName: "A Lead" }),
+      legacyRecord({ legacyHeaderId: 2, cycleName, department: "Eng", team: "Platform", subTeam: "Core API", reviewerName: "B Lead" }),
+      legacyRecord({ legacyHeaderId: 3, cycleName, department: "Eng", team: "Core", reviewerName: "C Lead" }),
+      legacyRecord({ legacyHeaderId: 4, cycleName, department: "Eng", team: "Web", reviewerName: "Core Lead" }),
+    ];
+    show(cycleName);
+    const leads = () =>
+      screen
+        .getAllByRole("row")
+        .slice(1)
+        .map((row) => row.querySelector('[data-field="parLeadEmail"]')?.textContent);
+    expect(leads()).toEqual(["A Lead", "B Lead", "C Lead", "Core Lead"]);
+
+    fireEvent.change(screen.getByPlaceholderText("Search Team"), { target: { value: "core" } });
+
+    expect(leads()).toEqual(["C Lead", "B Lead", "Core Lead", "A Lead"]);
+  });
+
   it("roster shows the Top 5%/20% Rating column from 2021 on and hides it before", () => {
     seed("2024 Performance Evaluation - H1");
     const { unmount } = show("2024 Performance Evaluation - H1");

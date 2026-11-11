@@ -32,6 +32,7 @@ const state = vi.hoisted(() => ({
   additionalFileOperations: [] as unknown[],
   stagingResults: [] as unknown[],
   ignoredFiles: [] as string[],
+  showError: vi.fn(),
 }));
 
 vi.mock("../../api/useUmtUpdateViewData", () => ({
@@ -47,10 +48,6 @@ vi.mock("../../api/useUmtUpdateViewData", () => ({
 
 vi.mock("../../api/useUmtTesting", () => ({
   useUmtStagingTestResults: () => ({ isSuccess: true, data: state.stagingResults }),
-}));
-
-vi.mock("../../api/useUmtPrAnalysis", () => ({
-  useUmtIsAdvancingToPrAnalyzed: () => false,
 }));
 
 // Two log entries: the stay a saved pointer belongs to is the lifecycle state
@@ -86,7 +83,7 @@ vi.mock("../../api/useUmtLifecycleTransition", () => ({
 }));
 
 vi.mock("@context/notifications/NotificationsContext", () => ({
-  useNotifications: () => ({ showSuccess: vi.fn(), showError: vi.fn(), showWarning: vi.fn() }),
+  useNotifications: () => ({ showSuccess: vi.fn(), showError: state.showError, showWarning: vi.fn() }),
 }));
 
 // A step that can hold unsaved edits reports them through onDirtyChange; the
@@ -189,6 +186,7 @@ beforeEach(() => {
   state.additionalFileOperations = [];
   state.stagingResults = [];
   state.ignoredFiles = [];
+  state.showError.mockClear();
 });
 
 describe("a step pointer saved under another lifecycle state", () => {
@@ -403,6 +401,55 @@ describe("demote buttons", () => {
     renderTab(makeUpdate({ lifecycleState: "UATStaging", promoteStages: [] }));
 
     expect(demoteButton("Demote to Testing")).toBeInTheDocument();
+  });
+});
+
+// The backend rejects a demote out of PRAnalyzed while the promotion after a
+// PR analysis is pending, as the product analysis would undo it.
+describe("Files Analysis in PRAnalyzed while the promotion is pending", () => {
+  const filesAnalysis = (praPromotionPending: boolean) =>
+    makeUpdate({ lifecycleState: "PRAnalyzed", promoteStages: ["ProductAnalyzed"], praStatus: "COMPLETED", praPromotionPending });
+  const demoteButton = () => screen.getByRole("button", { name: "Demote to Development" });
+
+  it("disables Demote to Development and Proceed, and says why", () => {
+    renderTab(filesAnalysis(true));
+
+    expect(demoteButton()).toBeDisabled();
+    expect(forwardButton()).toBeDisabled();
+    expect(screen.getByText("Product analysis is running. Wait for it to finish.")).toBeInTheDocument();
+  });
+
+  it("enables them as before once no promotion is pending", async () => {
+    renderTab(filesAnalysis(false));
+
+    expect(demoteButton()).toBeEnabled();
+    expect(forwardButton()).toBeEnabled();
+    expect(screen.queryByText("Product analysis is running. Wait for it to finish.")).not.toBeInTheDocument();
+
+    await userEvent.click(demoteButton());
+
+    await vi.waitFor(() => expect(state.transition).toHaveBeenCalledWith("Development"));
+  });
+
+  it("disables Proceed but keeps Demote to Development when the product analysis failed and the demote did too", () => {
+    renderTab({ ...filesAnalysis(false), paError: "Product analysis failed: Files API unavailable" });
+
+    expect(demoteButton()).toBeEnabled();
+    expect(forwardButton()).toBeDisabled();
+    expect(screen.getByText("The product analysis failed. Run Analyze again.")).toBeInTheDocument();
+  });
+
+  it("shows the backend's message when the demote is rejected anyway", async () => {
+    state.transition.mockRejectedValueOnce(new Error("The update is being promoted to PRAnalyzed after its PR analysis"));
+    renderTab(filesAnalysis(false));
+
+    await userEvent.click(demoteButton());
+
+    await vi.waitFor(() =>
+      expect(state.showError).toHaveBeenCalledWith(
+        expect.stringContaining("The update is being promoted to PRAnalyzed after its PR analysis"),
+      ),
+    );
   });
 });
 

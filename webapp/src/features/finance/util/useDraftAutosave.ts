@@ -18,6 +18,15 @@ import { useEffect, useRef, useState } from "react";
 
 export type DraftState = "idle" | "saving" | "saved" | "error";
 
+/**
+ * `initialBaseline` for a caller whose opening list is the draft to persist —
+ * carried-over bills, say, which have to replace whatever is stored. No
+ * signature can equal it, because `JSON.stringify` never returns an empty
+ * string, so the first ready snapshot is compared and saved rather than
+ * adopted as already-persisted.
+ */
+export const NOTHING_PERSISTED = "";
+
 // Debounced draft autosave. `signature` is a stable string derived from the
 // current line items; whenever it changes (after the first "ready" snapshot)
 // the hook waits `delay` ms then runs `run` — which the caller wires to
@@ -28,7 +37,8 @@ export type DraftState = "idle" | "saving" | "saved" | "error";
 // `initialBaseline` names that persisted state up front instead, for a caller
 // that holds `ready` back while something resolves: the first ready snapshot
 // is then compared rather than skipped, so an edit made during the wait is
-// still saved.
+// still saved. A caller whose opening list IS the state to persist, rather
+// than one read back from the server, passes `NOTHING_PERSISTED`.
 export function useDraftAutosave(
   signature: string,
   ready: boolean,
@@ -36,46 +46,92 @@ export function useDraftAutosave(
   delay = 1000,
   initialBaseline?: string,
 ): DraftState {
-  const [state, setState] = useState<DraftState>("idle");
-  // baseline = last persisted signature (seeded on first ready render, then
-  // advanced after each successful save). Read once, at mount: a later
-  // `initialBaseline` is ignored, the same way the first ready snapshot is.
-  const baseline = useRef<string | null>(initialBaseline ?? null);
+  // baseline = last persisted signature. State rather than a ref because the
+  // returned chip is derived from it during render, and reading a ref while
+  // rendering is what react-hooks/refs forbids.
+  const [baseline, setBaseline] = useState<string | null>(initialBaseline ?? null);
+  // The result of the last completed save, tied to the signature it saved, so
+  // it is dropped as soon as the list moves on. Only ever set from the
+  // promise's callbacks, never synchronously inside an effect.
+  const [outcome, setOutcome] = useState<{ signature: string; state: "saved" | "error" } | null>(
+    null,
+  );
+
+  // First value seen while ready = the hydrated/seeded state; adopt it as the
+  // baseline so it is not saved straight back. Done during render — React's
+  // documented way to adjust state when inputs change — rather than in an
+  // effect, which would be a synchronous setState in an effect body.
+  if (ready && baseline === null) {
+    setBaseline(signature);
+  }
+
   const runRef = useRef(run);
-  runRef.current = run;
+  // Synced in an effect, not during render: a ref write while rendering is
+  // what react-hooks/refs forbids. Declared BEFORE the save effect so React
+  // runs it first on every commit, which means the save below reads the
+  // closure from the render that changed the signature — the one holding the
+  // edited items. No dep array: `run` is a new closure each render.
+  useEffect(() => {
+    runRef.current = run;
+  });
+
   // Holds a queued (debounced-but-not-yet-run) save so it can be flushed on
   // unmount instead of silently dropped.
   const pendingRef = useRef<null | (() => Promise<void>)>(null);
+  // Counts started saves, so a save can tell whether it is still the newest.
+  // One can still be in flight when the next starts — a quick second edit, or
+  // a slow request — and only the newest describes what the server now holds.
+  // An older one settling afterwards is therefore dropped rather than allowed
+  // to report itself, which would hide the newer save's failure behind a stale
+  // "saved", or its success behind a stale "error".
+  const saveSeqRef = useRef(0);
+
+  // Everything the caller sees follows from these two, so no effect has to
+  // push a state change to keep the chip in step.
+  const dirty = ready && baseline !== null && signature !== baseline;
+  const state: DraftState =
+    outcome?.signature === signature ? outcome.state : dirty ? "saving" : "idle";
 
   useEffect(() => {
-    if (!ready) return;
-    // First value seen while ready = the hydrated/seeded state; don't save it.
-    if (baseline.current === null) {
-      baseline.current = signature;
+    if (!dirty) {
+      // Reverted to the last-saved state: drop the queued save so leaving the
+      // page does not write back a change that was undone. Guarded on `ready`
+      // because `dirty` is also false when the caller withdraws readiness —
+      // a refetch, say — and a save queued from a real edit has to survive
+      // that to still be flushed on unmount.
+      if (ready) {
+        pendingRef.current = null;
+      }
       return;
     }
-    // Reverted back to the last-saved state — nothing to persist. Reset the
-    // chip (otherwise it stays stuck on "Saving…" from the change we undid).
-    if (signature === baseline.current) {
-      pendingRef.current = null;
-      setState("idle");
-      return;
-    }
-    setState("saving");
     const target = signature;
     const fn = runRef.current;
     pendingRef.current = fn;
     const timer = window.setTimeout(() => {
       pendingRef.current = null;
+      const seq = ++saveSeqRef.current;
+      // A superseded save leaves the baseline alone as well. It names content
+      // the newer save has already written over, so adopting it would call the
+      // list persisted when it is not, and a later revert to that same
+      // signature would then cancel a write the server still needs.
+      const superseded = () => seq !== saveSeqRef.current;
       fn()
         .then(() => {
-          baseline.current = target;
-          setState("saved");
+          if (superseded()) {
+            return;
+          }
+          setBaseline(target);
+          setOutcome({ signature: target, state: "saved" });
         })
-        .catch(() => setState("error"));
+        .catch(() => {
+          if (superseded()) {
+            return;
+          }
+          setOutcome({ signature: target, state: "error" });
+        });
     }, delay);
     return () => window.clearTimeout(timer);
-  }, [signature, ready, delay]);
+  }, [dirty, ready, signature, delay]);
 
   // Flush a still-queued save when the component unmounts, so leaving within
   // the debounce window doesn't drop the last edit.

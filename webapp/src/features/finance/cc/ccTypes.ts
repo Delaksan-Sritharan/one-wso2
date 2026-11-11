@@ -16,6 +16,9 @@
 
 // DTOs + enums mirrored from digiops-finance/apps/cc-expenses/backend.
 
+/** The value a CC filter takes while it narrows nothing. */
+export const CC_FILTER_ALL = "all";
+
 // Access levels are string names (no numeric privileges) derived from the
 // JWT groups + DB owner/lead lists on the backend.
 export type CcAccessLevel = "employee" | "cc_owner" | "lead" | "finance";
@@ -55,6 +58,10 @@ export interface CcEmployee {
   jobRole: string;
   employeeThumbnail?: string | null;
   privileges: CcAccessLevel[];
+  /** Whether an active autofill rule of the card holder fills in no expense details. */
+  taggingRulesUnconfigured?: boolean;
+  /** Whether an active autofill rule of the card holder has values no longer offered. */
+  taggingRulesOutdated?: boolean;
 }
 
 export interface CcTransaction {
@@ -81,6 +88,18 @@ export interface CcTransaction {
   leadApprovedDate: string | null;
   financeApprovedDate: string | null;
   reportSequenceNumber: string | null;
+  /** The autofill rule that filled in this transaction, if any. */
+  taggingRuleId?: number | null;
+  /** The billing email the transaction was matched with, if any. */
+  billingEmailRef?: CcBillingEmailRef | null;
+}
+
+/** A billing email, found in Gmail by its Message-ID. */
+export interface CcBillingEmailRef {
+  /** The email's Message-ID header, angle brackets included. */
+  messageId: string;
+  /** The email's subject, as received. */
+  subject: string;
 }
 
 export interface CcCreditCard {
@@ -95,6 +114,72 @@ export interface CcCreditCard {
   countPendingLead: number;
   countPendingFinance: number;
 }
+
+// ---- autofill (tagging) rules ---------------------------------------------
+
+/** How a rule was added: by the card holder, or by the bill processor for a new supplier. */
+export type CcTaggingRuleSource = "manual" | "auto";
+
+/**
+ * A rule that fills in a card transaction's expense details when a bill
+ * matches its card, supplier, account and amount range.
+ */
+export interface CcTaggingRule {
+  /** The rule's ID. */
+  id: number;
+  /** The ID of the card the rule applies to. */
+  creditCardId: number;
+  /** The card's last digits. */
+  ccNumber: string;
+  /** The card holder's email. */
+  employeeEmail: string;
+  /** Matches any bill supplier that contains it. */
+  supplier: string;
+  /** The account on the bill. `null` matches bills that show no account. */
+  account: string | null;
+  /** The lowest bill amount the rule matches, inclusive. `null` sets no lower bound. */
+  amountMin: number | null;
+  /** The bill amount the rule matches up to, exclusive. `null` sets no upper bound. */
+  amountMax: number | null;
+  /** The expense category filled in. */
+  expenseCategoryLabel: string | null;
+  /** The expense type filled in, one of its category's types. */
+  expenseTypeLabel: string | null;
+  /** The transaction comment filled in. */
+  comment: string | null;
+  /** The sub region filled in. */
+  subRegion: string | null;
+  /** The product unit filled in, paired with `businessUnit`. */
+  productUnit: string | null;
+  /** The business unit filled in, paired with `productUnit`. */
+  businessUnit: string | null;
+  /** How the rule was added. */
+  source: CcTaggingRuleSource;
+  /** Whether the rule is applied. */
+  active: boolean;
+  /** Whether the rule has values that are no longer offered. */
+  outdated: boolean;
+}
+
+/** The body that adds a rule. The backend sets its source and card holder. */
+export type CcTaggingRuleInput = Pick<
+  CcTaggingRule,
+  | "ccNumber"
+  | "supplier"
+  | "account"
+  | "amountMin"
+  | "amountMax"
+  | "expenseCategoryLabel"
+  | "expenseTypeLabel"
+  | "comment"
+  | "subRegion"
+  | "productUnit"
+  | "businessUnit"
+  | "active"
+>;
+
+/** The body that changes a rule: only the fields that changed, with `null` clearing one. */
+export type CcTaggingRulePatch = Partial<CcTaggingRuleInput>;
 
 // ---- menu / configuration data --------------------------------------------
 
@@ -187,6 +272,27 @@ export function ccCardName(label: string | null | undefined, index: number): str
   return label || `Card ${index + 1}`;
 }
 
+/** Whether a card is active, whatever the case of its status. */
+export function ccCardIsActive(card: Pick<CcCreditCard, "status">): boolean {
+  return (card.status ?? "").toUpperCase() === "ACTIVE";
+}
+
+/**
+ * A card holder's card by name: its label, or "Card N" by its place among their active cards, as Pending Submissions
+ * names it. An unlabelled inactive card has no place there, so it's named as inactive.
+ *
+ * @param activeCards - The card holder's active cards, in the order Pending Submissions lists them.
+ */
+export function ccHolderCardName(card: CcCreditCard, activeCards: CcCreditCard[]): string {
+  const index = activeCards.findIndex((c) => c.id === card.id);
+  return index < 0 && !card.label ? "Inactive card" : ccCardName(card.label, index);
+}
+
+/** Whether a rule fills in no expense details, as the backend counts it for `taggingRulesUnconfigured`. */
+export function ccRuleUnconfigured(r: CcTaggingRule): boolean {
+  return !r.expenseTypeLabel && !r.comment && !r.subRegion && !r.productUnit && !r.businessUnit;
+}
+
 // A transaction is ready to submit once its required categorisation fields
 // are set (mirrors the backend's validateRequiredFields).
 export function ccTxnComplete(t: CcTransaction): boolean {
@@ -245,14 +351,18 @@ export interface CcCardHolderCompliance {
 }
 
 /**
- * The same pending backlog as `CcCardHolderCompliance`, rolled up under one
- * reporting manager. An empty `managerEmail` ("Unassigned") holds card holders
- * the HRIS has no manager for.
+ * The same pending backlog as `CcCardHolderCompliance`, rolled up under one card
+ * lead — the approver the credit card master data maps the card to. An empty
+ * `leadEmail` ("Unassigned") holds cards the master data maps to no lead at all.
+ *
+ * A card can name several leads, and each of them gets their own entry holding
+ * the whole backlog of that card. The entries deliberately overlap, so these
+ * amounts are not meant to be summed into an org-wide total.
  */
-export interface CcManagerCompliance {
-  managerEmail: string;
-  managerName: string;
-  reportCount: number;
+export interface CcCardLeadCompliance {
+  leadEmail: string;
+  leadName: string;
+  cardHolderCount: number;
   transactionCount: number;
   outstandingAmount: number;
   avgPendingDays: number;
@@ -260,7 +370,7 @@ export interface CcManagerCompliance {
   bucket8To14: number;
   bucket15To30: number;
   bucket30Plus: number;
-  reports: CcCardHolderCompliance[];
+  cardHolders: CcCardHolderCompliance[];
 }
 
 
@@ -307,4 +417,16 @@ export interface CcLeadTeamCardHolder {
   unsubmittedBucket8To14: number;
   unsubmittedBucket15To30: number;
   unsubmittedBucket30Plus: number;
+}
+
+/** The Billing Email Processor's inbox. A constant, not runtime config, since no backend this app calls owns it. */
+const CC_BILLS_INBOX = "card-invoices@wso2.com";
+
+/**
+ * The address a card holder's bills go to: the bills inbox with their user name as a plus alias, such as
+ * `card-invoices+jane@wso2.com`.
+ */
+export function ccBillsAddress(workEmail: string): string {
+  const [local, domain] = CC_BILLS_INBOX.split("@");
+  return `${local}+${workEmail.split("@")[0]}@${domain}`;
 }

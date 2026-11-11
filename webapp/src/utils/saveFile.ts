@@ -35,6 +35,8 @@ const SAVEABLE_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/csv;charset=utf-8",
   "application/pdf",
+  "image/jpeg",
+  "image/png",
 ]);
 
 /**

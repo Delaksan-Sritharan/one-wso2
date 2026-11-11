@@ -32,7 +32,7 @@ export default function UmtEditStepActions({
   explanation?: string;
   onProceed: () => void;
   onBack?: () => void;
-  demoteActions?: Array<{ label: string; onClick: () => void; color?: "error" }>;
+  demoteActions?: Array<{ label: string; onClick: () => void; color?: "error"; disabled?: boolean }>;
   demoteLoading?: boolean;
 }) {
   return (
@@ -47,6 +47,7 @@ export default function UmtEditStepActions({
           key={action.label}
           variant="outlined"
           color={action.color ?? "inherit"}
+          disabled={action.disabled}
           loading={demoteLoading}
           onClick={action.onClick}
         >

@@ -32,7 +32,7 @@ import { screenBadgePillSx } from "@components/screen-badge/screenBadgeSx";
 // than merely hidden from the bar.
 
 export interface RoutedTabDef {
-  /** URL segment under `basePath`, and the tab's identity. */
+  /** URL segment under `basePath`, and the tab's identity. Empty for an index tab at `basePath` itself. */
   segment: string;
   label: string;
   /** A badge drawn beside the label. */
@@ -45,14 +45,23 @@ export default function RoutedTabs({
   tabs,
   ariaLabel,
   scrollable = false,
+  keepSearchParams,
 }: {
   basePath: string;
   tabs: readonly RoutedTabDef[];
   ariaLabel: string;
   /** One row that scrolls sideways when the labels do not fit. */
   scrollable?: boolean;
+  /**
+   * Query parameters to carry into every tab's link, for tabs that are views of
+   * the same data (`["month"]` lets `?month=` survive a switch). Only the named
+   * parameters are kept, so a filter set on one tab does not silently filter
+   * the next. Off by default: a tab's own query parameters usually mean
+   * nothing to its neighbours.
+   */
+  keepSearchParams?: readonly string[];
 }) {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   // Match on the segment that follows basePath rather than on the whole path,
   // so a deeper URL (a future detail route under a tab) keeps its tab lit.
@@ -63,6 +72,8 @@ export default function RoutedTabs({
   // An unrecognised segment leaves every tab unlit rather than lighting the
   // wrong one. The route itself decides what to render in that case.
   if (tabs.length === 0) return null;
+
+  const kept = keptSearch(search, keepSearchParams);
 
   return (
     <Tabs
@@ -90,7 +101,7 @@ export default function RoutedTabs({
           value={t.segment}
           label={t.badge ? badgedLabel(t.label, t.badge) : t.label}
           component={Link}
-          to={`${basePath}/${t.segment}`}
+          to={`${t.segment ? `${basePath}/${t.segment}` : basePath}${kept}`}
         />
       ))}
     </Tabs>
@@ -110,4 +121,17 @@ function badgedLabel(label: string, badge: ScreenBadge) {
       />
     </Box>
   );
+}
+
+// The query string holding only the named parameters (in their current order),
+// with its leading "?", or "" when none of them is present.
+function keptSearch(search: string, names: readonly string[] | undefined): string {
+  if (!names || names.length === 0) return "";
+  const current = new URLSearchParams(search);
+  const kept = new URLSearchParams();
+  for (const [key, value] of current) {
+    if (names.includes(key)) kept.append(key, value);
+  }
+  const query = kept.toString();
+  return query ? `?${query}` : "";
 }

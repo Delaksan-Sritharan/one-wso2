@@ -52,7 +52,6 @@ import {
   maxSizeLabel,
   type ReceiptSource,
 } from "../util/financeReceipts";
-import { CC_SNACK } from "./ccCopy";
 import {
   JobNumberAutocomplete,
   JobNumberDetails,
@@ -70,6 +69,7 @@ import {
   isMarketingCategory,
   isTravelCategory,
 } from "./ccTypes";
+import { CC_SNACK } from "./ccUiText";
 import { useCcJobNumberDetails, useCcMenus } from "./useCc";
 import { useCcAttachment } from "./useCcMutations";
 

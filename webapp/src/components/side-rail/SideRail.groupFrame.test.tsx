@@ -88,8 +88,58 @@ function verticalSpace(el: Element): number {
   return (
     px(s.marginTop) + px(s.marginBottom) +
     px(s.paddingTop) + px(s.paddingBottom) +
-    px(s.borderTopWidth) + px(s.borderBottomWidth)
+    px(s.borderTopWidth) + px(s.borderBottomWidth) +
+    declaredBlockSpace(el)
   );
+}
+
+/**
+ * jsdom leaves margin-block, padding-block, and border-block off the physical sides, so a group
+ * can grow while marginTop and paddingTop stay empty. Those shorthands are read from the rules
+ * that match the element.
+ */
+function declaredBlockSpace(element: Element): number {
+  let marginStart = "";
+  let marginEnd = "";
+  let marginBlock = "";
+  let paddingStart = "";
+  let paddingEnd = "";
+  let paddingBlock = "";
+  let borderStart = "";
+  let borderEnd = "";
+  let borderBlock = "";
+  for (const rule of styleRules()) {
+    if (rule.selectorText.includes("::")) continue;
+    if (!selectorMatches(element, rule.selectorText)) continue;
+    const style = rule.style;
+    const keep = (property: string, current: string) => style.getPropertyValue(property) || current;
+    marginStart = keep("margin-block-start", marginStart);
+    marginEnd = keep("margin-block-end", marginEnd);
+    marginBlock = keep("margin-block", marginBlock);
+    paddingStart = keep("padding-block-start", paddingStart);
+    paddingEnd = keep("padding-block-end", paddingEnd);
+    paddingBlock = keep("padding-block", paddingBlock);
+    borderStart = keep("border-block-start-width", borderStart);
+    borderEnd = keep("border-block-end-width", borderEnd);
+    borderBlock = keep("border-block-width", "") || keep("border-block", borderBlock);
+  }
+  return (
+    pair(marginStart, marginEnd, marginBlock) +
+    pair(paddingStart, paddingEnd, paddingBlock) +
+    pair(borderStart, borderEnd, borderBlock)
+  );
+}
+
+function pair(start: string, end: string, shorthand: string): number {
+  if (start || end) return px(start) + px(end);
+  return bothSides(shorthand);
+}
+
+function bothSides(value: string): number {
+  const sizes = value.trim().split(/\s+/).filter((part) => part === "0" || /^[\d.]+(px|rem|em|%)$/.test(part));
+  if (sizes.length === 0) return 0;
+  if (sizes.length === 1) return px(sizes[0]) * 2;
+  return px(sizes[0]) + px(sizes[1]);
 }
 
 /**
@@ -123,6 +173,8 @@ describe("SideRail group rows", () => {
 
     const header = wrappersAround("Promotion", horizontalSpace);
     expect(header).toEqual(takingNoSpace(header));
+    const down = wrappersAround("Promotion", verticalSpace);
+    expect(down).toEqual(takingNoSpace(down));
     const child = wrappersAround("Board", horizontalSpace);
     expect(child).toEqual(takingNoSpace(child));
   });
@@ -143,48 +195,168 @@ describe("SideRail group rows", () => {
     const across = wrappersAround("Promotion", horizontalSpace);
     expect(across).toEqual(takingNoSpace(across));
   });
+
+  it("counts a margin-block on the open group's list", () => {
+    renderSideRail({ collapsed: false, at: "/people-ops/promotion/lead" });
+    withRule(groupWrapper("Promotion"), "", "margin-block: 8px", () => {
+      const down = wrappersAround("Promotion", verticalSpace);
+      expect(down).not.toEqual(takingNoSpace(down));
+    });
+  });
 });
 
+const NO_OUTLINE = { border: "none", background: "none", shadow: "none" };
+
 /**
- * Whether a group wears its outline. GroupFrame draws it on its <li>'s ::before, and jsdom
- * ignores getComputedStyle's pseudo-element argument — it answers with the <li>'s own style —
- * so this reads the ::before rule Emotion wrote for the frame instead.
+ * Border, background, and shadow of the <li> around a group's rows. The rail used to paint the
+ * border and tint on that element's ::before, and jsdom leaves pseudo-elements out of
+ * getComputedStyle, so ::before and ::after are read from the rules that match the <li>. A border,
+ * tint, or shadow on the <li> itself is its computed style.
  */
-function isOutlined(groupName: string): boolean {
-  const frame = screen.getByRole("button", { name: groupName }).closest("li")?.parentElement?.closest("li");
-  if (!frame) throw new Error(`no frame around ${groupName}`);
-  const rule = [...document.styleSheets]
-    .flatMap((sheet) => [...sheet.cssRules])
-    .filter((r): r is CSSStyleRule => "selectorText" in r && (r as CSSStyleRule).selectorText.endsWith("::before"))
-    .filter((r) => frame.matches(r.selectorText.slice(0, -"::before".length)))
-    .at(-1);
-  if (!rule) throw new Error(`no outline rule on the frame around ${groupName}`);
-  const colour = rule.style.getPropertyValue("border-top-color");
-  return colour !== "" && colour !== "transparent";
+function outlineOf(groupName: string): { border: string; background: string; shadow: string } {
+  const wrapper = groupWrapper(groupName);
+  return joinPaint([
+    paintOf(getComputedStyle(wrapper)),
+    pseudoPaint(wrapper, "::before"),
+    pseudoPaint(wrapper, "::after"),
+  ]);
+}
+
+function groupWrapper(groupName: string): HTMLElement {
+  const plainRowList = screen.getByRole("button", { name: "Org Chart" }).closest("ul");
+  const wrapper = screen.getByRole("button", { name: groupName }).closest("li")?.parentElement?.closest("li");
+  if (!(wrapper instanceof HTMLElement) || wrapper.parentElement !== plainRowList) {
+    throw new Error(`no list around ${groupName}`);
+  }
+  return wrapper;
+}
+
+function joinPaint(parts: (typeof NO_OUTLINE)[]): typeof NO_OUTLINE {
+  const pick = (key: keyof typeof NO_OUTLINE) =>
+    parts.map((part) => part[key]).filter((value) => value !== "none").join("; ") || "none";
+  return { border: pick("border"), background: pick("background"), shadow: pick("shadow") };
+}
+
+function paintOf(style: CSSStyleDeclaration): typeof NO_OUTLINE {
+  const sides = [
+    ["top", style.borderTopWidth, style.borderTopColor],
+    ["right", style.borderRightWidth, style.borderRightColor],
+    ["bottom", style.borderBottomWidth, style.borderBottomColor],
+    ["left", style.borderLeftWidth, style.borderLeftColor],
+  ] as const;
+  const visible = sides.filter(([, width, color]) => px(width) > 0 && !isClear(color));
+  return {
+    border: visible.length === 0 ? "none" : visible.map(([side, width, color]) => `${side} ${width} ${color}`).join(", "),
+    background: isClear(style.backgroundColor) ? "none" : style.backgroundColor,
+    shadow: style.boxShadow && style.boxShadow !== "none" ? style.boxShadow : "none",
+  };
+}
+
+function isClear(color: string): boolean {
+  const value = color.trim().toLowerCase();
+  if (value === "" || value === "transparent") return true;
+  const rgba = value.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/);
+  if (rgba) return Number(rgba[1]) === 0;
+  const withSlash = value.match(/^rgba?\(\s*[\d.]+\s+[\d.]+\s+[\d.]+\s*\/\s*([\d.]+)%?\s*\)$/);
+  return withSlash !== null && Number(withSlash[1]) === 0;
+}
+
+function pseudoPaint(element: Element, pseudo: "::before" | "::after"): typeof NO_OUTLINE {
+  const probe = document.createElement("div");
+  document.body.appendChild(probe);
+  try {
+    for (const rule of pseudoRules(element, pseudo)) copyDeclarations(rule, probe);
+    return paintOf(getComputedStyle(probe));
+  } finally {
+    probe.remove();
+  }
+}
+
+function copyDeclarations(rule: CSSStyleRule, target: HTMLElement) {
+  for (let index = 0; index < rule.style.length; index += 1) {
+    const property = rule.style.item(index);
+    target.style.setProperty(property, rule.style.getPropertyValue(property), rule.style.getPropertyPriority(property));
+  }
+}
+
+function pseudoRules(element: Element, pseudo: "::before" | "::after"): CSSStyleRule[] {
+  return styleRules().filter((rule) => {
+    if (!rule.selectorText.endsWith(pseudo)) return false;
+    return selectorMatches(element, rule.selectorText.slice(0, -pseudo.length));
+  });
+}
+
+function styleRules(): CSSStyleRule[] {
+  const rules: CSSStyleRule[] = [];
+  const walk = (list: CSSRuleList) => {
+    for (const rule of list) {
+      if (rule instanceof CSSStyleRule) rules.push(rule);
+      else if ("cssRules" in rule && rule.cssRules instanceof CSSRuleList) {
+        walk(rule.cssRules);
+      }
+    }
+  };
+  for (const sheet of document.styleSheets) {
+    try {
+      walk(sheet.cssRules);
+    } catch {
+      // A sheet from another origin does not expose its rules.
+    }
+  }
+  return rules;
+}
+
+function selectorMatches(element: Element, selector: string): boolean {
+  try {
+    return element.matches(selector);
+  } catch {
+    // jsdom throws when it cannot parse the selector.
+    return false;
+  }
 }
 
 describe("SideRail group outline", () => {
-  it("marks the open group you are in", () => {
-    renderSideRail({ collapsed: false, at: "/people-ops/promotion/lead" });
-
-    expect(isOutlined("Promotion")).toBe(true);
-  });
-
-  it("stays on the group you are in when you open another", () => {
+  it("does not outline the open group you are in, or a group opened beside it", () => {
     renderSideRail({ collapsed: false, at: "/people-ops/promotion/lead" });
     fireEvent.click(screen.getByRole("button", { name: "Performance" }));
 
+    expect(screen.getByRole("button", { name: "Promotion" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "Performance" })).toHaveAttribute("aria-expanded", "true");
-    expect(isOutlined("Promotion")).toBe(true);
-    expect(isOutlined("Performance")).toBe(false);
+    expect(outlineOf("Promotion")).toEqual(NO_OUTLINE);
+    expect(outlineOf("Performance")).toEqual(NO_OUTLINE);
   });
 
-  it("marks no group while you are on a plain row, however many are open", () => {
-    renderSideRail({ collapsed: false, at: "/people-ops/org-chart" });
-    fireEvent.click(screen.getByRole("button", { name: "Promotion" }));
-    fireEvent.click(screen.getByRole("button", { name: "Performance" }));
+  it("notices a border, a shadow, or a ::before on the group list", () => {
+    renderSideRail({ collapsed: false, at: "/people-ops/promotion/lead" });
+    const wrapper = groupWrapper("Promotion");
 
-    expect(isOutlined("Promotion")).toBe(false);
-    expect(isOutlined("Performance")).toBe(false);
+    withRule(wrapper, "", "border: 1px solid rgb(255, 122, 0); box-shadow: 0 0 0 1px rgb(255, 122, 0)", () => {
+      expect(outlineOf("Promotion")).not.toEqual(NO_OUTLINE);
+    });
+    expect(outlineOf("Promotion")).toEqual(NO_OUTLINE);
+
+    withRule(wrapper, "::before", 'content: ""; border: 1px solid rgb(255, 122, 0); background-color: rgba(255, 122, 0, 0.04)', () => {
+      expect(outlineOf("Promotion")).not.toEqual(NO_OUTLINE);
+    });
+    withRule(wrapper, "::after", 'content: ""; border: 1px solid rgb(255, 122, 0)', () => {
+      expect(outlineOf("Promotion")).not.toEqual(NO_OUTLINE);
+    });
   });
 });
+
+function withRule(element: Element, pseudo: "" | "::before" | "::after", declarations: string, run: () => void) {
+  const style = document.createElement("style");
+  document.head.appendChild(style);
+  try {
+    style.sheet?.insertRule(`${ownSelector(element)}${pseudo} { ${declarations} }`, 0);
+    run();
+  } finally {
+    style.remove();
+  }
+}
+
+function ownSelector(element: Element): string {
+  const classes = [...element.classList];
+  if (classes.length === 0) throw new Error("the group list has no class");
+  return `.${classes.join(".")}`;
+}

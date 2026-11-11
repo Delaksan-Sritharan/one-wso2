@@ -113,7 +113,8 @@ export function RunPicker({
       </Box>
       {children}
       <Typography sx={{ fontSize: "0.7rem", color: "text.disabled", pb: "7px" }}>
-        Ruleset {run.ruleset_version} · Budget sync date: {fmtDateTime(run.received_at)} ({fmtRelative(run.received_at)})
+        Ruleset {run.ruleset_version} · Synced {fmtDateTime(run.received_at)} ({fmtRelative(run.received_at)})
+        {run.generated_by && ` · by ${run.generated_by}`}
       </Typography>
     </Box>
   );

@@ -39,7 +39,7 @@ import { useNotifications } from "@context/notifications/NotificationsContext";
 import { isCcBackendConfigured } from "@config/apiConfig";
 import FinanceShell from "../../components/FinanceShell";
 import { describeError } from "../../util/financeError";
-import { CC_SNACK } from "../ccCopy";
+import { CC_SNACK } from "../ccUiText";
 import { CcStatementUploadDialog } from "../CcStatementUploadDialog";
 import { CcStatementGrid } from "../CcStatementGrid";
 import { CcNoStatementArt } from "../components/CcNoStatementArt";

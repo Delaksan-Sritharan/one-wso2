@@ -107,6 +107,10 @@ export default function NdaPage(): JSX.Element {
     isFetching: searchingCustomers,
     isError: searchFailed,
   } = useCustomerSearch(customerInput);
+  // The search list's open state is ours, so a failed search can keep it
+  // closed: open, it would cover the warning below the field (which offers
+  // manual entry) with a one-line copy of the same message.
+  const [customerListOpen, setCustomerListOpen] = useState(false);
   const downloadHintId = useId();
 
   // Only the groups the legal backend allows (Sales and Legal) may pick the
@@ -245,7 +249,7 @@ setSnack({ open: true, severity: "success", message: "NDA downloaded successfull
       value={showRecords ? "records" : "generate"}
       onChange={(_e, next: string) => setSearchParams(next === "records" ? { tab: "records" } : {}, { replace: true })}
       aria-label="NDA views"
-      sx={{ borderBottom: 1, borderColor: "divider" }}
+      sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}
     >
       <Tab value="generate" label="Generate NDA" sx={{ textTransform: "none" }} />
       <Tab value="records" label="NDA Records" sx={{ textTransform: "none" }} />
@@ -265,9 +269,13 @@ setSnack({ open: true, severity: "success", message: "NDA downloaded successfull
     />
   );
 
+  // A plain Box, not a flex column with a gap: PerspectiveHeader renders the
+  // title and subtitle as two separate elements with their own spacing, so a
+  // gap would also open up between them, and again before the tabs. Same
+  // layout as the Banking page (header, tabs, then the tab's content).
   if (showRecords) {
     return (
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box>
         {header}
         {tabs}
         <NdaRecordsTable />
@@ -276,7 +284,7 @@ setSnack({ open: true, severity: "success", message: "NDA downloaded successfull
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+    <Box>
       {header}
       {tabs}
 
@@ -351,16 +359,17 @@ setSnack({ open: true, severity: "success", message: "NDA downloaded successfull
                 if (newValue) setWso2Company(entityForCountry(newValue.address?.billingCountry));
               }}
               onInputChange={(_e, newInput) => setCustomerInput(newInput)}
+              open={customerListOpen && !searchFailed}
+              onOpen={() => setCustomerListOpen(true)}
+              onClose={() => setCustomerListOpen(false)}
+              // MUI skips onClose on blur while a failed search keeps the list
+              // closed, so the list would reopen once the cleared input ends the
+              // error. Forget the open state whenever focus leaves.
+              onBlur={() => setCustomerListOpen(false)}
               filterOptions={(x) => x}
               loading={searchingCustomers}
               loadingText="Searching…"
-              noOptionsText={
-                customerInput.length < 2
-                  ? "Type to search customers"
-                  : searchFailed
-                    ? "Customer search isn't working right now"
-                    : "No customers found"
-              }
+              noOptionsText={customerInput.length < 2 ? "Type to search customers" : "No customers found"}
               renderInput={(params) => (
                 <TextField
                   {...params}

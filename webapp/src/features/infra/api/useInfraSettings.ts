@@ -19,23 +19,15 @@ import { useAsgardeo } from "@asgardeo/react";
 import { authedDelete, authedGet, authedPatch, authedPost, authedPut } from "@api/http";
 import { httpRetry } from "@api/errors";
 import { useAccessToken } from "@hooks/useAccessToken";
-import { useIdToken } from "@hooks/useIdToken";
-import { infraBackendUrl, infraServiceUrls, isInfraBackendConfigured } from "@config/apiConfig";
+import { infraServiceUrls, isInfraBackendConfigured } from "@config/apiConfig";
 import type { InfraDefaultTeam, InfraOrganization } from "./infraTypes";
-
-function useLocalHeaders() {
-  const getIdToken = useIdToken();
-  return async () =>
-    infraBackendUrl.startsWith("http://localhost")
-      ? { "x-jwt-assertion": await getIdToken() }
-      : undefined;
-}
+import { useInfraLocalHeaders } from "./infraLocalBackend";
 
 /** Loads default teams offered when an admin adds or edits an organization. */
 export function useInfraDefaultTeams(enabled = true) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
-  const localHeaders = useLocalHeaders();
+  const localHeaders = useInfraLocalHeaders();
   const configured = isInfraBackendConfigured();
   return useQuery<InfraDefaultTeam[]>({
     queryKey: ["infra-default-teams"],
@@ -50,7 +42,7 @@ export function useInfraDefaultTeams(enabled = true) {
 export function useInfraOrganization(organizationId: number | null) {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
-  const localHeaders = useLocalHeaders();
+  const localHeaders = useInfraLocalHeaders();
   const configured = isInfraBackendConfigured();
   return useQuery<InfraOrganization>({
     queryKey: ["infra-organization", organizationId],
@@ -74,7 +66,7 @@ function useSettingsMutation<TBody>(
   invalidate: string[][],
 ) {
   const getAccessToken = useAccessToken();
-  const localHeaders = useLocalHeaders();
+  const localHeaders = useInfraLocalHeaders();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: TBody) => run(body, await getAccessToken(), await localHeaders()),

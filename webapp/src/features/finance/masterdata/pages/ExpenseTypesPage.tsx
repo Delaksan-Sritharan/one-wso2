@@ -20,7 +20,7 @@ import { FilterIcon } from "@wso2/oxygen-ui-icons-react";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import ExpenseTypeFilters from "../ExpenseTypeFilters";
 import MasterDataScreen from "../MasterDataScreen";
-import { MASTER_DATA_SNACK } from "../masterDataCopy";
+import { MASTER_DATA_SNACK } from "../masterDataUiText";
 import { useExpenseTypeAutoComplete, useExpenseTypes } from "../useMasterData";
 import type { ExpenseTypeFilter } from "../masterDataTypes";
 

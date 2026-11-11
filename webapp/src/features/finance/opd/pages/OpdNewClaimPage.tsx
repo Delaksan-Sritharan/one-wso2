@@ -50,7 +50,7 @@ import {
   fetchReceiptObjectUrl,
   type ReceiptSource,
 } from "../../util/financeReceipts";
-import { useDraftAutosave } from "../../util/useDraftAutosave";
+import { NOTHING_PERSISTED, useDraftAutosave } from "../../util/useDraftAutosave";
 import { useOpdAppData, useOpdUserInfo } from "../useOpd";
 import { useOpdDraftSync, useOpdReceiptUpload, useSubmitOpdClaim } from "../useOpdMutations";
 import { OPD_ROLE, opdHasRole, type OpdTransaction } from "../opdTypes";
@@ -87,7 +87,19 @@ function NewClaimBody() {
   const draft = useOpdDraftSync();
   const { showSuccess, showError } = useNotifications();
 
-  const [items, setItems] = useState<OpdTransaction[]>([]);
+  // Bills carried over from a rejected claim via "Resubmit as New Claim"
+  // (OpdHistoryPage). Read before the list below, which seeds from it.
+  const location = useLocation();
+  const carriedOver = (location.state as { resubmitTransactions?: OpdTransaction[] } | null)
+    ?.resubmitTransactions;
+  const hasCarriedOver = Boolean(carriedOver && carriedOver.length > 0);
+
+  // Carried-over bills open the list; a saved draft does not. A draft is offered
+  // as an explicit "Restore Draft" choice beside "Add OPD Claim", because
+  // restoring it silently would make a stale draft look like work in progress,
+  // with no way to start fresh without first deleting bills you never entered
+  // this session.
+  const [items, setItems] = useState<OpdTransaction[]>(() => carriedOver ?? []);
   const [dialogOpen, setDialogOpen] = useState(false);
   // ExpenseForm.tsx:59 — the dialog doubles as the edit form for one row.
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -144,32 +156,17 @@ function NewClaimBody() {
   const maxForDialog =
     remainingAfter != null && editingItem ? remainingAfter + editingItem.amount : remainingAfter;
 
-  // Bills carried over from a rejected claim via "Resubmit as New Claim"
-  // (OpdHistoryPage). ClaimDetails.tsx:187-192 adds them to the working list
-  // and navigates here; autosave then persists them, replacing the old draft.
-  const location = useLocation();
-  const carriedOver = (location.state as { resubmitTransactions?: OpdTransaction[] } | null)
-    ?.resubmitTransactions;
-
-  // Bills carried over from a resubmit go straight in; a saved draft does not.
-  // NewClaim.tsx:249-266 offers it as an explicit "Restore Draft" choice beside
-  // "Add OPD Claim" — restoring silently would make a stale draft look like
-  // work in progress, and there would be no way to start fresh without first
-  // deleting bills you never entered this session.
-  const seeded = useRef(false);
+  // Consume the router state once the list above has taken the bills from it.
+  // The router keeps history state across a Back and across a reload, so
+  // leaving it there means these bills seed again after the claim has been
+  // submitted, and autosave writes them back as a draft for a claim that is
+  // already filed.
   const navigate = useNavigate();
   useEffect(() => {
-    if (seeded.current) return;
-    if (carriedOver && carriedOver.length > 0) {
-      seeded.current = true;
-      setItems(carriedOver);
-      // Consume it. `seeded` only guards this mount, and the router keeps
-      // history state across a Back and across a reload — so leaving it there
-      // means these bills seed again after the claim has been submitted, and
-      // autosave writes them back as a draft for a claim that is already filed.
+    if (hasCarriedOver) {
       navigate(location.pathname, { replace: true, state: null });
     }
-  }, [carriedOver, navigate, location.pathname]);
+  }, [hasCarriedOver, navigate, location.pathname]);
 
   const savedDraft = appData.data?.draft?.transactions ?? [];
   const draftOffered = items.length === 0 && savedDraft.length > 0;
@@ -183,6 +180,12 @@ function NewClaimBody() {
       if (items.length > 0) await draft.save.mutateAsync(items);
       else await draft.remove.mutateAsync();
     },
+    undefined,
+    // Carried-over bills ARE the new draft and must replace whatever is stored,
+    // so the first armed snapshot has to be compared rather than adopted. That
+    // also makes the save no longer depend on whether app data had loaded by
+    // the time the bills arrived.
+    hasCarriedOver ? NOTHING_PERSISTED : undefined,
   );
 
   if (userInfo.isLoading || appData.isLoading) {

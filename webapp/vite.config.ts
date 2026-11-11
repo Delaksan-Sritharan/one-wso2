@@ -2,66 +2,12 @@ import { defineConfig, mergeConfig, type Plugin } from "vite";
 import { configDefaults, defineConfig as defineVitestConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { buildCsp, parseAuthOrigins } from "./src/config/csp";
 
-// Content-Security-Policy for the shipped SPA (threat-model risk ONEWSO2-R2:
-// no app-defined headers previously). Injected as a <meta> on PRODUCTION
-// builds only — the dev server relies on inline scripts + ws HMR that a
-// strict CSP would block. Headers a meta tag can't express must still be set
-// at the Choreo/Cloudflare edge: X-Frame-Options / frame-ancestors (ignored
-// in meta), HSTS, X-Content-Type-Options, Permissions-Policy, Clear-Site-Data.
-//
-// Origins: backend calls and employee thumbnails go through the Choreo
-// gateway (apis[-stg].wso2.com) and Asgardeo (*.asgardeo.io). Those hosts are
-// runtime-configurable (window.config) so a static build can't pin exact
-// origins — the wso2/asgardeo wildcards are the tightest portable allowlist;
-// pin them further at the edge if the CSP is moved there. style-src allows
-// 'unsafe-inline' for MUI/emotion; img-src/frame-src allow blob: and data:
-// for receipt previews (fetchReceiptObjectUrl → blob:, fetchBase64Attachment
-// → data:, incl. PDF <iframe src="data:...">). employeeThumbnail is a raw
-// pass-through URL from people-app, not always Choreo-hosted — some
-// employees' photos resolve to their Google account avatar
-// (lh3.googleusercontent.com and friends) rather than a gateway URL, so
-// img-src also allows Google's avatar CDN.
-//
-// The Evidence Portal shows evidence screenshots straight from Azure Blob
-// Storage: its backend hands out short-lived signed (SAS) URLs and has no
-// route that streams a single file's bytes, so img-src allows
-// *.blob.core.windows.net.
-//
-// The Lead Portal's evidence-attachment picker (useGoogleDrivePicker.ts)
-// loads Google Identity Services + the Picker API at runtime, needing three
-// more origins: script-src for the two loaded scripts, connect-src for the
-// token exchange + Drive API calls they make, and frame-src for the
-// Picker's own iframe (hosted on docs.google.com, not inline).
-//
-// Sales plays meeting recordings in a <video> whose src is the signed URL returned by
-// the Sales backend's playback endpoint (ONE_WSO2_REVOPS_BACKEND_URL, then
-// /meetings/{id}/playback). That URL's host differs per environment, so media-src takes
-// wildcards: *.choreoapis.dev for a Choreo default URL, and *.wso2.com for the API
-// gateway's wso2.com domain (the same *.wso2.com connect-src already trusts).
-//
-// connect-src also allows *.choreoapis.dev so the app can call a backend
-// through its Choreo default URL, not only through a *.wso2.com gateway URL.
-const CSP = [
-  "default-src 'self'",
-  // 'wasm-unsafe-eval': @react-pdf/renderer lays out PDFs with yoga-layout,
-  // which is WebAssembly, so every PDF built in the browser needs it (today
-  // Legal → NDA and the Partner dashboard report); without it they fail.
-  // It allows WebAssembly compilation only. Do NOT add 'unsafe-eval' to fix a
-  // future CSP error: it re-enables JavaScript eval() and new Function() on
-  // every page.
-  "script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.wso2.com https://wso2.cachefly.net https://*.asgardeo.io https://*.googleusercontent.com https://*.blob.core.windows.net",
-  "font-src 'self' data: https://wso2.cachefly.net",
-  "connect-src 'self' https://*.wso2.com https://*.choreoapis.dev https://*.asgardeo.io https://*.googleapis.com https://accounts.google.com",
-  "media-src 'self' https://*.choreoapis.dev https://*.wso2.com",
-  "frame-src 'self' blob: data: https://*.asgardeo.io https://docs.google.com https://accounts.google.com",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "upgrade-insecure-requests",
-].join("; ");
+// The production CSP lives in src/config/csp.ts — build-time only, and
+// unit-tested there. ONE_WSO2_CSP_AUTH_ORIGINS adds extra sign-in origins
+// for deployments whose IdP is not already allowlisted.
+const CSP = buildCsp(parseAuthOrigins(process.env.ONE_WSO2_CSP_AUTH_ORIGINS));
 
 function cspPlugin(): Plugin {
   return {

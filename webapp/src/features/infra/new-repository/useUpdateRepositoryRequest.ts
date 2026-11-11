@@ -18,8 +18,9 @@ import { useMutation } from "@tanstack/react-query";
 import { authedPatch } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { useIdToken } from "@hooks/useIdToken";
-import { infraBackendUrl, infraServiceUrls } from "@config/apiConfig";
+import { infraServiceUrls } from "@config/apiConfig";
 import type { RepositoryRequestUpdate } from "./submitRequest";
+import { infraLocalAssertionHeaders } from "../api/infraLocalBackend";
 
 export function useUpdateRepositoryRequest() {
   const getAccessToken = useAccessToken();
@@ -27,14 +28,11 @@ export function useUpdateRepositoryRequest() {
   return useMutation({
     mutationFn: async (body: RepositoryRequestUpdate) => {
       const accessToken = await getAccessToken();
-      const localAssertion = infraBackendUrl.startsWith("http://localhost")
-        ? { "x-jwt-assertion": await getIdToken() }
-        : undefined;
       return authedPatch<unknown>(
         infraServiceUrls.repositoryRequest(body.id),
         accessToken,
         body,
-        localAssertion,
+        infraLocalAssertionHeaders(await getIdToken()),
       );
     },
   });

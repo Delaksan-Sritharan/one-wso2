@@ -40,7 +40,6 @@ import { ReceiptViewer } from "../components/ReceiptViewer";
 import { bareAmount, formatNice } from "../util/financeFormat";
 import { fetchBase64Attachment, type ReceiptSource } from "../util/financeReceipts";
 import { useDraftAutosave } from "../util/useDraftAutosave";
-import { CC_SNACK } from "./ccCopy";
 import {
   AttachmentField,
   CcSubmissionDetails,
@@ -66,6 +65,7 @@ import {
   isMarketingCategory,
   isTravelCategory,
 } from "./ccTypes";
+import { CC_SNACK } from "./ccUiText";
 import { useCcJobNumberDetails, useCcMenus } from "./useCc";
 import { useCcAttachment } from "./useCcMutations";
 

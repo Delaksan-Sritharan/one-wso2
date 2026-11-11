@@ -33,7 +33,7 @@ const retriggeredAtKey = (id: string) => ["umt-staging-test-retriggered-at", id]
 // Shared by the shell (Proceed-gating) and UmtTestingStep (its own render) —
 // same query key, so TanStack dedupes the fetch. Enabled only while
 // lifecycleState is in the testing-state family; polls every 3s while
-// umtShouldPollStagingTestResults is true (mirrors useUmtPrAnalysisStatus's
+// umtShouldPollStagingTestResults is true (mirrors useUmtUpdate's
 // existing polling precedent). That ends at Failed, and at Staging once no run
 // is building and the post-retrigger window has passed.
 // The key carries lifecycleState because the list fetched before Staging is

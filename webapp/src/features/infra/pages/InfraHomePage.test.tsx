@@ -45,16 +45,6 @@ const AUTHORIZED: InfraGate = {
   retry: () => {},
 };
 
-const ITEM_LABELS: Record<string, string> = {
-  "infra-github-new-repository": "New Repository",
-  "infra-github-repository-access": "Repository Access",
-  "infra-github-request-access": "Request Access",
-  "infra-github-my-requests": "My Requests",
-  "infra-github-review-requests": "Review Requests",
-  "infra-security-dashboard": "Security Dashboard",
-  "infra-github-settings": "GitHub Settings",
-};
-
 function renderHome(g: Partial<InfraGate> = {}) {
   gate.value = { ...AUTHORIZED, ...g };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -72,41 +62,18 @@ beforeEach(() => {
 });
 
 describe("InfraHomePage", () => {
-  it("lists every registry item as not here yet, with scroll ids for the rail", () => {
+  it("offers GitHub connect and does not repeat the menu", () => {
     renderHome();
 
-    expect(screen.getByRole("link", { name: "Open new repository" })).toHaveAttribute(
+    expect(screen.getByText("Not Connected")).toBeInTheDocument();
+    expect(screen.getByText("GitHub OAuth is not configured.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Connect your GitHub account" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Adding an email address to your GitHub account" })).toHaveAttribute(
       "href",
-      "/infra/github/repository-requests",
+      "https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-email-preferences/adding-an-email-address-to-your-github-account",
     );
-    expect(screen.getByRole("link", { name: "Open github settings" })).toHaveAttribute(
-      "href",
-      "/infra/admin/github-settings",
-    );
-    expect(screen.getByRole("link", { name: "Open my requests" })).toHaveAttribute(
-      "href",
-      "/infra/github/my-requests",
-    );
-    expect(screen.getAllByText("Not here yet")).toHaveLength(3);
-    for (const [id, label] of Object.entries(ITEM_LABELS)) {
-      const el = document.getElementById(id);
-      expect(el, id).not.toBeNull();
-      expect(el).toHaveTextContent(label);
-    }
-  });
-
-  it("hides items the gate refuses, including their scroll ids", () => {
-    renderHome({
-    canSee: (id) => id === "infra-github-review-requests",
-  });
-
-  expect(document.getElementById("infra-github-review-requests")).not.toBeNull();
-  expect(screen.getByText("Review Requests")).toBeInTheDocument();
-  expect(screen.getByText("Not here yet")).toBeInTheDocument();
-
-  expect(screen.queryByText("New Repository")).not.toBeInTheDocument();
-  expect(screen.queryByText("GitHub Settings")).not.toBeInTheDocument();
-  expect(document.getElementById("infra-github-new-repository")).toBeNull();
-  expect(document.getElementById("infra-github-settings")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open new repository" })).not.toBeInTheDocument();
+    expect(screen.queryByText("New Repository")).not.toBeInTheDocument();
+    expect(screen.queryByText("Not here yet")).not.toBeInTheDocument();
   });
 });

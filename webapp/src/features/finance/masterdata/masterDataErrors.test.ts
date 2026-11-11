@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from "vitest";
 import { describeUpdateError } from "./useMasterDataMutations";
-import { MASTER_DATA_SNACK } from "./masterDataCopy";
+import { MASTER_DATA_SNACK } from "./masterDataUiText";
 import { HttpError } from "@api/http";
 
 const conflict = new HttpError("/expense-types/1", 409, "Conflict");

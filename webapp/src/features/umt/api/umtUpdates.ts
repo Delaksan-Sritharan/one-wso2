@@ -83,8 +83,18 @@ export interface UmtUpdateSummary {
   // since the same lifecycleState can have different valid next states.
   promoteStages?: string[] | null;
   // PR-analysis progress for the current Development cycle: QUEUED,
-  // PROCESSING, COMPLETED, or a failed/failure value with a trailing detail.
+  // PROCESSING, COMPLETED, FAILED or NONE. It describes the PR analysis
+  // only, not the promotion that follows it.
   praStatus?: string | null;
+  // Why the PR analysis failed, while praStatus is FAILED.
+  praError?: string | null;
+  // True from an analysis requested with promotion until the backend has
+  // moved the update to PRAnalyzed and run its product analysis, whether
+  // that worked or not.
+  praPromotionPending?: boolean | null;
+  // Why that promotion or product analysis failed. Cleared by the next
+  // PR analysis.
+  paError?: string | null;
   // Behavior-change attestation from the Description and Instruction step.
   // Persisted on the backend (unlike the step's own verification checkboxes,
   // which are not) — seeded into local state on mount/refetch so revisiting

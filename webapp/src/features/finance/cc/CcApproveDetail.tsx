@@ -208,6 +208,9 @@ function Attachment({ label, fileName, onView }: { label: string; fileName: stri
 function SubmissionDetails({ txn }: { txn: CcTransaction }) {
   const [open, setOpen] = useState(false);
   const date = (iso: string | null) => (iso ? formatNice(iso) : null);
+  // Order matters: the grid below fills row by row across three columns, so
+  // the three people come first and each one's date follows in the same
+  // column position on the second row.
   const cells = [
     { label: "Submitted User", value: txn.employeeEmail, fallback: "(not provided)" },
     // One lead, not the whole assigned list — `leadEmail` can name several.
@@ -230,11 +233,18 @@ function SubmissionDetails({ txn }: { txn: CcTransaction }) {
         Submission details
       </Button>
       <Collapse in={open} unmountOnExit>
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 1.25, mt: 1 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 1.25, mt: 1 }}>
           {cells.map((c) => (
             <Box key={c.label} sx={{ minWidth: 0 }}>
               <Caption>{c.label}</Caption>
-              <Typography sx={{ fontSize: 12, color: c.value ? "text.primary" : "text.disabled" }} noWrap title={c.value ?? undefined}>
+              {/* Wraps instead of truncating, so a long email stays readable without hover. */}
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: c.value ? "text.primary" : "text.disabled",
+                  overflowWrap: "anywhere",
+                }}
+              >
                 {c.value || c.fallback}
               </Typography>
             </Box>

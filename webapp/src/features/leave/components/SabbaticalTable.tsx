@@ -29,7 +29,7 @@ import {
 } from "@wso2/oxygen-ui";
 import type { DatabaseLeave, LeaveStatus } from "../api/leaveTypes";
 import { LeaveTypeChip, StatusChip } from "./LeaveChips";
-import { SABBATICAL } from "../util/leaveCopy";
+import { SABBATICAL } from "../util/leaveUiText";
 import { describeError } from "../util/leaveError";
 import { isoDay } from "../util/leaveDates";
 

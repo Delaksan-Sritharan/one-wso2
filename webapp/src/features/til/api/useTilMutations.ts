@@ -22,6 +22,7 @@
 // transient failure worth retrying.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { isNetworkFailure } from "@api/errors";
 import { authedDelete, authedPost, authedPut } from "@api/http";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { tilServiceUrls } from "@config/apiConfig";
@@ -46,6 +47,12 @@ export function useCreateTilSubmission() {
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: submissionsKey });
     },
+    // A connection lost after the server saved the entry fails like one that
+    // never got there, so the feed is fetched again for its author to check.
+    // Not awaited, since React Query would hold the error back until it settled.
+    onError: (error) => {
+      if (isNetworkFailure(error)) void qc.invalidateQueries({ queryKey: submissionsKey });
+    },
   });
 }
 
@@ -66,6 +73,15 @@ export function useUpdateTilSubmission() {
       if (updated) qc.setQueryData(detailKey, updated);
       else await qc.invalidateQueries({ queryKey: detailKey });
       await qc.invalidateQueries({ queryKey: submissionsKey });
+    },
+    // An edit the server saved fails the same way when the connection drops
+    // on the way back, so the entry and the feed are fetched again in case it
+    // went through. Not awaited, since React Query would hold the error back
+    // until it settled.
+    onError: (error, { id }) => {
+      if (!isNetworkFailure(error)) return;
+      void qc.invalidateQueries({ queryKey: ["til-submission", submissionsKey[1], id] });
+      void qc.invalidateQueries({ queryKey: submissionsKey });
     },
   });
 }

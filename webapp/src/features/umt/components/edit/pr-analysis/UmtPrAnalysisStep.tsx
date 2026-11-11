@@ -40,14 +40,15 @@ import { PlusIcon, TrashIcon } from "@wso2/oxygen-ui-icons-react";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import type { UmtBundleInfoChange, UmtFileOperation, UmtPullRequestAnalysisItem, UmtUpdateSummary } from "../../../api/umtUpdates";
-import type { UmtUpdateType } from "../../../api/umtTypes";
+import {
+  isUmtPrAnalysisInFlight,
+  isUmtPrAnalysisRunning,
+  type UmtUpdateType,
+} from "../../../api/umtTypes";
 import { useUmtLifecycleTransition } from "../../../api/useUmtLifecycleTransition";
 import { useUmtPullRequestAnalysis } from "../../../api/useUmtUpdateViewData";
 import { umtLifecycleState } from "../../../lib/umtLifecycleState";
 import {
-  UmtProductAnalysisFailedError,
-  useUmtPrAnalysisStatus,
-  useUmtProceedFromPrAnalysis,
   useUmtStartPullRequestAnalysis,
   useUmtUploadPullRequestAnalysisFile,
 } from "../../../api/useUmtPrAnalysis";
@@ -95,11 +96,13 @@ export default function UmtPrAnalysisStep({
   // Analyze in PRAnalyzed demotes to Development first: the backend only
   // accepts uploads and a new analysis there.
   const isPrAnalyzed = isFilesAnalysisPrAnalyzed(lifecycleState);
-  const status = useUmtPrAnalysisStatus(id, update.praStatus, isDevelopment);
+  // The backend moves the update to PRAnalyzed before it runs the product
+  // analysis, so a run can still be going on there. useUmtUpdate polls the
+  // update while it is.
+  const isRunning = isUmtPrAnalysisRunning(update);
   const startAnalysis = useUmtStartPullRequestAnalysis(id);
   const upload = useUmtUploadPullRequestAnalysisFile(id);
   const transition = useUmtLifecycleTransition(id);
-  const proceed = useUmtProceedFromPrAnalysis(id);
   const [isFilesWarningOpen, setIsFilesWarningOpen] = useState(false);
 
   // The type the last analysis was submitted with, as the backend recorded it.
@@ -141,11 +144,12 @@ export default function UmtPrAnalysisStep({
 
   // On reaching PRAnalyzed, the inputs start from what the backend analyzed
   // rather than this browser's drafts, which may be stale or missing entirely.
-  // Waits out a refetch: until it lands, the cached analysis can still be the
-  // previous run's, and seeding happens only once.
+  // Waits out a refetch and a run still going on in PRAnalyzed: until the run
+  // ends and the refetch lands, the cached analysis can still be the previous
+  // run's, and seeding happens only once.
   const analyzed = pullRequestAnalysis.data;
   const [seededForPrAnalyzed, setSeededForPrAnalyzed] = useState(false);
-  if (isPrAnalyzed && analyzed && !pullRequestAnalysis.isFetching && !seededForPrAnalyzed) {
+  if (isPrAnalyzed && analyzed && !pullRequestAnalysis.isFetching && !isRunning && !seededForPrAnalyzed) {
     setSeededForPrAnalyzed(true);
     setUpdateType(submittedUpdateType);
     setPullRequests(analyzed.pullRequests ?? []);
@@ -168,7 +172,7 @@ export default function UmtPrAnalysisStep({
   // above, it waits out a refetch: a 404 cached from Development, before the
   // analysis ran, says nothing about PRAnalyzed.
   const analysisNotFound =
-    isPrAnalyzed && !analyzed && !pullRequestAnalysis.isFetching && isNotFound(pullRequestAnalysis.error);
+    isPrAnalyzed && !analyzed && !pullRequestAnalysis.isFetching && !isRunning && isNotFound(pullRequestAnalysis.error);
   if (analysisNotFound && !seededForPrAnalyzed) {
     setSeededForPrAnalyzed(true);
     setHasNewInputs(true);
@@ -184,7 +188,7 @@ export default function UmtPrAnalysisStep({
   // they are replaced by a placeholder, or by an error with a retry if the
   // analysis can't be loaded.
   const awaitingAnalysis = isPrAnalyzed && !seededForPrAnalyzed;
-  const analysisFailed = awaitingAnalysis && !analyzed && pullRequestAnalysis.isError;
+  const analysisFailed = awaitingAnalysis && !analyzed && !isRunning && pullRequestAnalysis.isError;
 
   // Persisted from effects rather than the setters, so the values seeded
   // above reach the drafts too and survive the demote Analyze starts with.
@@ -199,38 +203,24 @@ export default function UmtPrAnalysisStep({
     writePersistedBundleInfoChanges(id, bundlesInfoChanges);
   }, [id, bundlesInfoChanges]);
 
-  // Spans Analyze's whole run (demote, uploads, submission). The cached
-  // update can briefly read Development with a COMPLETED analysis during it,
-  // so the advance below must wait for it to finish.
+  // Spans Analyze's whole run (demote, uploads, submission).
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // A completed analysis in Development moves the update on to PRAnalyzed and
-  // starts the product analysis. Reads the update itself, whose
-  // lifecycleState and praStatus come from the same response, and fires once
-  // per completed analysis so a failure doesn't retry in a loop.
-  const isAnalysisCompleteInDevelopment = isDevelopment && update.praStatus === "COMPLETED";
-  const advancedRef = useRef(false);
-  const advance = proceed.mutateAsync;
+  // How a run this page watched ended is announced once: the reason the
+  // promotion or product analysis failed, or else in PRAnalyzed. paError comes
+  // first, as a failed demote back to Development leaves the update in
+  // PRAnalyzed with it. A failed PR analysis is left to the status message.
+  const watchedRunRef = useRef(false);
   useEffect(() => {
-    if (!isAnalysisCompleteInDevelopment) {
-      advancedRef.current = false;
+    if (isRunning) {
+      watchedRunRef.current = true;
       return;
     }
-    if (isAnalyzing || advancedRef.current) return;
-    advancedRef.current = true;
-    advance()
-      .then(() => showSuccess(`Update ${id} advanced to PRAnalyzed.`))
-      .catch((error: unknown) => {
-        // The analysis has to be run again, which Analyze only allows once
-        // there is something new to analyze.
-        setHasNewInputs(true);
-        if (error instanceof UmtProductAnalysisFailedError) {
-          showError(`${error.message} ${describeError(error.analysisError)}`);
-        } else {
-          showError(`Moving the update to PRAnalyzed failed. ${describeError(error)}`);
-        }
-      });
-  }, [isAnalysisCompleteInDevelopment, isAnalyzing, advance, id, showSuccess, showError]);
+    if (!watchedRunRef.current) return;
+    watchedRunRef.current = false;
+    if (update.paError) showError(update.paError);
+    else if (isPrAnalyzed) showSuccess(`Update ${id} advanced to PRAnalyzed.`);
+  }, [isRunning, isPrAnalyzed, update.paError, id, showSuccess, showError]);
 
   const [isPrDialogOpen, setIsPrDialogOpen] = useState(false);
   const [prUrl, setPrUrl] = useState("");
@@ -244,33 +234,26 @@ export default function UmtPrAnalysisStep({
     setHasUnanalyzedChanges(true);
   };
 
-  const isInFlight = status.data === "QUEUED" || status.data === "PROCESSING";
-  const isCompleted = status.data === "COMPLETED";
-
   // Disable inputs from the moment Analyze is clicked (the mutation's own
   // isPending), not just once the server confirms QUEUED. No separate "awaiting confirmation" grace flag
-  // is needed once the mutation resolves: the backend commits praStatus to
-  // QUEUED synchronously before the start-analysis POST even returns
-  // (verified against the backend source), so the query invalidation the
-  // mutation fires on success is guaranteed to refetch an already-QUEUED
-  // status — isInFlight picks it up immediately, no race to bridge.
+  // is needed once the mutation resolves: the backend commits praStatus and
+  // the pending promotion synchronously before the start-analysis POST even
+  // returns (verified against the backend source), so the update refetch the
+  // mutation fires on success is guaranteed to read them — isRunning picks
+  // the run up immediately, no race to bridge.
   //
-  // The run isn't over when the PR analysis completes: in Development a
-  // completed analysis is always on its way to PRAnalyzed and its product
-  // analysis, so that counts as running too until the advance settles. The
-  // poll's status is checked alongside the update's, which is refetched a
-  // moment later, so the spinner doesn't drop out in between. A failed
-  // advance stops it.
-  const isRunningProductAnalysis =
-    proceed.isPending ||
-    (isDevelopment && (update.praStatus === "COMPLETED" || isCompleted) && !proceed.isError);
-  const isBusy = isInFlight || startAnalysis.isPending || isAnalyzing || isRunningProductAnalysis;
+  // The running message also says why Analyze, which demotes a PRAnalyzed
+  // update first, is off while the promotion is pending: the backend rejects
+  // that demote until the product analysis is done.
+  const isBusy = isRunning || startAnalysis.isPending || isAnalyzing;
   const runningMessage =
     isAnalyzing || startAnalysis.isPending
       ? "Starting analysis…"
-      : isRunningProductAnalysis && !isInFlight
-        ? "PR Analysis was successfully completed. Running product analysis…"
-        : undefined;
+      : isUmtPrAnalysisInFlight(update.praStatus)
+        ? "Running PR analysis…"
+        : isRunning
+          ? "PR analysis completed. Running product analysis…"
+          : undefined;
 
   if (!isDevelopment && !isPrAnalyzed) {
     return <Alert severity="info">PR Analysis can only be done in Development.</Alert>;
@@ -345,8 +328,6 @@ export default function UmtPrAnalysisStep({
   async function handleAnalyze() {
     setIsFilesWarningOpen(false);
     setIsAnalyzing(true);
-    // Clears a previous failed advance, so this run's spinner covers its own.
-    proceed.reset();
     try {
       if (isPrAnalyzed) await transition.mutateAsync("Development");
       // Only General Update sends manual files, so only it uploads them.
@@ -395,15 +376,20 @@ export default function UmtPrAnalysisStep({
     }
   }
 
-  // The status query is disabled outside Development, so in PRAnalyzed
-  // status.data is only a copy of update.praStatus. Being in PRAnalyzed is
-  // what says the analysis completed.
-  const statusMessage = prAnalysisStatusMessage(isPrAnalyzed ? "COMPLETED" : status.data);
+  // Being in PRAnalyzed is what says the analysis completed. A failed
+  // promotion or product analysis is shown for as long as the backend keeps
+  // its reason, so a reload still says why the update didn't move on.
+  const failedPromotion = update.paError || undefined;
+  const statusMessage = failedPromotion
+    ? { lines: [failedPromotion], tone: "error" as const }
+    : prAnalysisStatusMessage(isPrAnalyzed ? "COMPLETED" : update.praStatus, update.praError);
   const statusColor =
     statusMessage.tone === "error" ? "error.main" : statusMessage.tone === "success" ? "success.main" : "text.primary";
   const analyzeDisabled = isPrAnalyzeDisabled({
-    status: status.data,
-    hasNewInputsSinceLastAnalysis: hasNewInputs,
+    status: update.praStatus,
+    // A failed promotion or product analysis can be run again as it is, like
+    // a failed PR analysis.
+    hasNewInputsSinceLastAnalysis: hasNewInputs || Boolean(failedPromotion),
     updateType,
     pullRequestCount: pullRequests.length,
     // Same guard as the submitted payload: manual files only count for
@@ -414,9 +400,14 @@ export default function UmtPrAnalysisStep({
 
   // An Instructions Only update has no inputs, so once its analysis has
   // completed there is nothing left to analyze: no Analyze button, until the
-  // update type is changed or the update goes back to Development.
+  // update type is changed or the update goes back to Development. A failed
+  // product analysis keeps the button and its reason, so it can be run again.
   const isInstructionsOnlyAnalyzed =
-    isPrAnalyzed && updateType === "instructionsOnlyUpdate" && (awaitingAnalysis || !hasNewInputs) && !isBusy;
+    isPrAnalyzed &&
+    updateType === "instructionsOnlyUpdate" &&
+    (awaitingAnalysis || !hasNewInputs) &&
+    !isBusy &&
+    !failedPromotion;
 
   return (
     <Stack spacing={3}>
@@ -543,7 +534,7 @@ export default function UmtPrAnalysisStep({
           <>
             <Stack direction="row" spacing={2} sx={{ alignItems: "center", justifyContent: "flex-end", mt: 3 }}>
               {isBusy && <CircularProgress size={22} />}
-              {(isBusy || updateType !== "instructionsOnlyUpdate") && (
+              {(isBusy || updateType !== "instructionsOnlyUpdate" || Boolean(failedPromotion)) && (
                 <Stack sx={{ flex: 1, minWidth: 0 }}>
                   {runningMessage ? (
                     <Typography variant="body2" color="text.primary">
@@ -573,10 +564,10 @@ export default function UmtPrAnalysisStep({
       </Box>
 
       {/* Only once the product analysis has finished too, i.e. in PRAnalyzed. */}
-      {isPrAnalyzed && !isRunningProductAnalysis && pullRequestAnalysis.data && (
+      {isPrAnalyzed && !isRunning && !pullRequestAnalysis.isFetching && pullRequestAnalysis.data && (
         <UmtPrAnalysisResults result={pullRequestAnalysis.data} />
       )}
-      {analysisNotFound && !isRunningProductAnalysis && (
+      {analysisNotFound && (
         <Alert severity="info">Pull Request Analysis has not been performed for this update yet.</Alert>
       )}
 

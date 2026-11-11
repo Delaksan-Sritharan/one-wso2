@@ -28,7 +28,7 @@ import {
   Switch,
 } from "@wso2/oxygen-ui";
 import { useNotifications } from "@context/notifications/NotificationsContext";
-import { MASTER_DATA_FORM_COPY, MASTER_DATA_SNACK } from "./masterDataCopy";
+import { MASTER_DATA_FORM_COPY, MASTER_DATA_SNACK } from "./masterDataUiText";
 import { changedFields, initialFormData, isFormComplete, isUnchanged } from "./masterDataForm";
 import {
   CreditCardNumberInput,

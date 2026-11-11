@@ -17,6 +17,7 @@
  */
 
 import type { ReactElement } from "react";
+import { AmplifyLogo } from "@features/amplify/components/AmplifyLogo";
 import {
   CsmMark,
   EngineeringMark,
@@ -51,9 +52,22 @@ const APP_MARKS: Record<string, (p: MarkProps) => ReactElement> = {
 };
 
 /**
+ * Perspectives whose tile shows the product's own logo instead of a drawn
+ * two-tone mark. A logo brings its own colours, so these have no entry in
+ * APP_MARK_TONES and the tone tests skip them.
+ */
+const BRAND_MARKS: Record<string, (p: MarkProps) => ReactElement> = {
+  amplify: AmplifyLogo,
+};
+
+/** The keys in BRAND_MARKS, for the tests that hold drawn marks to their tones. */
+export const BRAND_MARK_KEYS: ReadonlySet<string> = new Set(Object.keys(BRAND_MARKS));
+
+/**
  * The mark for a perspective, or undefined when none is registered — the caller
  * is expected to fall back to that perspective's line glyph.
  */
 export function appMark(key: string): ((p: MarkProps) => ReactElement) | undefined {
-  return Object.prototype.hasOwnProperty.call(APP_MARKS, key) ? APP_MARKS[key] : undefined;
+  if (Object.prototype.hasOwnProperty.call(APP_MARKS, key)) return APP_MARKS[key];
+  return Object.prototype.hasOwnProperty.call(BRAND_MARKS, key) ? BRAND_MARKS[key] : undefined;
 }

@@ -33,7 +33,7 @@ import LeaveDateField from "./LeaveDateField";
 import SabbaticalHistoryTable from "./SabbaticalTable";
 import { useLeaveEmployees, useLeaveUserInfo, useLeaves } from "../api/useLeaveData";
 import { employeeDisplayName } from "../util/employeeName";
-import { REPORT_VALIDATION_MESSAGE } from "../util/leaveCopy";
+import { REPORT_VALIDATION_MESSAGE } from "../util/leaveUiText";
 import { startOfYearIso, todayIso } from "../util/leaveDates";
 import { useLeaveGate } from "../api/useLeaveGate";
 import { withLoadingAdornment } from "@components/picker-loading/pickerLoading";

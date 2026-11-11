@@ -16,18 +16,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAsgardeo } from "@asgardeo/react";
-import { authedGet, authedPost } from "@api/http";
+import { authedGet, authedPatch, authedPost } from "@api/http";
 import { httpRetry } from "@api/errors";
 import { useAccessToken } from "@hooks/useAccessToken";
 import { useIdToken } from "@hooks/useIdToken";
-import { infraBackendUrl, infraServiceUrls, isInfraBackendConfigured } from "@config/apiConfig";
+import { infraServiceUrls, isInfraBackendConfigured } from "@config/apiConfig";
 import type { InfraRepositoryRequestList, InfraRequestComment } from "./infraTypes";
-
-function localAssertionHeaders(idToken: string) {
-  return infraBackendUrl.startsWith("http://localhost")
-    ? { "x-jwt-assertion": idToken }
-    : undefined;
-}
+import { infraLocalAssertionHeaders } from "./infraLocalBackend";
 
 export function useMyCreationRequests(
   memberEmail: string,
@@ -54,10 +49,95 @@ export function useMyCreationRequests(
       return authedGet<InfraRepositoryRequestList>(
         `${infraServiceUrls.repositoryRequests}?${params.toString()}`,
         accessToken,
-        localAssertionHeaders(await getIdToken()),
+        infraLocalAssertionHeaders(await getIdToken()),
       );
     },
     retry: httpRetry,
+  });
+}
+
+export function useReviewCreationRequests(
+  filter: { leadEmail?: string; fetchAll?: boolean },
+  query: { limit: number; offset: number; repoName?: string },
+) {
+  const { isSignedIn } = useAsgardeo();
+  const getAccessToken = useAccessToken();
+  const getIdToken = useIdToken();
+  const configured = isInfraBackendConfigured();
+  const leadEmail = filter.leadEmail?.trim() ?? "";
+  const repoName = query.repoName?.trim() ?? "";
+  const fetchAll = Boolean(filter.fetchAll);
+  return useQuery<InfraRepositoryRequestList>({
+    queryKey: [
+      "infra-review-creation-requests",
+      leadEmail,
+      fetchAll,
+      query.limit,
+      query.offset,
+      repoName,
+    ],
+    enabled: isSignedIn && configured && (fetchAll || leadEmail.length > 0),
+    placeholderData: (previous) => previous,
+    queryFn: async () => {
+      const accessToken = await getAccessToken();
+      const params = new URLSearchParams({
+        limit: String(query.limit),
+        offset: String(query.offset),
+      });
+      if (leadEmail) params.set("leadEmail", leadEmail);
+      if (repoName) params.set("repoName", repoName);
+      return authedGet<InfraRepositoryRequestList>(
+        `${infraServiceUrls.repositoryRequests}?${params.toString()}`,
+        accessToken,
+        infraLocalAssertionHeaders(await getIdToken()),
+      );
+    },
+    retry: httpRetry,
+  });
+}
+
+export function useApproveRepositoryRequest() {
+  const getAccessToken = useAccessToken();
+  const getIdToken = useIdToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const accessToken = await getAccessToken();
+      return authedPatch<unknown>(
+        infraServiceUrls.repositoryRequestApprove(id),
+        accessToken,
+        {},
+        infraLocalAssertionHeaders(await getIdToken()),
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["infra-review-creation-requests"] });
+      void queryClient.invalidateQueries({ queryKey: ["infra-my-creation-requests"] });
+    },
+  });
+}
+
+export function useRejectRepositoryRequest() {
+  const getAccessToken = useAccessToken();
+  const getIdToken = useIdToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { id: number; commentText: string }) => {
+      const accessToken = await getAccessToken();
+      return authedPatch<unknown>(
+        infraServiceUrls.repositoryRequestReject(args.id),
+        accessToken,
+        { commentText: args.commentText },
+        infraLocalAssertionHeaders(await getIdToken()),
+      );
+    },
+    onSuccess: (_data, args) => {
+      void queryClient.invalidateQueries({ queryKey: ["infra-review-creation-requests"] });
+      void queryClient.invalidateQueries({ queryKey: ["infra-my-creation-requests"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["infra-repository-request-comments", args.id],
+      });
+    },
   });
 }
 
@@ -74,7 +154,7 @@ export function useRepositoryRequestComments(requestId: number | null) {
       return authedGet<InfraRequestComment[]>(
         infraServiceUrls.repositoryRequestComments(requestId as number),
         accessToken,
-        localAssertionHeaders(await getIdToken()),
+        infraLocalAssertionHeaders(await getIdToken()),
       );
     },
     retry: httpRetry,
@@ -88,14 +168,11 @@ export function useAddRepositoryRequestComment(requestId: number) {
   return useMutation({
     mutationFn: async (body: { authorEmail: string; commentText: string }) => {
       const accessToken = await getAccessToken();
-      const localAssertion = infraBackendUrl.startsWith("http://localhost")
-        ? { "x-jwt-assertion": await getIdToken() }
-        : undefined;
       return authedPost<unknown>(
         infraServiceUrls.repositoryRequestComments(requestId),
         accessToken,
         body,
-        localAssertion,
+        infraLocalAssertionHeaders(await getIdToken()),
       );
     },
     onSuccess: () => {
