@@ -172,7 +172,7 @@ describe("email", () => {
 });
 
 describe("release", () => {
-  it("lists the release fields, with the date as the Website Availability Date", () => {
+  it("lists the release fields, with the date as the Marketing Launch Date", () => {
     const panel = renderDrawer(sampleItem("88:release"));
     expect(within(panel).getByRole("heading", { name: "[Release-LTS] API Manager 4.6" })).toBeVisible();
     expect(rows(panel)).toEqual([
@@ -182,13 +182,13 @@ describe("release", () => {
       ["Release type", "LTS"],
       ["Tier", "Tier 1"],
       ["Website Availability Date", longDate("2026-11-19")],
-      ["Marketing launch date", longDate("2026-11-24")],
+      ["Marketing Launch Date", longDate("2026-11-24")],
     ]);
   });
 
-  it("leaves out a launch date the form doesn't give", () => {
+  it("leaves out a website availability date the form doesn't give", () => {
     const panel = renderDrawer(sampleItem("91:release"));
-    expect(rows(panel).map(([label]) => label)).not.toContain("Marketing launch date");
+    expect(rows(panel).map(([label]) => label)).not.toContain("Website Availability Date");
   });
 });
 

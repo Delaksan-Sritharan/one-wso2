@@ -19,7 +19,7 @@ import type { CalendarItem, CalendarItemsResponse } from "../marketingCalendarTy
 // Items copied from a real GET /api/marketing-calendar/items response for the
 // November 2026 grid (26 Oct to 6 Dec), against the local test project. Chosen to
 // cover each category's fields, the gaps (an event with no dates, a social post
-// with no details, an email with no BU, a release with no launch date), a
+// with no details, an email with no BU, a release with no website date), a
 // Salesforce Campaign as a URL and as text, several BUs and Regions on one item,
 // and values missing from the fixed option lists (BU "NEW", Region "oceania").
 
@@ -239,7 +239,7 @@ export const SAMPLE_ITEMS: CalendarItem[] = [
     title: "[Release-LTS] API Manager 4.6",
     url: "https://github.com/Plan2-Go/marketing-team/issues/88",
     category: "release",
-    date: "2026-11-19",
+    date: "2026-11-24",
     state: "open",
     bu: ["API"],
     region: ["Global"],
@@ -248,7 +248,7 @@ export const SAMPLE_ITEMS: CalendarItem[] = [
       version: "4.6",
       releaseType: "LTS",
       tier: "Tier 1",
-      launchDate: "2026-11-24",
+      websiteDate: "2026-11-19",
     },
     status: "Planned",
   },
@@ -257,7 +257,7 @@ export const SAMPLE_ITEMS: CalendarItem[] = [
     title: "[Release-STS] Choreo 2.1",
     url: "https://github.com/Plan2-Go/marketing-team/issues/89",
     category: "release",
-    date: "2026-11-05",
+    date: "2026-11-09",
     state: "open",
     bu: ["Choreo"],
     region: ["Global"],
@@ -266,7 +266,7 @@ export const SAMPLE_ITEMS: CalendarItem[] = [
       version: "2.1",
       releaseType: "STS",
       tier: "Tier 3",
-      launchDate: "2026-11-09",
+      websiteDate: "2026-11-05",
     },
     status: "Planned",
   },

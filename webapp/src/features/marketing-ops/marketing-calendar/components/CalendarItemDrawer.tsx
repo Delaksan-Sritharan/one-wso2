@@ -117,8 +117,8 @@ function itemFields(item: CalendarItem): { heading: string; fields: Field[] } {
           bu,
           { label: "Release type", value: item.details.releaseType },
           { label: "Tier", value: item.details.tier },
+          { label: "Website Availability Date", value: item.details.websiteDate, kind: "date" },
           date,
-          { label: "Marketing launch date", value: item.details.launchDate, kind: "date" },
         ],
       };
   }

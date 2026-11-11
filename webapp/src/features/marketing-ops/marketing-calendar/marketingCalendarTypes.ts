@@ -85,8 +85,9 @@ export interface ReleaseDetails {
   releaseType?: string;
   // "Tier 1" to "Tier 4".
   tier?: string;
-  // YYYY-MM-DD. The release's calendar date is its website availability date.
-  launchDate?: string;
+  // YYYY-MM-DD, from the issue body. The release's calendar date is its Due
+  // Date, which the template sets to the marketing launch date.
+  websiteDate?: string;
 }
 
 export type CalendarItem = CalendarItemCommon &

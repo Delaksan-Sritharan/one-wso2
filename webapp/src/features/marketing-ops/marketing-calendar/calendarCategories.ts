@@ -103,7 +103,7 @@ export const CALENDAR_CATEGORIES: readonly CategoryStyle[] = [
     pluralLabel: "Releases",
     label: "Release",
     noun: "releases",
-    dateLabel: "Website Availability Date",
+    dateLabel: "Marketing Launch Date",
     color: RELEASE_ROSE,
   },
 ];
