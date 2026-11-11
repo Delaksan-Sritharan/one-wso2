@@ -348,7 +348,10 @@ export default function AddLineDialog({
   const uom =
     pricing.kind === "FORMULA"
       ? // %LIST_PRICE% filled in with the price-book price (D154), as the save does.
-        unitOfMeasureFor(pricing.formula.unitOfMeasure, entry?.unitPrice ?? line?.keepPricing?.formula?.listPrice ?? "")
+        unitOfMeasureFor(
+          pricing.formula.unitOfMeasure,
+          entry?.unitPrice ?? line?.keepPricing?.formula?.listPrice ?? line?.unitPrice ?? "",
+        )
       : pricing.kind === "KEPT_FORMULA"
         ? (pricing.formula.unitOfMeasure ?? line?.unitOfMeasure ?? "")
         : keepsExisting && moved && line.keepPricing?.method === "FORMULA"

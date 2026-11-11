@@ -226,8 +226,8 @@ export default function FormulaEditorDialog({ formula, saved, onClose, onSaved }
             <Stack spacing={1.5}>
               <Typography variant="subtitle2">Placeholders</Typography>
               <Typography variant="body2" color="text.secondary">
-                Give each one a fixed value, or products: it then stands for the total of those products&apos; lines on
-                the quote, after their discount.
+                Give each one a fixed value; products, for the total of those products&apos; lines on the quote; or a
+                category, for the total of its price-book lines in the year. Totals are after the lines&apos; discount.
               </Typography>
               {names.map((n) => (
                 <BindingRow

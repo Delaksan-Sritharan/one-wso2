@@ -50,9 +50,12 @@ export default function SupportPlansPage(): JSX.Element {
   const issues = problemOf(save.error)?.issues ?? [];
   const issueOn = (field: string) => issues.find((i) => i.field === field)?.message;
 
+  // Each save sends the whole set, so a change made while one is still
+  // saving builds on that one, not on the set as last loaded.
   const change = (next: Partial<SupportPlansInput>) => {
     if (!data.data) return;
-    save.mutate({ ...inputOf(data.data), ...next }, { onSuccess: () => notify("Support plans saved") });
+    const base = save.isPending && save.variables ? save.variables : inputOf(data.data);
+    save.mutate({ ...base, ...next }, { onSuccess: () => notify("Support plans saved") });
   };
 
   return (

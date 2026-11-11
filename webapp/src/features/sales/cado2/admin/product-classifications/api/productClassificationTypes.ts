@@ -32,6 +32,13 @@ export interface ProductClassificationItem {
 }
 
 /** GET /admin/product-classifications. */
+/** One classification's setting, as an Admin sends it (both required). */
+export interface ProductClassificationInput {
+  readonly classification: string;
+  readonly category: LineCategory;
+  readonly recurring: boolean;
+}
+
 export interface ProductClassifications {
   readonly items: readonly ProductClassificationItem[];
   /** False when Salesforce couldn't be read: only the codes set up, no counts. */

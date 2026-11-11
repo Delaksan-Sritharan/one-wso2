@@ -33,7 +33,7 @@ import ProductsStep from "./ProductsStep";
 const sfLine = { id: "00kA", productName: "API Manager", productCode: null, quantity: "4", salesPrice: "9000", discount: "25", totalPrice: "27000.00", commissionPercent: null, serviceStartDate: null, serviceEndDate: null, problems: null, load: null };
 const opportunityLines: { currency: string; lines: unknown[]; check: unknown } = { currency: "USD", lines: [sfLine], check: null };
 // The quotes on the opportunity (D150: none synced to it yet).
-const opportunityQuotes: { data: unknown[] } = { data: [] };
+const opportunityQuotes: { data: unknown[] | undefined; error?: Error | null } = { data: [] };
 const sfLoad = {
   pricebookEntryId: "01uAPIM", productId: "01tAPIM", productName: "API Manager", productCode: "P-APIM", productDescription: null,
   pricebookId: "01sUSD", pricebookName: "USD Price Book", unitPrice: "8000", salesPrice: "9000", quantity: "4", discount: "25",
@@ -42,7 +42,7 @@ const sfLoad = {
 // D155: Admin → Support Plans, and those products in the quote's book.
 const supportProduct = (id: string, name: string, code: string) => ({
   id, name, productCode: code, description: null, family: null, unitOfMeasure: null, classification: "ES",
-  category: "SUPPORT" as const, recurring: true, classificationProblem: null,
+  category: "SUPPORT" as const, recurring: true, classificationProblem: null as string | null,
   pricebookEntries: [{ id: `01u${id}`, unitPrice: "25000", currencyIsoCode: "USD", isActive: true, pricebook: { id: "01sUSD", name: "USD Price Book" } }],
 });
 const plans = {
@@ -52,7 +52,7 @@ const plans = {
   updatedByEmail: null,
   updatedAt: null,
 };
-const quoteSettings: { supportPlans: unknown } = { supportPlans: null };
+const quoteSettings: { supportPlans: unknown; error: Error | null } = { supportPlans: null, error: null };
 const supportProducts = {
   data: [
     supportProduct("01tENT", "WSO2 Enterprise Support Plan", "SU-E"),
@@ -70,9 +70,12 @@ const empty = {
 vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => ({
   useAccountOpportunities: () => empty,
   useOpportunityLines: () => ({ ...empty, data: opportunityLines }),
-  useOpportunityQuotes: () => ({ ...empty, data: opportunityQuotes.data }),
+  useOpportunityQuotes: () => ({ ...empty, data: opportunityQuotes.data, error: opportunityQuotes.error ?? null }),
   usePricingFormulas: () => empty,
-  useQuoteSettings: () => ({ ...empty, data: { validityDays: 30, supportPlans: quoteSettings.supportPlans } }),
+  useQuoteSettings: () =>
+    quoteSettings.error
+      ? { ...empty, data: undefined, error: quoteSettings.error }
+      : { ...empty, data: { validityDays: 30, supportPlans: quoteSettings.supportPlans } },
   useProductsByIds: () => ({ ...empty, data: supportProducts.data }),
   useCurrencies: () => ({ ...empty, data: ["USD"] }),
   usePricebooks: () => empty,
@@ -145,7 +148,30 @@ function Harness({
 describe("ProductsStep (Products & Pricing)", () => {
   beforeEach(() => {
     opportunityQuotes.data = [];
+    opportunityQuotes.error = null;
     quoteSettings.supportPlans = null;
+    quoteSettings.error = null;
+    supportProducts.data = supportProducts.data.map((p) => ({ ...p, classificationProblem: null }));
+  });
+
+  // A failed lookup says so, instead of looking like "no support plans" or "not a renewal".
+  it("says when the support plans or the renewal's quotes couldn't be loaded", () => {
+    quoteSettings.error = new Error("down");
+    opportunityQuotes.data = undefined;
+    opportunityQuotes.error = new Error("down");
+    render(<Harness values={{ opportunityId: "006A", opportunityName: "Acme renewal", dealKind: "RENEWAL" }} />);
+    expect(screen.getByText(/Couldn't load the support plans, so this quote's support isn't checked/)).toBeInTheDocument();
+    expect(screen.getByText(/Couldn't check this renewal's quotes, so Import renewal products isn't offered/)).toBeInTheDocument();
+  });
+
+  it("won't add a support product whose classification isn't set up", () => {
+    quoteSettings.supportPlans = plans;
+    supportProducts.data = supportProducts.data.map((p) =>
+      p.id === "01tENT" ? { ...p, classificationProblem: "WSO2 Enterprise Support Plan's classification, SS, isn't set up in QuickQuote." } : p,
+    );
+    render(<Harness />);
+    expect(screen.getByRole("button", { name: "Add Enterprise Support" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add Standard Support" })).toBeEnabled();
   });
 
   // D155: a year with a subscription is reminded of its support plan; nothing is added by itself.

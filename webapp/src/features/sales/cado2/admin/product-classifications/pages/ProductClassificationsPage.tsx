@@ -40,7 +40,10 @@ import {
   useProductClassifications,
   useSetProductClassification,
 } from "@features/sales/cado2/admin/product-classifications/api/useProductClassifications";
-import type { ProductClassificationItem } from "@features/sales/cado2/admin/product-classifications/api/productClassificationTypes";
+import type {
+  ProductClassificationInput,
+  ProductClassificationItem,
+} from "@features/sales/cado2/admin/product-classifications/api/productClassificationTypes";
 
 /** The categories, in the order form's order and words. */
 const GROUPS: readonly { value: LineCategory; label: string }[] = [
@@ -147,25 +150,25 @@ export default function ProductClassificationsPage(): JSX.Element {
   const choiceOf = (item: ProductClassificationItem): Choice =>
     pending[item.classification] ?? { category: item.category, recurring: item.recurring };
   const savingCode = set.isPending ? set.variables?.classification : undefined;
+  // One save, for a choice and for Retry, so both clear the pending choice and say so.
+  const save = (input: ProductClassificationInput) =>
+    set.mutate(input, {
+      onSuccess: () => {
+        setPending((p) => {
+          const next = { ...p };
+          delete next[input.classification];
+          return next;
+        });
+        notify(`${input.classification} saved`);
+      },
+    });
   const choose = (item: ProductClassificationItem, change: Partial<Choice>) => {
     const next = { ...choiceOf(item), ...change };
     if (next.category === null || next.recurring === null) {
       setPending((p) => ({ ...p, [item.classification]: next }));
       return;
     }
-    set.mutate(
-      { classification: item.classification, category: next.category, recurring: next.recurring },
-      {
-        onSuccess: () => {
-          setPending((p) => {
-            const next = { ...p };
-            delete next[item.classification];
-            return next;
-          });
-          notify(`${item.classification} saved`);
-        },
-      },
-    );
+    save({ classification: item.classification, category: next.category, recurring: next.recurring });
   };
 
   const items = data.data?.items ?? [];
@@ -188,7 +191,7 @@ export default function ProductClassificationsPage(): JSX.Element {
       </Typography>
 
       {set.error ? (
-        <ErrorNotice error={set.error} onRetry={() => set.variables && set.mutate(set.variables)} retrying={set.isPending}>
+        <ErrorNotice error={set.error} onRetry={() => set.variables && save(set.variables)} retrying={set.isPending}>
           Couldn&apos;t save the classification.
         </ErrorNotice>
       ) : null}

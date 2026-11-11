@@ -29,6 +29,7 @@ import {
   Typography,
   IconButton,
 } from "@wso2/oxygen-ui";
+import ErrorNotice from "@components/error-notice/ErrorNotice";
 import {
   ChartColumnIcon,
   ChevronDownIcon,
@@ -229,12 +230,14 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
     const f = formulas.data?.find((x) => x.productId === p.id && x.status === "ACTIVE");
     return lineFromProduct(p, year, f ? unitOfMeasureFor(f.unitOfMeasure, p.pricebookEntries[0]?.unitPrice ?? "") : "");
   };
-  const notPriced = (productId: string) =>
-    supportProducts.isPending
-      ? "Loading…"
-      : supportProducts.data?.some((x) => x.id === productId && x.pricebookEntries.length > 0)
-        ? ""
-        : `Not in ${values.defaultPricebookName || "the quote's price book"} in ${currency}`;
+  // Why a support product can't be added: not priced in the book, or its
+  // classification isn't set up (as the product dialog says, D152).
+  const notPriced = (productId: string) => {
+    if (supportProducts.isPending) return "Loading…";
+    const p = supportProducts.data?.find((x) => x.id === productId);
+    if (!p || p.pricebookEntries.length === 0) return `Not in ${values.defaultPricebookName || "the quote's price book"} in ${currency}`;
+    return p.classificationProblem ?? "";
+  };
   const addSupport = (productId: string, n: number) => {
     const year = years.find((y) => y.number === n);
     const line = year ? supportLine(productId, year) : null;
@@ -473,6 +476,22 @@ export default function ProductsStep({ preview }: ProductsStepProps): JSX.Elemen
           <Alert severity="error" sx={{ mb: 2 }}>
             {yearsIssue}
           </Alert>
+        ) : null}
+        {/* A failed lookup says so, rather than looking like "off" or "not a renewal". */}
+        {settings.error ? (
+          <ErrorNotice error={settings.error} onRetry={() => void settings.refetch()} retrying={settings.isFetching} sx={{ mb: 2 }}>
+            Couldn&apos;t load the support plans, so this quote&apos;s support isn&apos;t checked.
+          </ErrorNotice>
+        ) : null}
+        {values.dealKind === "RENEWAL" && opportunityQuotes.error ? (
+          <ErrorNotice
+            error={opportunityQuotes.error}
+            onRetry={() => void opportunityQuotes.refetch()}
+            retrying={opportunityQuotes.isFetching}
+            sx={{ mb: 2 }}
+          >
+            Couldn&apos;t check this renewal&apos;s quotes, so Import renewal products isn&apos;t offered.
+          </ErrorNotice>
         ) : null}
         {loaded !== null ? (
           <Alert severity="success" sx={{ mb: 2 }} onClose={() => setLoaded(null)} aria-label="Loaded from Salesforce">

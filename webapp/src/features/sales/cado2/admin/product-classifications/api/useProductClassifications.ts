@@ -20,8 +20,7 @@ import { httpRetry } from "@api/errors";
 import { cado2ServiceUrls } from "@config/apiConfig";
 import { useCado2Basis } from "@features/sales/cado2/api/cado2Basis";
 import { cado2Send } from "@features/sales/cado2/api/cado2Http";
-import type { LineCategory } from "@features/sales/cado2/quotes/api/quoteTypes";
-import type { ProductClassificationItem, ProductClassifications } from "./productClassificationTypes";
+import type { ProductClassificationInput, ProductClassificationItem, ProductClassifications } from "./productClassificationTypes";
 
 const DOMAIN = "product-classifications";
 
@@ -40,11 +39,7 @@ export function useProductClassifications(): UseQueryResult<ProductClassificatio
 export function useSetProductClassification() {
   const { getToken, key } = useCado2Basis();
   const queryClient = useQueryClient();
-  return useMutation<
-    ProductClassificationItem,
-    Error,
-    { classification: string; category: LineCategory; recurring: boolean }
-  >({
+  return useMutation<ProductClassificationItem, Error, ProductClassificationInput>({
     mutationFn: async ({ classification, category, recurring }) =>
       cado2Send<ProductClassificationItem>("PUT", cado2ServiceUrls.productClassification(classification), await getToken(), {
         category,
