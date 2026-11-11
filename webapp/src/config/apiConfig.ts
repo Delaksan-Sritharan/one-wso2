@@ -1090,6 +1090,23 @@ export const marketingOpsServiceUrls = {
     `${marketingOpsBackendUrl}/api/events/review/submissions/${encodeURIComponent(id)}/export/${encodeURIComponent(tab)}`,
   eventsReviewExportAll: (id: string) =>
     `${marketingOpsBackendUrl}/api/events/review/submissions/${encodeURIComponent(id)}/export`,
+  // ---- events: lead import --------------------------------------------------
+  eventsLeadImportOptions: `${marketingOpsBackendUrl}/api/events/lead-import/options`,
+  eventsLeadImportRuns: `${marketingOpsBackendUrl}/api/events/lead-import/runs`,
+  eventsLeadImportUpload: (filename: string, sheetType: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs?filename=${encodeURIComponent(filename)}&sheet_type=${encodeURIComponent(sheetType)}`,
+  eventsLeadImportRun: (id: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}`,
+  eventsLeadImportApply: (id: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}/apply`,
+  eventsLeadImportSheet: (id: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}/sheet`,
+  eventsLeadImportEdits: (id: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}/edits`,
+  eventsLeadImportFinish: (id: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}/finish`,
+  eventsLeadImportFile: (id: string, kind: string) =>
+    `${marketingOpsBackendUrl}/api/events/lead-import/runs/${encodeURIComponent(id)}/files/${encodeURIComponent(kind)}`,
 
   // ---- crm-upload ----------------------------------------------------------------
   //
