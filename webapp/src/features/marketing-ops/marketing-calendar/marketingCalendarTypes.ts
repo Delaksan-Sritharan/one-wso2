@@ -23,7 +23,7 @@
 // their order and the layout live in CalendarItemDrawer. Empty values are left
 // out rather than sent as "".
 
-export type CalendarCategory = "event" | "content" | "social" | "email";
+export type CalendarCategory = "event" | "content" | "social" | "email" | "release";
 
 interface CalendarItemCommon {
   // "<owner>/<repo>#<number>:<category>"
@@ -78,12 +78,24 @@ export interface EmailDetails {
   bodyCopy?: string;
 }
 
+export interface ReleaseDetails {
+  productName?: string;
+  version?: string;
+  // "STS" or "LTS".
+  releaseType?: string;
+  // "Tier 1" to "Tier 4".
+  tier?: string;
+  // YYYY-MM-DD. The release's calendar date is its website availability date.
+  launchDate?: string;
+}
+
 export type CalendarItem = CalendarItemCommon &
   (
     | { category: "content"; details: ContentDetails }
     | { category: "event"; details: EventDetails }
     | { category: "social"; details: SocialDetails }
     | { category: "email"; details: EmailDetails }
+    | { category: "release"; details: ReleaseDetails }
   );
 
 /** One category's items, with that category's `details`. */
