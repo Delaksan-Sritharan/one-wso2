@@ -73,12 +73,14 @@ export function DenseTable<Row>({
   rows,
   rowKey,
   hideHeader = false,
+  alignTop = false,
 }: {
   ariaLabel: string;
   columns: DenseColumn<Row>[];
   rows: Row[];
   rowKey: (row: Row, index: number) => string;
   hideHeader?: boolean;
+  alignTop?: boolean;
 }) {
   // Carry the position through so a renderer can address a row by index, not
   // just by value — these lists can legitimately contain duplicates.
@@ -100,7 +102,7 @@ export function DenseTable<Row>({
     resizable: columns.length > 2 && column.width === undefined,
     sortable: false,
     renderCell: (params) => (
-      <GridCellContent>
+      <GridCellContent alignTop={alignTop}>
         {column.render(params.row.value as Row, params.row.index as number)}
       </GridCellContent>
     ),
@@ -142,9 +144,22 @@ const denseDataGridSx = {
   },
 } as const;
 
-export function GridCellContent({ children }: { children: ReactNode }) {
+export function GridCellContent({
+  children,
+  alignTop = false,
+}: {
+  children: ReactNode;
+  alignTop?: boolean;
+}) {
   return (
-    <Stack sx={{ justifyContent: "center", minHeight: "100%", py: 0.75, width: "100%" }}>
+    <Stack
+      sx={{
+        justifyContent: alignTop ? "flex-start" : "center",
+        minHeight: "100%",
+        py: 0.75,
+        width: "100%",
+      }}
+    >
       {children}
     </Stack>
   );
