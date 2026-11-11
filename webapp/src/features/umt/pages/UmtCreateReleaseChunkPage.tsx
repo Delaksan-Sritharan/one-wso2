@@ -191,7 +191,12 @@ function UmtCreateReleaseChunkForm() {
   // checked and submitted. That includes ticked updates the search or
   // lifecycle filter hides, so Create lists every one of them for
   // confirmation first.
-  const selectedUpdates = rows.filter((row) => selectedIds.includes(row.id));
+  // A new array only when the list or the ticks change, since the
+  // confirmation dialog's grid takes it as its rows.
+  const selectedUpdates = useMemo(() => {
+    const ids = new Set(selectedIds);
+    return rows.filter((row) => ids.has(row.id));
+  }, [rows, selectedIds]);
   const canCreate = selectedUpdates.length > 0 && uatUpdates !== undefined && !createChunk.isPending;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
