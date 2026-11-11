@@ -17,7 +17,7 @@
 import { describe, expect, it } from "vitest";
 import type { SheetMark, SheetRow } from "../leadImportTypes";
 import { userEditAsChange } from "./leadImport";
-import { cellKey, filterCounts, filterRows, markTone, visibleRange } from "./leadSheet";
+import { cellKey, filterCounts, filterRows, markTone, renderedSlices, visibleRange } from "./leadSheet";
 
 const mark = (status: SheetMark["status"], kind = "set_country"): SheetMark => ({
   id: "c-0001",
@@ -64,6 +64,13 @@ describe("lead sheet helpers", () => {
     expect(visibleRange(3000, 600, 30, 2490, 12)).toEqual({ first: 88, last: 132 });
     expect(visibleRange(1e6, 600, 30, 2490, 12)).toEqual({ first: 2490, last: 2490 });
     expect(visibleRange(0, 600, 30, 5, 12)).toEqual({ first: 0, last: 5 });
+  });
+
+  it("keeps the row of an open editor in the DOM when it scrolls out of the window", () => {
+    expect(renderedSlices(88, 132, -1)).toEqual([[88, 132]]);
+    expect(renderedSlices(88, 132, 100)).toEqual([[88, 132]]);
+    expect(renderedSlices(88, 132, 3)).toEqual([[3, 4], [88, 132]]);
+    expect(renderedSlices(88, 132, 2000)).toEqual([[88, 132], [2000, 2001]]);
   });
 
   it("keys a cell by tab, email (any case) and column", () => {

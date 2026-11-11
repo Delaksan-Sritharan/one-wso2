@@ -84,6 +84,15 @@ export function visibleRange(
   return { first: Math.min(first, last), last };
 }
 
+/** The [start, end) slices of rows to put in the DOM: the window, plus the row at `keep`
+ *  (the open cell editor) when it is outside the window. An input that unmounts fires no
+ *  blur, so a scroll would lose what was typed. Only that one row is added, not the rows
+ *  between it and the window. */
+export function renderedSlices(first: number, last: number, keep: number): [number, number][] {
+  if (keep < 0 || (keep >= first && keep < last)) return [[first, last]];
+  return keep < first ? [[keep, keep + 1], [first, last]] : [[first, last], [keep, keep + 1]];
+}
+
 const WIDE = new Set(["notes", "address", "email", "assigned_am"]);
 const NARROW = new Set(["hot_lead", "score", "state"]);
 

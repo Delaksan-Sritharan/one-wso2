@@ -54,7 +54,7 @@ import { ConfirmDialog, Empty, EventsLoading, Panel, Timestamp } from "./EventsU
 import { primaryBtn } from "./eventsStyles";
 
 // Lead import — the landing screen: drop a raw event lead file, and the list of
-// everything converted on the site in the last two hours.
+// everything you converted in the last two hours.
 //
 // The file and its sheet type are the only decisions asked for up front. The type is
 // checked against the file name ("<Event name> - Booth") so a misnamed or mixed-up file

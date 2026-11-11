@@ -17,17 +17,19 @@
 // Lead import data layer — a raw event lead file in, the List Import Template out.
 //
 // Gated by the same `events` capability as My Submissions (the backend mounts these
-// routes under the Events router's guard). Runs are SITE-WIDE, not owner-scoped, and
-// live two hours, so the keys carry no sub.
+// routes under the Events router's guard). Runs are PER-USER (owner-scoped server-side),
+// so the list key carries the sub, as the Events submission keys do. A run and its sheet
+// are keyed by their unguessable id, and the server answers 404 for another user's id.
 //
 // A conversion runs in the background on the server (30 s to a few minutes); the run
 // query polls while it is processing and stops once it is ready or failed.
 
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAsgardeo } from "@asgardeo/react";
-import { authedGet, authedPost, fetchWithReauth, HttpError } from "@api/http";
+import { authedDelete, authedGet, authedPost, fetchWithReauth, HttpError } from "@api/http";
 import { describeError, httpRetry } from "@api/errors";
 import { useAccessToken } from "@hooks/useAccessToken";
+import { useAsgardeoSub } from "@hooks/useAsgardeoSub";
 import {
   isMarketingOpsBackendConfigured,
   marketingOpsServiceUrls as urls,
@@ -46,7 +48,9 @@ import type {
 
 const KEY = {
   options: ["marketing-ops", "events", "lead-import", "options"] as const,
+  /** Every user's list: the prefix to invalidate. */
   runs: ["marketing-ops", "events", "lead-import", "runs"] as const,
+  ownRuns: (sub?: string) => ["marketing-ops", "events", "lead-import", "runs", sub] as const,
   run: (id: string) => ["marketing-ops", "events", "lead-import", "run", id] as const,
   sheet: (id: string) => ["marketing-ops", "events", "lead-import", "sheet", id] as const,
   /** Mutations that rebuild a run's workbook: confirm/undo and cell edits. */
@@ -58,8 +62,10 @@ const POLL_MS = 3000;
 function useBase() {
   const { isSignedIn } = useAsgardeo();
   const getAccessToken = useAccessToken();
+  const { state } = useAsgardeoSub();
+  const sub = state.status === "ready" ? state.sub : undefined;
   const ready = isSignedIn && isMarketingOpsBackendConfigured() && isPreviewEnabled("eventsLeadImport");
-  return { getAccessToken, ready };
+  return { getAccessToken, sub, ready };
 }
 
 /** The backend's message for a refusal ("Upload an .xlsx, .xls or .csv file…").
@@ -90,12 +96,12 @@ export function useLeadImportOptions() {
   });
 }
 
-/** Recently converted — every live run on the site, newest first. */
+/** Recently converted — the caller's live runs, newest first. */
 export function useLeadImportRuns() {
-  const { getAccessToken, ready } = useBase();
+  const { getAccessToken, sub, ready } = useBase();
   return useQuery<LeadImportRun[]>({
-    queryKey: KEY.runs,
-    enabled: ready,
+    queryKey: KEY.ownRuns(sub),
+    enabled: ready && Boolean(sub),
     queryFn: async () =>
       authedGet<LeadImportRun[]>(urls.eventsLeadImportRuns, await getAccessToken()),
     // Keep "time left" and in-flight rows honest without hammering the server.
@@ -126,7 +132,7 @@ export function useUploadLeadFile() {
     // The sheet type reaches Claude as a routing hint (which tab the leads belong on).
     mutationFn: async ({ file, sheetType }: { file: File; sheetType: SheetType }) => {
       const url = urls.eventsLeadImportUpload(file.name, sheetType);
-      // The file is the whole body. Not authedUpload: that sends multipart FormData.
+      // The file is the raw request body, not multipart: the server reads the bytes as they are.
       const res = await fetchWithReauth(
         url,
         { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file },
@@ -146,9 +152,7 @@ export function useDeleteLeadImport() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const url = urls.eventsLeadImportRun(id);
-      const res = await fetchWithReauth(url, { method: "DELETE" }, await getAccessToken());
-      if (!res.ok) throw new HttpError(url, res.status, await res.text().catch(() => ""));
+      await authedDelete(urls.eventsLeadImportRun(id), await getAccessToken());
     },
     onSuccess: (_, id) => {
       qc.removeQueries({ queryKey: KEY.run(id) });

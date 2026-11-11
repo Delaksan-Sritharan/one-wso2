@@ -36,6 +36,7 @@ import {
   useApplyLeadChanges,
   useDownloadLeadFile,
   useFinishLeadImport,
+  useLeadImportOptions,
   useLeadImportRebuilding,
   useLeadImportRun,
   useLeadImportSheet,
@@ -104,6 +105,7 @@ export default function LeadImportRun({ id, onBack }: { id: string; onBack: () =
 function Head({ run, workbook, onBack }: { run: Run; workbook: string | null; onBack: () => void }) {
   const finish = useFinishLeadImport();
   const download = useDownloadLeadFile();
+  const hours = useLeadImportOptions().data?.retention_hours ?? 2;
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,7 +156,7 @@ function Head({ run, workbook, onBack }: { run: Run; workbook: string | null; on
             {run.pending_count
               ? ` ${run.pending_count} change${run.pending_count === 1 ? "" : "s"} still waiting for you will stay unapplied.`
               : ""}{" "}
-            The downloads stay available for 2 hours.
+            The downloads stay available for {hours} hours.
           </>
         }
         confirmLabel="Finish & download"

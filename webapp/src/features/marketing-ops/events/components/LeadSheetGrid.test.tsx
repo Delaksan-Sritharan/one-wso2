@@ -66,6 +66,24 @@ describe("LeadSheetGrid", () => {
     expect(screen.queryByText("Acme 0")).not.toBeInTheDocument();
   });
 
+  it("keeps an open editor, and what was typed, when its row scrolls out of view", () => {
+    const props = renderGrid({ rows: rowsOf(2490) });
+    fireEvent.click(screen.getByText("Acme 1"));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "ACME Ltd" } });
+
+    const scroller = screen.getByTestId("lead-sheet-scroll");
+    act(() => {
+      scroller.scrollTop = 2000 * 30;
+      fireEvent.scroll(scroller);
+    });
+    expect(screen.getByText("Acme 2000")).toBeInTheDocument();
+    expect(dataRows().length).toBeLessThan(60);     // only the one row is added
+    const input = screen.getByRole("textbox", { name: "Company name, row 3" });
+    expect(input).toHaveValue("ACME Ltd");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(props.onEdit).toHaveBeenCalledWith(props.rows[1], COLUMNS[1], "ACME Ltd");
+  });
+
   it("edits a cell on click and saves on Enter", () => {
     const props = renderGrid();
     fireEvent.click(screen.getByText("Acme 1"));

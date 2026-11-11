@@ -17,7 +17,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { alpha, Box, InputBase, MenuItem, Select, Tooltip, useTheme } from "@wso2/oxygen-ui";
 import type { SheetColumn, SheetMark, SheetRow } from "../leadImportTypes";
-import { cellKey, columnWidth, markTone, visibleRange, type MarkTone } from "../lib/leadSheet";
+import { cellKey, columnWidth, markTone, renderedSlices, visibleRange, type MarkTone } from "../lib/leadSheet";
 
 // One lead tab of the converted workbook, as an editable sheet.
 //
@@ -69,6 +69,7 @@ export default function LeadSheetGrid({
   const tableRef = useRef<HTMLTableElement>(null);
   const toneSx = useToneSx();
   const { first, last } = visibleRange(scrollTop, VIEWPORT, ROW_HEIGHT, rows.length, OVERSCAN);
+  const editingIndex = editing ? rows.findIndex((r) => r.email === editing.email) : -1;
   const width = GUTTER + columns.reduce((sum, c) => sum + columnWidth(c), 0);
 
   const commit = useCallback(
@@ -92,6 +93,33 @@ export default function LeadSheetGrid({
       ?.querySelector<HTMLElement>(`td[data-cell="${CSS.escape(`${target.email}|${target.column}`)}"]`)
       ?.focus();
   }, [editing]);
+
+  // Each slice in order, with a spacer for the gap before it. Thus, an editor that scrolls
+  // out of view stays mounted, and the scrollbar is still the full list's.
+  const slices = renderedSlices(first, last, editingIndex);
+  const rendered = slices[slices.length - 1][1];
+  const body = slices.flatMap(([start, end], index) => {
+    const gap = start - (index > 0 ? slices[index - 1][1] : 0);
+    return [
+      gap > 0 ? <Spacer key={`gap-${start}`} rows={gap} span={columns.length + 1} /> : null,
+      ...rows.slice(start, end).map((row) => (
+        <SheetRowView
+          key={row.email}
+          tab={tab}
+          row={row}
+          columns={columns}
+          drafts={drafts}
+          editable={editable}
+          editingColumn={editing?.email === row.email ? editing.column : null}
+          toneSx={toneSx}
+          onStart={setEditing}
+          onCommit={commit}
+          onCancel={cancel}
+          describeMark={describeMark}
+        />
+      )),
+    ];
+  });
 
   return (
     <Box
@@ -125,24 +153,8 @@ export default function LeadSheetGrid({
           </tr>
         </thead>
         <tbody>
-          {first > 0 && <Spacer rows={first} span={columns.length + 1} />}
-          {rows.slice(first, last).map((row) => (
-            <SheetRowView
-              key={row.email}
-              tab={tab}
-              row={row}
-              columns={columns}
-              drafts={drafts}
-              editable={editable}
-              editingColumn={editing?.email === row.email ? editing.column : null}
-              toneSx={toneSx}
-              onStart={setEditing}
-              onCommit={commit}
-              onCancel={cancel}
-              describeMark={describeMark}
-            />
-          ))}
-          {last < rows.length && <Spacer rows={rows.length - last} span={columns.length + 1} />}
+          {body}
+          {rendered < rows.length && <Spacer rows={rows.length - rendered} span={columns.length + 1} />}
         </tbody>
       </Box>
     </Box>
