@@ -17,7 +17,7 @@
 import { describe, expect, it } from "vitest";
 import type { AuditEvent, DraftResponse } from "@features/sales/cado2/quotes/api/quoteTypes";
 import { gateway, ready } from "@features/sales/cado2/quotes/testing/fixtures";
-import { compareVersions, describeEvent, groupHistory, quoteLabel, quoteStatusLabel } from "./lifecycle";
+import { compareVersions, describeEvent, groupHistory, quoteLabel, quoteStatusLabel, syncedDraft } from "./lifecycle";
 
 const v2: DraftResponse = {
   ...ready,
@@ -188,5 +188,15 @@ describe("Salesforce sync history", () => {
     expect(describeEvent({ event: refused, count: 1 })).toBe(
       "Salesforce refused the sync of version 1: Closed Won opportunities can't be edited",
     );
+  });
+});
+
+// 2026-11-11: a draft synced to Salesforce can't be deleted; a later, never-synced one can.
+describe("syncedDraft", () => {
+  it("is the version last synced, or any version when it isn't recorded", () => {
+    expect(syncedDraft({ sfSyncedAt: null, sfSyncedVersion: null }, 1)).toBe(false);
+    expect(syncedDraft({ sfSyncedAt: "2026-11-10T12:00:00Z", sfSyncedVersion: 1 }, 1)).toBe(true);
+    expect(syncedDraft({ sfSyncedAt: "2026-11-10T12:00:00Z", sfSyncedVersion: 1 }, 2)).toBe(false);
+    expect(syncedDraft({ sfSyncedAt: "2026-11-10T12:00:00Z", sfSyncedVersion: null }, 2)).toBe(true);
   });
 });

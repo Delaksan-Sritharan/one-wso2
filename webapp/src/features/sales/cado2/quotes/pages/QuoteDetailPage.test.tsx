@@ -336,6 +336,17 @@ describe("QuoteDetailPage — lifecycle", () => {
     expect(await screen.findByText("My Quotes page")).toBeInTheDocument();
   });
 
+  // 2026-11-11: a draft synced to Salesforce can't be deleted; the quote is closed instead.
+  it("doesn't delete a draft that was synced to Salesforce", async () => {
+    show({ ...ready.quote, sfSyncedAt: "2026-11-10T12:14:54Z", sfSyncedVersion: 1 }, ready);
+    const user = userEvent.setup();
+    await openMenu(user);
+    const item = screen.getByRole("menuitem", { name: /Delete draft/ });
+    expect(item).toHaveAttribute("aria-disabled", "true");
+    expect(item).toHaveTextContent("Synced to Salesforce: close the quote instead");
+    expect(screen.getByRole("menuitem", { name: /Close quote/ })).not.toHaveAttribute("aria-disabled");
+  });
+
   it("deletes a later draft, and the version before it is the latest again", async () => {
     const v2: DraftResponse = { ...ready, version: { ...ready.version, versionNumber: 2 } };
     const q: QuoteView = {

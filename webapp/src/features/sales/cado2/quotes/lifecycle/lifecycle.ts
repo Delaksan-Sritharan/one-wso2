@@ -20,6 +20,7 @@
 
 import type {
   AuditEvent,
+  QuoteView,
   ContactView,
   AddressView,
   DraftResponse,
@@ -228,6 +229,18 @@ export function groupHistory(events: readonly AuditEvent[]): HistoryEntry[] {
 const roleOf = (meta: Record<string, unknown>) => (typeof meta.role === "string" ? roleLabel(meta.role) : "An approver");
 
 /** A primary quote named for others (D68): "Q-26-00031 (nimesha@wso2.com)", or "A draft by …" before its first submit. */
+/**
+ * Whether this version of the quote was synced to Salesforce, so it can't be
+ * deleted (2026-11-11): its changes to the opportunity would be left with no
+ * trace. A later draft that was never synced still can.
+ */
+export function syncedDraft(q: Pick<QuoteView, "sfSyncedAt" | "sfSyncedVersion">, versionNumber: number): boolean {
+  return Boolean(q.sfSyncedAt) && (q.sfSyncedVersion == null || q.sfSyncedVersion === versionNumber);
+}
+
+/** Why a synced draft can't be deleted, as the menu says it. */
+export const SYNCED_DRAFT_NOTE = "Synced to Salesforce: close the quote instead";
+
 export function primaryLabel(q: Pick<OpportunityQuote, "quoteNumber" | "ownerEmail">): string {
   return q.quoteNumber ? `${q.quoteNumber} (${q.ownerEmail})` : `A draft by ${q.ownerEmail}`;
 }

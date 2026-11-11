@@ -35,7 +35,13 @@ import QuoteSheet from "@features/sales/cado2/quotes/components/sheet/QuoteSheet
 import DocumentsPanel from "@features/sales/cado2/quotes/components/detail/DocumentsPanel";
 import StatusPanel from "@features/sales/cado2/quotes/components/detail/StatusPanel";
 import CustomerBand from "@features/sales/cado2/quotes/components/sheet/CustomerBand";
-import { STATUS_COLOR, STATUS_LABEL, quoteLabel } from "@features/sales/cado2/quotes/lifecycle/lifecycle";
+import {
+  STATUS_COLOR,
+  STATUS_LABEL,
+  SYNCED_DRAFT_NOTE,
+  quoteLabel,
+  syncedDraft,
+} from "@features/sales/cado2/quotes/lifecycle/lifecycle";
 import LifecycleDialog from "@features/sales/cado2/quotes/components/detail/LifecycleDialog";
 import VersionsTab from "@features/sales/cado2/quotes/components/detail/VersionsTab";
 import HistoryTab from "@features/sales/cado2/quotes/components/detail/HistoryTab";
@@ -437,7 +443,15 @@ export default function QuoteDetailPage(): JSX.Element {
                       ]}
                       destructive={[
                         ...(v.status === "DRAFT" && can("CLOSE")
-                          ? [{ label: "Delete draft", icon: <Trash2Icon size={16} />, onClick: () => openDialog("delete") }]
+                          ? [
+                              {
+                                label: "Delete draft",
+                                icon: <Trash2Icon size={16} />,
+                                onClick: () => openDialog("delete"),
+                                // A synced draft can't be deleted (2026-11-11).
+                                ...(syncedDraft(q, v.versionNumber) ? { disabled: true, detail: SYNCED_DRAFT_NOTE } : {}),
+                              },
+                            ]
                           : []),
                         ...(can("CLOSE") ? [{ label: "Close quote", icon: <XCircleIcon size={16} />, onClick: () => openDialog("close") }] : []),
                       ]}

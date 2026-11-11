@@ -86,7 +86,13 @@ import { nextHint, reachableStep, stepChecks } from "@features/sales/cado2/quote
 import PageHeader from "@features/sales/cado2/components/page-header/PageHeader";
 import ActingAsChip from "@features/sales/cado2/quotes/components/detail/ActingAsChip";
 import StatusChip from "@features/sales/cado2/components/status-chip/StatusChip";
-import { STATUS_COLOR, STATUS_LABEL, quoteLabel } from "@features/sales/cado2/quotes/lifecycle/lifecycle";
+import {
+  STATUS_COLOR,
+  STATUS_LABEL,
+  SYNCED_DRAFT_NOTE,
+  quoteLabel,
+  syncedDraft,
+} from "@features/sales/cado2/quotes/lifecycle/lifecycle";
 import { cado2Paths } from "@features/sales/cado2/cado2Paths";
 
 const { LocalizationProvider } = DatePickers;
@@ -529,7 +535,16 @@ export default function QuoteWizardPage(): JSX.Element {
                     actions={[]}
                     destructive={
                       saved && saved.version.status === "DRAFT" && saved.quote.actions.includes("CLOSE")
-                        ? [{ label: "Delete draft", icon: <Trash2Icon size={16} />, disabled: busy, onClick: () => setDeleting(true) }]
+                        ? [
+                            {
+                              label: "Delete draft",
+                              icon: <Trash2Icon size={16} />,
+                              disabled: busy || syncedDraft(saved.quote, saved.version.versionNumber),
+                              // A synced draft can't be deleted (2026-11-11).
+                              detail: syncedDraft(saved.quote, saved.version.versionNumber) ? SYNCED_DRAFT_NOTE : undefined,
+                              onClick: () => setDeleting(true),
+                            },
+                          ]
                         : []
                     }
                   />
