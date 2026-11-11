@@ -152,14 +152,16 @@ function UmtCreateReleaseChunkForm() {
   const [search, setSearch] = useState(restored.search);
   const [lifecycle, setLifecycle] = useState(restored.lifecycle);
 
-  const { pathname } = location;
+  // The URL parts are listed one by one, not as `location`: each save makes a
+  // new `location`, which would start the save again.
+  const { pathname, search: urlSearch, hash } = location;
   useEffect(() => {
     const timer = setTimeout(() => {
       const state: UmtCreateReleaseChunkPageState = { selectedIds, search, lifecycle };
-      void navigate(pathname, { replace: true, state });
+      void navigate({ pathname, search: urlSearch, hash }, { replace: true, state });
     }, SAVE_STATE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [navigate, pathname, selectedIds, search, lifecycle]);
+  }, [navigate, pathname, urlSearch, hash, selectedIds, search, lifecycle]);
 
   const [collisionProducts, setCollisionProducts] = useState<string[] | null>(null);
 
@@ -335,6 +337,7 @@ function UmtCreateReleaseChunkForm() {
           onChange={(event) => setSearch(event.target.value)}
           sx={{ flex: 1 }}
           slotProps={{
+            htmlInput: { "aria-label": "Search updates by product" },
             input: {
               startAdornment: (
                 <InputAdornment position="start">
