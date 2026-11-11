@@ -34,6 +34,10 @@ interface CalendarItemCommon {
   // A civil date, YYYY-MM-DD: the Due Date, or for an event with none, its
   // Event start date.
   date: string;
+  // Only on an event over several days: its Event end date, the last day it runs
+  // (included), always after `date`. Such an event is sent when any of its days is
+  // in the requested range, so `date` can be before the range's first day.
+  endDate?: string;
   state: "open" | "closed";
   // The project's Status, e.g. "Planned".
   status?: string;
