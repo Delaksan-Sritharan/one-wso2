@@ -85,7 +85,14 @@ export default function YearSections({
         // Only the last year can be shorter than 12 months; say so beside its dates.
         const short = y.start && y.end && durationShort(y.start, y.end) !== "1Y" ? durationText(y.start, y.end) : "";
         return (
-          <Box key={y.number} component="section" aria-label={`Year ${y.number}`} sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Box
+            key={y.number}
+            component="section"
+            aria-label={`Year ${y.number}`}
+            // A Deal Desk note about the year points here, e.g. its support plan (D155).
+            data-note-target={`year:${y.number}`}
+            sx={{ borderBottom: 1, borderColor: "divider" }}
+          >
             {/* The row folds the year on a click; the toggle itself (keyboard,
                 screen readers) holds only its name, and the controls in the row
                 (a clickable end date, the actions) sit beside it, not inside a

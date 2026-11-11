@@ -99,8 +99,6 @@ export interface SheetLine {
   /** Its dates within its year; a one-off is dated on its start. Null until it has a year and a start. */
   readonly startDate: string | null;
   readonly endDate: string | null;
-  /** A bundle child: its parent's product name; null otherwise. */
-  readonly parentName: string | null;
   /** From the pricing, when the quote can be priced. */
   readonly annualList: string | null;
   readonly annualNet: string | null;
@@ -286,7 +284,6 @@ export function sheetFromVersion(res: DraftResponse): QuoteSheet {
       yearNumber: l.yearNumber ?? 0,
       startDate: l.startDate,
       endDate: l.endDate,
-      parentName: l.parentLineNumber ? (v.lines.find((p) => p.lineNumber === l.parentLineNumber)?.productName ?? null) : null,
       annualList: pricing ? l.annualList : null,
       annualNet: pricing ? l.annualNet : null,
       arr: pricing ? l.arr : null,
@@ -439,7 +436,6 @@ export function sheetFromForm(
         yearNumber: l.yearNumber,
         startDate: dates?.start ?? null,
         endDate: dates?.end ?? null,
-        parentName: l.parentKey ? (v.lines.find((p) => p.key === l.parentKey)?.productName ?? null) : null,
         annualList: p?.annualList ?? null,
         annualNet: p?.annualNet ?? null,
         arr: p?.arr ?? null,

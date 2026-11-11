@@ -145,12 +145,6 @@ export default function OrderFormTable({
                 {l.productCode}
               </Typography>
             ) : null}
-            {/* A bundle child: it comes with, and leaves with, its parent. */}
-            {l.parentName ? (
-              <Typography variant="caption" color="text.secondary" display="block" aria-label="Bundled">
-                Comes with {l.parentName}
-              </Typography>
-            ) : null}
             {/* How a formula line's unit price was worked out (D81), and
                 what its discount brings it to (D149). */}
             {l.formula ? (

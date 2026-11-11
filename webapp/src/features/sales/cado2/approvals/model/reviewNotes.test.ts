@@ -44,6 +44,13 @@ describe("noteText", () => {
       .toEqual({ title: "Special terms from the AM", detail: "Check them, override if needed", who: "Legal approves after you" });
     expect(noteText(note({ rule: "SPECIAL_TERMS", lineNumber: 0, roles: [], reasons: ["The quote includes special terms"] }), "LEGAL"))
       .toEqual({ title: "Special terms", detail: "The quote includes special terms", who: "Why you're asked" });
+    // D155: a year's support plan, warned to the AM, checked by Deal Desk.
+    const support = "Year 1 has no Enterprise or Standard Support. Check the customer's support (a renewal may keep a legacy plan).";
+    expect(noteText(note({ rule: "SUPPORT_PLAN", lineNumber: 0, roles: [], reasons: [support] }), "DEAL_DESK")).toEqual({
+      title: "Support plan",
+      detail: support,
+      who: "Only Deal Desk checks this",
+    });
   });
 });
 

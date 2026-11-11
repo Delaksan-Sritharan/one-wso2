@@ -2107,12 +2107,11 @@ export const cado2ServiceUrls = {
   adminSupportingDocumentsOrder: `${cado2BackendUrl}/admin/supporting-documents/order`,
   adminSupportingDocument: (id: number, action?: "versions" | "retire" | "restore" | "file"): string =>
     `${cado2BackendUrl}/admin/supporting-documents/${encodeSegment(id)}${action ? `/${action}` : ""}`,
-  // Product bundles: Admins keep them; an AM's
-  // quote reads a parent's children from its price book.
-  adminBundles: `${cado2BackendUrl}/admin/bundles`,
-  adminBundle: (productId: string): string => `${cado2BackendUrl}/admin/bundles/${encodeSegment(productId)}`,
-  bundleChildren: (productId: string, currency: string, pricebookId: string): string =>
-    `${cado2BackendUrl}/bundles/${encodeSegment(productId)}?currency=${encodeSegment(currency)}&pricebookId=${encodeSegment(pricebookId)}`,
+  // Support plans (D155): Admins pick the products; the wizard reads them in quote settings.
+  adminSupportPlans: `${cado2BackendUrl}/admin/support-plans`,
+  // Particular products of the quote's price book, e.g. the support plans' (D155).
+  productsByIds: (currency: string, pricebookId: string, ids: readonly string[]): string =>
+    `${cado2BackendUrl}/products?${new URLSearchParams({ currency, pricebookId, ids: ids.join(","), limit: String(Math.max(ids.length, 1)) }).toString()}`,
   // Pricing formulas (D81): read by AMs and Admins; changed by Admins.
   pricingFormulas: `${cado2BackendUrl}/pricing-formulas`,
   adminPricingFormula: (productId: string): string =>

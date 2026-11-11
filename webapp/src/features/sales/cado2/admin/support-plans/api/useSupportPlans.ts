@@ -15,36 +15,42 @@
 // under the License.
 
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
-import { authedDelete, authedGet } from "@api/http";
+import { authedGet } from "@api/http";
 import { httpRetry } from "@api/errors";
 import { cado2ServiceUrls } from "@config/apiConfig";
 import { useCado2Basis } from "@features/sales/cado2/api/cado2Basis";
 import { cado2Send } from "@features/sales/cado2/api/cado2Http";
-import type { Bundle, BundleChildInput } from "./bundleTypes";
+import type { SupportPlans } from "@features/sales/cado2/quotes/api/quoteTypes";
 
-const DOMAIN = "bundles";
+const DOMAIN = "support-plans";
 
-/** Every bundle (Admin). */
-export function useBundles(): UseQueryResult<Bundle[], Error> {
+/** Admin → Support Plans (D155). */
+export function useSupportPlans(): UseQueryResult<SupportPlans, Error> {
   const { getToken, ready, key } = useCado2Basis();
-  return useQuery<Bundle[], Error>({
-    queryKey: key(DOMAIN, "all"),
-    queryFn: async () => authedGet<Bundle[]>(cado2ServiceUrls.adminBundles, await getToken()),
+  return useQuery<SupportPlans, Error>({
+    queryKey: key(DOMAIN),
+    queryFn: async () => authedGet<SupportPlans>(cado2ServiceUrls.adminSupportPlans, await getToken()),
     enabled: ready,
     retry: httpRetry,
   });
 }
 
-/** Saves a parent's children, in order (replacing any it had), or removes its bundle with none. */
-export function useSetBundle() {
+/** The whole configuration, as PUT /admin/support-plans takes it. */
+export interface SupportPlansInput {
+  readonly enterpriseProductId: string | null;
+  readonly standardProductId: string | null;
+  readonly premiumProductIds: readonly string[];
+}
+
+/** Saves the whole configuration; the wizard's quote settings follow. */
+export function useSaveSupportPlans() {
   const { getToken, key } = useCado2Basis();
   const queryClient = useQueryClient();
-  return useMutation<void, Error, { parentProductId: string; children: readonly BundleChildInput[] | null }>({
-    mutationFn: async ({ parentProductId, children }) => {
-      const token = await getToken();
-      if (children === null) await authedDelete(cado2ServiceUrls.adminBundle(parentProductId), token);
-      else await cado2Send("PUT", cado2ServiceUrls.adminBundle(parentProductId), token, { children });
+  return useMutation<SupportPlans, Error, SupportPlansInput>({
+    mutationFn: async (body) => cado2Send<SupportPlans>("PUT", cado2ServiceUrls.adminSupportPlans, await getToken(), body),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(key(DOMAIN), saved);
+      void queryClient.invalidateQueries({ queryKey: key("quote-settings") });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key(DOMAIN) }),
   });
 }

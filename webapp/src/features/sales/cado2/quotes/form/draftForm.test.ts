@@ -155,8 +155,6 @@ function filled(): DraftFormValues {
         endDate: "",
         salesPrice: "",
         key: `k-${Math.random()}`,
-        parentKey: "",
-        bundleFixedQuantity: null,
       },
       {
         lineId: null,
@@ -178,8 +176,6 @@ function filled(): DraftFormValues {
         endDate: "",
         salesPrice: "",
         key: `k-${Math.random()}`,
-        parentKey: "",
-        bundleFixedQuantity: null,
       },
     ],
   };
@@ -430,32 +426,6 @@ describe("contract years", () => {
     expect(durationText("2027-03-05", "2027-03-04")).toBe("");
   });
 
-});
-
-describe("bundles", () => {
-  const base = () => filled().lines[0];
-  const parent = { ...base(), key: "p", parentKey: "", yearNumber: 1 };
-  const child = { ...base(), pricebookEntryId: "01uC", key: "c", parentKey: "p", yearNumber: 1, recurring: false };
-
-  it("names a child's parent by position when saving", () => {
-    const input = toDraftInput({ ...filled(), lines: [base(), parent, child] });
-    expect(input.lines[2].parentIndex).toBe(1);
-    expect(input.lines[1].parentIndex).toBeUndefined();
-  });
-
-  it("clones a recurring parent with its children, as new linked lines", () => {
-    const next = cloneYear({ ...filled(), yearCount: 1, lines: [parent, child] }, 1);
-    const [p2, c2] = next.lines.slice(2);
-    expect(p2.yearNumber).toBe(2);
-    expect(c2).toMatchObject({ yearNumber: 2, parentKey: p2.key, pricebookEntryId: "01uC" }); // a one-off child comes along
-    expect(p2.key).not.toBe("p");
-  });
-
-  it("leaves a child behind with its non-recurring parent", () => {
-    const oneOff = { ...parent, recurring: false };
-    const recurringChild = { ...child, recurring: true };
-    expect(cloneYear({ ...filled(), yearCount: 1, lines: [oneOff, recurringChild] }, 1).lines).toHaveLength(2);
-  });
 });
 
 describe("sales price", () => {
@@ -824,7 +794,7 @@ describe("lineFromSalesforce", () => {
     expect(l).toMatchObject({
       lineId: null, pricebookEntryId: "01uAS", productId: "01tAS", productName: "API Manager Analytics", productCode: "P-APIM-AN",
       productDescription: "", pricebookId: "01sQQ", unitPrice: "15000", salesPrice: "16500", quantity: "2", discount: "5.5",
-      category: "SUBSCRIPTION", recurring: true, yearNumber: 1, startDate: "", endDate: "", parentKey: "",
+      category: "SUBSCRIPTION", recurring: true, yearNumber: 1, startDate: "", endDate: "",
     });
     expect(l.key).not.toBe("");
   });

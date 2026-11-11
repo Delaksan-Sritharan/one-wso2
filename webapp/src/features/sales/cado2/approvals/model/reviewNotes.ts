@@ -43,6 +43,11 @@ export function noteText(n: ReviewNote, role: LensRole): NoteText {
       title = "Start date";
       detail = first;
       break;
+    case "SUPPORT_PLAN":
+      // D155: the AM was warned, not stopped; Deal Desk checks.
+      title = "Support plan";
+      detail = first;
+      break;
     case "SPECIAL_TERMS":
       if (role === "DEAL_DESK") {
         // D139: the AM wrote them; Deal Desk checks them.

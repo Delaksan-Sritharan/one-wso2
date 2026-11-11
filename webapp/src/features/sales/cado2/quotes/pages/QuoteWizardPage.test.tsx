@@ -76,6 +76,8 @@ vi.mock("@features/sales/cado2/quotes/api/useQuoteApi", () => {
       },
     }),
     useQuoteSettings: () => ({ ...idle(), data: { validityDays: 30 } }),
+    useProductsByIds: () => ({ ...idle(), data: [] }),
+    usePricingFormulas: () => ({ ...idle(), data: [] }),
     usePricingPreview: () => pricing,
     useQuoteVersion: () => version,
     useSaveDraft: () => save,

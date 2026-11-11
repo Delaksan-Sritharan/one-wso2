@@ -285,22 +285,6 @@ export interface ScheduleRow {
   readonly netBilling?: string;
 }
 
-/** GET /bundles/{productId}: the children a parent brings, priced from the quote's book; Missing names those not in it. */
-/**
- * A bundle child with its quantity rule (D125): always fixedQuantity, or null
- * for the parent's; and how the AM adds it (D131): always, one of the named
- * choice, or optional.
- */
-export type BundleChild = Product & {
-  readonly fixedQuantity: number | null;
-  readonly addMode?: "ALWAYS" | "CHOOSE_ONE" | "OPTIONAL";
-  readonly choiceName?: string | null;
-};
-
-export interface BundleChildren {
-  readonly children: readonly BundleChild[];
-  readonly missing: readonly string[];
-}
 
 export interface PricingYear {
   readonly yearNumber: number;
@@ -542,8 +526,6 @@ export interface DraftLineInput {
   readonly endDate?: string;
   /** The unit price charged; omitted = the list price. Never below it; none on a formula line. */
   readonly salesPrice?: string;
-  /** A bundle child: the position in lines of its parent. */
-  readonly parentIndex?: number;
 }
 
 /** POST /quotes and PUT /quotes/{id}/versions/{n} body. */
@@ -627,10 +609,6 @@ export interface LineView {
   readonly discretionaryDiscountPercent: string;
   /** The contract year it belongs to. */
   readonly yearNumber: number | null;
-  /** A bundle child's parent line number; null otherwise. */
-  readonly parentLineNumber?: number | null;
-  /** A bundle child's quantity rule (D125): always this many, or null for its parent's quantity. */
-  readonly bundleFixedQuantity?: number | null;
   /** Null until the quote has a start date and a year (D78). */
   readonly startDate: string | null;
   readonly endDate: string | null;
@@ -900,6 +878,27 @@ export interface AuditEvent {
 export interface QuoteSettings {
   /** Expiry = submission date (UTC) + this many days. */
   readonly validityDays: number;
+  /** The support products the wizard checks each year for and offers (D155). */
+  readonly supportPlans?: SupportPlans;
+}
+
+/** A product picked on Admin → Support Plans (D155). */
+export interface SupportPlanProduct {
+  readonly productId: string;
+  readonly name: string;
+  readonly code: string | null;
+}
+
+/**
+ * Admin → Support Plans (D155): one Enterprise and one Standard product, any
+ * number of Premium ones. Enterprise and Standard both null: the check is off.
+ */
+export interface SupportPlans {
+  readonly enterprise: SupportPlanProduct | null;
+  readonly standard: SupportPlanProduct | null;
+  readonly premium: readonly SupportPlanProduct[];
+  readonly updatedByEmail: string | null;
+  readonly updatedAt: string | null;
 }
 
 export interface QuoteList {
