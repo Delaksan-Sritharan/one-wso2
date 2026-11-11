@@ -41,6 +41,7 @@ import { useNotifications } from "@context/notifications/NotificationsContext";
 import type { UmtBehaviorChangeRequest, UmtProductDetailsRequest, UmtUpdateProduct, UmtUpdateSummary } from "../../api/umtUpdates";
 import { useUmtSaveDescriptionInstruction } from "../../api/useUmtDescriptionInstruction";
 import { umtProductHasDescriptionInstruction } from "../../lib/umtDescriptionInstruction";
+import { UMT_ALL_ROWS_GRID_PROPS } from "../../lib/umtGrid";
 
 const { DataGrid: DataGridComponent } = DataGrid;
 
@@ -384,6 +385,7 @@ export default function UmtDescriptionInstructionForm({
       <Box>
         <DataGridComponent
           autoHeight
+          {...UMT_ALL_ROWS_GRID_PROPS}
           columnHeaderHeight={40}
           columns={columns}
           disableColumnMenu
