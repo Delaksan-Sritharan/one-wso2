@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router";
 import {
   Alert,
@@ -155,13 +155,15 @@ function UmtCreateReleaseChunkForm() {
   // The URL parts are listed one by one, not as `location`: each save makes a
   // new `location`, which would start the save again.
   const { pathname, search: urlSearch, hash } = location;
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const state: UmtCreateReleaseChunkPageState = { selectedIds, search, lifecycle };
-      void navigate({ pathname, search: urlSearch, hash }, { replace: true, state });
-    }, SAVE_STATE_DELAY_MS);
-    return () => clearTimeout(timer);
+  const savePageState = useCallback(() => {
+    const state: UmtCreateReleaseChunkPageState = { selectedIds, search, lifecycle };
+    void navigate({ pathname, search: urlSearch, hash }, { replace: true, state });
   }, [navigate, pathname, urlSearch, hash, selectedIds, search, lifecycle]);
+
+  useEffect(() => {
+    const timer = setTimeout(savePageState, SAVE_STATE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [savePageState]);
 
   const [collisionProducts, setCollisionProducts] = useState<string[] | null>(null);
 
@@ -212,16 +214,31 @@ function UmtCreateReleaseChunkForm() {
     }
   }
 
+  // Shows why the selection is refused, and returns true, when a selected
+  // update collides with an update already in UAT.
+  function refuseCollisions(uatList: UmtUpdateSummary[]): boolean {
+    const collisions = umtReleaseChunkCollisionProducts(selectedUpdates, uatList);
+    if (collisions.length === 0) return false;
+    setCollisionProducts(collisions);
+    return true;
+  }
+
   // A selection that collides with an update already in UAT is refused before
   // the confirmation, so nobody confirms a chunk that cannot be created.
   function handleCreateClick() {
-    if (!canCreate || uatUpdates === undefined) return;
-    const collisions = umtReleaseChunkCollisionProducts(selectedUpdates, uatUpdates);
-    if (collisions.length > 0) {
-      setCollisionProducts(collisions);
+    if (!canCreate || uatUpdates === undefined || refuseCollisions(uatUpdates)) return;
+    setConfirmOpen(true);
+  }
+
+  // The UAT list can change while the confirmation is open, for example when
+  // a retry of a failed load finishes, so it is checked again before creating.
+  function handleConfirmCreate() {
+    if (uatUpdates === undefined) return;
+    if (refuseCollisions(uatUpdates)) {
+      setConfirmOpen(false);
       return;
     }
-    setConfirmOpen(true);
+    void submitCreate(selectedUpdates.map((row) => row.id));
   }
 
   const columns: DataGrid.GridColDef<UmtUpdateSummary>[] = [
@@ -290,6 +307,10 @@ function UmtCreateReleaseChunkForm() {
                 sx={{ mx: "auto" }}
                 component={RouterLink}
                 to={umtPaths.update(params.row.id)}
+                // Leaving the page cancels a save still waiting on its timer,
+                // so the browser's Back would find the state before the last
+                // change. Saving here, before the link navigates, keeps it.
+                onClick={savePageState}
                 state={
                   {
                     backTo: umtPaths.newReleaseChunk,
@@ -418,7 +439,7 @@ function UmtCreateReleaseChunkForm() {
         columns={columns.filter((column) => column.field !== "action")}
         busy={createChunk.isPending}
         onCancel={() => setConfirmOpen(false)}
-        onConfirm={() => void submitCreate(selectedUpdates.map((row) => row.id))}
+        onConfirm={handleConfirmCreate}
       />
     </Stack>
   );
