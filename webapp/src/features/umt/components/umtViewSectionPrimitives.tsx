@@ -26,6 +26,7 @@ import {
   Stack,
   Typography,
 } from "@wso2/oxygen-ui";
+import { UMT_ALL_ROWS_GRID_PROPS } from "../lib/umtGrid";
 
 const { DataGrid: DataGridComponent } = DataGrid;
 
@@ -112,6 +113,7 @@ export function DenseTable<Row>({
     <Paper variant="outlined" sx={{ minWidth: 0, overflow: "hidden", position: "relative" }}>
       <DataGridComponent
         autoHeight
+        {...UMT_ALL_ROWS_GRID_PROPS}
         columnHeaderHeight={hideHeader ? 0 : 40}
         columns={gridColumns}
         disableColumnMenu

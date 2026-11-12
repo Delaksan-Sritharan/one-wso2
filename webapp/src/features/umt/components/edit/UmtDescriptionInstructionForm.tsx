@@ -42,6 +42,7 @@ import type { UmtBehaviorChangeRequest, UmtProductDetailsRequest, UmtUpdateProdu
 import { useUmtSaveDescriptionInstruction } from "../../api/useUmtDescriptionInstruction";
 import { umtProductHasDescriptionInstruction } from "../../lib/umtDescriptionInstruction";
 import { GridCellContent } from "../umtViewSectionPrimitives";
+import { UMT_ALL_ROWS_GRID_PROPS } from "../../lib/umtGrid";
 
 const { DataGrid: DataGridComponent } = DataGrid;
 
@@ -397,6 +398,7 @@ export default function UmtDescriptionInstructionForm({
       <Box>
         <DataGridComponent
           autoHeight
+          {...UMT_ALL_ROWS_GRID_PROPS}
           columnHeaderHeight={40}
           columns={columns}
           disableColumnMenu

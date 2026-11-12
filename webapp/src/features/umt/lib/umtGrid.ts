@@ -75,3 +75,13 @@ export const UMT_FROSTED_HEADER_SX = {
       backgroundColor: "transparent",
     },
 } as const;
+
+// The MIT DataGrid always pages its rows, 100 to a page by default, and a grid
+// with a hidden footer has no pager to reach page 2. These props put every row
+// on one page instead: a page size of -1 means "all rows", and it has to be
+// listed in `pageSizeOptions` as well. Spread them into any UMT grid that shows
+// a whole list with no pager.
+export const UMT_ALL_ROWS_GRID_PROPS = {
+  initialState: { pagination: { paginationModel: { page: 0, pageSize: -1 } } },
+  pageSizeOptions: [-1],
+};
