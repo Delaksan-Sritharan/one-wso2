@@ -228,7 +228,7 @@ describe("UmtPendingReleaseChunksGrid", () => {
     expect(lineTexts("tgBuildStatus")).toEqual(["N/A", "Successful"]);
   });
 
-  it("shows Failed for a status the answer leaves out", () => {
+  it("shows N/A for a status the answer leaves out", () => {
     buildStatus = {
       id: 42,
       updateIds: [101, 102],
@@ -239,9 +239,9 @@ describe("UmtPendingReleaseChunksGrid", () => {
     };
     render(<UmtPendingReleaseChunksGrid />);
 
-    expect(lineTexts("buildStatus")).toEqual(["Failed", "Failed"]);
-    expect(lineTexts("tgBuildStatus")).toEqual(["Failed", "Failed"]);
-    expect(lineTexts("cstBuildStatus")).toEqual(["Failed"]);
+    expect(lineTexts("buildStatus")).toEqual(["N/A", "N/A"]);
+    expect(lineTexts("tgBuildStatus")).toEqual(["N/A", "N/A"]);
+    expect(lineTexts("cstBuildStatus")).toEqual(["N/A"]);
   });
 
   it("rules under a group title only where the group has titles beneath it", () => {

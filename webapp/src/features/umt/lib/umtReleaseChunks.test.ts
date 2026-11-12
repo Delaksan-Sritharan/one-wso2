@@ -16,7 +16,6 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  umtAnsweredBuildStatus,
   umtBuildStatusChip,
   umtCanRetriggerBuild,
   umtCanRetriggerCstBuild,
@@ -70,19 +69,6 @@ describe("umtBuildStatusChip", () => {
     expect(umtBuildStatusChip(null).text).toBe("N/A");
     expect(umtBuildStatusChip(undefined).text).toBe("N/A");
     expect(umtBuildStatusChip("").text).toBe("N/A");
-  });
-});
-
-describe("umtAnsweredBuildStatus", () => {
-  it("passes a status the response carried through unchanged", () => {
-    expect(umtAnsweredBuildStatus("UNKNOWN")).toBe("UNKNOWN");
-    expect(umtAnsweredBuildStatus("SUCCESS")).toBe("SUCCESS");
-  });
-
-  it("reads a status the response left out as a failure, not as N/A", () => {
-    for (const status of [null, undefined, ""]) {
-      expect(umtBuildStatusChip(umtAnsweredBuildStatus(status)).text).toBe("Failed");
-    }
   });
 });
 

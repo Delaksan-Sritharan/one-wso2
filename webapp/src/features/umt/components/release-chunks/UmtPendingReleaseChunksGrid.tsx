@@ -61,7 +61,6 @@ import {
 } from "../../api/useUmtReleaseChunks";
 import { useUmtGate } from "../../api/useUmtGate";
 import {
-  umtAnsweredBuildStatus,
   umtCanRetriggerBuild,
   umtCanRetriggerCstBuild,
   umtReleaseChunkRowAction,
@@ -153,14 +152,13 @@ function releaseReadinessAnswered(readiness: UmtReleaseReadiness, showWarning: (
 //
 // Every build status on a row comes from the build status request alone.
 // Until that request answers, when it fails, or when its answer does not list
-// the level, there is no status and the cell reads N/A. A level the answer
-// lists without a status reads as a failure.
+// the level or lists it without a status, there is no status and the cell
+// reads N/A.
 function tgBuildStatusOf(
   status: UmtReleaseChunkRowStatus | undefined,
   level: UmtReleaseChunkUpdateLevel,
-): string | undefined {
-  const match = statusLevelOf(status, level);
-  return match && umtAnsweredBuildStatus(match.tgBuildStatus);
+): string | null | undefined {
+  return statusLevelOf(status, level)?.tgBuildStatus;
 }
 
 // One update level's product build status, read the same way as its TG build
@@ -169,16 +167,13 @@ function tgBuildStatusOf(
 function productBuildStatusOf(
   status: UmtReleaseChunkRowStatus | undefined,
   level: UmtReleaseChunkUpdateLevel,
-): string | undefined {
-  const match = statusLevelOf(status, level);
-  return match && umtAnsweredBuildStatus(match.buildStatus);
+): string | null | undefined {
+  return statusLevelOf(status, level)?.buildStatus;
 }
 
-// The chunk's CST build status, from the same request: N/A with no answer, and
-// a failure for an answer without one.
-function cstBuildStatusOf(status: UmtReleaseChunkRowStatus | undefined): string | undefined {
-  const answer = status?.buildStatus;
-  return answer && umtAnsweredBuildStatus(answer.overallCstBuildStatus);
+// The chunk's CST build status, from the same request.
+function cstBuildStatusOf(status: UmtReleaseChunkRowStatus | undefined): string | null | undefined {
+  return status?.buildStatus?.overallCstBuildStatus;
 }
 
 function statusLevelOf(

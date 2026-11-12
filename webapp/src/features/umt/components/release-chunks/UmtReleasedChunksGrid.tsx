@@ -21,7 +21,6 @@ import type { UmtReleasedChunk } from "../../api/umtReleaseChunks";
 import { useUmtReleasedChunks } from "../../api/useUmtReleaseChunks";
 import { BuildStatusChip, ChunkCell, ChunkLine } from "./umtReleaseChunkGridPrimitives";
 import { UMT_GRID_PAPER_SX } from "../../lib/umtGrid";
-import { umtAnsweredBuildStatus } from "../../lib/umtReleaseChunks";
 import { UMT_CHUNK_GRID_SX } from "./umtReleaseChunkGridSx";
 import { useChunkGridPagination } from "./useChunkGridPagination";
 
@@ -114,7 +113,7 @@ export default function UmtReleasedChunksGrid() {
         <ChunkCell divided>
           {params.row.updateLevels.map((level, index) => (
             <ChunkLine key={index}>
-              <BuildStatusChip status={umtAnsweredBuildStatus(level.buildStatus)} />
+              <BuildStatusChip status={level.buildStatus} />
             </ChunkLine>
           ))}
         </ChunkCell>

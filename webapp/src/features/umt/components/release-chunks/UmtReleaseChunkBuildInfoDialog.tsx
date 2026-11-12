@@ -30,7 +30,6 @@ import { RotateCwIcon } from "@wso2/oxygen-ui-icons-react";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useUmtReleaseChunkDockerBuildStatus } from "../../api/useUmtReleaseChunks";
 import type { UmtDockerBuildStatus } from "../../api/umtReleaseChunks";
-import { umtAnsweredBuildStatus } from "../../lib/umtReleaseChunks";
 import { BuildStatusChip, ChunkCell, ChunkLine } from "./umtReleaseChunkGridPrimitives";
 import { UMT_CHUNK_GRID_BORDERED_SX } from "./umtReleaseChunkGridSx";
 
@@ -87,7 +86,7 @@ export default function UmtReleaseChunkBuildInfoDialog({
       renderCell: (params) => (
         <ChunkCell>
           <ChunkLine>
-            <BuildStatusChip status={umtAnsweredBuildStatus(params.row.buildStatus)} />
+            <BuildStatusChip status={params.row.buildStatus} />
           </ChunkLine>
         </ChunkCell>
       ),

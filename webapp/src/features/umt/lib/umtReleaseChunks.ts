@@ -23,8 +23,9 @@ export const UMT_CHUNK_PAGE_SIZE_OPTIONS = [20, 30, 50];
 
 // How a build status reads on screen. The backend's vocabulary is open-ended,
 // so a status that arrived but is not listed below (FAILURE, ABORTED, ...) is
-// reported as a failure. N/A is for a status with no answer behind it: the
-// request that carries it failed, or has not answered yet.
+// reported as a failure. N/A is for a build with no status at all: the request
+// that carries it failed or has not answered yet, or its answer has no status
+// for the build.
 //
 // Two of these are the same state under two names: a product or TG build in
 // flight reports BUILDING and one that finished reports SUCCESS, while the
@@ -68,14 +69,6 @@ const NO_STATUS_CHIP: UmtBuildStatusChip = {
 export function umtBuildStatusChip(status: string | null | undefined): UmtBuildStatusChip {
   if (!status) return NO_STATUS_CHIP;
   return Object.hasOwn(BUILD_STATUS_CHIPS, status) ? BUILD_STATUS_CHIPS[status] : FAILED_BUILD_STATUS_CHIP;
-}
-
-// The status to show for a build when the response that carries it did
-// arrive. A response that has the build but leaves its status out has nothing
-// good to report about it, so the empty status reads as a failure. Only a
-// status with no response behind it reads as N/A.
-export function umtAnsweredBuildStatus(status: string | null | undefined): string {
-  return status || "FAILURE";
 }
 
 // Whether a build can be retriggered. There is nothing to retry while a build
