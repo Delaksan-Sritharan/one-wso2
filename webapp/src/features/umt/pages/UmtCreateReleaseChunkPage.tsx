@@ -230,10 +230,11 @@ function UmtCreateReleaseChunkForm() {
     setConfirmOpen(true);
   }
 
-  // The UAT list can change while the confirmation is open, for example when
-  // a retry of a failed load finishes, so it is checked again before creating.
+  // The UATStaging and UAT lists can change while the confirmation is open,
+  // for example when a retry of a failed load finishes, so the selection is
+  // checked again before creating.
   function handleConfirmCreate() {
-    if (uatUpdates === undefined) return;
+    if (!canCreate || uatUpdates === undefined) return;
     if (refuseCollisions(uatUpdates)) {
       setConfirmOpen(false);
       return;
@@ -493,7 +494,7 @@ function UmtConfirmCreateDialog({
         <Button variant="outlined" onClick={onCancel} disabled={busy}>
           Cancel
         </Button>
-        <Button variant="contained" loading={busy} disabled={busy} onClick={onConfirm}>
+        <Button variant="contained" loading={busy} disabled={busy || updates.length === 0} onClick={onConfirm}>
           Create
         </Button>
       </DialogActions>
