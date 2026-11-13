@@ -19,6 +19,7 @@ import {
   deadlineHandlerLabel,
   formatDelayLogEntry,
   isCurrentDeadlineOverdue,
+  isDueDateOptional,
   isMyDeadline,
   myDeadlineHandlers,
   myDeadlines,
@@ -119,5 +120,16 @@ describe("isMyDeadline / myDeadlines", () => {
     expect(myDeadlines([handedOn], ["OWNER"])).toEqual([]);
     const rejected = control(1, { currentHandler: "OWNER", currentDueDate: "2026-12-07" });
     expect(myDeadlines([rejected], ["OWNER"]).map((c) => c.currentDueDate)).toEqual(["2026-12-07"]);
+  });
+});
+
+describe("isDueDateOptional", () => {
+  it("lets a new Design control leave the due date empty", () => {
+    expect(isDueDateOptional(false, "DESIGN")).toBe(true);
+  });
+
+  it("still needs a due date for OE controls and when editing", () => {
+    expect(isDueDateOptional(false, "OE")).toBe(false);
+    expect(isDueDateOptional(true, "DESIGN")).toBe(false);
   });
 });
