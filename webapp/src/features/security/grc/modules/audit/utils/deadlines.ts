@@ -79,6 +79,15 @@ export function myDeadlineHandlers(side: DeadlineSide): DeadlineHandler[] {
 }
 
 /**
+ * Key for the controls table. My Deadlines arrives ordered soonest-first, so
+ * entering or leaving it remounts the table and drops any sort picked on
+ * another tab, which would otherwise replace that order.
+ */
+export function controlsTableKey(quickFilter: string | null): string {
+  return quickFilter === "myDeadlines" ? "my-deadlines" : "controls";
+}
+
+/**
  * Whether the My Deadlines view is offered: org-wide GRC viewers already see
  * every control and every deadline, so it is for everyone else who holds a turn.
  */
