@@ -79,6 +79,15 @@ export function myDeadlineHandlers(side: DeadlineSide): DeadlineHandler[] {
 }
 
 /**
+ * Whether the Add Control form may leave the due date empty. A new Design control
+ * may: the server then sets it to today plus the audit's Owner initial days.
+ * Editing a control and OE controls always need one.
+ */
+export function isDueDateOptional(editMode: boolean, requirementType: string): boolean {
+  return !editMode && requirementType !== "OE";
+}
+
+/**
  * Key for the controls table. My Deadlines arrives ordered soonest-first, so
  * entering or leaving it remounts the table and drops any sort picked on
  * another tab, which would otherwise replace that order.
