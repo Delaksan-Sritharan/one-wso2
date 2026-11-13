@@ -13,10 +13,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ControlsTable from "./ControlsTable";
 import { CONTROL_COLUMNS } from "./controlColumns";
+import { controlsTableKey } from "@features/security/grc/modules/audit/utils/deadlines";
 import type { AuditControl } from "@features/security/grc/modules/audit/types/audit";
 
 const control = (id: number, over: Partial<AuditControl> = {}): AuditControl =>
@@ -123,5 +124,44 @@ describe("ControlsTable deadline columns", () => {
       ["controlNumber", "dueDate"],
     );
     expect(screen.queryByText("Current Deadline")).not.toBeInTheDocument();
+  });
+});
+
+describe("ControlsTable sort across tabs", () => {
+  const rowOrder = () => screen.getAllByText(/^CA-\d$/).map((el) => el.textContent);
+
+  // Same order the page hands over for My Deadlines: soonest deadline first.
+  const soonestFirst = [control(3), control(1), control(2)];
+
+  function tableFor(quickFilter: string | null) {
+    return (
+      <ControlsTable
+        key={controlsTableKey(quickFilter)}
+        controls={soonestFirst}
+        allControls={soonestFirst}
+        filters={{}}
+        onFiltersChange={vi.fn()}
+        isLoading={false}
+        onRowClick={vi.fn()}
+        visibleColumnIds={ALL_IDS}
+      />
+    );
+  }
+
+  it("starts My Deadlines soonest-first even after All was sorted by Control No.", () => {
+    const { rerender } = render(tableFor("allPending"));
+    fireEvent.click(screen.getByText("Control No."));
+    expect(rowOrder()).toEqual(["CA-1", "CA-2", "CA-3"]);
+
+    rerender(tableFor("myDeadlines"));
+    expect(rowOrder()).toEqual(["CA-3", "CA-1", "CA-2"]);
+  });
+
+  it("keeps the sort when moving between the other tabs", () => {
+    const { rerender } = render(tableFor("allPending"));
+    fireEvent.click(screen.getByText("Control No."));
+
+    rerender(tableFor("approved"));
+    expect(rowOrder()).toEqual(["CA-1", "CA-2", "CA-3"]);
   });
 });

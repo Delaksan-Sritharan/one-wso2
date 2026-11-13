@@ -67,6 +67,7 @@ import {
 } from "@features/security/grc/modules/audit/utils/controlFilters";
 import { CONTROL_STATUS_LABELS } from "@features/security/grc/modules/audit/utils/controlStatus";
 import {
+  controlsTableKey,
   hasDelayLog,
   myDeadlineHandlers,
   myDeadlines,
@@ -556,6 +557,7 @@ export default function AuditDetailPage(): JSX.Element {
 
       {/* Controls table */}
       <ControlsTable
+        key={controlsTableKey(activeQuickFilter)}
         controls={filteredControls}
         allControls={controls}
         filters={filters}
