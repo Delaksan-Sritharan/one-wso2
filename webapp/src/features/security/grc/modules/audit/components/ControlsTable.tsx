@@ -36,7 +36,7 @@ import { formatAuditDate } from "@features/security/grc/modules/audit/utils/form
 import { CONTROL_STATUS_LABELS, isPopulationOverdue } from "@features/security/grc/modules/audit/utils/controlStatus";
 import { HandlerChip, DelayedBadge, UltimateStatusBadge } from "@features/security/grc/modules/audit/components/DeadlineBadges";
 import {
-  formatDelayLogEntry,
+  groupDelayLog,
   hasDelayLog,
   isCurrentDeadlineOverdue,
 } from "@features/security/grc/modules/audit/utils/deadlines";
@@ -372,7 +372,7 @@ function currentDeadlineCell(c: AuditControl, today: string): JSX.Element {
 // Delay log: the first entries inline, the full list on hover. Only reached when
 // the server sent a delay log at all (see the column filter below).
 function delayLogCell(c: AuditControl): JSX.Element {
-  const entries = (c.delayLog ?? []).map(formatDelayLogEntry);
+  const entries = groupDelayLog(c.delayLog ?? []);
   if (entries.length === 0) return <Typography variant="body2" color="text.secondary">—</Typography>;
   const shown = entries.slice(0, 2).join(", ");
   const more = entries.length > 2 ? ` +${entries.length - 2}` : "";

@@ -115,7 +115,7 @@ describe("ControlsTable deadline columns", () => {
       }),
     ]);
     expect(screen.getByText("Delay Log")).toBeInTheDocument();
-    expect(screen.getByText("Owner - 11/08, Owner - 11/09 +1")).toBeInTheDocument();
+    expect(screen.getByText("Owner - 11/08 to 11/09 (2 days), Compliance - 11/11 (1 day)")).toBeInTheDocument();
   });
 
   it("does not show a hidden deadline column", () => {

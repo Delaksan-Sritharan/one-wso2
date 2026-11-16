@@ -42,6 +42,61 @@ export function formatDelayLogEntry(entry: DelayLogEntry): string {
   return `${deadlineHandlerLabel(entry.handledBy)} - ${day}`;
 }
 
+const DAY_MS = 86_400_000;
+
+function dayNumber(date: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) / DAY_MS : null;
+}
+
+function monthDay(date: string): string {
+  const m = /^\d{4}-(\d{2})-(\d{2})/.exec(date);
+  return m ? `${m[1]}/${m[2]}` : date;
+}
+
+/**
+ * Collapses the delay log into one line per run of consecutive late days for
+ * the same group, e.g. "Owner - 10/19 to 11/16 (29 days)", so a control that has
+ * been late for weeks does not produce a line per day. Entries are expected in
+ * the order the server sends them; a malformed date stands on its own line.
+ */
+export function groupDelayLog(entries: DelayLogEntry[]): string[] {
+  const lines: string[] = [];
+  let i = 0;
+  while (i < entries.length) {
+    const start = entries[i];
+    let end = start;
+    let count = 1;
+    let prev = dayNumber(start.date);
+    while (i + count < entries.length && prev !== null) {
+      const next = entries[i + count];
+      const n = dayNumber(next.date);
+      if (next.handledBy !== start.handledBy || n === null || n !== prev + 1) break;
+      end = next;
+      prev = n;
+      count += 1;
+    }
+    const who = deadlineHandlerLabel(start.handledBy);
+    const days = `${count} ${count === 1 ? "day" : "days"}`;
+    lines.push(
+      count === 1
+        ? `${who} - ${monthDay(start.date)} (${days})`
+        : `${who} - ${monthDay(start.date)} to ${monthDay(end.date)} (${days})`,
+    );
+    i += count;
+  }
+  return lines;
+}
+
+/** One-line total for the delay log, e.g. "12 late days: Owner 10, Compliance 2". Null when nobody was late. */
+export function lateDaySummary(entries: DelayLogEntry[]): string | null {
+  if (entries.length === 0) return null;
+  const perGroup = new Map<string, number>();
+  for (const e of entries) perGroup.set(e.handledBy, (perGroup.get(e.handledBy) ?? 0) + 1);
+  const parts = [...perGroup].map(([handler, n]) => `${deadlineHandlerLabel(handler)} ${n}`);
+  return `${entries.length} late ${entries.length === 1 ? "day" : "days"}: ${parts.join(", ")}`;
+}
+
 /** True when the backend tracks deadlines for this control. */
 export function isDeadlineTracked(control: Pick<AuditControl, "deadlineTracked">): boolean {
   return control.deadlineTracked === true;

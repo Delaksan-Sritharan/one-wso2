@@ -18,6 +18,8 @@ import type { AuditControl } from "@features/security/grc/modules/audit/types/au
 import {
   deadlineHandlerLabel,
   formatDelayLogEntry,
+  groupDelayLog,
+  lateDaySummary,
   isCurrentDeadlineOverdue,
   isMyDeadline,
   myDeadlineHandlers,
@@ -119,5 +121,49 @@ describe("isMyDeadline / myDeadlines", () => {
     expect(myDeadlines([handedOn], ["OWNER"])).toEqual([]);
     const rejected = control(1, { currentHandler: "OWNER", currentDueDate: "2026-12-07" });
     expect(myDeadlines([rejected], ["OWNER"]).map((c) => c.currentDueDate)).toEqual(["2026-12-07"]);
+  });
+});
+
+describe("groupDelayLog", () => {
+  it("joins consecutive days of one group into a single range", () => {
+    expect(
+      groupDelayLog([
+        { handledBy: "OWNER", date: "2026-10-30" },
+        { handledBy: "OWNER", date: "2026-10-31" },
+        { handledBy: "OWNER", date: "2026-11-01" },
+      ]),
+    ).toEqual(["Owner - 10/30 to 11/01 (3 days)"]);
+  });
+
+  it("starts a new line when the group or the run changes", () => {
+    expect(
+      groupDelayLog([
+        { handledBy: "OWNER", date: "2026-11-08" },
+        { handledBy: "OWNER", date: "2026-11-09" },
+        { handledBy: "COMPLIANCE", date: "2026-11-10" },
+        { handledBy: "OWNER", date: "2026-11-20" },
+      ]),
+    ).toEqual(["Owner - 11/08 to 11/09 (2 days)", "Compliance - 11/10 (1 day)", "Owner - 11/20 (1 day)"]);
+  });
+
+  it("is empty for an empty log and keeps a malformed date on its own line", () => {
+    expect(groupDelayLog([])).toEqual([]);
+    expect(groupDelayLog([{ handledBy: "AUDITOR", date: "soon" }])).toEqual(["Auditor - soon (1 day)"]);
+  });
+});
+
+describe("lateDaySummary", () => {
+  it("totals the late days and splits them by group", () => {
+    const log = [
+      ...Array.from({ length: 10 }, (_, i) => ({ handledBy: "OWNER" as const, date: `2026-10-${18 + i}` })),
+      { handledBy: "COMPLIANCE" as const, date: "2026-11-14" },
+      { handledBy: "COMPLIANCE" as const, date: "2026-11-15" },
+    ];
+    expect(lateDaySummary(log)).toBe("12 late days: Owner 10, Compliance 2");
+  });
+
+  it("is null for an empty log and singular for one day", () => {
+    expect(lateDaySummary([])).toBeNull();
+    expect(lateDaySummary([{ handledBy: "AUDITOR", date: "2026-12-25" }])).toBe("1 late day: Auditor 1");
   });
 });
