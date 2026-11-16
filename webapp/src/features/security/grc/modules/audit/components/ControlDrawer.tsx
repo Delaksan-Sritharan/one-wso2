@@ -83,9 +83,10 @@ import type { AuditControl, ControlStatus } from "@features/security/grc/modules
 import { useAuditPrivileges } from "@features/security/grc/modules/audit/hooks/useAuditPrivileges";
 import { HandlerChip, DelayedBadge, UltimateStatusBadge } from "@features/security/grc/modules/audit/components/DeadlineBadges";
 import {
-  formatDelayLogEntry,
+  groupDelayLog,
   isCurrentDeadlineOverdue,
   isDeadlineTracked,
+  lateDaySummary,
 } from "@features/security/grc/modules/audit/utils/deadlines";
 import { todayUtcDateOnlyString } from "@features/security/grc/utils/dateTime";
 import { AuditPrivilege } from "@features/security/grc/modules/audit/privileges";
@@ -1856,7 +1857,6 @@ export default function ControlDrawer({ control, open, onClose }: ControlDrawerP
                       <DelayedBadge delayed={control.delayed} />
                     </Box>
                   </InfoTile>
-                  <DueDateTile label="Ultimate Deadline" date={control.dueDate} overdue={control.isOverdue} />
                   <InfoTile label="Ultimate Status">
                     <Box>
                       <UltimateStatusBadge delayed={control.ultimateDelayed} />
@@ -1871,13 +1871,18 @@ export default function ControlDrawer({ control, open, onClose }: ControlDrawerP
                     <Typography variant="caption" color="text.secondary" fontWeight={600}>
                       Delay Log
                     </Typography>
+                    {lateDaySummary(control.delayLog) && (
+                      <Typography variant="body2" fontSize="0.8rem" fontWeight={600} sx={{ color: "#dc2626" }}>
+                        {lateDaySummary(control.delayLog)}
+                      </Typography>
+                    )}
                     {control.delayLog.length === 0 ? (
                       <Typography variant="body2" color="text.secondary" fontSize="0.8rem">No delays.</Typography>
                     ) : (
                       <Box component="ul" aria-label="Delay log" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
-                        {control.delayLog.map((entry, i) => (
-                          <Typography key={`${entry.handledBy}-${entry.date}-${i}`} component="li" variant="body2" fontSize="0.8rem">
-                            {formatDelayLogEntry(entry)}
+                        {groupDelayLog(control.delayLog).map((line) => (
+                          <Typography key={line} component="li" variant="body2" fontSize="0.8rem">
+                            {line}
                           </Typography>
                         ))}
                       </Box>
