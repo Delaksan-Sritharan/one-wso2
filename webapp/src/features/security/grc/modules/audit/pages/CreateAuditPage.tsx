@@ -535,7 +535,7 @@ function EditableControlsTable({ drafts, onChange, users, auditorCandidates, tea
             <TableCell sx={{ fontWeight: 600, minWidth: 155 }}>Process Owner</TableCell>
             <TableCell sx={{ fontWeight: 600, minWidth: 155 }}>Auditor POC</TableCell>
             <TableCell sx={{ fontWeight: 600, minWidth: 130 }}>Team</TableCell>
-            <TableCell sx={{ fontWeight: 600, minWidth: 108 }}>Due Date</TableCell>
+            <TableCell sx={{ fontWeight: 600, minWidth: 140 }}>Ultimate Deadline</TableCell>
             {showPushColumn && (
               <TableCell sx={{ fontWeight: 600, minWidth: 130 }}>
                 <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -1895,7 +1895,7 @@ function Step3Review({
                   <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Process Owner</TableCell>
                   <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Auditor POC</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Team</TableCell>
-                  <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Due Date</TableCell>
+                  <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Ultimate Deadline</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -2049,7 +2049,7 @@ export default function CreateAuditPage(): JSX.Element {
       if (!d.controlNumber.trim())       errs.push(`${label}: Control Number is required`);
       if (!d.description.trim())         errs.push(`${label}: Description is required`);
       if (!d.evidenceRequirement.trim()) errs.push(`${label}: Evidence Requirement is required`);
-      if (!d.dueDate)                    errs.push(`${label}: Due Date is required`);
+      if (!d.dueDate)                    errs.push(`${label}: Ultimate Deadline is required`);
       if (d.requirementType === "OE") {
         if (!d.population?.description.trim()) errs.push(`${label}: Population Requirement is required`);
         if (!d.population?.dueDate)            errs.push(`${label}: Population Due Date is required`);

@@ -68,7 +68,6 @@ import type {
   UpdateControlRequest,
 } from "@features/security/grc/modules/audit/types/audit";
 import type { AuditUser } from "@features/security/grc/modules/audit/types/user";
-import { isDueDateOptional } from "@features/security/grc/modules/audit/utils/deadlines";
 
 // ── Control form state (used for both Add and Edit dialogs) ──────────────────
 
@@ -205,10 +204,8 @@ function ControlFormDialog({
   const isPastDate = (d: string, initial: string) =>
     !allowPastDueDate && d.length > 0 && d !== initial && d < todayUtcDateOnlyString();
   const PAST_DATE_HINT = "This date is in the past - double-check before saving";
-  // A new Design control may leave the due date empty: the server then sets it to
-  // today plus the audit's Owner initial days. Editing, and OE, always need one.
-  const dueDateOptional = isDueDateOptional(editMode, form.requirementType);
-  const dueDateValid = dueDateOptional || form.dueDate.length > 0;
+  // The due date is the control's ultimate deadline and is always required.
+  const dueDateValid = form.dueDate.length > 0;
   const populationDueDateValid = form.populationDueDate.length > 0;
   const isValid =
     form.controlNumber.trim().length > 0 &&
@@ -343,9 +340,9 @@ function ControlFormDialog({
           />
 
           <TextField
-            label="Due Date"
+            label="Ultimate Deadline"
             type="date"
-            required={!dueDateOptional}
+            required
             value={form.dueDate}
             onChange={(e) => set("dueDate", e.target.value)}
             size="small"
@@ -354,9 +351,7 @@ function ControlFormDialog({
             helperText={
               isPastDate(form.dueDate, initialValues.dueDate)
                 ? PAST_DATE_HINT
-                : dueDateOptional && form.dueDate === ""
-                  ? "Leave empty to use today plus the Owner initial days set in Deadline Days"
-                  : undefined
+                : "Final date for this control to be completed"
             }
           />
 
