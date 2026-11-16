@@ -81,7 +81,7 @@ import { useOverrideControlStatus } from "@features/security/grc/modules/audit/a
 import { isAssignedAuditor } from "@features/security/grc/modules/audit/utils/auditor";
 import type { AuditControl, ControlStatus } from "@features/security/grc/modules/audit/types/audit";
 import { useAuditPrivileges } from "@features/security/grc/modules/audit/hooks/useAuditPrivileges";
-import { HandlerChip, DelayedBadge } from "@features/security/grc/modules/audit/components/DeadlineBadges";
+import { HandlerChip, DelayedBadge, UltimateStatusBadge } from "@features/security/grc/modules/audit/components/DeadlineBadges";
 import {
   formatDelayLogEntry,
   isCurrentDeadlineOverdue,
@@ -1776,7 +1776,7 @@ export default function ControlDrawer({ control, open, onClose }: ControlDrawerP
                   </Typography>
                 </InfoTile>
 
-                <DueDateTile label="Due Date" date={control.dueDate} overdue={control.isOverdue} />
+                <DueDateTile label="Ultimate Deadline" date={control.dueDate} overdue={control.isOverdue} />
 
                 <InfoTile label="Team">
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -1854,6 +1854,12 @@ export default function ControlDrawer({ control, open, onClose }: ControlDrawerP
                   <InfoTile label="Delayed">
                     <Box>
                       <DelayedBadge delayed={control.delayed} />
+                    </Box>
+                  </InfoTile>
+                  <DueDateTile label="Ultimate Deadline" date={control.dueDate} overdue={control.isOverdue} />
+                  <InfoTile label="Ultimate Status">
+                    <Box>
+                      <UltimateStatusBadge delayed={control.ultimateDelayed} />
                     </Box>
                   </InfoTile>
                   <DueDateTile label="Planned (Owner)" date={control.plannedOwnerDate ?? null} />

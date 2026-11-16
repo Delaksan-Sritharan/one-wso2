@@ -174,6 +174,8 @@ export interface AuditControl {
   plannedComplianceDate?: string | null;
   plannedAuditorDate?: string | null;
   delayed?: boolean | null;
+  /** Finished after, or still open past, dueDate (the ultimate deadline). Null when unknown. */
+  ultimateDelayed?: boolean | null;
   /** Org-wide GRC viewers only; omitted for everyone else. Never assume it exists. */
   delayLog?: DelayLogEntry[];
 }

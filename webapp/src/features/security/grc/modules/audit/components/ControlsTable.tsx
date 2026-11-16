@@ -34,7 +34,7 @@ import ControlStatusChip from "@features/security/grc/modules/audit/components/C
 import UserAvatar from "@features/security/grc/modules/audit/components/UserAvatar";
 import { formatAuditDate } from "@features/security/grc/modules/audit/utils/format";
 import { CONTROL_STATUS_LABELS, isPopulationOverdue } from "@features/security/grc/modules/audit/utils/controlStatus";
-import { HandlerChip, DelayedBadge } from "@features/security/grc/modules/audit/components/DeadlineBadges";
+import { HandlerChip, DelayedBadge, UltimateStatusBadge } from "@features/security/grc/modules/audit/components/DeadlineBadges";
 import {
   formatDelayLogEntry,
   hasDelayLog,
@@ -496,12 +496,14 @@ export default function ControlsTable({
     { id: "scope", label: "Scope", minWidth: 130, sortField: "scope",
       filterKey: "scope", filterOptions: SCOPE_OPTIONS,
       render: (c) => <Typography variant="body2" noWrap>{SCOPE_LABELS[c.scope]}</Typography> },
-    { id: "dueDate", label: "Due Date", minWidth: 110, sortField: "dueDate",
+    { id: "dueDate", label: "Ultimate Deadline", minWidth: 150, sortField: "dueDate",
       render: (c) => dateCell(c.dueDate, c.isOverdue) },
     { id: "currentDueDate", label: "Current Deadline", minWidth: 170, sortField: "currentDueDate",
       render: (c) => currentDeadlineCell(c, today) },
     { id: "delayed", label: "Delayed", minWidth: 100, sortField: "delayed",
       render: (c) => <DelayedBadge delayed={c.delayed} /> },
+    { id: "ultimateDelayed", label: "Ultimate Status", minWidth: 130, sortField: "ultimateDelayed",
+      render: (c) => <UltimateStatusBadge delayed={c.ultimateDelayed} /> },
     // ── Original plan, per group (hidden by default) ──
     { id: "plannedOwnerDate", label: "Planned (Owner)", minWidth: 150, sortField: "plannedOwnerDate", defaultHidden: true,
       render: (c) => dateCell(c.plannedOwnerDate) },

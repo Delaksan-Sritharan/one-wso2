@@ -30,6 +30,20 @@ export function HandlerChip({ handler }: { handler: DeadlineHandler }): JSX.Elem
   );
 }
 
+/** Ultimate deadline status: "Delayed" in red, "On track" in green, a dash when unknown. */
+export function UltimateStatusBadge({ delayed }: { delayed: boolean | null | undefined }): JSX.Element {
+  if (delayed == null) return <Typography variant="body2" color="text.secondary">—</Typography>;
+  const color = delayed ? "#dc2626" : "#16a34a";
+  return (
+    <Chip
+      label={delayed ? "Delayed" : "On track"}
+      size="small"
+      variant="outlined"
+      sx={{ height: 20, fontSize: "0.68rem", fontWeight: 600, color, borderColor: color }}
+    />
+  );
+}
+
 /** Red "Delayed" badge; a dash for a control that is not delayed or not tracked. */
 export function DelayedBadge({ delayed }: { delayed: boolean | null | undefined }): JSX.Element {
   if (!delayed) return <Typography variant="body2" color="text.secondary">—</Typography>;
