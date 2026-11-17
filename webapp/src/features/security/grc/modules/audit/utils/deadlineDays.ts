@@ -17,8 +17,19 @@ import type {
   DeadlineCycleType,
   DeadlineDayRow,
   DeadlineHandler,
+  DeadlinePhase,
   UpdateDeadlineDaysRequest,
 } from "@features/security/grc/modules/audit/types/audit";
+
+/** The settings sections, in the order shown. */
+export const DEADLINE_PHASES: { phase: DeadlinePhase; label: string; hint: string }[] = [
+  { phase: "EVIDENCE", label: "Design controls", hint: "Evidence" },
+  { phase: "POPULATION", label: "OE controls: Population", hint: "Population review and sample" },
+  { phase: "OE_EVIDENCE", label: "OE controls: Evidence", hint: "Evidence for the sample" },
+];
+
+/** A row from a server that predates OE has no phase and means Design evidence. */
+export const rowPhase = (r: Pick<DeadlineDayRow, "phase">): DeadlinePhase => r.phase ?? "EVIDENCE";
 
 export const DEADLINE_CYCLES: { cycleType: DeadlineCycleType; label: string }[] = [
   { cycleType: "INITIAL", label: "Initial" },
@@ -33,16 +44,19 @@ export const MAX_ALLOWED_DAYS = 365;
 
 export const ALLOWED_DAYS_ERROR = `Enter a whole number from ${MIN_ALLOWED_DAYS} to ${MAX_ALLOWED_DAYS}`;
 
-/** Form state: the text of each input, keyed "INITIAL:OWNER" and so on. */
+/** Form state: the text of each input, keyed "POPULATION:INITIAL:OWNER" and so on. */
 export type DeadlineDaysDraft = Record<string, string>;
 
-export const deadlineCellKey = (cycleType: DeadlineCycleType, handledBy: DeadlineHandler): string =>
-  `${cycleType}:${handledBy}`;
+export const deadlineCellKey = (
+  phase: DeadlinePhase,
+  cycleType: DeadlineCycleType,
+  handledBy: DeadlineHandler,
+): string => `${phase}:${cycleType}:${handledBy}`;
 
 /** Draft text for every row the server returned. */
 export function draftFromRows(rows: DeadlineDayRow[]): DeadlineDaysDraft {
   const draft: DeadlineDaysDraft = {};
-  for (const r of rows) draft[deadlineCellKey(r.cycleType, r.handledBy)] = String(r.allowedDays);
+  for (const r of rows) draft[deadlineCellKey(rowPhase(r), r.cycleType, r.handledBy)] = String(r.allowedDays);
   return draft;
 }
 
@@ -80,9 +94,10 @@ export function buildDeadlineDaysUpdate(
 ): UpdateDeadlineDaysRequest {
   const days: UpdateDeadlineDaysRequest["days"] = [];
   for (const r of rows) {
-    const n = parseAllowedDays(draft[deadlineCellKey(r.cycleType, r.handledBy)] ?? "");
+    const phase = rowPhase(r);
+    const n = parseAllowedDays(draft[deadlineCellKey(phase, r.cycleType, r.handledBy)] ?? "");
     if (n !== null && n !== r.allowedDays) {
-      days.push({ cycleType: r.cycleType, handledBy: r.handledBy, allowedDays: n });
+      days.push({ phase, cycleType: r.cycleType, handledBy: r.handledBy, allowedDays: n });
     }
   }
   return { days };

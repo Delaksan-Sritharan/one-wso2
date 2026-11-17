@@ -24,6 +24,7 @@ import {
   isMyDeadline,
   myDeadlineHandlers,
   myDeadlines,
+  planGroups,
   showMyDeadlines,
 } from "./deadlines";
 
@@ -165,5 +166,39 @@ describe("lateDaySummary", () => {
   it("is null for an empty log and singular for one day", () => {
     expect(lateDaySummary([])).toBeNull();
     expect(lateDaySummary([{ handledBy: "AUDITOR", date: "2026-12-25" }])).toBe("1 late day: Auditor 1");
+  });
+});
+
+describe("OE phases", () => {
+  it("labels an OE phase in the delay log and never merges late days across phases", () => {
+    expect(
+      groupDelayLog([
+        { phase: "POPULATION", handledBy: "OWNER", date: "2026-11-08" },
+        { phase: "POPULATION", handledBy: "OWNER", date: "2026-11-09" },
+        { phase: "OE_EVIDENCE", handledBy: "OWNER", date: "2026-11-10" },
+      ]),
+    ).toEqual(["Owner (Population) - 11/08 to 11/09 (2 days)", "Owner (Evidence) - 11/10 (1 day)"]);
+  });
+
+  it("leaves Design's delay log wording alone", () => {
+    expect(groupDelayLog([{ phase: "EVIDENCE", handledBy: "OWNER", date: "2026-11-08" }])).toEqual([
+      "Owner - 11/08 (1 day)",
+    ]);
+  });
+
+  it("shows one unlabelled plan for a Design control", () => {
+    expect(
+      planGroups({ plannedOwnerDate: "2026-11-07", plannedComplianceDate: "2026-11-17", plannedAuditorDate: "2026-11-27" }),
+    ).toEqual([{ label: null, owner: "2026-11-07", compliance: "2026-11-17", auditor: "2026-11-27" }]);
+  });
+
+  it("shows a plan per phase for an OE control, evidence appearing once it has started", () => {
+    const population = { phase: "POPULATION" as const, plannedOwnerDate: "2026-11-06", plannedComplianceDate: "2026-11-09", plannedAuditorDate: "2026-11-12" };
+    expect(planGroups({ phasePlans: [population] }).map((g) => g.label)).toEqual(["Population"]);
+    const both = planGroups({
+      phasePlans: [population, { phase: "OE_EVIDENCE", plannedOwnerDate: "2026-11-10", plannedComplianceDate: "2026-11-12", plannedAuditorDate: "2026-11-14" }],
+    });
+    expect(both.map((g) => g.label)).toEqual(["Population", "Evidence"]);
+    expect(both[1].auditor).toBe("2026-11-14");
   });
 });

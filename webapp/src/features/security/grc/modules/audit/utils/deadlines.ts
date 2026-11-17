@@ -17,6 +17,7 @@
 import type {
   AuditControl,
   DeadlineHandler,
+  DeadlinePhase,
   DelayLogEntry,
 } from "@features/security/grc/modules/audit/types/audit";
 
@@ -40,6 +41,18 @@ export function formatDelayLogEntry(entry: DelayLogEntry): string {
   const match = /^\d{4}-(\d{2})-(\d{2})/.exec(entry.date);
   const day = match ? `${match[1]}/${match[2]}` : entry.date;
   return `${deadlineHandlerLabel(entry.handledBy)} - ${day}`;
+}
+
+/** Phase names for the OE phases; Design's EVIDENCE needs none, so it is left out. */
+const OE_PHASE_LABELS: Partial<Record<DeadlinePhase, string>> = {
+  POPULATION: "Population",
+  OE_EVIDENCE: "Evidence",
+};
+
+/** "Owner" or, in an OE phase, "Owner (Population)". */
+function whoLabel(handler: string, phase?: DeadlinePhase): string {
+  const phaseLabel = phase ? OE_PHASE_LABELS[phase] : undefined;
+  return phaseLabel ? `${deadlineHandlerLabel(handler)} (${phaseLabel})` : deadlineHandlerLabel(handler);
 }
 
 const DAY_MS = 86_400_000;
@@ -71,12 +84,12 @@ export function groupDelayLog(entries: DelayLogEntry[]): string[] {
     while (i + count < entries.length && prev !== null) {
       const next = entries[i + count];
       const n = dayNumber(next.date);
-      if (next.handledBy !== start.handledBy || n === null || n !== prev + 1) break;
+      if (next.handledBy !== start.handledBy || next.phase !== start.phase || n === null || n !== prev + 1) break;
       end = next;
       prev = n;
       count += 1;
     }
-    const who = deadlineHandlerLabel(start.handledBy);
+    const who = whoLabel(start.handledBy, start.phase);
     const days = `${count} ${count === 1 ? "day" : "days"}`;
     lines.push(
       count === 1
@@ -173,4 +186,39 @@ export function myDeadlines(controls: AuditControl[], handlers: DeadlineHandler[
 /** True when at least one control carries a delay log (it is sent to org-wide GRC viewers only). */
 export function hasDelayLog(controls: Pick<AuditControl, "delayLog">[]): boolean {
   return controls.some((c) => Array.isArray(c.delayLog));
+}
+
+export interface PlanGroup {
+  /** Heading for an OE phase; null for a Design control's single plan. */
+  label: string | null;
+  owner: string | null;
+  compliance: string | null;
+  auditor: string | null;
+}
+
+/**
+ * The planned dates to show, one group per phase the control has started. A
+ * Design control, or one the server sent no per-phase plan for, has the single
+ * plan from the flat fields and no heading.
+ */
+export function planGroups(
+  control: Pick<AuditControl, "phasePlans" | "plannedOwnerDate" | "plannedComplianceDate" | "plannedAuditorDate">,
+): PlanGroup[] {
+  const plans = control.phasePlans ?? [];
+  if (plans.length > 0 && plans.some((p) => p.phase !== "EVIDENCE")) {
+    return plans.map((p) => ({
+      label: OE_PHASE_LABELS[p.phase] ?? null,
+      owner: p.plannedOwnerDate ?? null,
+      compliance: p.plannedComplianceDate ?? null,
+      auditor: p.plannedAuditorDate ?? null,
+    }));
+  }
+  return [
+    {
+      label: null,
+      owner: control.plannedOwnerDate ?? null,
+      compliance: control.plannedComplianceDate ?? null,
+      auditor: control.plannedAuditorDate ?? null,
+    },
+  ];
 }

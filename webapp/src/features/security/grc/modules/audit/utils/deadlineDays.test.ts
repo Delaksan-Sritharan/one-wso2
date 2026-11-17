@@ -23,12 +23,15 @@ import {
 } from "./deadlineDays";
 
 const ROWS: DeadlineDayRow[] = [
-  { cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 30, isDefault: true },
-  { cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 10, isDefault: true },
-  { cycleType: "INITIAL", handledBy: "AUDITOR", allowedDays: 10, isDefault: true },
-  { cycleType: "REVISION", handledBy: "OWNER", allowedDays: 15, isDefault: true },
-  { cycleType: "REVISION", handledBy: "COMPLIANCE", allowedDays: 5, isDefault: true },
-  { cycleType: "REVISION", handledBy: "AUDITOR", allowedDays: 5, isDefault: true },
+  { phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 30, isDefault: true },
+  { phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 10, isDefault: true },
+  { phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "AUDITOR", allowedDays: 10, isDefault: true },
+  { phase: "EVIDENCE", cycleType: "REVISION", handledBy: "OWNER", allowedDays: 15, isDefault: true },
+  { phase: "EVIDENCE", cycleType: "REVISION", handledBy: "COMPLIANCE", allowedDays: 5, isDefault: true },
+  { phase: "EVIDENCE", cycleType: "REVISION", handledBy: "AUDITOR", allowedDays: 5, isDefault: true },
+  { phase: "POPULATION", cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 4, isDefault: true },
+  { phase: "POPULATION", cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 3, isDefault: true },
+  { phase: "OE_EVIDENCE", cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 5, isDefault: true },
 ];
 
 describe("parseAllowedDays", () => {
@@ -51,8 +54,8 @@ describe("validateDraft", () => {
   });
 
   it("names each invalid cell", () => {
-    const draft = { ...draftFromRows(ROWS), "INITIAL:OWNER": "0", "REVISION:AUDITOR": "x" };
-    expect(Object.keys(validateDraft(draft)).sort()).toEqual(["INITIAL:OWNER", "REVISION:AUDITOR"]);
+    const draft = { ...draftFromRows(ROWS), "EVIDENCE:INITIAL:OWNER": "0", "EVIDENCE:REVISION:AUDITOR": "x" };
+    expect(Object.keys(validateDraft(draft)).sort()).toEqual(["EVIDENCE:INITIAL:OWNER", "EVIDENCE:REVISION:AUDITOR"]);
   });
 });
 
@@ -62,17 +65,32 @@ describe("buildDeadlineDaysUpdate", () => {
   });
 
   it("sends only the rows that changed", () => {
-    const draft = { ...draftFromRows(ROWS), "INITIAL:COMPLIANCE": "12", "REVISION:OWNER": "20" };
+    const draft = { ...draftFromRows(ROWS), "EVIDENCE:INITIAL:COMPLIANCE": "12", "EVIDENCE:REVISION:OWNER": "20" };
     expect(buildDeadlineDaysUpdate(ROWS, draft)).toEqual({
       days: [
-        { cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 12 },
-        { cycleType: "REVISION", handledBy: "OWNER", allowedDays: 20 },
+        { phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 12 },
+        { phase: "EVIDENCE", cycleType: "REVISION", handledBy: "OWNER", allowedDays: 20 },
       ],
     });
   });
 
+  it("keeps the same cycle and group in different phases apart", () => {
+    const draft = { ...draftFromRows(ROWS), "POPULATION:INITIAL:OWNER": "6", "OE_EVIDENCE:INITIAL:OWNER": "7" };
+    expect(buildDeadlineDaysUpdate(ROWS, draft)).toEqual({
+      days: [
+        { phase: "POPULATION", cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 6 },
+        { phase: "OE_EVIDENCE", cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 7 },
+      ],
+    });
+  });
+
+  it("treats a row with no phase as Design evidence", () => {
+    const rows: DeadlineDayRow[] = [{ cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 30, isDefault: true }];
+    expect(draftFromRows(rows)).toEqual({ "EVIDENCE:INITIAL:OWNER": "30" });
+  });
+
   it("never sends an invalid cell", () => {
-    const draft = { ...draftFromRows(ROWS), "INITIAL:OWNER": "400" };
+    const draft = { ...draftFromRows(ROWS), "EVIDENCE:INITIAL:OWNER": "400" };
     expect(buildDeadlineDaysUpdate(ROWS, draft)).toEqual({ days: [] });
   });
 });

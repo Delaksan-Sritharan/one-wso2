@@ -112,10 +112,24 @@ export type DeadlineHandler = "OWNER" | "COMPLIANCE" | "AUDITOR";
 // INITIAL is a group's first turn; REVISION is its shorter turn after a rejection.
 export type DeadlineCycleType = "INITIAL" | "REVISION";
 
+// The stretch of a control's life a deadline belongs to. Design controls only
+// have EVIDENCE; OE controls go through POPULATION and then OE_EVIDENCE, each
+// with its own allowed days.
+export type DeadlinePhase = "EVIDENCE" | "POPULATION" | "OE_EVIDENCE";
+
 // One late day for one group. `date` is "YYYY-MM-DD".
 export interface DelayLogEntry {
+  phase?: DeadlinePhase;
   handledBy: DeadlineHandler;
   date: string;
+}
+
+// What each group was first expected to do in one phase. A phase appears once it has started.
+export interface PhasePlan {
+  phase: DeadlinePhase;
+  plannedOwnerDate?: string | null;
+  plannedComplianceDate?: string | null;
+  plannedAuditorDate?: string | null;
 }
 
 export interface PopulationSample {
@@ -164,7 +178,7 @@ export interface AuditControl {
   overriddenBy?: string | null;
   overriddenAt?: string | null;
   // Workflow-aware deadlines. All absent/null for a control that is not tracked
-  // (OE controls, controls that predate the feature) — render a dash, never fail.
+  // (controls that predate the feature) — render a dash, never fail.
   deadlineTracked?: boolean;
   /** Group holding the control now; null once it is complete. */
   currentHandler?: DeadlineHandler | null;
@@ -173,6 +187,11 @@ export interface AuditControl {
   plannedOwnerDate?: string | null;
   plannedComplianceDate?: string | null;
   plannedAuditorDate?: string | null;
+  /** Phase of the current holder's stage; an OE control moves from POPULATION to OE_EVIDENCE. */
+  currentPhase?: DeadlinePhase | null;
+  /** Plan of every phase started. The three planned dates above are those of the first phase. */
+  phasePlans?: PhasePlan[];
+  /** Someone held the control past their own deadline (the delay log is not empty). */
   delayed?: boolean | null;
   /** Finished after, or still open past, dueDate (the ultimate deadline). Null when unknown. */
   ultimateDelayed?: boolean | null;
@@ -191,6 +210,8 @@ export interface ControlListResponse {
 }
 
 export interface DeadlineDayRow {
+  /** Absent means EVIDENCE (Design). */
+  phase?: DeadlinePhase;
   cycleType: DeadlineCycleType;
   handledBy: DeadlineHandler;
   allowedDays: number;
@@ -269,5 +290,5 @@ export interface UpdateControlRequest {
 }
 
 export interface UpdateDeadlineDaysRequest {
-  days: { cycleType: DeadlineCycleType; handledBy: DeadlineHandler; allowedDays: number }[];
+  days: { phase: DeadlinePhase; cycleType: DeadlineCycleType; handledBy: DeadlineHandler; allowedDays: number }[];
 }
