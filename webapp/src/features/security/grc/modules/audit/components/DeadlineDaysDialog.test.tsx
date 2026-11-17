@@ -33,12 +33,24 @@ const DAYS: DeadlineDaysResponse = {
   auditId: 7,
   phase: "EVIDENCE",
   days: [
-    { cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 30, isDefault: true },
-    { cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 10, isDefault: true },
-    { cycleType: "INITIAL", handledBy: "AUDITOR", allowedDays: 10, isDefault: true },
-    { cycleType: "REVISION", handledBy: "OWNER", allowedDays: 15, isDefault: false },
-    { cycleType: "REVISION", handledBy: "COMPLIANCE", allowedDays: 5, isDefault: true },
-    { cycleType: "REVISION", handledBy: "AUDITOR", allowedDays: 5, isDefault: true },
+    { phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 30, isDefault: true },
+    { phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 10, isDefault: true },
+    { phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "AUDITOR", allowedDays: 10, isDefault: true },
+    { phase: "EVIDENCE", cycleType: "REVISION", handledBy: "OWNER", allowedDays: 15, isDefault: false },
+    { phase: "EVIDENCE", cycleType: "REVISION", handledBy: "COMPLIANCE", allowedDays: 5, isDefault: true },
+    { phase: "EVIDENCE", cycleType: "REVISION", handledBy: "AUDITOR", allowedDays: 5, isDefault: true },
+    { phase: "POPULATION", cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 4, isDefault: true },
+    { phase: "POPULATION", cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 3, isDefault: true },
+    { phase: "POPULATION", cycleType: "INITIAL", handledBy: "AUDITOR", allowedDays: 3, isDefault: true },
+    { phase: "POPULATION", cycleType: "REVISION", handledBy: "OWNER", allowedDays: 2, isDefault: true },
+    { phase: "POPULATION", cycleType: "REVISION", handledBy: "COMPLIANCE", allowedDays: 2, isDefault: true },
+    { phase: "POPULATION", cycleType: "REVISION", handledBy: "AUDITOR", allowedDays: 2, isDefault: true },
+    { phase: "OE_EVIDENCE", cycleType: "INITIAL", handledBy: "OWNER", allowedDays: 5, isDefault: true },
+    { phase: "OE_EVIDENCE", cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 2, isDefault: true },
+    { phase: "OE_EVIDENCE", cycleType: "INITIAL", handledBy: "AUDITOR", allowedDays: 2, isDefault: true },
+    { phase: "OE_EVIDENCE", cycleType: "REVISION", handledBy: "OWNER", allowedDays: 2, isDefault: true },
+    { phase: "OE_EVIDENCE", cycleType: "REVISION", handledBy: "COMPLIANCE", allowedDays: 2, isDefault: true },
+    { phase: "OE_EVIDENCE", cycleType: "REVISION", handledBy: "AUDITOR", allowedDays: 2, isDefault: true },
   ],
 };
 
@@ -74,18 +86,20 @@ describe("DeadlineDaysDialog", () => {
     expect(authFetch).not.toHaveBeenCalled();
   });
 
-  it("shows the six numbers, which are defaults, and the hand-off hint", async () => {
+  it("shows the numbers of all three phases, which are defaults, and the hand-off hint", async () => {
     renderDialog();
-    expect(await input("Initial days for Owner")).toHaveValue("30");
-    expect(await input("Revision days for Auditor")).toHaveValue("5");
-    expect(screen.getAllByText("Default")).toHaveLength(5);
+    expect(await input("Initial days for Owner (Design controls)")).toHaveValue("30");
+    expect(await input("Revision days for Auditor (Design controls)")).toHaveValue("5");
+    expect(await input("Initial days for Owner (OE controls: Population)")).toHaveValue("4");
+    expect(await input("Initial days for Owner (OE controls: Evidence)")).toHaveValue("5");
+    expect(screen.getAllByText("Default")).toHaveLength(17);
     expect(screen.getByText(/only affect hand-offs that happen afterwards/i)).toBeInTheDocument();
   });
 
   it("rejects values outside 1 to 365 and keeps Save disabled", async () => {
     const user = userEvent.setup();
     renderDialog();
-    const field = await input("Initial days for Compliance");
+    const field = await input("Initial days for Compliance (Design controls)");
     await user.clear(field);
     await user.type(field, "400");
     expect(screen.getByText(/whole number from 1 to 365/i)).toBeInTheDocument();
@@ -98,7 +112,7 @@ describe("DeadlineDaysDialog", () => {
   it("saves only the changed rows, then refreshes the days and the controls list", async () => {
     const user = userEvent.setup();
     const { invalidate, onClose } = renderDialog();
-    const field = await input("Initial days for Compliance");
+    const field = await input("Initial days for Compliance (Design controls)");
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     await user.clear(field);
     await user.type(field, "12");
@@ -108,7 +122,7 @@ describe("DeadlineDaysDialog", () => {
     const put = authFetch.mock.calls.find(([, init]) => init?.method === "PUT");
     expect(put?.[0]).toBe("http://backend.test/api/v1/audits/7/settings/deadline-days");
     expect(JSON.parse(put?.[1].body as string)).toEqual({
-      days: [{ cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 12 }],
+      days: [{ phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 12 }],
     });
     const keys = invalidate.mock.calls.map(([f]) => f?.queryKey);
     expect(keys).toContainEqual(["audits", 7, "deadline-days"]);
@@ -121,11 +135,27 @@ describe("DeadlineDaysDialog", () => {
     );
     const user = userEvent.setup();
     const { onClose } = renderDialog();
-    const field = await input("Initial days for Owner");
+    const field = await input("Initial days for Owner (Design controls)");
     await user.clear(field);
     await user.type(field, "20");
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText("allowedDays must be between 1 and 365")).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("DeadlineDaysDialog OE sections", () => {
+  it("saves an OE population change under its own phase", async () => {
+    const user = userEvent.setup();
+    const { onClose } = renderDialog();
+    const field = await input("Initial days for Auditor (OE controls: Population)");
+    await user.clear(field);
+    await user.type(field, "6");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    const put = authFetch.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(put?.[1].body as string)).toEqual({
+      days: [{ phase: "POPULATION", cycleType: "INITIAL", handledBy: "AUDITOR", allowedDays: 6 }],
+    });
   });
 });

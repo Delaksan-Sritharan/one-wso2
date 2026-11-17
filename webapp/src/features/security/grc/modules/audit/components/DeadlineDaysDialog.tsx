@@ -41,6 +41,8 @@ import type { DeadlineDayRow } from "@features/security/grc/modules/audit/types/
 import {
   DEADLINE_CYCLES,
   DEADLINE_HANDLERS,
+  DEADLINE_PHASES,
+  rowPhase,
   allowedDaysError,
   buildDeadlineDaysUpdate,
   deadlineCellKey,
@@ -72,58 +74,65 @@ function DeadlineDaysForm({ rows, isSaving, error, onSave, onClose }: DeadlineDa
     <>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Days each group has to act on a control once it is handed to them. Changes only affect
-          hand-offs that happen afterwards; deadlines already set are not recalculated.
+          Days each group has to act on a control once it is handed to them. Design controls and the
+          two OE phases are set separately. Changes only affect hand-offs that happen afterwards;
+          deadlines already set are not recalculated.
         </Typography>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600 }} />
-              {DEADLINE_HANDLERS.map((h) => (
-                <TableCell key={h} sx={{ fontWeight: 600 }}>{deadlineHandlerLabel(h)}</TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {DEADLINE_CYCLES.map(({ cycleType, label }) => (
-              <TableRow key={cycleType}>
-                <TableCell sx={{ fontWeight: 600 }}>{label}</TableCell>
-                {DEADLINE_HANDLERS.map((h) => {
-                  const key = deadlineCellKey(cycleType, h);
-                  const row = rows.find((r) => r.cycleType === cycleType && r.handledBy === h);
-                  const err = touched.has(key) ? allowedDaysError(draft[key] ?? "") : null;
-                  return (
-                    <TableCell key={h} sx={{ verticalAlign: "top" }}>
-                      <TextField
-                        size="small"
-                        value={draft[key] ?? ""}
-                        disabled={isSaving || !row}
-                        error={err !== null}
-                        helperText={err ?? undefined}
-                        onChange={(e) => {
-                          setDraft((d) => ({ ...d, [key]: e.target.value }));
-                          setTouched((t) => new Set(t).add(key));
-                        }}
-                        slotProps={{
-                          htmlInput: {
-                            inputMode: "numeric",
-                            "aria-label": `${label} days for ${deadlineHandlerLabel(h)}`,
-                          },
-                        }}
-                        sx={{ width: 96 }}
-                      />
-                      {row?.isDefault && (
-                        <Box sx={{ mt: 0.5 }}>
-                          <Chip label="Default" size="small" variant="outlined" sx={{ height: 18, fontSize: "0.65rem" }} />
-                        </Box>
-                      )}
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {DEADLINE_PHASES.map(({ phase, label: title, hint }) => (
+          <Box key={phase} sx={{ mt: phase === "EVIDENCE" ? 0 : 3 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{title}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>{hint}</Typography>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }} />
+                  {DEADLINE_HANDLERS.map((h) => (
+                    <TableCell key={h} sx={{ fontWeight: 600 }}>{deadlineHandlerLabel(h)}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {DEADLINE_CYCLES.map(({ cycleType, label }) => (
+                  <TableRow key={cycleType}>
+                    <TableCell sx={{ fontWeight: 600 }}>{label}</TableCell>
+                    {DEADLINE_HANDLERS.map((h) => {
+                      const key = deadlineCellKey(phase, cycleType, h);
+                      const row = rows.find((r) => rowPhase(r) === phase && r.cycleType === cycleType && r.handledBy === h);
+                      const err = touched.has(key) ? allowedDaysError(draft[key] ?? "") : null;
+                      return (
+                        <TableCell key={h} sx={{ verticalAlign: "top" }}>
+                          <TextField
+                            size="small"
+                            value={draft[key] ?? ""}
+                            disabled={isSaving || !row}
+                            error={err !== null}
+                            helperText={err ?? undefined}
+                            onChange={(e) => {
+                              setDraft((d) => ({ ...d, [key]: e.target.value }));
+                              setTouched((t) => new Set(t).add(key));
+                            }}
+                            slotProps={{
+                              htmlInput: {
+                                inputMode: "numeric",
+                                "aria-label": `${label} days for ${deadlineHandlerLabel(h)} (${title})`,
+                              },
+                            }}
+                            sx={{ width: 96 }}
+                          />
+                          {row?.isDefault && (
+                            <Box sx={{ mt: 0.5 }}>
+                              <Chip label="Default" size="small" variant="outlined" sx={{ height: 18, fontSize: "0.65rem" }} />
+                            </Box>
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        ))}
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
             {error}
@@ -206,7 +215,7 @@ export default function DeadlineDaysDialog({ auditId, open, onClose }: DeadlineD
       ) : (
         <DeadlineDaysForm
           // Re-seed the draft when the server's numbers change (after a save).
-          key={data.days.map((r) => `${r.cycleType}:${r.handledBy}:${r.allowedDays}`).join("|")}
+          key={data.days.map((r) => `${rowPhase(r)}:${r.cycleType}:${r.handledBy}:${r.allowedDays}`).join("|")}
           rows={data.days}
           isSaving={updateMutation.isPending}
           error={saveError}
