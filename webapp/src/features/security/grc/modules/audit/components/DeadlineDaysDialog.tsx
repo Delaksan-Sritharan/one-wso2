@@ -37,7 +37,7 @@ import { useGetDeadlineDays } from "@features/security/grc/modules/audit/api/use
 import { useUpdateDeadlineDays } from "@features/security/grc/modules/audit/api/useUpdateDeadlineDays";
 import { useAuditPrivileges } from "@features/security/grc/modules/audit/hooks/useAuditPrivileges";
 import { AuditPrivilege } from "@features/security/grc/modules/audit/privileges";
-import type { DeadlineDayRow } from "@features/security/grc/modules/audit/types/audit";
+import type { DeadlineDayRow, DeadlineRecalcSummary } from "@features/security/grc/modules/audit/types/audit";
 import {
   DEADLINE_CYCLES,
   DEADLINE_HANDLERS,
@@ -56,19 +56,37 @@ import { deadlineHandlerLabel } from "@features/security/grc/modules/audit/utils
 interface DeadlineDaysFormProps {
   rows: DeadlineDayRow[];
   isSaving: boolean;
+  isPreviewing: boolean;
   error: string | null;
-  onSave: (rows: DeadlineDayRow[], draft: Record<string, string>) => void;
+  onSave: (rows: DeadlineDayRow[], draft: Record<string, string>, applyToOpenStages: boolean) => void;
+  /** Works out what applying the draft to the open stages would do, without saving. */
+  onPreview: (rows: DeadlineDayRow[], draft: Record<string, string>) => void;
+  /** The last preview's result, or null when none has been asked for. */
+  preview: DeadlineRecalcSummary | null;
+  onClearPreview: () => void;
   onClose: () => void;
 }
 
-function DeadlineDaysForm({ rows, isSaving, error, onSave, onClose }: DeadlineDaysFormProps): JSX.Element {
+/** What a change does to controls already in progress, shown before saving. */
+function previewText(p: DeadlineRecalcSummary): string {
+  const controls = `${p.stagesUpdated} ${p.stagesUpdated === 1 ? "control" : "controls"}`;
+  const overdue = p.newlyOverdue > 0 ? ` ${p.newlyOverdue} would become overdue if you update them.` : "";
+  return `${controls} in progress currently with a group will keep their present deadline unless you update them too.${overdue}`;
+}
+
+function DeadlineDaysForm({
+  rows, isSaving, isPreviewing, error, onSave, onPreview, preview, onClearPreview, onClose,
+}: DeadlineDaysFormProps): JSX.Element {
   const [draft, setDraft] = useState(() => draftFromRows(rows));
   // Errors show once a cell has been touched, so a fresh form is not red.
   const [touched, setTouched] = useState<Set<string>>(new Set());
 
   const errors = validateDraft(draft);
   const hasChanges = buildDeadlineDaysUpdate(rows, draft).days.length > 0;
-  const canSave = !isSaving && hasChanges && Object.keys(errors).length === 0;
+  const canSave = !isSaving && !isPreviewing && hasChanges && Object.keys(errors).length === 0;
+  // Controls already with a group are affected by this change: the admin chooses
+  // whether to update them, so it can never be forgotten.
+  const choosing = preview !== null;
 
   return (
     <>
@@ -108,6 +126,7 @@ function DeadlineDaysForm({ rows, isSaving, error, onSave, onClose }: DeadlineDa
                             error={err !== null}
                             helperText={err ?? undefined}
                             onChange={(e) => {
+                              onClearPreview();
                               setDraft((d) => ({ ...d, [key]: e.target.value }));
                               setTouched((t) => new Set(t).add(key));
                             }}
@@ -133,6 +152,11 @@ function DeadlineDaysForm({ rows, isSaving, error, onSave, onClose }: DeadlineDa
             </Table>
           </Box>
         ))}
+        {preview !== null && (
+          <Alert severity={preview.newlyOverdue > 0 ? "warning" : "info"} sx={{ mt: 2 }}>
+            {previewText(preview)} Planned dates and ultimate deadlines do not change either way.
+          </Alert>
+        )}
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
             {error}
@@ -140,18 +164,40 @@ function DeadlineDaysForm({ rows, isSaving, error, onSave, onClose }: DeadlineDa
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={isSaving} sx={{ textTransform: "none" }}>
+        <Button onClick={onClose} disabled={isSaving || isPreviewing} sx={{ textTransform: "none" }}>
           Cancel
         </Button>
-        <Button
-          variant="contained"
-          disabled={!canSave}
-          onClick={() => onSave(rows, draft)}
-          startIcon={isSaving ? <CircularProgress size={14} /> : undefined}
-          sx={{ textTransform: "none" }}
-        >
-          Save
-        </Button>
+        {choosing ? (
+          <>
+            <Button
+              variant="outlined"
+              disabled={isSaving}
+              onClick={() => onSave(rows, draft, false)}
+              sx={{ textTransform: "none" }}
+            >
+              Save for new hand-offs only
+            </Button>
+            <Button
+              variant="contained"
+              disabled={isSaving}
+              onClick={() => onSave(rows, draft, true)}
+              startIcon={isSaving ? <CircularProgress size={14} /> : undefined}
+              sx={{ textTransform: "none" }}
+            >
+              {`Save and update ${preview.stagesUpdated} ${preview.stagesUpdated === 1 ? "control" : "controls"}`}
+            </Button>
+          </>
+        ) : (
+          <Button
+            variant="contained"
+            disabled={!canSave}
+            onClick={() => onPreview(rows, draft)}
+            startIcon={isSaving || isPreviewing ? <CircularProgress size={14} /> : undefined}
+            sx={{ textTransform: "none" }}
+          >
+            Save
+          </Button>
+        )}
       </DialogActions>
     </>
   );
@@ -172,19 +218,38 @@ export default function DeadlineDaysDialog({ auditId, open, onClose }: DeadlineD
 
   const { data, isLoading, isError, error: loadError, refetch } = useGetDeadlineDays(auditId, open && canManage);
   const updateMutation = useUpdateDeadlineDays();
+  const previewMutation = useUpdateDeadlineDays();
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<DeadlineRecalcSummary | null>(null);
 
   if (!canManage) return null;
 
   function handleClose() {
     setSaveError(null);
+    setPreview(null);
     onClose();
   }
 
-  function handleSave(rows: DeadlineDayRow[], draft: Record<string, string>) {
+  function handlePreview(rows: DeadlineDayRow[], draft: Record<string, string>) {
+    setSaveError(null);
+    previewMutation.mutate(
+      { auditId, req: { ...buildDeadlineDaysUpdate(rows, draft), dryRun: true } },
+      {
+        onSuccess: (res) => {
+          const found = res.recalculated ?? { stagesUpdated: 0, newlyOverdue: 0 };
+          // Nothing in progress is affected, so there is nothing to choose: just save.
+          if (found.stagesUpdated === 0) handleSave(rows, draft, false);
+          else setPreview(found);
+        },
+        onError: (e) => setSaveError(e instanceof Error ? e.message : "Failed to check which controls are affected"),
+      },
+    );
+  }
+
+  function handleSave(rows: DeadlineDayRow[], draft: Record<string, string>, applyToOpenStages: boolean) {
     setSaveError(null);
     updateMutation.mutate(
-      { auditId, req: buildDeadlineDaysUpdate(rows, draft) },
+      { auditId, req: { ...buildDeadlineDaysUpdate(rows, draft), ...(applyToOpenStages ? { applyToOpenStages: true } : {}) } },
       {
         onSuccess: handleClose,
         onError: (e) => setSaveError(e instanceof Error ? e.message : "Failed to update deadline days"),
@@ -218,8 +283,12 @@ export default function DeadlineDaysDialog({ auditId, open, onClose }: DeadlineD
           key={data.days.map((r) => `${rowPhase(r)}:${r.cycleType}:${r.handledBy}:${r.allowedDays}`).join("|")}
           rows={data.days}
           isSaving={updateMutation.isPending}
+          isPreviewing={previewMutation.isPending}
           error={saveError}
           onSave={handleSave}
+          onPreview={handlePreview}
+          preview={preview}
+          onClearPreview={() => setPreview(null)}
           onClose={handleClose}
         />
       )}

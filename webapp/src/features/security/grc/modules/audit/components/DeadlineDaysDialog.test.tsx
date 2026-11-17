@@ -119,7 +119,7 @@ describe("DeadlineDaysDialog", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    const put = authFetch.mock.calls.find(([, init]) => init?.method === "PUT");
+    const put = authFetch.mock.calls.filter(([, init]) => init?.method === "PUT").at(-1); // the last is the save; a check precedes it
     expect(put?.[0]).toBe("http://backend.test/api/v1/audits/7/settings/deadline-days");
     expect(JSON.parse(put?.[1].body as string)).toEqual({
       days: [{ phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 12 }],
@@ -153,9 +153,87 @@ describe("DeadlineDaysDialog OE sections", () => {
     await user.type(field, "6");
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    const put = authFetch.mock.calls.find(([, init]) => init?.method === "PUT");
+    const put = authFetch.mock.calls.filter(([, init]) => init?.method === "PUT").at(-1); // the last is the save; a check precedes it
     expect(JSON.parse(put?.[1].body as string)).toEqual({
       days: [{ phase: "POPULATION", cycleType: "INITIAL", handledBy: "AUDITOR", allowedDays: 6 }],
     });
+  });
+});
+
+describe("DeadlineDaysDialog controls already in progress", () => {
+  const respondWith = (recalculated: { stagesUpdated: number; newlyOverdue: number }) =>
+    authFetch.mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method !== "PUT") return Promise.resolve(json(DAYS));
+      const body = JSON.parse(init.body as string) as { dryRun?: boolean };
+      return Promise.resolve(json({ ...DAYS, recalculated, dryRun: body.dryRun === true }));
+    });
+  const putBodies = () =>
+    authFetch.mock.calls.filter(([, init]) => init?.method === "PUT").map(([, init]) => JSON.parse(init.body as string));
+  const change = async (user: ReturnType<typeof userEvent.setup>, value: string) => {
+    const field = await input("Initial days for Compliance (Design controls)");
+    await user.clear(field);
+    await user.type(field, value);
+    return field;
+  };
+  const ROW = { phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "COMPLIANCE" };
+
+  it("saves straight away when no control in progress is affected", async () => {
+    respondWith({ stagesUpdated: 0, newlyOverdue: 0 });
+    const user = userEvent.setup();
+    const { onClose } = renderDialog();
+    await change(user, "15");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(putBodies()).toEqual([
+      { days: [{ ...ROW, allowedDays: 15 }], dryRun: true },
+      { days: [{ ...ROW, allowedDays: 15 }] },
+    ]);
+  });
+
+  it("stops and asks when controls in progress are affected, and saves for new hand-offs only", async () => {
+    respondWith({ stagesUpdated: 12, newlyOverdue: 0 });
+    const user = userEvent.setup();
+    const { onClose } = renderDialog();
+    await change(user, "15");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/12 controls in progress currently with a group will keep their present deadline/i)).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(putBodies()).toHaveLength(1); // only the check so far, nothing saved
+
+    await user.click(screen.getByRole("button", { name: "Save for new hand-offs only" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(putBodies()[1]).toEqual({ days: [{ ...ROW, allowedDays: 15 }] });
+  });
+
+  it("updates the controls in progress when asked", async () => {
+    respondWith({ stagesUpdated: 12, newlyOverdue: 0 });
+    const user = userEvent.setup();
+    const { onClose } = renderDialog();
+    await change(user, "15");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(await screen.findByRole("button", { name: "Save and update 12 controls" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(putBodies()[1]).toEqual({ days: [{ ...ROW, allowedDays: 15 }], applyToOpenStages: true });
+  });
+
+  it("warns how many would become overdue", async () => {
+    respondWith({ stagesUpdated: 5, newlyOverdue: 3 });
+    const user = userEvent.setup();
+    renderDialog();
+    await change(user, "3");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/3 would become overdue if you update them/i)).toBeInTheDocument();
+  });
+
+  it("drops the question when the numbers change again", async () => {
+    respondWith({ stagesUpdated: 2, newlyOverdue: 0 });
+    const user = userEvent.setup();
+    renderDialog();
+    const field = await change(user, "15");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText(/2 controls in progress/i);
+    await user.type(field, "0");
+    expect(screen.queryByText(/2 controls in progress/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 });
