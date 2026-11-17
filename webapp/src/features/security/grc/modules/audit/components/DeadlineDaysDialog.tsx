@@ -122,7 +122,7 @@ function DeadlineDaysForm({
                           <TextField
                             size="small"
                             value={draft[key] ?? ""}
-                            disabled={isSaving || !row}
+                            disabled={isSaving || isPreviewing || !row}
                             error={err !== null}
                             helperText={err ?? undefined}
                             onChange={(e) => {
@@ -258,8 +258,8 @@ export default function DeadlineDaysDialog({ auditId, open, onClose }: DeadlineD
   }
 
   return (
-    <Dialog open={open} // A backdrop click or Escape must not dismiss the dialog mid-request.
-      onClose={() => { if (!updateMutation.isPending) handleClose(); }} maxWidth="sm" fullWidth>
+    <Dialog open={open} // A backdrop click or Escape must not dismiss the dialog mid-request, a check or a save.
+      onClose={() => { if (!updateMutation.isPending && !previewMutation.isPending) handleClose(); }} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ fontWeight: 700 }}>Deadline Days</DialogTitle>
       {isLoading ? (
         <DialogContent>

@@ -237,3 +237,59 @@ describe("DeadlineDaysDialog controls already in progress", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 });
+
+describe("DeadlineDaysDialog while the check is pending", () => {
+  // The check (dry run) is held until release() is called; everything else answers at once.
+  const holdTheCheck = () => {
+    let release: () => void = () => {};
+    authFetch.mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method !== "PUT") return Promise.resolve(json(DAYS));
+      const body = JSON.parse(init.body as string) as { dryRun?: boolean };
+      if (!body.dryRun) return Promise.resolve(json(DAYS));
+      return new Promise<Response>((resolve) => {
+        release = () => resolve(json({ ...DAYS, dryRun: true, recalculated: { stagesUpdated: 0, newlyOverdue: 0 } }));
+      });
+    });
+    return () => release();
+  };
+  const savedBodies = () =>
+    authFetch.mock.calls
+      .filter(([, init]) => init?.method === "PUT")
+      .map(([, init]) => JSON.parse(init.body as string) as { dryRun?: boolean })
+      .filter((b) => !b.dryRun);
+
+  it("keeps the numbers fixed, so the answer always describes what would be saved", async () => {
+    const release = holdTheCheck();
+    const user = userEvent.setup();
+    renderDialog();
+    const field = await input("Initial days for Compliance (Design controls)");
+    await user.clear(field);
+    await user.type(field, "15");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(field).toBeDisabled());
+    expect(await input("Revision days for Owner (Design controls)")).toBeDisabled();
+    release();
+    await waitFor(() => expect(savedBodies()).toHaveLength(1));
+    expect(savedBodies()[0]).toEqual({ days: [{ phase: "EVIDENCE", cycleType: "INITIAL", handledBy: "COMPLIANCE", allowedDays: 15 }] });
+  });
+
+  it("does not close, or save anything, when dismissed while the check is pending", async () => {
+    const release = holdTheCheck();
+    const user = userEvent.setup();
+    const { onClose } = renderDialog();
+    const field = await input("Initial days for Compliance (Design controls)");
+    await user.clear(field);
+    await user.type(field, "15");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(field).toBeDisabled());
+
+    await user.keyboard("{Escape}");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("Deadline Days")).toBeInTheDocument();
+    expect(savedBodies()).toHaveLength(0);
+
+    release(); // the check finishes: nothing in progress is affected, so it saves, and only now
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(savedBodies()).toHaveLength(1);
+  });
+});
