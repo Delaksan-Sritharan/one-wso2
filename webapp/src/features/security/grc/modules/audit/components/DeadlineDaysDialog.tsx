@@ -93,8 +93,8 @@ function DeadlineDaysForm({
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Days each group has to act on a control once it is handed to them. Design controls and the
-          two OE phases are set separately. Changes only affect hand-offs that happen afterwards;
-          deadlines already set are not recalculated.
+          two OE phases are set separately. A change applies to hand-offs that happen afterwards; when it
+          would affect controls already with a group, saving asks whether to update those too.
         </Typography>
         {DEADLINE_PHASES.map(({ phase, label: title, hint }) => (
           <Box key={phase} sx={{ mt: phase === "EVIDENCE" ? 0 : 3 }}>

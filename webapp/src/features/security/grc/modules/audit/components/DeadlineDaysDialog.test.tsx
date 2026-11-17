@@ -93,7 +93,7 @@ describe("DeadlineDaysDialog", () => {
     expect(await input("Initial days for Owner (OE controls: Population)")).toHaveValue("4");
     expect(await input("Initial days for Owner (OE controls: Evidence)")).toHaveValue("5");
     expect(screen.getAllByText("Default")).toHaveLength(17);
-    expect(screen.getByText(/only affect hand-offs that happen afterwards/i)).toBeInTheDocument();
+    expect(screen.getByText(/applies to hand-offs that happen afterwards/i)).toBeInTheDocument();
   });
 
   it("rejects values outside 1 to 365 and keeps Save disabled", async () => {
