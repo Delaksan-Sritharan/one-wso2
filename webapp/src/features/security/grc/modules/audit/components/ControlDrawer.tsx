@@ -54,7 +54,7 @@ import {
   X,
   XCircle,
 } from "@wso2/oxygen-ui-icons-react";
-import { useEffect, useRef, useState, type JSX } from "react";
+import { Fragment, useEffect, useRef, useState, type JSX } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import ControlStatusChip from "@features/security/grc/modules/audit/components/ControlStatusChip";
 import UserAvatar from "@features/security/grc/modules/audit/components/UserAvatar";
@@ -85,6 +85,7 @@ import { HandlerChip, DelayedBadge, UltimateStatusBadge } from "@features/securi
 import {
   groupDelayLog,
   isCurrentDeadlineOverdue,
+  planGroups,
   isDeadlineTracked,
   lateDaySummary,
 } from "@features/security/grc/modules/audit/utils/deadlines";
@@ -1862,10 +1863,31 @@ export default function ControlDrawer({ control, open, onClose }: ControlDrawerP
                       <UltimateStatusBadge delayed={control.ultimateDelayed} />
                     </Box>
                   </InfoTile>
-                  <DueDateTile label="Planned (Owner)" date={control.plannedOwnerDate ?? null} />
-                  <DueDateTile label="Planned (Compliance)" date={control.plannedComplianceDate ?? null} />
-                  <DueDateTile label="Planned (Auditor)" date={control.plannedAuditorDate ?? null} />
+                  {planGroups(control).map((g) =>
+                    g.label ? null : (
+                      <Fragment key="plan">
+                        <DueDateTile label="Planned (Owner)" date={g.owner} />
+                        <DueDateTile label="Planned (Compliance)" date={g.compliance} />
+                        <DueDateTile label="Planned (Auditor)" date={g.auditor} />
+                      </Fragment>
+                    ),
+                  )}
                 </Box>
+                {/* An OE control has a plan per phase: population, then evidence once it starts. */}
+                {planGroups(control).map((g) =>
+                  g.label ? (
+                    <Box key={g.label} sx={{ mt: 1.5 }}>
+                      <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                        {g.label} Plan
+                      </Typography>
+                      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, mt: 0.5 }}>
+                        <DueDateTile label="Planned (Owner)" date={g.owner} />
+                        <DueDateTile label="Planned (Compliance)" date={g.compliance} />
+                        <DueDateTile label="Planned (Auditor)" date={g.auditor} />
+                      </Box>
+                    </Box>
+                  ) : null,
+                )}
                 {control.delayLog && (
                   <Box sx={{ mt: 1.5 }}>
                     <Typography variant="caption" color="text.secondary" fontWeight={600}>
