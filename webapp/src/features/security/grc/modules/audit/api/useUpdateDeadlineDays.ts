@@ -29,7 +29,10 @@ interface UpdateDeadlineDaysPayload {
   req: UpdateDeadlineDaysRequest;
 }
 
-/** Updates the audit's allowed days. Only hand-offs that happen afterwards use the new numbers. */
+/**
+ * Updates the audit's allowed days. Only hand-offs that happen afterwards use the new
+ * numbers, unless the request sets applyToOpenStages; dryRun previews that and saves nothing.
+ */
 export function useUpdateDeadlineDays() {
   const authFetch = useAuthApiClient();
   const queryClient = useQueryClient();
@@ -47,7 +50,9 @@ export function useUpdateDeadlineDays() {
       return res.json() as Promise<DeadlineDaysResponse>;
     },
 
-    onSuccess: (_data, { auditId }) => {
+    onSuccess: (_data, { auditId, req }) => {
+      // A preview saved nothing, so there is nothing to refresh.
+      if (req.dryRun) return;
       void queryClient.invalidateQueries({ queryKey: deadlineDaysQueryKey(auditId) });
       // Controls carry the planned and current dates the new numbers feed.
       void queryClient.invalidateQueries({ queryKey: controlsQueryKey(auditId) });

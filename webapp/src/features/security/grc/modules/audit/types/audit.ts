@@ -218,10 +218,22 @@ export interface DeadlineDayRow {
   isDefault: boolean;
 }
 
+/** What applying changed days to the open stages did (or, for a preview, would do). */
+export interface DeadlineRecalcSummary {
+  /** Open stages, one per control, whose deadline moved. */
+  stagesUpdated: number;
+  /** Of those, how many were within their deadline before and are past the new one. */
+  newlyOverdue: number;
+}
+
 export interface DeadlineDaysResponse {
   auditId: number;
   phase: "EVIDENCE";
   days: DeadlineDayRow[];
+  /** Present when the request asked to apply the change to open stages, or to preview it. */
+  recalculated?: DeadlineRecalcSummary;
+  /** True when nothing was saved. */
+  dryRun?: boolean;
 }
 
 // ── Request types (sent to backend) ──────────────────────────────────────────
@@ -291,4 +303,8 @@ export interface UpdateControlRequest {
 
 export interface UpdateDeadlineDaysRequest {
   days: { phase: DeadlinePhase; cycleType: DeadlineCycleType; handledBy: DeadlineHandler; allowedDays: number }[];
+  /** Also move the deadline of open stages the changed values govern. */
+  applyToOpenStages?: boolean;
+  /** Only work out what applyToOpenStages would do; saves nothing. */
+  dryRun?: boolean;
 }
