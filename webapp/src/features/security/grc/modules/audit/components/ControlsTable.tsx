@@ -412,6 +412,8 @@ function applySorting(
   return [...controls].sort((a, b) => {
     const aVal = String((a as unknown as Record<string, unknown>)[field] ?? "");
     const bVal = String((b as unknown as Record<string, unknown>)[field] ?? "");
+    // Empty values (finished or untracked controls) go last in either direction.
+    if (!aVal || !bVal) return aVal === bVal ? 0 : aVal ? -1 : 1;
     const cmp = aVal.localeCompare(bVal);
     return direction === "asc" ? cmp : -cmp;
   });

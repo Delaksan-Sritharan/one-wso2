@@ -32,17 +32,6 @@ export function deadlineHandlerLabel(handler: string): string {
   return DEADLINE_HANDLER_LABELS[handler as DeadlineHandler] ?? handler;
 }
 
-/**
- * Formats a delay-log entry as "Owner - 11/08" (MM/DD). The date is parsed
- * from the "YYYY-MM-DD" string itself — never through Date — so the day cannot
- * move with the reader's timezone. A malformed date is shown as received.
- */
-export function formatDelayLogEntry(entry: DelayLogEntry): string {
-  const match = /^\d{4}-(\d{2})-(\d{2})/.exec(entry.date);
-  const day = match ? `${match[1]}/${match[2]}` : entry.date;
-  return `${deadlineHandlerLabel(entry.handledBy)} - ${day}`;
-}
-
 /** Phase names for the OE phases; Design's EVIDENCE needs none, so it is left out. */
 const OE_PHASE_LABELS: Partial<Record<DeadlinePhase, string>> = {
   POPULATION: "Population",

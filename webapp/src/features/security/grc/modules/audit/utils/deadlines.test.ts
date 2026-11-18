@@ -17,7 +17,6 @@ import { describe, expect, it } from "vitest";
 import type { AuditControl } from "@features/security/grc/modules/audit/types/audit";
 import {
   deadlineHandlerLabel,
-  formatDelayLogEntry,
   groupDelayLog,
   lateDaySummary,
   isCurrentDeadlineOverdue,
@@ -42,21 +41,6 @@ describe("deadlineHandlerLabel", () => {
 
   it("shows an unknown group as received", () => {
     expect(deadlineHandlerLabel("LEGAL")).toBe("LEGAL");
-  });
-});
-
-describe("formatDelayLogEntry", () => {
-  it("formats as the group label and MM/DD", () => {
-    expect(formatDelayLogEntry({ handledBy: "OWNER", date: "2026-11-08" })).toBe("Owner - 11/08");
-    expect(formatDelayLogEntry({ handledBy: "AUDITOR", date: "2027-01-02" })).toBe("Auditor - 01/02");
-  });
-
-  it("keeps the calendar day whatever the timezone (no Date round trip)", () => {
-    expect(formatDelayLogEntry({ handledBy: "COMPLIANCE", date: "2026-03-01" })).toBe("Compliance - 03/01");
-  });
-
-  it("shows a malformed date as received", () => {
-    expect(formatDelayLogEntry({ handledBy: "OWNER", date: "soon" })).toBe("Owner - soon");
   });
 });
 
