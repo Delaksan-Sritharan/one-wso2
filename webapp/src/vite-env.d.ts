@@ -26,3 +26,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Set by vite.config.ts: whether this build/dev server runs as a federation host.
+declare const __FEDERATION_ENABLED__: boolean;

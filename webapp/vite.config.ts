@@ -2,10 +2,31 @@ import { defineConfig, mergeConfig } from "vite";
 import { configDefaults, defineConfig as defineVitestConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { federation } from "@module-federation/vite";
+import { sharedConfig } from "@one-wso2/federation-shared";
+
+const federationEnabled =
+  !process.env.VITEST && (process.argv.includes("build") || process.env.FEDERATION_DEV === "1");
 
 // https://vite.dev/config/
 const viteConfig = defineConfig({
   plugins: [
+    // Federation host. Remote URLs are registered at runtime from
+    // window.config (see src/platform/remotes.ts), so none are listed here.
+    // Off under Vitest, where the plugin's module wrapping breaks test imports,
+    // and off in plain `vite` dev: sharing Oxygen UI makes Vite serve its
+    // CommonJS dependencies (react-is, prop-types, ...) untransformed, which the
+    // browser rejects. Opt in with FEDERATION_DEV=1 (see docs/microfrontends.md).
+    ...(!federationEnabled
+      ? []
+      : [
+          federation({
+            name: "shell",
+            remotes: {},
+            shared: sharedConfig(),
+            dts: false,
+          }),
+        ]),
     react({
       babel: {
         plugins: [["babel-plugin-react-compiler"]],
@@ -26,6 +47,8 @@ const viteConfig = defineConfig({
       "@utils": path.resolve(__dirname, "./src/utils"),
     },
   },
+  build: { target: "esnext" },
+  define: { __FEDERATION_ENABLED__: JSON.stringify(federationEnabled) },
   envPrefix: ["ONE_WSO2_"],
   server: {
     port: 3000,

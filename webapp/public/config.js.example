@@ -49,6 +49,9 @@ window.config = {
 
   // Email groups backend (Google Groups subscriptions).
   // ONE_WSO2_EMAIL_GROUPS_BACKEND_URL: "<your-email-groups-backend-url>",
+  // Email groups microfrontend (apps/email-groups): the origin serving its
+  // remoteEntry.js. Locally: "http://localhost:3001". Unset = route unavailable.
+  // ONE_WSO2_EMAIL_GROUPS_REMOTE_URL: "<your-email-groups-remote-url>",
   // MEDDPICC backend (digiops-sales echo-backend). Powers the Deals tab and the
   // MEDDPICC column on Sales -> Meetings. When unset, Deals shows that it is not
   // connected and Meetings leaves the MEDDPICC column out.
