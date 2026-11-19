@@ -107,7 +107,10 @@ const ParAdminHistoryTab = lazy(() => import("@features/par/pages/ParAdminHistor
 const ParAdminGlobalConfigTab = lazy(() => import("@features/par/pages/ParAdminGlobalConfigTab"));
 const ParGiveFeedbackTab = lazy(() => import("@features/par/pages/ParGiveFeedbackTab"));
 const ParCycleFeedbackSection = lazy(() => import("@features/par/pages/ParCycleFeedbackSection"));
-import EmailGroupsPage from "@features/my/email-groups/pages/EmailGroupsPage";
+import { createRemotePage } from "@/platform/RemoteRoute";
+
+// Federated microfrontends — each is its own deployable (see apps/).
+const EmailGroupsRemote = createRemotePage("emailGroups", "Page");
 import EmailSignaturePage from "@features/my/email-signature/pages/EmailSignaturePage";
 import BankingRoute from "@features/my/banking/components/BankingRoute";
 import BankingPage, { BankingIndex } from "@features/my/banking/pages/BankingPage";
@@ -1325,7 +1328,10 @@ export default function App() {
               half of that app is not part of this port). Every employee sees
               the same screen — the backend enforces access, not a route
               guard. */}
-          <Route path="me/email-groups" element={<EmailGroupsPage />} />
+          <Route
+            path="me/email-groups"
+            element={<EmailGroupsRemote />}
+          />
           {/* Me → Email Signature: the other half of the same source app,
               its own menu item rather than a tab — it shares no data or
               backend with Email Groups. Pure client-side HTML generator. */}

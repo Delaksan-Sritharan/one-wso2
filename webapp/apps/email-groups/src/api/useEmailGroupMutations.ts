@@ -37,10 +37,10 @@
 // risks a duplicate attempt against a backend with no idempotency key.
 
 import { useMutation } from "@tanstack/react-query";
-import { authedPatch } from "@api/http";
-import { useAccessToken } from "@hooks/useAccessToken";
-import { emailGroupsServiceUrls } from "@config/apiConfig";
-import { useAsgardeoSub } from "@hooks/useAsgardeoSub";
+import { authedPatch } from "@one-wso2/platform-contract";
+import { useAccessToken } from "@one-wso2/platform-contract";
+import { emailGroupsServiceUrls } from "../config";
+import { useAsgardeoSub } from "@one-wso2/platform-contract";
 import type { GroupSubscriptionPayload } from "./emailGroupTypes";
 
 /**

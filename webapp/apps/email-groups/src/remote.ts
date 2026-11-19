@@ -14,11 +14,5 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Shared error helpers for this feature, re-exported so call sites keep a
-// short import — the same arrangement menu/leave/finance use.
-import { describeError, httpRetry } from "@api/errors";
-
-export { describeError };
-
-/** No retries on 4xx — a 401/403 or a malformed request is a final answer. */
-export const emailGroupRetry = httpRetry;
+// What the shell loads as "emailGroups/Page". Keep this the only expose.
+export { default } from "./pages/EmailGroupsPage";

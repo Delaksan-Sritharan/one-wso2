@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>One App</title>
+    <link rel="stylesheet" href="/src/landing.css" />
+    <link rel="icon" type="image/svg+xml" href="./favicon-mark-white.svg" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/svg+xml" href="./favicon-mark-navy.svg" media="(prefers-color-scheme: light)" />
+    <style>
+      :root {
+        --bg: #f4f6fa; --card: #ffffff; --text: #0b1230; --muted: #5a6280; --line: #e2e6f0;
+        --accent: #ff7300; --accent-text: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #050a1c; --card: #0c1330; --text: #f2f4fc; --muted: #98a0c2; --line: #1c2548; }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+        background: var(--bg); color: var(--text);
+        font: 16px/1.55 "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main {
+        width: 100%; max-width: 440px; text-align: center;
+        background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 40px 32px;
+      }
+      .mark { width: 48px; height: 48px; display: block; }
+      .mark.on-dark { display: none; }
+      @media (prefers-color-scheme: dark) {
+        .mark.on-light { display: none; }
+        .mark.on-dark { display: block; }
+      }
+      .brand {
+        display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 24px;
+        font-family: "Sora Variable", sans-serif; font-weight: 600; font-size: 40px; line-height: 1;
+      }
+      .brand .mark { margin: 0; width: 40px; height: 40px; }
+      h1 { margin: 0 0 8px; font-size: 20px; font-weight: 600; font-family: "Sora Variable", sans-serif; }
+      footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
+      p { margin: 0 0 28px; color: var(--muted); }
+      a.button {
+        display: inline-block; background: var(--accent); color: var(--accent-text);
+        text-decoration: none; font-weight: 600; padding: 11px 22px; border-radius: 999px;
+      }
+      a.button:hover { filter: brightness(1.08); }
+      a.button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">
+        <img class="mark on-light" src="./favicon-mark-navy.svg" alt="" />
+        <img class="mark on-dark" src="./favicon-mark-white.svg" alt="" />
+        <span>One</span>
+      </div>
+      <h1>Head back to One</h1>
+      <p>This page is part of One and can't be opened on its own. Open it from there.</p>
+      <a class="button" href="__ONE_SHELL_URL__">Go to One</a>
+      <footer>© 2026 Choreo Labs LLC. All rights reserved.</footer>
+    </main>
+  </body>
+</html>

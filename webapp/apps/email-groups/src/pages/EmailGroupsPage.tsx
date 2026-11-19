@@ -17,10 +17,10 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Box, Card, Skeleton, Stack } from "@wso2/oxygen-ui";
-import { useUserInfo } from "@api/useUserInfo";
-import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
-import { useNotifications } from "@context/notifications/NotificationsContext";
-import ErrorNotice from "@components/error-notice/ErrorNotice";
+import { useUserInfo } from "@one-wso2/platform-contract";
+import { useAsgardeoUser } from "@one-wso2/platform-contract";
+import { useNotifications } from "@one-wso2/platform-contract";
+import { ErrorNotice } from "@one-wso2/platform-contract";
 import EmailGroupsShell from "../components/EmailGroupsShell";
 import GroupSectionHeading from "../components/GroupSectionHeading";
 import GroupsSearchField from "../components/GroupsSearchField";

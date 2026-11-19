@@ -15,7 +15,7 @@
 // under the License.
 
 // Wire shapes are just `string[]` of group email addresses (mirroring the
-// email-group-manager backend's own responses) — see @config/apiConfig's
+// email-group-manager backend's own responses) — see config.ts's
 // emailGroupsServiceUrls. Everything below is the domain model the UI
 // actually renders, built from those three arrays by groupCatalog.ts.
 //

@@ -22,10 +22,10 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAsgardeo } from "@asgardeo/react";
-import { authedGet } from "@api/http";
-import { useAccessToken } from "@hooks/useAccessToken";
-import { emailGroupsServiceUrls, isEmailGroupsBackendConfigured } from "@config/apiConfig";
-import { foldIdentityError, useAsgardeoSub } from "@hooks/useAsgardeoSub";
+import { authedGet } from "@one-wso2/platform-contract";
+import { useAccessToken } from "@one-wso2/platform-contract";
+import { emailGroupsServiceUrls, isEmailGroupsBackendConfigured } from "../config";
+import { foldIdentityError, useAsgardeoSub } from "@one-wso2/platform-contract";
 import { buildGroupCatalog } from "../util/groupCatalog";
 import { emailGroupRetry } from "../util/emailGroupError";
 import type { GroupCatalog } from "./emailGroupTypes";
