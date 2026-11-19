@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:all": "turbo run build && npm run build",
+    "build:bundled": "npm run build -w @one-wso2/email-groups && npm run build && rm -rf dist/email-groups && cp -R apps/email-groups/dist dist/email-groups",
     "test:all": "turbo run test",
     "lint:all": "turbo run lint",
     "dev:all": "turbo run dev --ui=stream & vite",
