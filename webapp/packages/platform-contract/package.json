@@ -1,0 +1,13 @@
+{
+  "name": "@one-wso2/platform-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.tsx",
+  "types": "src/index.tsx",
+  "peerDependencies": {
+    "@tanstack/react-query": "*",
+    "@wso2/oxygen-ui": "*",
+    "react": "*"
+  }
+}

@@ -11,13 +11,20 @@
     "check:prod-pdf": "node scripts/check-prod-pdf.mjs",
     "lint": "eslint --cache .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:all": "turbo run build && npm run build",
+    "test:all": "turbo run test",
+    "lint:all": "turbo run lint",
+    "dev:all": "turbo run dev --ui=stream & vite",
+    "preview:all": "turbo run preview --ui=stream & vite preview --port 3000"
   },
   "dependencies": {
     "@asgardeo/react": "0.25.14",
     "@fontsource-variable/newsreader": "5.3.0",
     "@fontsource/plus-jakarta-sans": "^5.1.0",
+    "@module-federation/runtime": "2.9.3",
     "@mui/material": "7.3.4",
+    "@one-wso2/platform-contract": "*",
     "@react-pdf/renderer": "4.9.0",
     "@tanstack/react-query": "5.90.20",
     "@wso2/oxygen-ui": "0.25.0",
@@ -41,7 +48,8 @@
     "react-quill-new": "3.8.3",
     "react-router": "7.18.2",
     "react-window": "1.8.11",
-    "recharts": "3.10.1"
+    "recharts": "3.10.1",
+    "@one-wso2/federation-shared": "*"
   },
   "overrides": {
     "dompurify": "3.4.16",
@@ -50,6 +58,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",
+    "@module-federation/vite": "1.24.1",
     "@tanstack/react-query-devtools": "5.91.2",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "6.9.1",
@@ -69,9 +78,15 @@
     "globals": "16.5.0",
     "jsdom": "27.4.0",
     "playwright": "1.64.0",
+    "turbo": "2.11.13",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.2",
     "vite": "7.3.7",
     "vitest": "4.1.11"
-  }
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "packageManager": "npm@11.20.0"
 }

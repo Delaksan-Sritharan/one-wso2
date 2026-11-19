@@ -30,3 +30,5 @@ public/config.js
 .env
 .env.*
 !.env.example
+.turbo
+*.tsbuildinfo
