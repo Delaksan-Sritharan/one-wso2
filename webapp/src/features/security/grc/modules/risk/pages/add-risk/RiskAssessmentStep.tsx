@@ -32,6 +32,7 @@ import {
 } from "@wso2/oxygen-ui";
 import { Info } from "@wso2/oxygen-ui-icons-react";
 import type { JSX, ReactNode } from "react";
+import { likelihoodBasis } from "./suggestionBasis";
 import type { AddRiskFormValues, ImpactLevel, LikelihoodLevel } from "./types";
 import type { RiskScore } from "../../api/riskApi";
 import { suggestLikelihood } from "../../api/riskApi";
@@ -136,8 +137,11 @@ export default function RiskAssessmentStep({ riskScores }: RiskAssessmentStepPro
         score: result.score,
         reason: result.reason,
         confidence: result.confidence,
+        basis: likelihoodBasis(riskTitle, riskDescription, impactDescription, complianceReferences, riskCategory, sourceRegister),
       });
     } catch (err) {
+      // A failed request must not leave the previous suggestion behind.
+      setValue("aiLikelihoodSuggestion", null);
       const status = (err as { status?: number }).status;
       const message = err instanceof Error ? err.message : undefined;
       setSuggestError(

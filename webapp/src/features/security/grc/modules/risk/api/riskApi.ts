@@ -16,6 +16,7 @@
 
 import { BACKEND_BASE_URL } from "@features/security/grc/shim/apiConfig";
 import { toDateOnlyString } from "@features/security/grc/utils/dateTime";
+import { suggestionsToSend } from "../pages/add-risk/suggestionBasis";
 import type { AddRiskFormValues, LikelihoodLevel } from "../pages/add-risk/types";
 
 // ── Response types (mirror Go models) ─────────────────────────────────────────
@@ -949,6 +950,9 @@ export async function fetchNextSequenceID(
 // ── Build the POST /api/v1/risks payload from the form values ──────────────────
 
 export function buildCreateRiskPayload(data: AddRiskFormValues): Record<string, unknown> {
+  // Only suggestions that still describe the form being saved; see
+  // suggestionBasis.ts.
+  const ai = suggestionsToSend(data);
   return {
     year: data.year,
     quarter: data.quarter,
@@ -957,11 +961,11 @@ export function buildCreateRiskPayload(data: AddRiskFormValues): Record<string, 
     risk_description: data.riskDescription,
     compliance_reference_ids: data.complianceReferences,
     risk_category_ids: data.riskCategory !== "" ? [data.riskCategory] : undefined,
-    ai_category_suggestion: data.aiCategorySuggestion
+    ai_category_suggestion: ai.category
       ? {
-          category_id: data.aiCategorySuggestion.categoryId,
-          reason: data.aiCategorySuggestion.reason,
-          confidence: data.aiCategorySuggestion.confidence,
+          category_id: ai.category.categoryId,
+          reason: ai.category.reason,
+          confidence: ai.category.confidence,
         }
       : undefined,
     identified_by_type: data.identifiedByType,
@@ -977,11 +981,11 @@ export function buildCreateRiskPayload(data: AddRiskFormValues): Record<string, 
     risk_identified_date: toDateOnlyString(data.riskIdentifiedDate),
     likelihood: data.likelihood,
     impact: data.impact,
-    ai_likelihood_suggestion: data.aiLikelihoodSuggestion
+    ai_likelihood_suggestion: ai.likelihood
       ? {
-          score: data.aiLikelihoodSuggestion.score,
-          reason: data.aiLikelihoodSuggestion.reason,
-          confidence: data.aiLikelihoodSuggestion.confidence,
+          score: ai.likelihood.score,
+          reason: ai.likelihood.reason,
+          confidence: ai.likelihood.confidence,
         }
       : undefined,
     impact_description: data.impactDescription,
@@ -992,12 +996,12 @@ export function buildCreateRiskPayload(data: AddRiskFormValues): Record<string, 
     management_approver_id: data.managementApprover !== "" ? data.managementApprover : undefined,
     action_owner_id: data.actionOwner !== "" ? data.actionOwner : undefined,
     action_plan_description: data.actionPlanDescription,
-    ai_action_plan_suggestion: data.aiActionPlanSuggestion
+    ai_action_plan_suggestion: ai.actionPlan
       ? {
-          description: data.aiActionPlanSuggestion.description,
-          reason: data.aiActionPlanSuggestion.reason,
-          confidence: data.aiActionPlanSuggestion.confidence,
-          used: data.aiActionPlanSuggestion.used,
+          description: ai.actionPlan.description,
+          reason: ai.actionPlan.reason,
+          confidence: ai.actionPlan.confidence,
+          used: ai.actionPlan.used,
         }
       : undefined,
     action_steps: data.actionSteps.map((s) => ({ description: s.description })),

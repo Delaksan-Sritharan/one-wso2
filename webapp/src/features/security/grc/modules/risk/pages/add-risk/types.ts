@@ -49,6 +49,8 @@ export interface AICategorySuggestion {
   categoryId: number;
   reason: string;
   confidence: "high" | "medium" | "low";
+  // Fingerprint of the inputs this was made from (see ./suggestionBasis).
+  basis: string;
 }
 
 // Likelihood counterpart to AICategorySuggestion — same reasoning, same
@@ -60,6 +62,8 @@ export interface AILikelihoodSuggestion {
   score: LikelihoodLevel;
   reason: string;
   confidence: "high" | "medium" | "low";
+  // Fingerprint of the inputs this was made from (see ./suggestionBasis).
+  basis: string;
 }
 
 // Action Plan counterpart to AICategorySuggestion/AILikelihoodSuggestion.
@@ -75,6 +79,8 @@ export interface AIActionPlanSuggestion {
   reason: string;
   confidence: "high" | "medium" | "low";
   used: boolean;
+  // Fingerprint of the inputs this was made from (see ./suggestionBasis).
+  basis: string;
 }
 
 import type { EvidenceAttachment } from "@features/security/grc/components/evidence-attachments/EvidenceAttachments";
