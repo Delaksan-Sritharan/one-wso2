@@ -35,6 +35,7 @@ import type { JSX } from "react";
 import { useAuthApiClient } from "@features/security/grc/shim/useAuthApiClient";
 import { resolveUserByEmail, searchEmployees, suggestActionPlan } from "../../api/riskApi";
 import type { EmployeeOption, RiskDetail } from "../../api/riskApi";
+import AIDraftNotice from "../add-risk/AIDraftNotice";
 import { actionPlanBasis, actionPlanStillUsed } from "../add-risk/suggestionBasis";
 import type { AIActionPlanSuggestion } from "../add-risk/types";
 import { dialogPaperSx } from "../cardStyles";
@@ -315,11 +316,12 @@ export default function ActionPlanDialog({
             {!suggestError && suggestion && (
               <Alert severity="info" sx={{ mt: 1 }}>
                 <Stack gap={1}>
+                  <AIDraftNotice />
                   <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                    <strong>Suggested</strong> ({suggestion.confidence} confidence): {suggestion.description}
+                    {suggestion.description}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {suggestion.reason}
+                    AI confidence: {suggestion.confidence}. {suggestion.reason}
                   </Typography>
                   <Box>
                     <Button

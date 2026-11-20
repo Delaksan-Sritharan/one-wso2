@@ -34,6 +34,7 @@ import {
 import { Plus, Trash2 } from "@wso2/oxygen-ui-icons-react";
 import type { JSX, ReactNode } from "react";
 import EvidenceAttachments from "@features/security/grc/components/evidence-attachments/EvidenceAttachments";
+import AIDraftNotice from "./AIDraftNotice";
 import { actionPlanBasis } from "./suggestionBasis";
 import type { AddRiskFormValues } from "./types";
 import { TREATMENT_STRATEGIES } from "./constants";
@@ -563,12 +564,12 @@ export default function ActionPlanStep({
               {!actionPlanSuggestError && aiActionPlanSuggestion && (
                 <Alert severity="info" sx={{ mt: 1 }}>
                   <Stack gap={1}>
+                    <AIDraftNotice />
                     <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                      <strong>Suggested</strong> ({aiActionPlanSuggestion.confidence} confidence):{" "}
                       {aiActionPlanSuggestion.description}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {aiActionPlanSuggestion.reason}
+                      AI confidence: {aiActionPlanSuggestion.confidence}. {aiActionPlanSuggestion.reason}
                     </Typography>
                     <Box>
                       <Button
