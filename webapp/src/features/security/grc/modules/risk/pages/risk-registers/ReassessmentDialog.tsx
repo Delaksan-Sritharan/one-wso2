@@ -57,6 +57,7 @@ import type {
   RiskScoreInfo,
   UserOption,
 } from "../../api/riskApi";
+import { likelihoodBasis } from "../add-risk/suggestionBasis";
 import { dialogPaperSx } from "../cardStyles";
 import RiskScoreGrid from "./RiskScoreGrid";
 
@@ -245,8 +246,20 @@ export default function ReassessmentDialog({
     reason: string;
     confidence: "high" | "medium" | "low";
   } | null>(null);
+  const [suggestionBasis, setSuggestionBasis] = useState<string | null>(null);
   const [suggesting, setSuggesting] = useState(false);
   const [suggestError, setSuggestError] = useState<string | null>(null);
+
+  // Fingerprint of the risk the suggestion is made from; a suggestion made for
+  // different inputs is not sent (see ../add-risk/suggestionBasis).
+  const currentLikelihoodBasis = likelihoodBasis(
+    detail.risk_title,
+    detail.risk_description,
+    detail.impact_description,
+    detail.compliance_references.map((r) => r.id),
+    detail.risk_categories[0]?.id,
+    detail.source_register_id,
+  );
 
   // A risk whose category was later archived/deleted has an empty
   // risk_categories array — suggestLikelihood needs a real category id, so
@@ -269,7 +282,11 @@ export default function ReassessmentDialog({
         detail.source_register_id,
       );
       setSuggestion(result);
+      setSuggestionBasis(currentLikelihoodBasis);
     } catch (err) {
+      // A failed request must not leave the previous suggestion behind.
+      setSuggestion(null);
+      setSuggestionBasis(null);
       const status = (err as { status?: number }).status;
       const message = err instanceof Error ? err.message : undefined;
       setSuggestError(
@@ -280,7 +297,7 @@ export default function ReassessmentDialog({
     } finally {
       setSuggesting(false);
     }
-  }, [authFetch, detail]);
+  }, [authFetch, detail, currentLikelihoodBasis]);
 
   const handleClose = () => {
     if (submitting) return;
@@ -301,6 +318,7 @@ export default function ReassessmentDialog({
     setErrors({});
     setApiError("");
     setSuggestion(null);
+    setSuggestionBasis(null);
     setSuggestError(null);
     onClose();
   };
@@ -354,7 +372,8 @@ export default function ReassessmentDialog({
       };
       // Only when the user asked for a suggestion — the key is otherwise left
       // out of the request entirely.
-      if (suggestion) payload.ai_likelihood_suggestion = suggestion;
+      // Left out if the risk changed since it was made.
+      if (suggestion && suggestionBasis === currentLikelihoodBasis) payload.ai_likelihood_suggestion = suggestion;
       // Only what changed, and only from the assigner — the backend refuses
       // anyone else who sends them.
       if (canEditRiskDetails) {

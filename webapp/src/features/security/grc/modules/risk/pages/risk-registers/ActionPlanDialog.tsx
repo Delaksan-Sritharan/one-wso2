@@ -35,6 +35,7 @@ import type { JSX } from "react";
 import { useAuthApiClient } from "@features/security/grc/shim/useAuthApiClient";
 import { resolveUserByEmail, searchEmployees, suggestActionPlan } from "../../api/riskApi";
 import type { EmployeeOption, RiskDetail } from "../../api/riskApi";
+import { actionPlanBasis, actionPlanStillUsed } from "../add-risk/suggestionBasis";
 import type { AIActionPlanSuggestion } from "../add-risk/types";
 import { dialogPaperSx } from "../cardStyles";
 
@@ -106,6 +107,16 @@ export default function ActionPlanDialog({
   // the button stays disabled rather than silently sending category_id: 0.
   const canSuggestActionPlan = riskDetail.risk_categories.length > 0;
 
+  // Fingerprint of the risk the suggestion is made from; a suggestion made for
+  // different inputs is not sent (see ../add-risk/suggestionBasis).
+  const currentPlanBasis = actionPlanBasis(
+    riskDetail.risk_title,
+    riskDetail.risk_description,
+    riskDetail.risk_categories[0]?.id,
+    riskDetail.compliance_references.map((r) => r.id),
+    riskDetail.treatment_strategy,
+  );
+
   const handleSuggestActionPlan = useCallback(async () => {
     const categoryId = riskDetail.risk_categories[0]?.id;
     if (categoryId == null) return;
@@ -120,8 +131,10 @@ export default function ActionPlanDialog({
         riskDetail.compliance_references.map((r) => r.id),
         riskDetail.treatment_strategy ?? "",
       );
-      setSuggestion({ ...result, used: false });
+      setSuggestion({ ...result, used: false, basis: currentPlanBasis });
     } catch (err) {
+      // A failed request must not leave the previous suggestion behind.
+      setSuggestion(null);
       const status = (err as { status?: number }).status;
       const message = err instanceof Error ? err.message : undefined;
       setSuggestError(
@@ -132,7 +145,7 @@ export default function ActionPlanDialog({
     } finally {
       setSuggesting(false);
     }
-  }, [authFetch, riskDetail]);
+  }, [authFetch, riskDetail, currentPlanBasis]);
 
   const handleUseSuggestion = (): void => {
     if (!suggestion) return;
@@ -227,7 +240,12 @@ export default function ActionPlanDialog({
         description: description.trim(),
         actionOwnerId: ownerId,
         steps: trimmedSteps,
-        aiActionPlanSuggestion: suggestion,
+        // Dropped if the risk changed since it was made; counted as used only
+        // if the saved text is still the suggestion.
+        aiActionPlanSuggestion:
+          suggestion && suggestion.basis === currentPlanBasis
+            ? { ...suggestion, used: actionPlanStillUsed(suggestion, description) }
+            : null,
       });
       resetState();
       onClose();

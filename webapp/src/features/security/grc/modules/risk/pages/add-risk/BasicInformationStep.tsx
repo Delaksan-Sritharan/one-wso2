@@ -39,6 +39,7 @@ import {
   Typography,
 } from "@wso2/oxygen-ui";
 import type { JSX } from "react";
+import { categoryBasis } from "./suggestionBasis";
 import type { AddRiskFormValues } from "./types";
 import { QUARTERS, RISK_ACCEPTORS, YEAR_OPTIONS } from "./constants";
 import FieldLabel from "./FieldLabel";
@@ -124,9 +125,13 @@ export default function BasicInformationStep({
         categoryId: result.category_id,
         reason: result.reason,
         confidence: result.confidence,
+        basis: categoryBasis(riskTitle, riskDescription, complianceReferences),
       });
       clearErrors("riskCategory");
     } catch (err) {
+      // A failed request must not leave the previous suggestion behind: the
+      // banner is hidden, but the old one would still be saved.
+      setValue("aiCategorySuggestion", null);
       const status = (err as { status?: number }).status;
       const message = err instanceof Error ? err.message : undefined;
       setSuggestError(

@@ -34,6 +34,7 @@ import {
 import { Plus, Trash2 } from "@wso2/oxygen-ui-icons-react";
 import type { JSX, ReactNode } from "react";
 import EvidenceAttachments from "@features/security/grc/components/evidence-attachments/EvidenceAttachments";
+import { actionPlanBasis } from "./suggestionBasis";
 import type { AddRiskFormValues } from "./types";
 import { TREATMENT_STRATEGIES } from "./constants";
 import {
@@ -235,8 +236,11 @@ export default function ActionPlanStep({
         reason: result.reason,
         confidence: result.confidence,
         used: false,
+        basis: actionPlanBasis(riskTitle, riskDescription, riskCategory, complianceReferences, treatmentStrategy),
       });
     } catch (err) {
+      // A failed request must not leave the previous suggestion behind.
+      setValue("aiActionPlanSuggestion", null);
       const status = (err as { status?: number }).status;
       const message = err instanceof Error ? err.message : undefined;
       setActionPlanSuggestError(
