@@ -37,6 +37,7 @@ import type { SelfReview, SelfReviewAnswers } from "../api/selfReviewTypes";
 import { useSaveParRating } from "../api/useParMutations";
 import { useSaveSelfReview, useShareSelfReview } from "../api/useSelfReview";
 import { isDeadlinePassed } from "../util/parDeadline";
+import { employeeDeadlineFor } from "../util/parDepartments";
 import { answersToSave, isSectionAnswered, shareBlockers } from "../util/selfReviewForm";
 
 const AUTOSAVE_DELAY_MS = 1200;
@@ -74,7 +75,8 @@ export default function ParSelfReviewForm({
 
   const status = rating.parEmployeeStatus;
   const shared = status === "SHARED" || status === "SHARED_BLOCKED";
-  const deadlinePassed = isDeadlinePassed(cycle.parEmployeeDeadline);
+  // Their department's own self-review deadline, or the cycle's.
+  const deadlinePassed = isDeadlinePassed(employeeDeadlineFor(cycle, rating.parDepartment));
   const editable = !shared && !deadlinePassed && (started || status === "DRAFT");
   // Same rule as the single comment: unshare until the lead shares their side.
   const canUnshare = status === "SHARED" && rating.parLeadStatus !== "SHARED" && !deadlinePassed;

@@ -68,6 +68,19 @@ export interface ParCycleConfigurations {
   missedDeadlineRating?: string;
   // The same for the leadership team (a leadership team rating).
   leadershipMissedDeadlineRating?: string;
+  // The departments that share the rating that needs evidence without it, by
+  // name in any business unit.
+  evidenceExemptDepartments?: string[];
+  // The departments with a self-review deadline of their own (a cycle's only:
+  // the global configurations have none).
+  departmentEmployeeDeadlines?: DepartmentDeadline[];
+}
+
+// A department's own self-review deadline in a cycle. The cycle's other
+// deadlines stay the same for it.
+export interface DepartmentDeadline {
+  department: string;
+  deadline: string;
 }
 
 export interface ParCycle {

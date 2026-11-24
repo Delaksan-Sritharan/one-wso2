@@ -406,6 +406,7 @@ export const parServiceUrls = {
   // Same resource edits cycle settings and drives OPEN/CLOSED transitions.
   parCycleModify: (parCycleId: number) => `${parBackendUrl}/par-cycles/${parCycleId}`,
   parGlobalConfig: () => `${parBackendUrl}/meta/configurations`,
+  parDepartments: () => `${parBackendUrl}/meta/departments`,
   parAdminTeams: (parCycleId: number) => `${parBackendUrl}/par-cycles/${parCycleId}/teams`,
   parAdminSpecialRatingGroups: (parCycleId: number) =>
     `${parBackendUrl}/par-cycles/${parCycleId}/special-rating-groups`,

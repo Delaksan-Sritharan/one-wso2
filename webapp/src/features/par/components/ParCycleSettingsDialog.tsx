@@ -17,13 +17,16 @@
 import { useState } from "react";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Grid, TextField, Typography } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
+import { isPreviewEnabled } from "@config/previewFeatures";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import ParDateField from "./ParDateField";
+import ParDepartmentSettingsFields from "./ParDepartmentSettingsFields";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useUpdateParCycle } from "../api/useParMutations";
 import { useParShowsPar2 } from "../api/useReview360";
-import type { ParCycle } from "../api/types";
+import type { DepartmentDeadline, ParCycle } from "../api/types";
+import { departmentDeadlinesProblem } from "../util/parDepartments";
 
 function fieldsFromCycle(cycle: ParCycle) {
   return {
@@ -38,9 +41,10 @@ function fieldsFromCycle(cycle: ParCycle) {
   };
 }
 
-// Same fields as ParCycleCreationDialog.tsx minus the name and the (always
-// disabled) PAR creation date, prefilled from the current cycle instead of
-// useParGlobalConfig.
+// Same fields as ParCycleCreationDialog.tsx minus the name, the (always
+// disabled) PAR creation date and the ratings, prefilled from the current
+// cycle instead of useParGlobalConfig. Unlike the ratings, the departments can
+// change while the cycle runs (where `par2` is on).
 export default function ParCycleSettingsDialog({
   open,
   onClose,
@@ -60,11 +64,24 @@ export default function ParCycleSettingsDialog({
   const [form, setForm] = useState(fieldsFromCycle(cycle));
   const [employeeQuestion, setEmployeeQuestion] = useState(cycle.parCycleConfigurations?.employeeParQuestion ?? "");
   const [reviewQuestion, setReviewQuestion] = useState(cycle.parCycleConfigurations?.threeSixtyReviewQuestion ?? "");
+  const showsDepartments = isPreviewEnabled("par2");
+  const savedNoEvidence = cycle.parCycleConfigurations?.evidenceExemptDepartments ?? [];
+  const savedDeadlines = cycle.parCycleConfigurations?.departmentEmployeeDeadlines ?? [];
+  const [noEvidence, setNoEvidence] = useState<string[]>(savedNoEvidence);
+  const [departmentDeadlines, setDepartmentDeadlines] = useState<DepartmentDeadline[]>(savedDeadlines);
   const [confirmContent, setConfirmContent] = useState<ConfirmationContent | null>(null);
 
   const set = (field: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [field]: value }));
 
   const evalStart = cycle.parEvaluationStartDate;
+
+  const deadlinesProblem = showsDepartments
+    ? departmentDeadlinesProblem(departmentDeadlines, {
+        evaluationStart: evalStart,
+        evaluationEnd: form.parEvaluationEndDate,
+        leadDeadline: form.parLeadDeadline,
+      })
+    : null;
 
   const isValid =
     form.parCycleStartDate &&
@@ -82,17 +99,22 @@ export default function ParCycleSettingsDialog({
     form.parSpecialRatingDeadline > evalStart &&
     form.parF2FDeadline &&
     form.parF2FDeadline > evalStart &&
-    (!showsQuestions || (employeeQuestion.trim() && reviewQuestion.trim()));
+    (!showsQuestions || (employeeQuestion.trim() && reviewQuestion.trim())) &&
+    deadlinesProblem === null;
 
   const hasChanged =
     JSON.stringify(form) !== JSON.stringify(fieldsFromCycle(cycle)) ||
     employeeQuestion !== (cycle.parCycleConfigurations?.employeeParQuestion ?? "") ||
-    reviewQuestion !== (cycle.parCycleConfigurations?.threeSixtyReviewQuestion ?? "");
+    reviewQuestion !== (cycle.parCycleConfigurations?.threeSixtyReviewQuestion ?? "") ||
+    JSON.stringify(noEvidence) !== JSON.stringify(savedNoEvidence) ||
+    JSON.stringify(departmentDeadlines) !== JSON.stringify(savedDeadlines);
 
   const handleClose = () => {
     setForm(fieldsFromCycle(cycle));
     setEmployeeQuestion(cycle.parCycleConfigurations?.employeeParQuestion ?? "");
     setReviewQuestion(cycle.parCycleConfigurations?.threeSixtyReviewQuestion ?? "");
+    setNoEvidence(savedNoEvidence);
+    setDepartmentDeadlines(savedDeadlines);
     onClose();
   };
 
@@ -105,12 +127,19 @@ export default function ParCycleSettingsDialog({
           {
             ...form,
             // Partial update — rating scales aren't edited by this dialog, so
-            // only the two question fields go out.
-            ...(showsQuestions
+            // only the two question fields and the departments go out.
+            ...(showsQuestions || showsDepartments
               ? {
                   parCycleConfigurations: {
-                    employeeParQuestion: employeeQuestion.trim(),
-                    threeSixtyReviewQuestion: reviewQuestion.trim(),
+                    ...(showsQuestions
+                      ? {
+                          employeeParQuestion: employeeQuestion.trim(),
+                          threeSixtyReviewQuestion: reviewQuestion.trim(),
+                        }
+                      : {}),
+                    ...(showsDepartments
+                      ? { evidenceExemptDepartments: noEvidence, departmentEmployeeDeadlines: departmentDeadlines }
+                      : {}),
                   },
                 }
               : {}),
@@ -270,6 +299,28 @@ export default function ParCycleSettingsDialog({
                 onChange={set("parF2FDeadline")}
               />
             </Grid>
+
+            {showsDepartments && (
+              <>
+                <Grid size={12} sx={{ mt: 1 }}>
+                  <ParDepartmentSettingsFields
+                    evidenceRating={cycle.parCycleConfigurations?.evidenceEnabledRating ?? ""}
+                    noEvidence={noEvidence}
+                    onNoEvidenceChange={setNoEvidence}
+                    deadlines={departmentDeadlines}
+                    onDeadlinesChange={setDepartmentDeadlines}
+                    dates={{ min: evalStart, max: form.parEvaluationEndDate || undefined }}
+                  />
+                </Grid>
+                {deadlinesProblem && (
+                  <Grid size={12}>
+                    <Typography variant="caption" color="error">
+                      {deadlinesProblem}
+                    </Typography>
+                  </Grid>
+                )}
+              </>
+            )}
 
             {par2.error && (
               <Grid size={12}>

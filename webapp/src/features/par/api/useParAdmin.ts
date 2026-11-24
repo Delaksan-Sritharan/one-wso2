@@ -76,6 +76,21 @@ export function useParGlobalConfig(enabled = true) {
   });
 }
 
+// Every department in HR, for PAR admins to pick from.
+export function useParDepartments(enabled = true) {
+  const { isSignedIn, getAccessToken, backendConfigured } = useParBaseline();
+  return useQuery<string[]>({
+    queryKey: ["par-admin-departments"],
+    enabled: enabled && isSignedIn && backendConfigured,
+    queryFn: async () => {
+      const accessToken = await getAccessToken();
+      return authedGet<string[]>(parServiceUrls.parDepartments(), accessToken, digiopsHeaders());
+    },
+    staleTime: 30 * 60 * 1000,
+    retry: defaultQueryRetry,
+  });
+}
+
 export function useParAdminTeams(parCycleId: number | undefined, enabled = true) {
   const { isSignedIn, getAccessToken, backendConfigured } = useParBaseline();
   return useQuery<ParTeamSummary[]>({

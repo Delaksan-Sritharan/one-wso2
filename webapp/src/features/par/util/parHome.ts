@@ -19,6 +19,7 @@ import type { ParCycle, ParRating, Par360Reviewer } from "../api/types";
 import { MIN_360_RESPONSES } from "../api/review360Types";
 import { formatShortDate } from "./parDate";
 import { isDeadlinePassed } from "./parDeadline";
+import { employeeDeadlineFor } from "./parDepartments";
 
 export type HomeStepKey = "self-review" | "360" | "lead-review" | "f2f";
 
@@ -91,7 +92,7 @@ function facts({ cycle, rating, reviewers, received, leadership }: HomeInput) {
   return {
     selfShared,
     // Nothing is submitted for the employee at a deadline: their own steps lock, so a missed one is Incomplete.
-    selfMissed: !selfShared && isDeadlinePassed(cycle.parEmployeeDeadline),
+    selfMissed: !selfShared && isDeadlinePassed(employeeDeadlineFor(cycle, rating.parDepartment)),
     leadShared,
     f2fDone,
     f2fMissed: !f2fDone && isDeadlinePassed(cycle.parF2FDeadline),
@@ -130,6 +131,8 @@ export function homeSteps(input: HomeInput): HomeStep[] {
 export function stepHeader(input: HomeInput, key: HomeStepKey): StepHeader {
   const { cycle, leadership } = input;
   const f = facts(input);
+  // Their department's own self-review deadline, or the cycle's.
+  const selfReviewDeadline = employeeDeadlineFor(cycle, input.rating.parDepartment);
   const state = homeSteps(input).find((s) => s.key === key)!.state;
   const passed = (what: string, deadline: string) => `The ${what} deadline passed on ${formatShortDate(deadline)}.`;
 
@@ -137,11 +140,11 @@ export function stepHeader(input: HomeInput, key: HomeStepKey): StepHeader {
     case "self-review":
       if (state === "done") return { title: "Self-review shared" };
       if (state === "incomplete") {
-        return { title: "Self-review not shared", line: passed("self-review", cycle.parEmployeeDeadline) };
+        return { title: "Self-review not shared", line: passed("self-review", selfReviewDeadline) };
       }
       return {
         title: state === "in-progress" ? "Write your self-review" : "Self-review",
-        due: { label: "Due", date: cycle.parEmployeeDeadline, countdown: true },
+        due: { label: "Due", date: selfReviewDeadline, countdown: true },
       };
     case "360": {
       const name = leadership ? "Leadership 360° feedback" : "360° feedback";

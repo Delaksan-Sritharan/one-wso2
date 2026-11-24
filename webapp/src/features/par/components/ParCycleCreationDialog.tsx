@@ -33,11 +33,13 @@ import { describeError } from "@api/errors";
 import { isPreviewEnabled } from "@config/previewFeatures";
 import ParDateField from "./ParDateField";
 import ParRatingSettingsFields from "./ParRatingSettingsFields";
+import ParDepartmentSettingsFields from "./ParDepartmentSettingsFields";
 import ConfirmationDialog, { type ConfirmationContent } from "@components/confirmation-dialog/ConfirmationDialog";
 import ErrorNotice from "@components/error-notice/ErrorNotice";
 import { useParGlobalConfig } from "../api/useParAdmin";
 import { useCreateParCycle } from "../api/useParMutations";
-import type { ParCycleCreate } from "../api/types";
+import type { DepartmentDeadline, ParCycleCreate } from "../api/types";
+import { departmentDeadlinesProblem } from "../util/parDepartments";
 import {
   allRatings,
   ratingSettingsFrom,
@@ -80,8 +82,9 @@ const EMPTY_FORM = {
 // ParCycleCreate requires it.
 //
 // Where `par2` is on, every cycle is a PAR 2.0 cycle: People Ops set its
-// ratings and their rules, and the two questions and the 360° rating list
-// (cycles without the PAR 2.0 forms) aren't asked.
+// ratings and their rules, the departments that need no evidence, and any
+// department's own self-review deadline; the two questions and the 360° rating
+// list (cycles without the PAR 2.0 forms) aren't asked.
 export default function ParCycleCreationDialog({
   open,
   onClose,
@@ -100,6 +103,8 @@ export default function ParCycleCreationDialog({
   const [employeeQuestion, setEmployeeQuestion] = useState("");
   const [reviewQuestion, setReviewQuestion] = useState("");
   const [ratingSettings, setRatingSettings] = useState<RatingSettings>(ratingSettingsFrom(undefined));
+  const [noEvidence, setNoEvidence] = useState<string[]>([]);
+  const [departmentDeadlines, setDepartmentDeadlines] = useState<DepartmentDeadline[]>([]);
   const [ratingsSeeded, setRatingsSeeded] = useState(false);
   const par2 = isPreviewEnabled("par2");
   const [confirmContent, setConfirmContent] = useState<ConfirmationContent | null>(null);
@@ -114,6 +119,7 @@ export default function ParCycleCreationDialog({
     setEmployeeQuestion(globalConfig.data.employeeParQuestion);
     setReviewQuestion(globalConfig.data.threeSixtyReviewQuestion);
     setRatingSettings(ratingSettingsFrom(globalConfig.data));
+    setNoEvidence(globalConfig.data.evidenceExemptDepartments ?? []);
   }
 
   const today = todayDateOnly();
@@ -127,11 +133,19 @@ export default function ParCycleCreationDialog({
     setEmployeeQuestion("");
     setReviewQuestion("");
     setRatingSettings(ratingSettingsFrom(undefined));
+    setNoEvidence([]);
+    setDepartmentDeadlines([]);
     setRatingsSeeded(false);
     onClose(created);
   };
 
   const set = (field: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [field]: value }));
+
+  const deadlinesProblem = departmentDeadlinesProblem(departmentDeadlines, {
+    evaluationStart: evalStart,
+    evaluationEnd: form.parEvaluationEndDate,
+    leadDeadline: form.parLeadDeadline,
+  });
 
   const isValid =
     form.parCycleName.trim() &&
@@ -146,7 +160,7 @@ export default function ParCycleCreationDialog({
     form.parSpecialRatingDeadline &&
     form.parF2FDeadline &&
     (par2
-      ? ratingsSeeded && ratingSettingsProblem(ratingSettings) === null
+      ? ratingsSeeded && ratingSettingsProblem(ratingSettings) === null && deadlinesProblem === null
       : employeeQuestion.trim() && reviewQuestion.trim() && ratings.length > 0 && reviewRatings.length > 0);
 
   const buildPayload = (): ParCycleCreate => ({
@@ -161,7 +175,7 @@ export default function ParCycleCreationDialog({
     parSpecialRatingDeadline: form.parSpecialRatingDeadline,
     parF2FDeadline: form.parF2FDeadline,
     parCycleConfigurations: par2
-      ? ratingSettings
+      ? { ...ratingSettings, evidenceExemptDepartments: noEvidence, departmentEmployeeDeadlines: departmentDeadlines }
       : {
           employeeParQuestion: employeeQuestion.trim(),
           threeSixtyReviewQuestion: reviewQuestion.trim(),
@@ -330,13 +344,32 @@ export default function ParCycleCreationDialog({
                   </Grid>
                 )}
                 {ratingsSeeded ? (
-                  <Grid size={12} sx={{ mt: 1 }}>
-                    <ParRatingSettingsFields
-                      value={ratingSettings}
-                      onChange={setRatingSettings}
-                      suggestions={globalConfig.data ? allRatings(ratingSettingsFrom(globalConfig.data)) : []}
-                    />
-                  </Grid>
+                  <>
+                    <Grid size={12} sx={{ mt: 1 }}>
+                      <ParRatingSettingsFields
+                        value={ratingSettings}
+                        onChange={setRatingSettings}
+                        suggestions={globalConfig.data ? allRatings(ratingSettingsFrom(globalConfig.data)) : []}
+                      />
+                    </Grid>
+                    <Grid size={12} sx={{ mt: 1 }}>
+                      <ParDepartmentSettingsFields
+                        evidenceRating={ratingSettings.evidenceEnabledRating}
+                        noEvidence={noEvidence}
+                        onNoEvidenceChange={setNoEvidence}
+                        deadlines={departmentDeadlines}
+                        onDeadlinesChange={setDepartmentDeadlines}
+                        dates={{ min: tomorrow, max: form.parEvaluationEndDate || undefined }}
+                      />
+                    </Grid>
+                    {deadlinesProblem && (
+                      <Grid size={12}>
+                        <Typography variant="caption" color="error">
+                          {deadlinesProblem}
+                        </Typography>
+                      </Grid>
+                    )}
+                  </>
                 ) : (
                   globalConfig.isError && (
                     <Grid size={12}>

@@ -28,6 +28,9 @@ vi.mock("../api/useReview360", () => ({
 vi.mock("../api/useParMutations", () => ({
   useUpdateParCycle: () => ({ mutate, isPending: false, isError: false, error: null }),
 }));
+vi.mock("../api/useParAdmin", () => ({
+  useParDepartments: () => ({ data: ["PARTNER OPS", "FIELD OPS", "FIELD OPS ENGINEERING"], isLoading: false, isError: false }),
+}));
 vi.mock("@context/notifications/NotificationsContext", () => ({
   useNotifications: () => ({ showSuccess: vi.fn(), showError: vi.fn() }),
 }));
@@ -61,7 +64,13 @@ const cycle = {
   parCycleStatus: "OPEN",
 } as ParCycle;
 
+const originalConfig = window.config;
+const setPar2 = (on: boolean) => {
+  window.config = { ...(originalConfig ?? {}), ONE_WSO2_PREVIEW_FEATURES: { par2: on } } as Window["config"];
+};
+
 afterEach(() => {
+  window.config = originalConfig;
   forms = resolved;
   mutate.mockReset();
 });
@@ -99,5 +108,34 @@ describe("ParCycleSettingsDialog", () => {
     const payload = moveF2FDeadlineAndSave();
     expect(payload.parF2FDeadline).toBe("2027-07-28");
     expect(payload).not.toHaveProperty("parCycleConfigurations");
+  });
+
+  it("changes the departments while the cycle runs, with par2 on", () => {
+    setPar2(true);
+    forms = { ...resolved, showsPar2: true };
+    const ownDeadlineCycle = {
+      ...cycle,
+      parCycleConfigurations: {
+        ...cycle.parCycleConfigurations,
+        evidenceEnabledRating: "Needs Improvements",
+        evidenceExemptDepartments: ["FIELD OPS", "PARTNER OPS"],
+        departmentEmployeeDeadlines: [{ department: "FIELD OPS", deadline: "2027-07-08" }],
+      },
+    } as ParCycle;
+    render(<ParCycleSettingsDialog open onClose={vi.fn()} cycle={ownDeadlineCycle} />);
+    expect(screen.getByLabelText("Self-review deadline 1")).toHaveValue("2027-07-08");
+
+    // Moving the lead deadline before Field Ops' own isn't allowed.
+    fireEvent.change(screen.getByLabelText("Deadline for lead's feedback"), { target: { value: "2027-07-07" } });
+    expect(screen.getByText("FIELD OPS's self-review deadline must be before the deadline for lead's feedback.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Deadline for lead's feedback"), { target: { value: "2027-07-15" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove self-review deadline 1" }));
+    const payload = moveF2FDeadlineAndSave();
+    expect(payload.parCycleConfigurations).toEqual({
+      evidenceExemptDepartments: ["FIELD OPS", "PARTNER OPS"],
+      departmentEmployeeDeadlines: [],
+    });
   });
 });

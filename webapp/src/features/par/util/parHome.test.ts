@@ -134,6 +134,20 @@ describe("stepHeader", () => {
     });
   });
 
+  it("self-review: their department's own deadline, when it has one", () => {
+    const ownDeadlineCycle = {
+      ...cycle,
+      parEmployeeDeadline: PAST,
+      parCycleConfigurations: { departmentEmployeeDeadlines: [{ department: "FIELD OPS", deadline: "2999-06-30" }] },
+    } as ParCycle;
+    const fieldOps = input({ cycle: ownDeadlineCycle, rating: rating({ parDepartment: "FIELD OPS" }) });
+    expect(state(fieldOps, "self-review")).toBe("not-started");
+    expect(stepHeader(fieldOps, "self-review").due).toEqual({ label: "Due", date: "2999-06-30", countdown: true });
+    expect(state(input({ cycle: ownDeadlineCycle, rating: rating({ parDepartment: "MARKETING" }) }), "self-review")).toBe(
+      "incomplete",
+    );
+  });
+
   it("360°: Due while there's asking to do, Open until once 3 are asked, and why it's Incomplete", () => {
     expect(stepHeader(input(), "360")).toEqual({
       title: "Request 360° feedback",
