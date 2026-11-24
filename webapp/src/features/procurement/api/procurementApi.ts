@@ -108,6 +108,10 @@ export interface ProcurementApi {
   downloadAttachment: (requestId: string, attachmentId: string) => Promise<Blob>;
   /** The people a request can be assigned to: the members of the Procurement groups. */
   listTeamMembers: () => Promise<Person[]>;
+  /** Let a person, by email, read an approved or assigned request. */
+  addCollaborator: (requestId: string, email: string) => Promise<void>;
+  /** Take a collaborator off a request. */
+  removeCollaborator: (requestId: string, email: string) => Promise<void>;
 }
 
 /** Whether a dev build should serve sample data in place of the missing backend. */
@@ -276,6 +280,12 @@ function createHttpProcurementApi(getAccessToken: () => Promise<string>, user: P
       return res.blob();
     },
     listTeamMembers: async () => (await get<BackendDirectoryUser[]>(urls.teamMembers)).map(toPerson),
+    addCollaborator: async (requestId, email) => {
+      await authedPost(urls.requestCollaborators(requestId), await getAccessToken(), { email });
+    },
+    removeCollaborator: async (requestId, email) => {
+      await authedDelete(urls.requestCollaborator(requestId, email), await getAccessToken());
+    },
   };
 }
 

@@ -267,6 +267,14 @@ function useHandlingAction<V>(requestId: string, run: (api: NonNullable<ReturnTy
 export const useAssignRequest = (requestId: string) =>
   useHandlingAction<string | undefined>(requestId, (api, email) => api.assignRequest(requestId, email));
 
+/** Add a collaborator, by email. */
+export const useAddCollaborator = (requestId: string) =>
+  useHandlingAction<string>(requestId, (api, email) => api.addCollaborator(requestId, email));
+
+/** Take a collaborator off, by email. */
+export const useRemoveCollaborator = (requestId: string) =>
+  useHandlingAction<string>(requestId, (api, email) => api.removeCollaborator(requestId, email));
+
 export const useUnassignRequest = (requestId: string) => useHandlingAction<void>(requestId, (api) => api.unassignRequest(requestId));
 
 export const useSetPriority = (requestId: string) =>

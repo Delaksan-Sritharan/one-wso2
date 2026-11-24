@@ -2128,6 +2128,11 @@ export const procurementServiceUrls = {
   },
   engagementCodes: (businessUnit: string): string =>
     `${procurementBackendUrl}/engagement-codes?businessUnit=${encodeSegment(businessUnit)}`,
+  /** POST adds a collaborator to an approved or assigned request, by email. */
+  requestCollaborators: (requestId: string): string => `${procurementBackendUrl}/requests/${encodeSegment(requestId)}/collaborators`,
+  /** DELETE removes a collaborator from a request. */
+  requestCollaborator: (requestId: string, email: string): string =>
+    `${procurementBackendUrl}/requests/${encodeSegment(requestId)}/collaborators/${encodeSegment(email)}`,
   /** GET lists the members of the Procurement user and admin groups, for Procurement users and admins. */
   teamMembers: `${procurementBackendUrl}/procurement/team`,
   directoryEmployees: (query: string, leadsOnly: boolean): string =>

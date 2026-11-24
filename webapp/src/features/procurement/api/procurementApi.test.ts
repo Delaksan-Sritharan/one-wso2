@@ -172,6 +172,15 @@ describe("the Procurement backend adapter", () => {
     expect((await api().searchDirectory("dre", false)).map((p) => p.name)).toEqual(["Drew Parker", "An Intern"]);
   });
 
+  it("adds a collaborator by email, and takes one off", async () => {
+    authedPost.mockResolvedValue(null);
+    authedDelete.mockResolvedValue(undefined);
+    await api().addCollaborator("7", "kim@example.com");
+    await api().removeCollaborator("7", "kim@example.com");
+    expect(authedPost.mock.calls).toEqual([["/requests/7/collaborators", "token", { email: "kim@example.com" }]]);
+    expect(authedDelete.mock.calls.map((c) => c[0])).toEqual(["/requests/7/collaborators/kim%40example.com"]);
+  });
+
   it("lists the Procurement team's members as people, for the assignee dropdown", async () => {
     expect(await api().listTeamMembers()).toEqual([
       { id: "sam.lee@example.com", name: "Sam Lee", email: "sam.lee@example.com" },

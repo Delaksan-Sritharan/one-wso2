@@ -124,6 +124,7 @@ const MOCK_BUDGET_APPROVERS: BudgetApproverOption[] = [{ id: "10", name: "Budget
 const codeOf = (list: Choice[], label: string): string => list.find((c) => c.label === label)?.value ?? "";
 
 const SEARCH_LIMIT = 10;
+const MAX_COLLABORATORS = 20;
 const MIN_QUERY_LENGTH = 3;
 
 function seedRequests(requester: Person): PurchaseRequest[] {
@@ -510,6 +511,17 @@ function buildMockProcurementApi(user: Person): ProcurementApi {
       return found.blob;
     },
     listTeamMembers: async () => [...MOCK_TEAM],
+    addCollaborator: async (requestId, email) => {
+      const found = find(requestId);
+      if (found.status !== "approved" && found.status !== "assigned") throw new Error("Only an approved or assigned request can have collaborators.");
+      if (found.collaborators.some((c) => c.toLowerCase() === email.toLowerCase())) throw new Error("That person is a collaborator already.");
+      if (found.collaborators.length >= MAX_COLLABORATORS) throw new Error(`A request has at most ${MAX_COLLABORATORS} collaborators.`);
+      Object.assign(found, { collaborators: [...found.collaborators, email], updatedAt: new Date().toISOString() });
+    },
+    removeCollaborator: async (requestId, email) => {
+      const found = find(requestId);
+      Object.assign(found, { collaborators: found.collaborators.filter((c) => c.toLowerCase() !== email.toLowerCase()), updatedAt: new Date().toISOString() });
+    },
   };
 }
 
