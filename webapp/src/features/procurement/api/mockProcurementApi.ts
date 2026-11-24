@@ -55,6 +55,9 @@ export const MOCK_DIRECTORY: readonly Person[] = [
 
 const TEAM_LEAD = MOCK_DIRECTORY[10];
 
+/** The sample Procurement team, taken from the sample people above. */
+const MOCK_TEAM: readonly Person[] = [MOCK_DIRECTORY[1], MOCK_DIRECTORY[3], MOCK_DIRECTORY[4]];
+
 /** People who are not leads, such as interns: the directory finds them only when leads are not asked for. */
 const NON_LEADS: ReadonlySet<string> = new Set(["casey.lane@example.com", "finley.brooks@example.com"]);
 
@@ -506,6 +509,7 @@ function buildMockProcurementApi(user: Person): ProcurementApi {
       if (!found) throw new Error("Attachment not found.");
       return found.blob;
     },
+    listTeamMembers: async () => [...MOCK_TEAM],
   };
 }
 

@@ -2128,6 +2128,8 @@ export const procurementServiceUrls = {
   },
   engagementCodes: (businessUnit: string): string =>
     `${procurementBackendUrl}/engagement-codes?businessUnit=${encodeSegment(businessUnit)}`,
+  /** GET lists the members of the Procurement user and admin groups, for Procurement users and admins. */
+  teamMembers: `${procurementBackendUrl}/procurement/team`,
   directoryEmployees: (query: string, leadsOnly: boolean): string =>
     `${procurementBackendUrl}/directory/employees?query=${encodeSegment(query)}${leadsOnly ? "&leadsOnly=true" : ""}`,
   requests: (limit: number): string => `${procurementBackendUrl}/requests?limit=${encodeSegment(limit)}`,

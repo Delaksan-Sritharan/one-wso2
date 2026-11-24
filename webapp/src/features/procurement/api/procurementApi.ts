@@ -106,6 +106,8 @@ export interface ProcurementApi {
   listAttachments: (requestId: string) => Promise<Attachment[]>;
   /** The bytes of a saved file. */
   downloadAttachment: (requestId: string, attachmentId: string) => Promise<Blob>;
+  /** The people a request can be assigned to: the members of the Procurement groups. */
+  listTeamMembers: () => Promise<Person[]>;
 }
 
 /** Whether a dev build should serve sample data in place of the missing backend. */
@@ -273,6 +275,7 @@ function createHttpProcurementApi(getAccessToken: () => Promise<string>, user: P
       if (!res.ok) throw new HttpError(url, res.status, await res.text().catch(() => ""));
       return res.blob();
     },
+    listTeamMembers: async () => (await get<BackendDirectoryUser[]>(urls.teamMembers)).map(toPerson),
   };
 }
 

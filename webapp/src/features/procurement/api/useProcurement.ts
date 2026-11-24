@@ -233,6 +233,22 @@ export function useTeamQueue(filter: { status?: RequestStatus; priority?: Priori
   });
 }
 
+/**
+ * The people a request can be assigned to.
+ *
+ * @param active - Whether to ask at all; only the page that assigns needs the team
+ */
+export function useProcurementTeam(active = true) {
+  const { api, userId, enabled } = useProcurementContext();
+  return useQuery({
+    queryKey: [...root(userId), "team-members"],
+    enabled: enabled && active,
+    staleTime: REFERENCE_STALE_TIME,
+    retry: defaultQueryRetry,
+    queryFn: () => api!.listTeamMembers(),
+  });
+}
+
 /** Run a handling action on a request, then refresh that request and the queue. */
 function useHandlingAction<V>(requestId: string, run: (api: NonNullable<ReturnType<typeof useProcurementContext>["api"]>, variables: V) => Promise<unknown>) {
   const { api, userId } = useProcurementContext();

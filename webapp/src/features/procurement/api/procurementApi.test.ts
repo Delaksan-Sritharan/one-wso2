@@ -52,6 +52,7 @@ const answers: Record<string, unknown> = {
   "/budget-approvers?businessUnit=BU-1": [{ id: 10, name: "Budget Owner" }],
   "/budget-approvers?businessUnit=BU-1&region=REG-1": [{ id: 11, name: "Regional Owner" }],
   "/engagement-codes?businessUnit=Sales": [{ code: "ENG-1", name: "Platform" }],
+  "/procurement/team": [{ email: "sam.lee@example.com", name: "Sam Lee" }, { email: "robin.shaw@example.com", name: "Robin Shaw" }],
   "/directory/employees?query=dre": [{ email: "drew.parker@example.com", name: "Drew Parker" }, { email: "intern@example.com", name: "An Intern" }],
   "/directory/employees?query=dre&leadsOnly=true": [{ email: "drew.parker@example.com", name: "Drew Parker" }],
   "/approvals?limit=100": [
@@ -169,6 +170,14 @@ describe("the Procurement backend adapter", () => {
 
   it("searches the directory and returns people", async () => {
     expect((await api().searchDirectory("dre", false)).map((p) => p.name)).toEqual(["Drew Parker", "An Intern"]);
+  });
+
+  it("lists the Procurement team's members as people, for the assignee dropdown", async () => {
+    expect(await api().listTeamMembers()).toEqual([
+      { id: "sam.lee@example.com", name: "Sam Lee", email: "sam.lee@example.com" },
+      { id: "robin.shaw@example.com", name: "Robin Shaw", email: "robin.shaw@example.com" },
+    ]);
+    expect(asked()).toEqual(["/procurement/team"]);
   });
 
   it("asks the backend for leads only when that is wanted, so the answer holds only people who can approve", async () => {
