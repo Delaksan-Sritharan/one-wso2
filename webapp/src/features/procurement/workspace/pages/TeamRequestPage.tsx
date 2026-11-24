@@ -21,6 +21,7 @@ import DecisionNotice from "../../components/DecisionNotice";
 import { RequestStatusChip } from "../../components/ProcurementChips";
 import SavedRequestSummary from "../../components/SavedRequestSummary";
 import { useProcurementMe, useRequest } from "../../api/useProcurement";
+import BudgetEdit from "../components/BudgetEdit";
 import HandlingPanel from "../components/HandlingPanel";
 import { workspacePaths } from "../workspacePaths";
 
@@ -57,7 +58,7 @@ export default function TeamRequestPage() {
         <Stack spacing={2}>
           <DecisionNotice request={data} />
           {handling && me.data && <HandlingPanel request={data} me={me.data.email} />}
-          <SavedRequestSummary request={data} />
+          <SavedRequestSummary request={data} budgetAction={handling && me.data ? <BudgetEdit request={data} me={me.data.email} /> : undefined} />
         </Stack>
       )}
     </>

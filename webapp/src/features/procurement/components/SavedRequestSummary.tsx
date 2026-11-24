@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import type { ReactNode } from "react";
 import { Alert, Button, Stack } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import { budgetForDisplay } from "../request-form/requestFormModel";
@@ -22,8 +23,12 @@ import { useAttachments, useDownloadAttachment, useEngagementCodes, useProcureme
 import type { PurchaseRequest } from "../types";
 import RequestSummary, { type AttachmentRow } from "./RequestSummary";
 
-/** A saved request as the summary cards, with budget codes shown as the names the lists give them. */
-export default function SavedRequestSummary({ request }: { request: PurchaseRequest }) {
+/**
+ * A saved request as the summary cards, with budget codes shown as the names the lists give them.
+ *
+ * @param budgetAction - Shown at the top of the Budget card, for a control that changes the budget details
+ */
+export default function SavedRequestSummary({ request, budgetAction }: { request: PurchaseRequest; budgetAction?: ReactNode }) {
   const lookups = useProcurementLookups();
   const unitName = lookups.data?.businessUnits.find((u) => u.value === request.budget.businessUnit)?.label ?? "";
   const engagementCodes = useEngagementCodes(unitName);
@@ -87,6 +92,7 @@ export default function SavedRequestSummary({ request }: { request: PurchaseRequ
           attachments: rows,
           date: request.submittedAt ? { label: "Raised", iso: request.submittedAt } : undefined,
         }}
+        budgetAction={budgetAction}
       />
     </Stack>
   );

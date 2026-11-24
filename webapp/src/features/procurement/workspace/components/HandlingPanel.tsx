@@ -30,6 +30,7 @@ import {
 import { OptionField, SelectField } from "../../request-form/formFields";
 import { MIN_DIRECTORY_QUERY } from "../../request-form/requestFormModel";
 import type { Person, Priority, PurchaseRequest } from "../../types";
+import { raisedOrApproves } from "../handlingAccess";
 
 const PRIORITIES: Priority[] = ["P1", "P2", "P3"];
 const PRIORITY_LABELS: Record<Priority, string> = { P1: "P1 — High", P2: "P2 — Medium", P3: "P3 — Normal" };
@@ -59,9 +60,7 @@ export default function HandlingPanel({ request, me }: { request: PurchaseReques
   const saving = mutations.some((m) => m.isPending);
   const mine = request.assignee.toLowerCase() === me.toLowerCase();
   // The backend does not let the requester or an approver of a request handle it.
-  const own = [request.requester.email, request.teamLead?.email ?? "", ...request.additionalApprovers].some(
-    (person) => person.toLowerCase() === me.toLowerCase(),
-  );
+  const own = raisedOrApproves(request, me);
   const busy = saving || own;
   // The backend does not give a request to the people who raised or approve it.
   const refused = new Set([request.requester.email, request.teamLead?.email ?? "", ...request.additionalApprovers].map((email) => email.toLowerCase()));
