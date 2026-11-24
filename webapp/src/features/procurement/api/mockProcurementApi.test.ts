@@ -141,11 +141,11 @@ describe("the Procurement sample data", () => {
 
   it("queues the approved requests, and lets the team assign, unassign and prioritise one that is not the user's own", async () => {
     const api = createMockProcurementApi(user);
-    expect((await api.listTeamQueue()).map((r) => r.id).sort()).toEqual(["approval-2", "seed-3"]);
+    expect((await api.listTeamQueue()).map((r) => r.id).sort()).toEqual(["approval-2", "seed-3", "team-1", "team-2"]);
     await expect(api.assignRequest("seed-3")).rejects.toThrow(/your own request/);
     await api.assignRequest("approval-2");
     expect(await api.getRequest("approval-2")).toMatchObject({ status: "assigned", assignee: user.email });
-    expect((await api.listTeamQueue({ status: "assigned" })).map((r) => r.id)).toEqual(["approval-2"]);
+    expect((await api.listTeamQueue({ status: "assigned" })).map((r) => r.id).sort()).toEqual(["approval-2", "team-2"]);
     await api.setPriority("approval-2", "P1");
     expect((await api.listTeamQueue({ priority: "P1" })).map((r) => r.id)).toEqual(["approval-2"]);
     await api.unassignRequest("approval-2");
@@ -157,6 +157,15 @@ describe("the Procurement sample data", () => {
     const api = createMockProcurementApi(user);
     await api.setPriority("seed-3", "P2");
     await api.setPriority("approval-2", "P1");
-    expect((await api.listTeamQueue()).map((r) => r.id)).toEqual(["approval-2", "seed-3"]);
+    expect((await api.listTeamQueue()).map((r) => r.id)).toEqual(["approval-2", "seed-3", "team-2", "team-1"]);
+  });
+
+  it("has requests that someone else raised and approved, which the user can handle and whose budget they can change", async () => {
+    const api = createMockProcurementApi(user);
+    await api.assignRequest("team-1");
+    expect(await api.getRequest("team-1")).toMatchObject({ status: "assigned", assignee: user.email });
+    const budget = (await api.getRequest("team-1")).budget;
+    await api.changeBudget("team-1", { budget: { ...budget, engagementCode: "ENG-2041" }, budgetApproverId: "10" });
+    expect((await api.getRequest("team-1")).budget.engagementCode).toBe("ENG-2041");
   });
 });

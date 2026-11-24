@@ -303,6 +303,62 @@ function approvalSeeds(approver: Person): PurchaseRequest[] {
   ];
 }
 
+/**
+ * Approved requests that someone else raised and someone else approved, which is what a Procurement user handles:
+ * a request the signed-in user raised or approved cannot be handled by them.
+ */
+function teamSeeds(): PurchaseRequest[] {
+  const L = MOCK_LOOKUPS;
+  const lead = MOCK_DIRECTORY[3];
+  const approved = { decision: "approved" as const, notes: "", decidedAt: "2026-11-07T10:00:00.000Z", decidedBy: lead.email, isOverride: false };
+  const base = {
+    additionalApprovers: [],
+    notes: "",
+    teamLead: lead,
+    teamLeadDecision: approved,
+    budgetApproverId: "10",
+    budgetApproverName: "Budget Owner",
+    vendors: [{ name: "Acme Supplies", website: "https://www.acme.example.com", contact: "", email: "", phone: "" }],
+    budget: {
+      category: codeOf(L.budgetCategories, "Facilities & Office"),
+      businessUnit: codeOf(L.businessUnits, "Facilities & Admin"),
+      product: codeOf(L.products, "Not product-specific"),
+      region: codeOf(L.regions, "APAC - Sri Lanka"),
+      engagementCode: "ENG-2040",
+      salesforceCampaign: "",
+    },
+    category: "NON-IT" as const,
+    submittedAt: "2026-11-06T09:00:00.000Z",
+    updatedAt: "2026-11-07T10:00:00.000Z",
+  };
+  return [
+    {
+      ...base,
+      id: "team-1",
+      reference: "PR-2026-00012",
+      title: "Ergonomic chairs for the Colombo office",
+      status: "approved",
+      requester: MOCK_DIRECTORY[2],
+      priority: null,
+      assignee: "",
+      collaborators: [],
+      details: { ...emptyDetails(), description: "Forty ergonomic chairs.", businessJustification: "Replaces chairs that are past repair." },
+    },
+    {
+      ...base,
+      id: "team-2",
+      reference: "PR-2026-00013",
+      title: "Printer toner and paper",
+      status: "assigned",
+      requester: MOCK_DIRECTORY[0],
+      priority: "P2",
+      assignee: MOCK_DIRECTORY[1].email,
+      collaborators: [MOCK_DIRECTORY[2].email],
+      details: { ...emptyDetails(), description: "Toner and paper for the second floor printers.", businessJustification: "Current stock runs out this month." },
+    },
+  ];
+}
+
 /** The most urgent first; a request with no priority yet comes last. */
 const urgencyRank = (priority: Priority | null): number => (priority ? ["P1", "P2", "P3"].indexOf(priority) : 3);
 
@@ -314,11 +370,12 @@ function titleFor(input: PurchaseRequestInput): string {
 function buildMockProcurementApi(user: Person): ProcurementApi {
   const requests: PurchaseRequest[] = seedRequests(user);
   const toApprove: PurchaseRequest[] = approvalSeeds(user);
+  const forTeam: PurchaseRequest[] = teamSeeds();
   let counter = requests.length;
   const me: ProcurementMe = { ...user, roles: ["procurement_user"], teamLead: TEAM_LEAD, approvalExempt: false };
 
   const find = (requestId: string): PurchaseRequest => {
-    const found = [...requests, ...toApprove].find((r) => r.id === requestId);
+    const found = [...requests, ...toApprove, ...forTeam].find((r) => r.id === requestId);
     if (!found) throw new Error("Request not found.");
     return found;
   };
@@ -464,7 +521,7 @@ function buildMockProcurementApi(user: Person): ProcurementApi {
       });
     },
     listTeamQueue: async ({ status, priority } = {}) =>
-      [...requests, ...toApprove]
+      [...requests, ...toApprove, ...forTeam]
         .filter((r) => (r.status === "approved" || r.status === "assigned") && (!status || r.status === status) && (!priority || r.priority === priority))
         .sort((a, b) => urgencyRank(a.priority) - urgencyRank(b.priority))
         .map(({ id, reference, title, category, status: stage, priority: urgency, assignee, requester, updatedAt }) => ({
