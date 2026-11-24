@@ -21,6 +21,7 @@ import { emptyDetails, emptyEvent } from "../request-form/requestFormModel";
 import type {
   Attachment,
   BudgetApproverOption,
+  BudgetChange,
   BudgetDetails,
   Choice,
   EventDetails,
@@ -43,6 +44,7 @@ import type {
 import type {
   BackendApprovalItem,
   BackendAttachment,
+  BackendBudgetChange,
   BackendNewDecision,
   BackendProcurementItem,
   BackendItDetails,
@@ -115,6 +117,18 @@ export const toAttachment = (a: BackendAttachment): Attachment => ({
   uploadedBy: a.uploadedBy,
   uploadedAt: a.uploadedOn,
 });
+
+/** The budget details the backend is sent when Procurement changes them; a blank one is sent as none. */
+export function toBackendBudgetChange({ budget: b, budgetApproverId }: BudgetChange): BackendBudgetChange {
+  return {
+    budgetCategoryCode: orNull(b.category),
+    businessUnitCode: orNull(b.businessUnit),
+    productCode: orNull(b.product),
+    regionCode: orNull(b.region),
+    engagementCode: orNull(b.engagementCode),
+    budgetApproverId: budgetApproverId ? Number(budgetApproverId) : null,
+  };
+}
 
 export function toSummary(row: BackendRequestSummary): RequestSummary {
   return {

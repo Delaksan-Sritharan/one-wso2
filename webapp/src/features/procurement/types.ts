@@ -215,6 +215,13 @@ export interface AttachmentsDraft {
   files: File[];
 }
 
+/** The budget details Procurement may change after a request is approved, which replace the old ones. */
+export interface BudgetChange {
+  budget: BudgetDetails;
+  /** The chosen budget approver's id, or "" when none. */
+  budgetApproverId: string;
+}
+
 /** What the requester fills in. The requester, team lead, status and dates are set by the server, never sent. */
 export interface PurchaseRequestInput {
   category: ProcurementCategory;

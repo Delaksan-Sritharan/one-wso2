@@ -190,6 +190,16 @@ export interface BackendAttachment {
   uploadedOn: string;
 }
 
+/** The body of PUT /requests/{id}/budget: the budget details that replace the old ones. */
+export interface BackendBudgetChange {
+  budgetCategoryCode: string | null;
+  businessUnitCode: string | null;
+  productCode: string | null;
+  regionCode: string | null;
+  engagementCode: string | null;
+  budgetApproverId: number | null;
+}
+
 export interface BackendVendor {
   name: string;
   website?: string | null;

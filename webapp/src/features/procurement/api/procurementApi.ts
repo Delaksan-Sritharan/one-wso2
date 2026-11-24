@@ -27,6 +27,7 @@ import type {
   ApprovalItem,
   Attachment,
   BudgetApproverOption,
+  BudgetChange,
   Choice,
   Person,
   ProcurementLookups,
@@ -57,6 +58,7 @@ import type {
 import {
   toApprovalItem,
   toAttachment,
+  toBackendBudgetChange,
   toBackendStatus,
   toBudgetApprovers,
   toChoices,
@@ -108,6 +110,8 @@ export interface ProcurementApi {
   downloadAttachment: (requestId: string, attachmentId: string) => Promise<Blob>;
   /** The people a request can be assigned to: the members of the Procurement groups. */
   listTeamMembers: () => Promise<Person[]>;
+  /** Replace the budget details of an approved or assigned request. */
+  changeBudget: (requestId: string, change: BudgetChange) => Promise<void>;
   /** Let a person, by email, read an approved or assigned request. */
   addCollaborator: (requestId: string, email: string) => Promise<void>;
   /** Take a collaborator off a request. */
@@ -280,6 +284,9 @@ function createHttpProcurementApi(getAccessToken: () => Promise<string>, user: P
       return res.blob();
     },
     listTeamMembers: async () => (await get<BackendDirectoryUser[]>(urls.teamMembers)).map(toPerson),
+    changeBudget: async (requestId, change) => {
+      await authedPut(urls.requestBudget(requestId), await getAccessToken(), toBackendBudgetChange(change));
+    },
     addCollaborator: async (requestId, email) => {
       await authedPost(urls.requestCollaborators(requestId), await getAccessToken(), { email });
     },

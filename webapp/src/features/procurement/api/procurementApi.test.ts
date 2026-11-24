@@ -181,6 +181,24 @@ describe("the Procurement backend adapter", () => {
     expect(authedDelete.mock.calls.map((c) => c[0])).toEqual(["/requests/7/collaborators/kim%40example.com"]);
   });
 
+  it("replaces the budget details of a request, sending a blank one as none", async () => {
+    authedPut.mockResolvedValue(null);
+    await api().changeBudget("7", {
+      budget: { category: "CAT-1", businessUnit: "BU-1", product: "", region: "REG-1", engagementCode: "ENG-1", salesforceCampaign: "ignored" },
+      budgetApproverId: "10",
+    });
+    expect(authedPut).toHaveBeenCalledWith("/requests/7/budget", "token", {
+      budgetCategoryCode: "CAT-1",
+      businessUnitCode: "BU-1",
+      productCode: null,
+      regionCode: "REG-1",
+      engagementCode: "ENG-1",
+      budgetApproverId: 10,
+    });
+    await api().changeBudget("7", { budget: { category: "", businessUnit: "", product: "", region: "", engagementCode: "", salesforceCampaign: "" }, budgetApproverId: "" });
+    expect(authedPut.mock.calls[1][2]).toMatchObject({ budgetCategoryCode: null, budgetApproverId: null });
+  });
+
   it("lists the Procurement team's members as people, for the assignee dropdown", async () => {
     expect(await api().listTeamMembers()).toEqual([
       { id: "sam.lee@example.com", name: "Sam Lee", email: "sam.lee@example.com" },

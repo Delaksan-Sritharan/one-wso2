@@ -511,6 +511,12 @@ function buildMockProcurementApi(user: Person): ProcurementApi {
       return found.blob;
     },
     listTeamMembers: async () => [...MOCK_TEAM],
+    changeBudget: async (requestId, { budget, budgetApproverId }) => {
+      const found = find(requestId);
+      if (found.status !== "approved" && found.status !== "assigned") throw new Error("Only an approved or assigned request can change its budget.");
+      if (found.category === "NON-IT" && budget.engagementCode.trim() === "") throw new Error("A Non-IT request keeps its engagement code.");
+      Object.assign(found, { budget, budgetApproverId, budgetApproverName: approverName(budgetApproverId), updatedAt: new Date().toISOString() });
+    },
     addCollaborator: async (requestId, email) => {
       const found = find(requestId);
       if (found.status !== "approved" && found.status !== "assigned") throw new Error("Only an approved or assigned request can have collaborators.");

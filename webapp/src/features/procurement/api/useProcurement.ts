@@ -22,7 +22,7 @@ import { useAccessToken } from "@hooks/useAccessToken";
 import { useAsgardeoUser } from "@hooks/useAsgardeoUser";
 import { saveBlob } from "@utils/saveFile";
 import { MIN_DIRECTORY_QUERY } from "../request-form/requestFormModel";
-import type { ApprovalDecisionInput, Attachment, Person, Priority, PurchaseRequestInput, RequestStatus } from "../types";
+import type { ApprovalDecisionInput, Attachment, BudgetChange, Person, Priority, PurchaseRequestInput, RequestStatus } from "../types";
 import { createProcurementApi, isProcurementAvailable } from "./procurementApi";
 
 const REFERENCE_STALE_TIME = 5 * 60 * 1000;
@@ -266,6 +266,10 @@ function useHandlingAction<V>(requestId: string, run: (api: NonNullable<ReturnTy
 /** Assign to the signed-in user, or to the given email. */
 export const useAssignRequest = (requestId: string) =>
   useHandlingAction<string | undefined>(requestId, (api, email) => api.assignRequest(requestId, email));
+
+/** Replace the budget details of a request. */
+export const useChangeBudget = (requestId: string) =>
+  useHandlingAction<BudgetChange>(requestId, (api, change) => api.changeBudget(requestId, change));
 
 /** Add a collaborator, by email. */
 export const useAddCollaborator = (requestId: string) =>

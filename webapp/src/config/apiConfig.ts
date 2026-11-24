@@ -2128,6 +2128,8 @@ export const procurementServiceUrls = {
   },
   engagementCodes: (businessUnit: string): string =>
     `${procurementBackendUrl}/engagement-codes?businessUnit=${encodeSegment(businessUnit)}`,
+  /** PUT replaces the budget details of an approved or assigned request. */
+  requestBudget: (requestId: string): string => `${procurementBackendUrl}/requests/${encodeSegment(requestId)}/budget`,
   /** POST adds a collaborator to an approved or assigned request, by email. */
   requestCollaborators: (requestId: string): string => `${procurementBackendUrl}/requests/${encodeSegment(requestId)}/collaborators`,
   /** DELETE removes a collaborator from a request. */
