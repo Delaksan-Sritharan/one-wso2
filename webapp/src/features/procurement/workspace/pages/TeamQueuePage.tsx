@@ -32,26 +32,34 @@ import {
 import { describeError } from "@api/errors";
 import FilterChips from "../../components/FilterChips";
 import { RequestStatusChip } from "../../components/ProcurementChips";
-import { useTeamQueue } from "../../api/useProcurement";
+import { useProcurementMe, useTeamQueue } from "../../api/useProcurement";
 import { workspacePaths } from "../workspacePaths";
 import type { RequestStatus } from "../../types";
 
 const CATEGORY_LABEL = { IT: "IT", "NON-IT": "Non-IT", EVENTS: "Marketing & Events" } as const;
 const ALL = "all";
-const STATUSES: { value: typeof ALL | "approved" | "assigned"; label: string }[] = [
+const MINE = "mine";
+type Show = typeof ALL | "approved" | "assigned" | typeof MINE;
+const SHOWS: { value: Show; label: string }[] = [
   { value: ALL, label: "All" },
   { value: "approved", label: "Waiting to be assigned" },
   { value: "assigned", label: "Assigned" },
+  { value: MINE, label: "Assigned to me" },
 ];
 
 export default function TeamQueuePage() {
-  const [status, setStatus] = useState<typeof ALL | "approved" | "assigned">(ALL);
-  const queue = useTeamQueue({ status: status === ALL ? undefined : (status as RequestStatus) });
+  const [show, setShow] = useState<Show>(ALL);
+  // The backend filters by stage only, so "Assigned to me" asks for the assigned ones and keeps those the user holds.
+  const queue = useTeamQueue({ status: show === ALL ? undefined : ((show === MINE ? "assigned" : show) as RequestStatus) });
+  const me = useProcurementMe();
   const navigate = useNavigate();
+  const myEmail = me.data?.email.toLowerCase() ?? "";
+  const rows = show === MINE ? queue.data?.filter((r) => r.assignee.toLowerCase() === myEmail) : queue.data;
+  const waitingForMe = show === MINE && !me.data && !me.isError;
 
   return (
     <>
-      <FilterChips label="Show" options={STATUSES} value={status} onChange={setStatus} />
+      <FilterChips label="Show" options={SHOWS} value={show} onChange={setShow} />
       {queue.isError && (
         <Alert
           severity="error"
@@ -64,9 +72,9 @@ export default function TeamQueuePage() {
           {describeError(queue.error)}
         </Alert>
       )}
-      {queue.isPending && !queue.isError && <Skeleton variant="rounded" height={200} />}
-      {queue.data && queue.data.length === 0 && <Typography color="text.secondary">No requests match</Typography>}
-      {queue.data && queue.data.length > 0 && (
+      {(queue.isPending || waitingForMe) && !queue.isError && <Skeleton variant="rounded" height={200} />}
+      {rows && !waitingForMe && rows.length === 0 && <Typography color="text.secondary">No requests match</Typography>}
+      {rows && !waitingForMe && rows.length > 0 && (
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -81,7 +89,7 @@ export default function TeamQueuePage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {queue.data.map((r) => (
+              {rows.map((r) => (
                 <TableRow
                   key={r.id}
                   hover

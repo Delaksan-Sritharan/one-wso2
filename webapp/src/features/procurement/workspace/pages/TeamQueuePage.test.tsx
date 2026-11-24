@@ -38,8 +38,17 @@ const asked = vi.hoisted(() => vi.fn());
 vi.mock("../../api/useProcurement", () => ({
   useTeamQueue: (filter: unknown) => {
     asked(filter);
-    return { data: [row("1"), row("2", { status: "assigned", priority: "P1", assignee: "pat@example.com" })], isPending: false, isError: false };
+    return {
+      data: [
+        row("1"),
+        row("2", { status: "assigned", priority: "P1", assignee: "pat@example.com" }),
+        row("3", { status: "assigned", priority: "P3", assignee: "sam@example.com" }),
+      ],
+      isPending: false,
+      isError: false,
+    };
   },
+  useProcurementMe: () => ({ data: { email: "Pat@example.com" }, isPending: false, isError: false }),
 }));
 
 function renderPage() {
@@ -66,6 +75,19 @@ describe("TeamQueuePage", () => {
     renderPage();
     await userEvent.setup().click(screen.getByText("Title 1"));
     expect(screen.getByRole("heading", { name: "Handling page" })).toBeInTheDocument();
+  });
+
+  it("shows only the requests the user holds under Assigned to me, asking the backend for the assigned ones", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    expect(screen.getByText("Title 1")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Assigned to me" }));
+    expect(asked).toHaveBeenLastCalledWith({ status: "assigned" });
+    expect(screen.getByText("Title 2")).toBeInTheDocument();
+    expect(screen.queryByText("Title 1")).toBeNull();
+    expect(screen.queryByText("Title 3")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByText("Title 3")).toBeInTheDocument();
   });
 
   it("asks for one stage when a chip is picked, and for none with All", async () => {
