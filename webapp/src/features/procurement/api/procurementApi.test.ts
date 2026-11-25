@@ -429,6 +429,18 @@ describe("the Procurement backend adapter", () => {
     expect(asked()).toEqual(["/procurement/requests?limit=100&status=ASSIGNED", "/procurement/requests?limit=100&status=ASSIGNED&offset=100"]);
   });
 
+  it("says the search is incomplete when every permitted page was full, instead of returning what it found as the whole answer", async () => {
+    const row = (id: number) => ({
+      id, referenceNo: `PR-2026-${id}`, title: `Request ${id}`, category: "NON_IT", status: "ASSIGNED", version: 1, submittedOn: null,
+      updatedOn: "2026-11-01T00:00:00Z", priority: null, assigneeEmail: "sam@example.com", requesterName: "Alex Morgan", requesterEmail: "alex@example.com",
+    });
+    for (let page = 0; page < 50; page += 1) {
+      answers[`/procurement/requests?limit=100&status=ASSIGNED${page > 0 ? `&offset=${page * 100}` : ""}`] = Array.from({ length: 100 }, (_, i) => row(page * 100 + i + 1));
+    }
+    await expect(api().listTeamQueue({ status: "assigned", assignee: "pat@example.com" })).rejects.toThrow(/too many requests/);
+    expect(asked()).toHaveLength(50);
+  });
+
   it("stops reading the queue at the first page that is not full, and reads only one page when no assignee is asked for", async () => {
     await api().listTeamQueue({ status: "assigned", priority: "P1" });
     expect(asked()).toEqual(["/procurement/requests?limit=100&status=ASSIGNED&priority=P1"]);

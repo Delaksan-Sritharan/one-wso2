@@ -57,8 +57,10 @@ export default function TeamQueuePage() {
     !mine || Boolean(me.data),
   );
   const navigate = useNavigate();
-  const rows = queue.data;
+  const waitingForMe = mine && !me.data && !me.isError;
   const identityFailed = mine && !me.data && me.isError;
+  // Under "Assigned to me" with no identity yet, the query may still hold the rows of "Assigned", which are not the user's.
+  const rows = mine && !me.data ? undefined : queue.data;
 
   return (
     <>
@@ -87,7 +89,7 @@ export default function TeamQueuePage() {
           {describeError(queue.error)}
         </Alert>
       )}
-      {!identityFailed && queue.isPending && !queue.isError && <Skeleton variant="rounded" height={200} />}
+      {!identityFailed && (waitingForMe || (queue.isPending && !queue.isError)) && <Skeleton variant="rounded" height={200} />}
       {!identityFailed && rows && rows.length === 0 && <Typography color="text.secondary">No requests match</Typography>}
       {!identityFailed && rows && rows.length > 0 && (
         <TableContainer>

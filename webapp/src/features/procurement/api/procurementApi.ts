@@ -278,9 +278,10 @@ function createHttpProcurementApi(getAccessToken: () => Promise<string>, user: P
       for (let index = 0; index < MAX_QUEUE_PAGES; index += 1) {
         const rows = await page(index * REQUEST_PAGE_SIZE);
         mine.push(...rows.filter((r) => r.assignee.toLowerCase() === assignee.toLowerCase()));
-        if (rows.length < REQUEST_PAGE_SIZE) break;
+        if (rows.length < REQUEST_PAGE_SIZE) return mine;
       }
-      return mine;
+      // Every permitted page was full, so the queue may go on, and what was found is not the whole answer.
+      throw new Error("There are too many requests in the queue to find all the ones assigned to you.");
     },
     assignRequest: async (requestId, email) => {
       await authedPost(urls.assignRequest(requestId, email), await getAccessToken(), {});

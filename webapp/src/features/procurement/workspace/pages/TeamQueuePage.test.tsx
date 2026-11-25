@@ -102,6 +102,18 @@ describe("TeamQueuePage", () => {
     expect(asked).toHaveBeenLastCalledWith({ status: "assigned", assignee: undefined }, false);
   });
 
+  it("shows no rows under Assigned to me until who the user is is known, even when the same stage was loaded before", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Assigned" }));
+    expect(screen.getByText("Title 1")).toBeInTheDocument();
+    identity.value = { data: undefined, isPending: true, isError: false, refetch: identity.refetch };
+    await user.click(screen.getByRole("button", { name: "Assigned to me" }));
+    expect(screen.queryByText("Title 1")).toBeNull();
+    expect(screen.queryByText("Title 2")).toBeNull();
+    expect(screen.queryByText("No requests match")).toBeNull();
+  });
+
   it("says who the user could not be read, with a Retry, instead of an empty queue, and leaves the other chips usable", async () => {
     identity.value = { data: undefined, isPending: false, isError: true, error: new Error("Identity unavailable."), refetch: identity.refetch };
     const user = userEvent.setup();
