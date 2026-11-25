@@ -15,7 +15,7 @@
 // under the License.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import type { ParCycle, ParParticipant, Par360ReviewRequest } from "../api/types";
@@ -103,6 +103,7 @@ let surveys: Leadership360Survey[];
 let mine: Leadership360MyFeedback;
 let requests: Par360ReviewRequest[];
 let participants: ParParticipant[];
+let participantsError: Error | null = null;
 const offerMutate = vi.fn();
 let offerPending = false;
 const declineMutate = vi.fn();
@@ -134,7 +135,8 @@ vi.mock("../api/usePar360", () => ({
   useReviewRequests: () => query(requests),
   useReviewers: () => query([]),
   useSubmitReview: () => ({ ...mutation(), mutate: declineMutate }),
-  useParticipants: () => query(participants),
+  useParticipants: () =>
+    participantsError ? { ...query(undefined), isError: true, error: participantsError } : query(participants),
   useOfferToReview: () => ({ ...mutation(), mutate: offerMutate, isPending: offerPending }),
 }));
 
@@ -148,7 +150,10 @@ vi.mock("../api/useReview360", () => ({
 }));
 
 let ownReports = new Set<string>();
-vi.mock("../api/useLeadTeams", () => ({ useOwnReports: () => ({ emails: ownReports, isLoading: false }) }));
+let ownReportsLoading = false;
+vi.mock("../api/useLeadTeams", () => ({
+  useOwnReports: () => ({ emails: ownReports, isLoading: ownReportsLoading }),
+}));
 
 const discardLeadershipMutate = vi.fn();
 vi.mock("../api/useLeadership360", () => ({
@@ -194,10 +199,9 @@ function show() {
 
 const noFeedback = (): Leadership360MyFeedback => ({ drafts: [], named: [], anonymous: [] });
 
-/** Provide Feedback, then a person from the list. */
+/** A person from the search on the tab. */
 async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
-  await user.type(screen.getByRole("combobox", { name: "Who is it for?" }), name);
+  await user.type(screen.getByRole("combobox", { name: "Search people" }), name);
   await user.click(screen.getByRole("option", { name: new RegExp(name) }));
 }
 
@@ -212,6 +216,8 @@ beforeEach(() => {
   leaders = query([elena, hannah]);
   parts = { cycle, hasLead: true, leadership: true };
   ownReports = new Set();
+  ownReportsLoading = false;
+  participantsError = null;
   participants = [
     { workEmail: "elena@example.com", employeeName: "Elena" },
     { workEmail: "alex@example.com", employeeName: "Alex" },
@@ -452,11 +458,12 @@ describe("ParGiveFeedbackTab", () => {
 });
 
 describe("Provide Feedback", () => {
-  it("has one Provide Feedback button; a request is answered with Respond", async () => {
+  it("has the person search on the tab, no button for it; a request is answered with Respond", async () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, employeeName: "Alex" }];
     show();
-    expect(screen.getAllByRole("button", { name: "Provide Feedback" })).toHaveLength(1);
+    expect(screen.getByRole("combobox", { name: "Search people" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Provide Feedback" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Respond" }));
     expect(screen.getByText("PAR form for Alex")).toBeInTheDocument();
   });
@@ -464,9 +471,8 @@ describe("Provide Feedback", () => {
   it("asks for the person first, from everyone, and a leader gets the Leadership 360° form", async () => {
     const user = userEvent.setup();
     show();
-    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
     expect(screen.queryByRole("button", { name: /For a PAR/ })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     const options = screen.getAllByRole("option").map((o) => o.textContent);
     expect(options).toHaveLength(3);
     expect(options[0]).toContain("Hannah");
@@ -480,18 +486,32 @@ describe("Provide Feedback", () => {
     const user = userEvent.setup();
     ownReports = new Set(["alex@example.com", "elena@example.com"]);
     show();
-    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Elena/ })).toHaveTextContent("Leadership 360°");
+  });
+
+  it("keeps the leadership team in the search when the cycle's people can't be loaded", async () => {
+    const user = userEvent.setup();
+    participantsError = new Error("HTTP 500");
+    show();
+    expect(screen.getByText(/Couldn't load people to choose from/)).toBeInTheDocument();
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
+    expect(screen.getByRole("option", { name: /Elena/ })).toHaveTextContent("Leadership 360°");
+    expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
+  });
+
+  it("waits for a lead's own reports before the search can be used", () => {
+    ownReportsLoading = true;
+    show();
+    expect(screen.getByRole("combobox", { name: "Search people" })).toBeDisabled();
   });
 
   it("leaves out people already in your list: you respond or continue there", async () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, employeeName: "Alex" }];
     show();
-    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Elena/ })).toBeInTheDocument();
   });
@@ -533,9 +553,11 @@ describe("Provide Feedback", () => {
     await pick(user, "Alex");
     expect(screen.getByText(/Offer feedback for Alex's 2026 H2 PAR\?/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByRole("combobox", { name: "Who is it for?" })).toHaveValue("");
+    // The confirmation fades out before the tab is reachable again.
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("combobox", { name: "Search people" })).toHaveValue("");
     expect(offerMutate).not.toHaveBeenCalled();
-    await user.type(screen.getByRole("combobox", { name: "Who is it for?" }), "Alex");
+    await user.type(screen.getByRole("combobox", { name: "Search people" }), "Alex");
     await user.click(screen.getByRole("option", { name: /Alex/ }));
     expect(screen.queryByRole("button", { name: "Cross-team" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Offer feedback" }));
@@ -560,8 +582,7 @@ describe("Provide Feedback", () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, reviewStatus: "SHARED" }];
     show();
-    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
   });
 
@@ -569,8 +590,7 @@ describe("Provide Feedback", () => {
     const user = userEvent.setup();
     currentSurvey = null;
     show();
-    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     const elenaOption = screen.getByRole("option", { name: /Elena/ });
     expect(elenaOption).toHaveAttribute("aria-disabled", "true");
     expect(elenaOption).toHaveTextContent("Leadership 360° closed");
@@ -587,8 +607,7 @@ describe("Provide Feedback", () => {
     const user = userEvent.setup();
     mine = { ...noFeedback(), anonymous: [{ leaderEmail: "elena@example.com" }] };
     show();
-    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     const elenaOption = screen.getByRole("option", { name: /Elena/ });
     expect(elenaOption).not.toHaveAttribute("aria-disabled", "true");
     expect(elenaOption).toHaveTextContent("Leadership 360° · Submitted");
@@ -598,16 +617,16 @@ describe("Provide Feedback", () => {
 });
 
 describe("ParGiveFeedbackTab: the leadership team", () => {
-  it("waits for it before Provide Feedback, so a leader isn't taken for anyone else", () => {
+  it("waits for it before the person search, so a leader isn't taken for anyone else", () => {
     leaders = { ...query(undefined), isLoading: true };
     show();
-    expect(screen.getByRole("button", { name: "Provide Feedback" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Search people" })).toBeDisabled();
   });
 
   it("says when it couldn't be loaded, instead of listing requests as PAR feedback", () => {
     leaders = { ...query(undefined), isError: true, error: new Error("HTTP 500") };
     show();
     expect(screen.getByText(/Couldn't load the leadership team/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Provide Feedback" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Search people" })).toBeDisabled();
   });
 });

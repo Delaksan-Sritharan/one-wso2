@@ -48,7 +48,7 @@ import {
 } from "../api/useLeadership360";
 import type { Leadership360Leader } from "../api/leadership360Types";
 import Par360FeedbackDialog from "../components/Par360FeedbackDialog";
-import Par360GiveFeedbackDialog, { type FeedbackStart } from "../components/Par360GiveFeedbackDialog";
+import Par360GiveFeedbackPicker, { type FeedbackStart } from "../components/Par360GiveFeedbackPicker";
 import Leadership360FeedbackDialog from "../components/Leadership360FeedbackDialog";
 import ParEmptyState from "../components/ParEmptyState";
 import { PersonRow, StatusChip } from "../components/Par360PeopleRows";
@@ -76,7 +76,8 @@ const SHOW_DESCRIPTION: Partial<Record<Show, string>> = {
 // Provide Feedback: one list of everyone who asked for your feedback and the
 // feedback you've given, waiting ones first. Who it's about decides the form:
 // Leadership 360° for a member of the leadership team, PAR feedback for anyone
-// else. Provide Feedback starts feedback nobody asked for, the person first.
+// else. The search above the list starts feedback nobody asked for, the person
+// first.
 export default function ParGiveFeedbackTab() {
   const profile = useMeProfile();
   const workEmail = profile.data?.userInfo.workEmail;
@@ -96,7 +97,6 @@ export default function ParGiveFeedbackTab() {
   const discard = useDiscardReviewForm(cycle?.parCycleId);
   const discardLeadership = useDiscardLeadership360Draft(surveyId, workEmail);
   const { showSuccess, showError } = useNotifications();
-  const [choosing, setChoosing] = useState(false);
   const [giving, setGiving] = useState<FeedbackStart | null>(null);
   const [viewing, setViewing] = useState<GiveFeedbackItem | null>(null);
   const [declining, setDeclining] = useState<GiveFeedbackItem | null>(null);
@@ -178,7 +178,18 @@ export default function ParGiveFeedbackTab() {
       <Typography variant="body2" color="text.secondary">
         Share your feedback to help your colleagues recognise their strengths and find opportunities to grow.
       </Typography>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+      <Par360GiveFeedbackPicker
+        workEmail={workEmail}
+        cycle={cycle}
+        workedWith={workedWith}
+        held={held}
+        survey={openSurvey}
+        leaders={leaders.data ?? []}
+        items={items}
+        disabled={Boolean(loading || leadersFailed)}
+        onStart={setGiving}
+      />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
         <ToggleButtonGroup
           exclusive
           size="small"
@@ -196,9 +207,6 @@ export default function ParGiveFeedbackTab() {
             Voluntary
           </ToggleButton>
         </ToggleButtonGroup>
-        <Button variant="contained" onClick={() => setChoosing(true)} disabled={loading || leadersFailed}>
-          Provide Feedback
-        </Button>
       </Box>
       {SHOW_DESCRIPTION[show] && (
         <Typography variant="body2" color="text.secondary">
@@ -263,22 +271,6 @@ export default function ParGiveFeedbackTab() {
         </Card>
       )}
 
-      {choosing && (
-        <Par360GiveFeedbackDialog
-          onClose={() => setChoosing(false)}
-          workEmail={workEmail}
-          cycle={cycle}
-          workedWith={workedWith}
-          held={held}
-          survey={openSurvey}
-          leaders={leaders.data ?? []}
-          items={items}
-          onStart={(start) => {
-            setChoosing(false);
-            setGiving(start);
-          }}
-        />
-      )}
       {(giving?.kind === "PAR" || viewing?.kind === "PAR") && (
         <Par360FeedbackDialog
           open
