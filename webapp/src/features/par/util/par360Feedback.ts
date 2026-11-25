@@ -207,9 +207,10 @@ export function isWaiting(item: GiveFeedbackItem): boolean {
   return item.state === "todo" || (item.state === "draft" && !item.answered);
 }
 
-/** How many people are waiting on your feedback: the number on the Give feedback tab. */
+/** How many requests to you are still waiting on your feedback: the number on the Provide Feedback tab.
+ * Feedback you started without being asked isn't counted. */
 export function waitingCount(items: GiveFeedbackItem[]): number {
-  return items.filter(isWaiting).length;
+  return items.filter((item) => !isVoluntary(item) && isWaiting(item)).length;
 }
 
 /** Whether Give feedback's picker lists someone. People already in your list are left out (you

@@ -140,9 +140,9 @@ export default function ParGroupPage() {
   );
 }
 
-/** People waiting on your feedback in a PAR 2.0 cycle, for the Give feedback
- * tab's label: requests not yet answered and Leadership 360° drafts (named ones
- * on the server, anonymous ones in this browser), one per person. */
+/** Requests waiting on your feedback in a PAR 2.0 cycle, for the Provide
+ * Feedback tab's label: requests to you not yet answered, one per person.
+ * Feedback you started unasked (PAR or Leadership 360°) isn't counted. */
 function useFeedbackWaiting(workEmail: string | undefined, cycle: ParCycle | undefined): number {
   // After the cycle's 360° deadline, feedback is held for the next cycle (cycle 0): count that.
   const windowOpen = cycle !== undefined && !isDeadlinePassed(cycle.parThreeSixtyRatingDeadline);
