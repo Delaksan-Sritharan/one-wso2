@@ -213,4 +213,14 @@ describe("RequestDetailPage", () => {
     expect(screen.queryByRole("button", { name: "Cancel editing" })).toBeNull();
     expect(screen.getByRole("button", { name: "Edit and resubmit" })).toBeInTheDocument();
   });
+
+  it("offers the requester a pencil to change the team lead only while the request waits for its first decision", () => {
+    const waiting = { decision: "pending" as const, notes: "", decidedAt: null, decidedBy: "", isOverride: false };
+    state.requests = { "3": request("3", { status: "submitted", teamLeadDecision: waiting }), "4": request("4") };
+    const first = renderAt("/me/procurement/requests/3");
+    expect(screen.getByRole("button", { name: "Change team lead" })).toBeInTheDocument();
+    first.unmount();
+    renderAt("/me/procurement/requests/4");
+    expect(screen.queryByRole("button", { name: "Change team lead" })).toBeNull();
+  });
 });

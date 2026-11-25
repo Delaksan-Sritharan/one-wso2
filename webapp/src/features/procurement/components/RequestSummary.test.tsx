@@ -102,6 +102,20 @@ describe("RequestSummary", () => {
     expect(within(screen.getByRole("button", { name: "Edit Requirement details" })).getByText("Edit")).toBeInTheDocument();
   });
 
+  it("shows a control given for the requester in the Requester card, and nowhere else", () => {
+    render(<RequestSummary view={view()} requesterAction={<button type="button">Change lead</button>} />);
+    const card = screen.getByText("Requester", { selector: "h6, .MuiTypography-subtitle1" }).closest(".MuiCard-root") as HTMLElement;
+    expect(within(card).getByRole("button", { name: "Change lead" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Change lead" })).toHaveLength(1);
+  });
+
+  it("shows a control given for the budget in the Budget card, and nowhere else", () => {
+    render(<RequestSummary view={view()} budgetAction={<button type="button">Change budget</button>} />);
+    const card = screen.getByText("Budget", { selector: "h6, .MuiTypography-subtitle1" }).closest(".MuiCard-root") as HTMLElement;
+    expect(within(card).getByRole("button", { name: "Change budget" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Change budget" })).toHaveLength(1);
+  });
+
   it("shows an event with its costs and total, and no vendors card", () => {
     const event = {
       ...emptyEvent(),
