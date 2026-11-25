@@ -347,7 +347,11 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
         </Button>
         <Button
           variant="outlined"
-          disabled={registerId === "" || !file || running || starting || job?.mode === "import"}
+          // Off while a run is going and after an import that finished, which a second
+          // import of the same file would only repeat. Left on after a FAILED import:
+          // its message says to run the file again, and a fresh dry run is how the
+          // admin finds out which rows are still to write.
+          disabled={registerId === "" || !file || running || starting || (job?.mode === "import" && job.status === "succeeded")}
           onClick={() => void start("dry_run")}
         >
           Run dry run

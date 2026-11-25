@@ -293,6 +293,36 @@ describe("Bulk import — the import", () => {
     expect(posts()[1].get("acknowledge_warnings")).toBe("true");
   });
 
+  // The failed import tells the admin to run the file again. Both buttons used to
+  // be off after it, so the only way out was to choose the file again.
+  it("lets the admin run a fresh dry run after an import fails", async () => {
+    finished.import = job({
+      mode: "import",
+      status: "failed",
+      importable: false,
+      error: "The run could not complete. Nothing from it is lost: run the same file again to continue.",
+      counts: { migrated: 5, skipped: 0, rejects: 0, warnings: 0, mismatches: 0 },
+    });
+    const { user } = await renderOpen();
+    await runDryRun(user);
+    await user.click(await screen.findByRole("button", { name: "Import 12 rows" }));
+    await poll();
+    expect(await screen.findByText(/run the same file again to continue/)).toBeInTheDocument();
+
+    // Import itself stays off: the fresh dry run says what is left to write.
+    expect(screen.getByRole("button", { name: /^Import/ })).toBeDisabled();
+    const dryRunButton = screen.getByRole("button", { name: "Run dry run" });
+    expect(dryRunButton).toBeEnabled();
+
+    await user.click(dryRunButton);
+    await waitFor(() => expect(posts()).toHaveLength(3));
+    expect(posts()[2].get("mode")).toBe("dry_run");
+    await poll();
+
+    expect(await screen.findByText(/found nothing to reject/)).toBeInTheDocument();
+    expect(screen.queryByText(/run the same file again to continue/)).not.toBeInTheDocument();
+  });
+
   it("flags differences found by the check after the import", async () => {
     finished.import = job({
       mode: "import",
