@@ -29,14 +29,11 @@ import {
 } from "../../api/useProcurement";
 import { OptionField, SelectField } from "../../request-form/formFields";
 import { MIN_DIRECTORY_QUERY } from "../../request-form/requestFormModel";
-import type { Person, Priority, PurchaseRequest } from "../../types";
-import { raisedOrApproves } from "../handlingAccess";
+import { MAX_COLLABORATORS, type Person, type Priority, type PurchaseRequest } from "../../types";
+import { raisedOrApproves, refusedEmails } from "../handlingAccess";
 
 const PRIORITIES: Priority[] = ["P1", "P2", "P3"];
 const PRIORITY_LABELS: Record<Priority, string> = { P1: "P1 — High", P2: "P2 — Medium", P3: "P3 — Normal" };
-
-/** The most collaborators the backend keeps on a request. */
-const MAX_COLLABORATORS = 20;
 
 const personLabel = (person: Person): string => `${person.name} (${person.email})`;
 const fromEmail = (email: string): Person => ({ id: email, name: email, email });
@@ -58,18 +55,18 @@ export default function HandlingPanel({ request, me }: { request: PurchaseReques
   const mutations = [assign, unassign, setPriority, addCollaborator, removeCollaborator];
   const failure = mutations.find((m) => m.isError);
   const saving = mutations.some((m) => m.isPending);
-  const mine = request.assignee.toLowerCase() === me.toLowerCase();
+  const assignedToMe = request.assignee.toLowerCase() === me.toLowerCase();
   // The backend does not let the requester or an approver of a request handle it.
-  const own = raisedOrApproves(request, me);
-  const busy = saving || own;
+  const raisedOrApprovesIt = raisedOrApproves(request, me);
+  const busy = saving || raisedOrApprovesIt;
   // The backend does not give a request to the people who raised or approve it.
-  const refused = new Set([request.requester.email, request.teamLead?.email ?? "", ...request.additionalApprovers].map((email) => email.toLowerCase()));
+  const refused = refusedEmails(request);
   const candidates = (team.data ?? [])
     .filter((person) => !refused.has(person.email.toLowerCase()))
     .map((person) => ({ value: person.email, label: personLabel(person) }));
-  // Kept the same array between renders: the search box would otherwise take each render for a new value and clear what was typed.
   const nameOf = (email: string): string => (team.data ?? []).find((p) => p.email.toLowerCase() === email.toLowerCase())?.name ?? email;
-  const pending = chosen !== "" && chosen.toLowerCase() !== request.assignee.toLowerCase();
+  const hasUnassignedPick = chosen !== "" && chosen.toLowerCase() !== request.assignee.toLowerCase();
+  // Kept the same array between renders: the search box would otherwise take each render for a new value and clear what was typed.
   const collaborators = useMemo(() => request.collaborators.map(fromEmail), [request.collaborators]);
   const full = collaborators.length >= MAX_COLLABORATORS;
   const options = [...(search.data ?? []), ...collaborators].filter(
@@ -118,7 +115,7 @@ export default function HandlingPanel({ request, me }: { request: PurchaseReques
         </Typography>
         <Chip size="small" variant="outlined" color={request.status === "assigned" ? "success" : "warning"} label={request.status === "assigned" ? "Assigned" : "Unassigned"} />
       </Stack>
-      {own && <Alert severity="info">You raised or approve this request, so you can't handle it.</Alert>}
+      {raisedOrApprovesIt && <Alert severity="info">You raised or approve this request, so you can't handle it.</Alert>}
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) minmax(0, 2fr) auto" } }}>
         <SelectField
           label="Priority"
@@ -138,11 +135,11 @@ export default function HandlingPanel({ request, me }: { request: PurchaseReques
           disabled={busy || team.isError}
           onChange={setChosen}
         />
-        <Button variant="contained" disabled={busy || !pending} onClick={assignChosen} sx={{ alignSelf: "end", height: 40 }}>
+        <Button variant="contained" disabled={busy || !hasUnassignedPick} onClick={assignChosen} sx={{ alignSelf: "end", height: 40 }}>
           Assign
         </Button>
       </Box>
-      {pending && (
+      {hasUnassignedPick && (
         <Typography variant="caption" color="text.secondary">
           {nameOf(chosen)} and the requester will be notified by email when you press Assign.
         </Typography>
@@ -160,7 +157,7 @@ export default function HandlingPanel({ request, me }: { request: PurchaseReques
         </Alert>
       )}
       <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
-        {!mine && !own && (
+        {!assignedToMe && !raisedOrApprovesIt && (
           <Button variant="contained" disabled={busy} onClick={assignToMe}>
             {request.assignee ? "Take over" : "Assign to me"}
           </Button>
@@ -197,7 +194,7 @@ export default function HandlingPanel({ request, me }: { request: PurchaseReques
             </li>
           )}
           isOptionEqualToValue={(a, b) => a.email.toLowerCase() === b.email.toLowerCase()}
-          getOptionDisabled={(person) => full && !collaborators.some((c) => c.email === person.email)}
+          getOptionDisabled={(person) => full && !collaborators.some((c) => c.email.toLowerCase() === person.email.toLowerCase())}
           filterOptions={(all) => all}
           noOptionsText={full ? `A request has at most ${MAX_COLLABORATORS} collaborators` : "No matching employee"}
           onChange={(_, next) => changeCollaborators(next)}

@@ -22,6 +22,7 @@ import { useNotifications } from "@context/notifications/NotificationsContext";
 import { useChangeTeamLead, useDirectorySearch } from "../api/useProcurement";
 import { MIN_DIRECTORY_QUERY } from "../request-form/requestFormModel";
 import type { Person, PurchaseRequest } from "../types";
+import { refusedEmails } from "../workspace/handlingAccess";
 
 const personLabel = (person: Person): string => `${person.name} (${person.email})`;
 
@@ -35,7 +36,7 @@ function TeamLeadForm({ request, onClose }: { request: PurchaseRequest; onClose:
   // Only leads can approve, so only leads are offered.
   const search = useDirectorySearch(query, true);
   // The backend does not take the requester, the team lead the request has, or an additional approver.
-  const refused = new Set([request.requester.email, request.teamLead?.email ?? "", ...request.additionalApprovers].map((email) => email.toLowerCase()));
+  const refused = refusedEmails(request);
   const options = [...(search.data ?? []), ...(chosen ? [chosen] : [])].filter(
     (person, index, all) => all.findIndex((other) => other.email.toLowerCase() === person.email.toLowerCase()) === index,
   );

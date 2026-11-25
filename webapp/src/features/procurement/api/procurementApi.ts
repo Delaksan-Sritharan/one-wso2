@@ -95,7 +95,6 @@ export interface ProcurementApi {
   listApprovals: (status?: RequestStatus) => Promise<ApprovalItem[]>;
   /** Approve or reject a request that waits for the user's decision. */
   decideRequest: (requestId: string, decision: ApprovalDecisionInput) => Promise<void>;
-  /** The approved and assigned requests Procurement handles, the most urgent first. */
   /**
    * The requests Procurement handles, the most urgent first.
    *

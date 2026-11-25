@@ -33,6 +33,7 @@ import type {
   PurchaseRequest,
   PurchaseRequestInput,
 } from "../types";
+import { MAX_COLLABORATORS } from "../types";
 import { emptyDetails, emptyEvent } from "../request-form/requestFormModel";
 import type { ProcurementApi } from "./procurementApi";
 
@@ -124,7 +125,6 @@ const MOCK_BUDGET_APPROVERS: BudgetApproverOption[] = [{ id: "10", name: "Budget
 const codeOf = (list: Choice[], label: string): string => list.find((c) => c.label === label)?.value ?? "";
 
 const SEARCH_LIMIT = 10;
-const MAX_COLLABORATORS = 20;
 const MIN_QUERY_LENGTH = 3;
 
 function seedRequests(requester: Person): PurchaseRequest[] {

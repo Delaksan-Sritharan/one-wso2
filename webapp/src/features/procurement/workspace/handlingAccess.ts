@@ -18,8 +18,10 @@
 import type { PurchaseRequest } from "../types";
 
 /** The people the backend does not let handle a request: its requester, its team lead and its additional approvers. */
+export function refusedEmails(request: PurchaseRequest): Set<string> {
+  return new Set([request.requester.email, request.teamLead?.email ?? "", ...request.additionalApprovers].map((email) => email.toLowerCase()));
+}
+
 export function raisedOrApproves(request: PurchaseRequest, email: string): boolean {
-  return [request.requester.email, request.teamLead?.email ?? "", ...request.additionalApprovers].some(
-    (person) => person.toLowerCase() === email.toLowerCase(),
-  );
+  return refusedEmails(request).has(email.toLowerCase());
 }

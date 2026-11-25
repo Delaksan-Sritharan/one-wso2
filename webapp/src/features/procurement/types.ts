@@ -26,6 +26,9 @@ export type ProcurementCategory = "IT" | "NON-IT" | "EVENTS";
  * the approvers; `approved` waits for Procurement to assign it; `assigned` is
  * where phase 1 ends; `cancelled` was withdrawn by the requester.
  */
+/** The most collaborators the backend keeps on a request. */
+export const MAX_COLLABORATORS = 20;
+
 export type RequestStatus = "draft" | "submitted" | "approved" | "rejected" | "assigned" | "cancelled";
 
 export type YesNo = "yes" | "no";

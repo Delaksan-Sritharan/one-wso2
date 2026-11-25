@@ -39,8 +39,8 @@ import type { RequestStatus } from "../../types";
 const CATEGORY_LABEL = { IT: "IT", "NON-IT": "Non-IT", EVENTS: "Marketing & Events" } as const;
 const ALL = "all";
 const MINE = "mine";
-type Show = typeof ALL | "approved" | "assigned" | typeof MINE;
-const SHOWS: { value: Show; label: string }[] = [
+type QueueView = typeof ALL | "approved" | "assigned" | typeof MINE;
+const SHOWS: { value: QueueView; label: string }[] = [
   { value: ALL, label: "All" },
   { value: "approved", label: "Waiting to be assigned" },
   { value: "assigned", label: "Assigned" },
@@ -48,7 +48,7 @@ const SHOWS: { value: Show; label: string }[] = [
 ];
 
 export default function TeamQueuePage() {
-  const [show, setShow] = useState<Show>(ALL);
+  const [show, setShow] = useState<QueueView>(ALL);
   const me = useProcurementMe();
   const mine = show === MINE;
   // "Assigned to me" needs the user's email, so it waits for it and the other chips do not.
