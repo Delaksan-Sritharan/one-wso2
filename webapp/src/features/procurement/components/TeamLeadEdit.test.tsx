@@ -15,7 +15,7 @@
 // under the License.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { PurchaseRequest } from "../types";
 import TeamLeadEdit from "./TeamLeadEdit";
@@ -127,5 +127,18 @@ describe("TeamLeadEdit", () => {
     render(<TeamLeadEdit request={request()} me="me@example.com" />);
     const dialog = await open(user);
     expect(within(dialog).getByText("The request no longer waits for a decision.")).toBeInTheDocument();
+  });
+
+  it("ignores Escape while the save runs, and closes on Escape otherwise", async () => {
+    const user = userEvent.setup();
+    for (const saving of [true, false]) {
+      change.isPending = saving;
+      const { unmount } = render(<TeamLeadEdit request={request()} me="me@example.com" />);
+      await open(user);
+      await user.keyboard("{Escape}");
+      if (saving) expect(screen.getByRole("dialog", { name: "Change team lead" })).toBeInTheDocument();
+      else await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      unmount();
+    }
   });
 });

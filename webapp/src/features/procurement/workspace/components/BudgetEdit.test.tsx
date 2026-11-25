@@ -15,7 +15,7 @@
 // under the License.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { PurchaseRequest } from "../../types";
 import BudgetEdit from "./BudgetEdit";
@@ -150,5 +150,18 @@ describe("BudgetEdit", () => {
     render(<BudgetEdit request={request()} me="pat@example.com" />);
     const dialog = await open(user);
     expect(within(dialog).getByText("Budget approver not found.")).toBeInTheDocument();
+  });
+
+  it("ignores Escape while the save runs, and closes on Escape otherwise", async () => {
+    const user = userEvent.setup();
+    for (const saving of [true, false]) {
+      change.isPending = saving;
+      const { unmount } = render(<BudgetEdit request={request()} me="pat@example.com" />);
+      await open(user);
+      await user.keyboard("{Escape}");
+      if (saving) expect(screen.getByRole("dialog", { name: "Edit budget details" })).toBeInTheDocument();
+      else await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      unmount();
+    }
   });
 });

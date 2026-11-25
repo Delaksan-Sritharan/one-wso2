@@ -150,6 +150,18 @@ function RequestDetailContent() {
         {data && (
           <Stack spacing={2}>
             <DecisionNotice request={data} />
+            {!editing && !me.data && me.isError && (
+              <Alert
+                severity="error"
+                action={
+                  <Button color="inherit" size="small" onClick={() => void me.refetch()}>
+                    Retry
+                  </Button>
+                }
+              >
+                Who you are could not be read, so the actions for you are hidden. {describeError(me.error)}
+              </Alert>
+            )}
             {editing ? (
               <>
                 <Button color="inherit" variant="outlined" onClick={() => setEditing(false)} sx={{ alignSelf: "flex-start" }}>

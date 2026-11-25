@@ -29,7 +29,7 @@ const TWO_COLUMNS = { display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr",
 const sameBudget = (a: BudgetDetails, b: BudgetDetails): boolean =>
   a.category === b.category && a.businessUnit === b.businessUnit && a.product === b.product && a.region === b.region && a.engagementCode === b.engagementCode;
 
-/** The budget details of a request in a form, as they are now, that Procurement can change and save. Saving sends the requester an email. */
+/** The budget details of a request in a pop-up, as they are now, that Procurement can change and save. It cannot be dismissed while a save runs. Saving sends the requester an email. */
 function BudgetForm({ request, onClose }: { request: PurchaseRequest; onClose: () => void }) {
   const lookups = useProcurementLookups();
   const change = useChangeBudget(request.id);
@@ -69,7 +69,8 @@ function BudgetForm({ request, onClose }: { request: PurchaseRequest; onClose: (
     );
 
   return (
-    <>
+    // Escape and a click outside do not close the pop-up while the save runs, or its result would be lost.
+    <Dialog open fullWidth maxWidth="sm" onClose={() => !saving && onClose()}>
       <DialogTitle>Edit budget details</DialogTitle>
       <DialogContent>
         {lookups.isError && !lookups.data && (
@@ -133,7 +134,7 @@ function BudgetForm({ request, onClose }: { request: PurchaseRequest; onClose: (
           {saving ? "Saving…" : "Save budget"}
         </Button>
       </DialogActions>
-    </>
+    </Dialog>
   );
 }
 
@@ -149,11 +150,7 @@ export default function BudgetEdit({ request, me }: { request: PurchaseRequest; 
       <IconButton size="small" aria-label="Edit budget details" onClick={() => setOpen(true)}>
         <PencilIcon size={16} />
       </IconButton>
-      {open && (
-        <Dialog open fullWidth maxWidth="sm" onClose={() => setOpen(false)}>
-          <BudgetForm request={request} onClose={() => setOpen(false)} />
-        </Dialog>
-      )}
+      {open && <BudgetForm request={request} onClose={() => setOpen(false)} />}
     </>
   );
 }

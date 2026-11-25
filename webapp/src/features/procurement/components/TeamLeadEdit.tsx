@@ -25,7 +25,7 @@ import type { Person, PurchaseRequest } from "../types";
 
 const personLabel = (person: Person): string => `${person.name} (${person.email})`;
 
-/** The pop-up for naming another team lead. Saving emails both the current team lead and the new one. */
+/** The pop-up for naming another team lead, which cannot be dismissed while a save runs. Saving emails both the current team lead and the new one. */
 function TeamLeadForm({ request, onClose }: { request: PurchaseRequest; onClose: () => void }) {
   const change = useChangeTeamLead(request.id);
   const { showSuccess } = useNotifications();
@@ -50,7 +50,8 @@ function TeamLeadForm({ request, onClose }: { request: PurchaseRequest; onClose:
   };
 
   return (
-    <>
+    // Escape and a click outside do not close the pop-up while the save runs, or its result would be lost.
+    <Dialog open fullWidth maxWidth="sm" onClose={() => !change.isPending && onClose()}>
       <DialogTitle>Change team lead</DialogTitle>
       <DialogContent>
         <DialogContentText sx={{ mb: 2 }}>
@@ -103,7 +104,7 @@ function TeamLeadForm({ request, onClose }: { request: PurchaseRequest; onClose:
           {change.isPending ? "Saving…" : "Save team lead"}
         </Button>
       </DialogActions>
-    </>
+    </Dialog>
   );
 }
 
@@ -123,11 +124,7 @@ export default function TeamLeadEdit({ request, me }: { request: PurchaseRequest
       <IconButton size="small" aria-label="Change team lead" onClick={() => setOpen(true)}>
         <PencilIcon size={16} />
       </IconButton>
-      {open && (
-        <Dialog open fullWidth maxWidth="sm" onClose={() => setOpen(false)}>
-          <TeamLeadForm request={request} onClose={() => setOpen(false)} />
-        </Dialog>
-      )}
+      {open && <TeamLeadForm request={request} onClose={() => setOpen(false)} />}
     </>
   );
 }

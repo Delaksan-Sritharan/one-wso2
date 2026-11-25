@@ -223,4 +223,15 @@ describe("RequestDetailPage", () => {
     renderAt("/me/procurement/requests/4");
     expect(screen.queryByRole("button", { name: "Change team lead" })).toBeNull();
   });
+
+  it("says when who the viewer is could not be read, keeps the summary, and retries", async () => {
+    const user = userEvent.setup();
+    const refetch = vi.fn();
+    state.me = { data: undefined, isPending: false, isFetching: false, isError: true, error: new Error("Could not reach the server."), refetch };
+    renderAt("/me/procurement/requests/1");
+    expect(screen.getByText(/Who you are could not be read/)).toBeInTheDocument();
+    expect(screen.getByText("Request 1", { exact: false })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalled();
+  });
 });
