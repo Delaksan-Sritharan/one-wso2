@@ -18,8 +18,8 @@ import { Box, Card, Stack, Typography } from "@wso2/oxygen-ui";
 import type { FormDefinition } from "../api/leadership360Types";
 import type { SelfReviewAnswers } from "../api/selfReviewTypes";
 
-// A shared self-review, read-only: each guided section with its answer. Used
-// by the employee once shared and by their lead.
+// A shared self-review, read-only: each guided section with its hint and its
+// answer. Used by the lead and in History.
 export default function ParSelfReviewView({
   definition,
   answers,
@@ -34,9 +34,14 @@ export default function ParSelfReviewView({
     <Stack spacing={2.25}>
       {definition.sections.map((section, i) => (
         <Box key={section.id}>
-          <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+          <Typography sx={{ fontWeight: 600, mb: section.hint ? 0.25 : 0.5 }}>
             {i + 1}. {section.title}
           </Typography>
+          {section.hint && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
+              {section.hint}
+            </Typography>
+          )}
           {section.questions.map((q) => {
             const text = (answers[q.id] ?? "").trim();
             return (

@@ -46,7 +46,7 @@ export type FeedbackStart =
   | { kind: "PAR"; email: string; name: string; offered?: boolean }
   | { kind: "LEADERSHIP"; leader: Leadership360Leader };
 
-// Give feedback: the person first, from everyone in the cycle and the
+// Provide Feedback: the person first, from everyone in the cycle and the
 // leadership team, except a lead's own reports, whose feedback goes in the
 // lead's review. Who they are decides the form: Leadership 360° for a member
 // of the leadership team, PAR feedback for anyone else. PAR feedback nobody
@@ -73,7 +73,7 @@ export default function Par360GiveFeedbackDialog({
   survey?: Leadership360CurrentSurvey;
   /** The leadership team. */
   leaders: Leadership360Leader[];
-  /** Your Give feedback list, for where you are with each leader. */
+  /** Your Provide Feedback list, for where you are with each leader. */
   items: GiveFeedbackItem[];
   onStart: (start: FeedbackStart) => void;
 }) {
@@ -131,7 +131,7 @@ export default function Par360GiveFeedbackDialog({
   return (
     // Stays open while an offer is being made: the feedback form opens from here once it's made.
     <Dialog open onClose={() => !offer.isPending && onClose()} maxWidth="sm" fullWidth>
-      <DialogTitle>Give feedback</DialogTitle>
+      <DialogTitle>Provide Feedback</DialogTitle>
       <DialogContent>
         {confirming && person ? (
           <Stack spacing={2} sx={{ pt: 0.5 }}>

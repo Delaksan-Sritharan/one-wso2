@@ -55,7 +55,7 @@ describe("homeSteps", () => {
     expect(homeSteps(input()).map((s) => s.label)).toEqual(["Self-review", "360° feedback", "Lead review", "Face-to-face"]);
   });
 
-  it("self-review: Not started, In progress as a draft, Done once shared, Incomplete if the deadline passes first", () => {
+  it("self-review: Not started, In progress as a draft, Completed once shared, Incomplete if the deadline passes first", () => {
     expect(state(input(), "self-review")).toBe("not-started");
     expect(state(input({ rating: rating({ parEmployeeStatus: "DRAFT" }) }), "self-review")).toBe("in-progress");
     expect(state(input({ rating: rating({ parEmployeeStatus: "SHARED" }) }), "self-review")).toBe("done");
@@ -63,11 +63,11 @@ describe("homeSteps", () => {
     const missed = { cycle: { ...cycle, parEmployeeDeadline: PAST } };
     expect(state(input({ ...missed, rating: rating({ parEmployeeStatus: "DRAFT" }) }), "self-review")).toBe("incomplete");
     expect(state(input(missed), "self-review")).toBe("incomplete");
-    // Shared in time, it stays Done after the deadline.
+    // Shared in time, it stays Completed after the deadline.
     expect(state(input({ ...missed, rating: rating({ parEmployeeStatus: "SHARED" }) }), "self-review")).toBe("done");
   });
 
-  it("360°: Not started until someone is asked, In progress until 3 have submitted, then Done", () => {
+  it("360°: Not started until someone is asked, In progress until 3 have submitted, then Completed", () => {
     expect(state(input(), "360")).toBe("not-started");
     expect(state(input({ reviewers: asked(2) }), "360")).toBe("in-progress");
     expect(state(input({ reviewers: asked(4, 2) }), "360")).toBe("in-progress");
@@ -100,13 +100,13 @@ describe("homeSteps", () => {
     expect(state(leader(2, { rating: rating({ parLeadStatus: "SHARED" }) }), "360")).toBe("in-progress");
   });
 
-  it("lead review: Not available yet until the lead shares, then Done; never Incomplete", () => {
+  it("lead review: Not available yet until the lead shares, then Completed; never Incomplete", () => {
     expect(state(input({ rating: rating({ parEmployeeStatus: "SHARED" }) }), "lead-review")).toBe("not-available");
     expect(state(input({ cycle: { ...cycle, parLeadDeadline: PAST } }), "lead-review")).toBe("not-available");
     expect(state(input({ rating: rating({ parLeadStatus: "SHARED" }) }), "lead-review")).toBe("done");
   });
 
-  it("face-to-face: Not available yet until the lead shares, then Not started, Done, or Incomplete past its deadline", () => {
+  it("face-to-face: Not available yet until the lead shares, then Not started, Completed, or Incomplete past its deadline", () => {
     expect(state(input(), "f2f")).toBe("not-available");
     expect(state(input({ rating: rating({ parLeadStatus: "SHARED" }) }), "f2f")).toBe("not-started");
     expect(state(input({ rating: rating({ parLeadStatus: "SHARED", parF2fStatus: "SCHEDULED" }) }), "f2f")).toBe("not-started");

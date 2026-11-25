@@ -30,7 +30,7 @@ export const STEP_STATE_LABEL: Record<StepState, string> = {
   "not-started": "Not started",
   "in-progress": "In progress",
   "not-available": "Not available yet",
-  done: "Done",
+  done: "Completed",
   incomplete: "Incomplete",
 };
 

@@ -83,22 +83,24 @@ export default function Par360AboutMe({
     <Stack spacing={2}>
       {beforeRequests}
 
+      <Typography variant="body2" color="text.secondary">
+        Invite colleagues who have worked closely with you during this review cycle to share feedback on your
+        contributions, collaboration and areas for development. You are required to receive feedback from at least{" "}
+        {MIN_360_RESPONSES} colleagues to complete this section.
+      </Typography>
       <Box sx={{ display: "flex", alignItems: "baseline", columnGap: 1.5, rowGap: 0.5, flexWrap: "wrap" }}>
         <Typography sx={{ fontWeight: 600 }}>Feedback requests</Typography>
         {!countLoading && !countFailed && (
           <Typography variant="body2" color="text.secondary">
+            {/* Past the minimum, "5 of 3" would read wrong: only the number shows. */}
+            <Count n={received} />
             {received < MIN_360_RESPONSES && (
               <>
-                You need at least <Count n={MIN_360_RESPONSES} /> feedback.{" "}
+                {" "}
+                of <Count n={MIN_360_RESPONSES} />
               </>
-            )}
-            {received > 0 ? (
-              <>
-                <Count n={received} /> received.
-              </>
-            ) : (
-              "None yet."
-            )}
+            )}{" "}
+            feedback responses received
           </Typography>
         )}
       </Box>

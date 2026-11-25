@@ -66,10 +66,17 @@ const EMPTY: Record<Show, string> = {
   voluntary: "You haven't given feedback nobody asked for this cycle",
 };
 
-// Give feedback: one list of everyone who asked for your feedback and the
+// What the Requested and Voluntary filters show; All has only the tab's own description.
+const SHOW_DESCRIPTION: Partial<Record<Show, string>> = {
+  requested:
+    "Here you'll find feedback requests from colleagues. You can share your feedback or decline it if you haven't worked closely enough with the person to provide meaningful feedback.",
+  voluntary: "Share feedback proactively with anyone you have worked with, without needing a request.",
+};
+
+// Provide Feedback: one list of everyone who asked for your feedback and the
 // feedback you've given, waiting ones first. Who it's about decides the form:
 // Leadership 360° for a member of the leadership team, PAR feedback for anyone
-// else. Give feedback starts feedback nobody asked for, the person first.
+// else. Provide Feedback starts feedback nobody asked for, the person first.
 export default function ParGiveFeedbackTab() {
   const profile = useMeProfile();
   const workEmail = profile.data?.userInfo.workEmail;
@@ -168,6 +175,9 @@ export default function ParGiveFeedbackTab() {
 
   return (
     <Stack spacing={2} sx={{ maxWidth: 1100, pt: 0.5 }}>
+      <Typography variant="body2" color="text.secondary">
+        Share your feedback to help your colleagues recognise their strengths and find opportunities to grow.
+      </Typography>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
         <ToggleButtonGroup
           exclusive
@@ -187,9 +197,14 @@ export default function ParGiveFeedbackTab() {
           </ToggleButton>
         </ToggleButtonGroup>
         <Button variant="contained" onClick={() => setChoosing(true)} disabled={loading || leadersFailed}>
-          Give feedback
+          Provide Feedback
         </Button>
       </Box>
+      {SHOW_DESCRIPTION[show] && (
+        <Typography variant="body2" color="text.secondary">
+          {SHOW_DESCRIPTION[show]}
+        </Typography>
+      )}
 
       {loading ? (
         <Skeleton variant="rectangular" height={160} sx={{ borderRadius: 1.5 }} />
@@ -216,7 +231,9 @@ export default function ParGiveFeedbackTab() {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mb: 1 }}>
                   <Typography variant="body2" color="text.secondary">
                     About five minutes each.
-                    {waiting.some((item) => !isVoluntary(item)) &&
+                    {/* Requested's own description already says when to decline. */}
+                    {show !== "requested" &&
+                      waiting.some((item) => !isVoluntary(item)) &&
                       " If you haven't worked closely enough with someone to help, decline instead."}
                   </Typography>
                   {!held && !deadlinePassed && <ParDueChip due={cycle.parThreeSixtyRatingDeadline} />}

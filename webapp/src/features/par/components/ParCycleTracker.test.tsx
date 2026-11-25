@@ -127,14 +127,14 @@ describe("ParCycleTracker", () => {
     expect(screen.getByTestId("where")).toHaveTextContent("/me/performance/cycle/f2f");
   });
 
-  it("says 360° feedback is Done at 3 submitted", () => {
+  it("says 360° feedback is Completed at 3 submitted", () => {
     reviewers = ["SHARED", "SHARED", "SHARED", "PENDING"].map((reviewStatus, n) => ({
       reviewerEmail: `r${n}@example.com`,
       reviewStatus: reviewStatus as Par360Reviewer["reviewStatus"],
       isEmployeeRequested: true,
     }));
     show();
-    expect(step("360° feedback")).toHaveTextContent("Done");
+    expect(step("360° feedback")).toHaveTextContent("Completed");
   });
 
   it("says when how many responded couldn't be loaded, with Retry, and still shows the step's page", async () => {

@@ -51,7 +51,12 @@ const selfReview: SelfReview = {
       title: "Self-review",
       scales: {},
       sections: [
-        { id: "impact", title: "Impact this cycle", questions: [{ id: "impact", type: "TEXT", text: "Impact this cycle", required: true }] },
+        {
+          id: "impact",
+          title: "Impact this cycle",
+          hint: "What did you contribute, and what changed because of it?",
+          questions: [{ id: "impact", type: "TEXT", text: "Impact this cycle", required: true }],
+        },
         { id: "growth", title: "Growth & learning", questions: [{ id: "growth", type: "TEXT", text: "Growth & learning", required: true }] },
       ],
     },
@@ -145,6 +150,14 @@ describe("ParSelfReviewForm", () => {
     expect(screen.getByText(/^Saved \d{1,2}:\d{2}/)).toBeInTheDocument();
   });
 
+  it("asks to confirm sharing in PAR 1.0's words, naming the lead", async () => {
+    show("DRAFT", { impact: "Shipped it", growth: "Learnt it" });
+    fireEvent.click(screen.getByRole("button", { name: "Share with lead" }));
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
+      "If you share this review, your feedback will be made available to lead@wso2.com. Do you wish to continue?",
+    );
+  });
+
   it("keeps the share confirmation open while sharing, so no answer can change behind it", async () => {
     shareMutateAsync.mockImplementation(() => new Promise(() => {}));
     show("DRAFT", { impact: "Shipped it", growth: "Learnt it" });
@@ -216,6 +229,7 @@ describe("ParSelfReviewForm", () => {
 
   it("shows a shared review read-only, with Unshare until the lead shares", () => {
     show("SHARED", { impact: "Shipped it", growth: "Learned it" });
+    expect(screen.getByText("What did you contribute, and what changed because of it?")).toBeInTheDocument();
     expect(screen.getByText("Shipped it")).toBeInTheDocument();
     expect(screen.getByText("Learned it")).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();

@@ -194,9 +194,9 @@ function show() {
 
 const noFeedback = (): Leadership360MyFeedback => ({ drafts: [], named: [], anonymous: [] });
 
-/** Give feedback, then a person from the list. */
+/** Provide Feedback, then a person from the list. */
 async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.click(screen.getByRole("button", { name: "Give feedback" }));
+  await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
   await user.type(screen.getByRole("combobox", { name: "Who is it for?" }), name);
   await user.click(screen.getByRole("option", { name: new RegExp(name) }));
 }
@@ -407,6 +407,27 @@ describe("ParGiveFeedbackTab", () => {
     expect(screen.queryByText("Sam")).not.toBeInTheDocument();
   });
 
+  it("describes the tab, and under the filter what Requested or Voluntary holds", async () => {
+    const user = userEvent.setup();
+    requests = [{ ...alexAsked, employeeName: "Alex" }];
+    show();
+    const tabDescription = /help your colleagues recognise their strengths/;
+    const requestedDescription = /Here you'll find feedback requests from colleagues/;
+    const voluntaryDescription = /Share feedback proactively with anyone you have worked with/;
+    expect(screen.getByText(tabDescription)).toBeInTheDocument();
+    expect(screen.queryByText(requestedDescription)).not.toBeInTheDocument();
+    expect(screen.queryByText(voluntaryDescription)).not.toBeInTheDocument();
+    expect(screen.getByText(/decline instead/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Requested" }));
+    expect(screen.getByText(tabDescription)).toBeInTheDocument();
+    expect(screen.getByText(requestedDescription)).toBeInTheDocument();
+    // Its description already says when to decline.
+    expect(screen.queryByText(/decline instead/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Voluntary" }));
+    expect(screen.getByText(voluntaryDescription)).toBeInTheDocument();
+    expect(screen.queryByText(requestedDescription)).not.toBeInTheDocument();
+  });
+
   it("says nobody asked when there's nothing, with no banner for the open survey", () => {
     show();
     expect(screen.getByText("No one has asked for your feedback yet")).toBeInTheDocument();
@@ -430,12 +451,12 @@ describe("ParGiveFeedbackTab", () => {
   });
 });
 
-describe("Give feedback", () => {
-  it("has one Give feedback button; a request is answered with Respond", async () => {
+describe("Provide Feedback", () => {
+  it("has one Provide Feedback button; a request is answered with Respond", async () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, employeeName: "Alex" }];
     show();
-    expect(screen.getAllByRole("button", { name: "Give feedback" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Provide Feedback" })).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Respond" }));
     expect(screen.getByText("PAR form for Alex")).toBeInTheDocument();
   });
@@ -443,7 +464,7 @@ describe("Give feedback", () => {
   it("asks for the person first, from everyone, and a leader gets the Leadership 360° form", async () => {
     const user = userEvent.setup();
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
+    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
     expect(screen.queryByRole("button", { name: /For a PAR/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
     const options = screen.getAllByRole("option").map((o) => o.textContent);
@@ -459,7 +480,7 @@ describe("Give feedback", () => {
     const user = userEvent.setup();
     ownReports = new Set(["alex@example.com", "elena@example.com"]);
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
+    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
     await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
     expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Elena/ })).toHaveTextContent("Leadership 360°");
@@ -469,7 +490,7 @@ describe("Give feedback", () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, employeeName: "Alex" }];
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
+    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
     await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
     expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Elena/ })).toBeInTheDocument();
@@ -539,7 +560,7 @@ describe("Give feedback", () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, reviewStatus: "SHARED" }];
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
+    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
     await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
     expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
   });
@@ -548,7 +569,7 @@ describe("Give feedback", () => {
     const user = userEvent.setup();
     currentSurvey = null;
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
+    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
     await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
     const elenaOption = screen.getByRole("option", { name: /Elena/ });
     expect(elenaOption).toHaveAttribute("aria-disabled", "true");
@@ -566,7 +587,7 @@ describe("Give feedback", () => {
     const user = userEvent.setup();
     mine = { ...noFeedback(), anonymous: [{ leaderEmail: "elena@example.com" }] };
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
+    await user.click(screen.getByRole("button", { name: "Provide Feedback" }));
     await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
     const elenaOption = screen.getByRole("option", { name: /Elena/ });
     expect(elenaOption).not.toHaveAttribute("aria-disabled", "true");
@@ -577,16 +598,16 @@ describe("Give feedback", () => {
 });
 
 describe("ParGiveFeedbackTab: the leadership team", () => {
-  it("waits for it before Give feedback, so a leader isn't taken for anyone else", () => {
+  it("waits for it before Provide Feedback, so a leader isn't taken for anyone else", () => {
     leaders = { ...query(undefined), isLoading: true };
     show();
-    expect(screen.getByRole("button", { name: "Give feedback" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Provide Feedback" })).toBeDisabled();
   });
 
   it("says when it couldn't be loaded, instead of listing requests as PAR feedback", () => {
     leaders = { ...query(undefined), isError: true, error: new Error("HTTP 500") };
     show();
     expect(screen.getByText(/Couldn't load the leadership team/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Give feedback" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Provide Feedback" })).toBeDisabled();
   });
 });
