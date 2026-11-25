@@ -937,6 +937,121 @@ export async function deleteRiskEvidence(authFetch: AuthFetch, riskId: number, f
   return handleResponse<void>(res);
 }
 
+// ── Bulk risk import (Compliance Admin) ───────────────────────────────────────
+//
+// A CSV is dry-run first and imported only if that dry run finished with
+// nothing rejected. Both run as a background job on the server: start one, then
+// poll it. The backend refuses an import for a file that was not dry-run clean,
+// so none of this is advisory.
+
+export type BulkImportMode = "dry_run" | "import";
+
+export interface BulkImportFinding {
+  migration_id: number;
+  csv_row: number;
+  risk_title: string;
+  severity: "REJECT" | "WARN" | "MISMATCH";
+  failure: string;
+  detail: string;
+}
+
+export interface BulkImportCounts {
+  migrated: number;
+  skipped: number;
+  rejects: number;
+  warnings: number;
+  mismatches: number;
+  // Set by a dry run (plan_known): the rows an import would write, and the rows
+  // an earlier import already completed, which it would skip.
+  to_write?: number;
+  already_done?: number;
+  plan_known?: boolean;
+}
+
+export type BulkImportDownload = "errors" | "report" | "risk-codes";
+
+export interface BulkImportJob {
+  id: string;
+  mode: BulkImportMode;
+  status: "running" | "succeeded" | "failed";
+  // preflight | parse | resolve | write | verify, while running.
+  phase?: string;
+  done: number;
+  total: number;
+  register_id: number;
+  register_name: string;
+  template: RegisterTemplate;
+  file_name: string;
+  file_sha256: string;
+  outcome?: "clean" | "completed_with_findings" | "aborted";
+  rows: number;
+  error?: string;
+  started_at: string;
+  finished_at?: string;
+  counts?: BulkImportCounts;
+  // True on a finished dry run with nothing rejected, until importable_until:
+  // the window in which the same file may be imported.
+  importable: boolean;
+  importable_until?: string;
+  findings?: BulkImportFinding[];
+  findings_truncated?: boolean;
+  downloads?: BulkImportDownload[];
+}
+
+// A file response: the bytes and the name the server gave them.
+async function readFileResponse(res: Response, fallbackName: string): Promise<{ blob: Blob; fileName: string }> {
+  if (!res.ok) {
+    // Errors come back as JSON, same as every other endpoint.
+    return handleResponse<never>(res);
+  }
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const fileName = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1] ?? fallbackName;
+  return { blob: await res.blob(), fileName };
+}
+
+// The header row for the register's template: only the columns that register
+// needs. It has no example row, so nothing in it can be imported by mistake.
+export async function downloadBulkImportTemplate(
+  authFetch: AuthFetch,
+  registerId: number,
+): Promise<{ blob: Blob; fileName: string }> {
+  const res = await authFetch(`${BACKEND_BASE_URL}/api/v1/risks/bulk-import/template?register_id=${registerId}`);
+  return readFileResponse(res, "risk-import-template.csv");
+}
+
+// Starts a dry run or an import and returns the accepted job. Throws with the
+// server's message when the upload is refused (wrong file type, too large,
+// another import running, no clean dry run for this file).
+export async function startBulkImport(
+  authFetch: AuthFetch,
+  params: { registerId: number; mode: BulkImportMode; file: File; acknowledgeWarnings?: boolean },
+): Promise<BulkImportJob> {
+  const form = new FormData();
+  form.append("register_id", String(params.registerId));
+  form.append("mode", params.mode);
+  if (params.acknowledgeWarnings) form.append("acknowledge_warnings", "true");
+  form.append("file", params.file, params.file.name);
+
+  const res = await authFetch(`${BACKEND_BASE_URL}/api/v1/risks/bulk-import`, { method: "POST", body: form });
+  return handleResponse<BulkImportJob>(res);
+}
+
+export async function fetchBulkImportJob(authFetch: AuthFetch, jobId: string): Promise<BulkImportJob> {
+  const res = await authFetch(`${BACKEND_BASE_URL}/api/v1/risks/bulk-import/jobs/${encodeURIComponent(jobId)}`);
+  return handleResponse<BulkImportJob>(res);
+}
+
+export async function downloadBulkImportResult(
+  authFetch: AuthFetch,
+  jobId: string,
+  artifact: BulkImportDownload,
+): Promise<{ blob: Blob; fileName: string }> {
+  const res = await authFetch(
+    `${BACKEND_BASE_URL}/api/v1/risks/bulk-import/jobs/${encodeURIComponent(jobId)}/${artifact}`,
+  );
+  return readFileResponse(res, artifact === "report" ? "report.txt" : `${artifact}.csv`);
+}
+
 // The filter half of ListRisksParams as a query string — everything but paging.
 // Shared by the list and the CSV export so the export can never drift from
 // what the table is showing.
