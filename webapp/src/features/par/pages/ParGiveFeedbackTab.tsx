@@ -69,8 +69,9 @@ const EMPTY: Record<Show, string> = {
 // What the Requested and Voluntary filters show; All has only the tab's own description.
 const SHOW_DESCRIPTION: Partial<Record<Show, string>> = {
   requested:
-    "Here you'll find feedback requests from colleagues. You can share your feedback or decline it if you haven't worked closely enough with the person to provide meaningful feedback.",
-  voluntary: "Share feedback proactively with anyone you have worked with, without needing a request.",
+    "Here you'll find feedback requests from colleagues. You can share your feedback or decline it if you haven't worked closely enough with the person to provide meaningful feedback. Please ensure your comments are professional, constructive, and detailed to add meaningful insights.",
+  voluntary:
+    "Share feedback proactively with anyone you have worked with, without needing a request. Please ensure your comments are professional, constructive, and detailed to add meaningful insights.",
 };
 
 // Provide Feedback: one list of everyone who asked for your feedback and the
@@ -167,7 +168,7 @@ export default function ParGiveFeedbackTab() {
     setGiving(
       item.kind === "LEADERSHIP"
         ? { kind: "LEADERSHIP", leader: leaderOf(item) }
-        : { kind: "PAR", email: item.email, name: item.name ?? item.email, offered: isVoluntary(item) },
+        : { kind: "PAR", email: item.email, name: item.name ?? item.email },
     );
   const loading = requests.isLoading || (parts.leadership && (leaders.isLoading || mine.isLoading));
   // Without the leadership team, a request for Leadership 360° feedback would open the PAR form.
@@ -283,7 +284,6 @@ export default function ParGiveFeedbackTab() {
           employeeName={giving?.kind === "PAR" ? giving.name : (viewing!.name ?? viewing!.email)}
           deadline={cycle.parThreeSixtyRatingDeadline}
           held={held}
-          offered={giving?.kind === "PAR" ? Boolean(giving.offered) : isVoluntary(viewing!)}
         />
       )}
       {viewing?.kind === "LEADERSHIP" && viewing.given?.anonymous === false && openSurvey && (

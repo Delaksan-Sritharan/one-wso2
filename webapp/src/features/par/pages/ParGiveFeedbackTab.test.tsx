@@ -418,8 +418,8 @@ describe("ParGiveFeedbackTab", () => {
     requests = [{ ...alexAsked, employeeName: "Alex" }];
     show();
     const tabDescription = /help your colleagues recognise their strengths/;
-    const requestedDescription = /Here you'll find feedback requests from colleagues/;
-    const voluntaryDescription = /Share feedback proactively with anyone you have worked with/;
+    const requestedDescription = /Here you'll find feedback requests from colleagues.*Please ensure your comments are/;
+    const voluntaryDescription = /Share feedback proactively with anyone you have worked with.*Please ensure your comments/;
     expect(screen.getByText(tabDescription)).toBeInTheDocument();
     expect(screen.queryByText(requestedDescription)).not.toBeInTheDocument();
     expect(screen.queryByText(voluntaryDescription)).not.toBeInTheDocument();

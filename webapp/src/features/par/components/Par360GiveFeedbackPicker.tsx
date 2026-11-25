@@ -42,8 +42,7 @@ import {
 import { isDeadlinePassed } from "../util/parDeadline";
 
 export type FeedbackStart =
-  // `offered`: nobody asked you.
-  | { kind: "PAR"; email: string; name: string; offered?: boolean }
+  | { kind: "PAR"; email: string; name: string }
   | { kind: "LEADERSHIP"; leader: Leadership360Leader };
 
 // Provide Feedback's person search, on the tab itself as on the Active cycle's 360° step: everyone in the
@@ -186,12 +185,6 @@ export default function Par360GiveFeedbackPicker({
         )}
         noOptionsText="No one found"
       />
-      <Typography variant="caption" color="text.secondary">
-        For a member of the leadership team it's Leadership 360° feedback,{" "}
-        {held ? "with your name, counting toward their next PAR cycle" : "and you can stay anonymous"}. For anyone else
-        it's PAR 360° feedback, which their lead reads with your name. People already in your list aren't shown here:
-        respond to them or continue there.
-      </Typography>
 
       {/* Stays open while an offer is being made: the feedback form opens from here once it's made. */}
       <Dialog open={confirming && person !== null} onClose={() => !offer.isPending && reset()} maxWidth="sm" fullWidth>
@@ -222,7 +215,7 @@ export default function Par360GiveFeedbackPicker({
                 {
                   onSuccess: () => {
                     reset();
-                    onStart({ kind: "PAR", email: person.email, name: person.name, offered: true });
+                    onStart({ kind: "PAR", email: person.email, name: person.name });
                   },
                 },
               )
