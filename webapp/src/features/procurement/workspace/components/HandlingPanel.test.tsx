@@ -204,6 +204,17 @@ describe("HandlingPanel, collaborators", () => {
     expect(showSuccess).toHaveBeenCalledWith("drew.parker@example.com has been added as a collaborator on this request.");
   });
 
+  it("offers no clear-all on the collaborators, so each is taken off one at a time", async () => {
+    const user = userEvent.setup();
+    render(<HandlingPanel request={request({ collaborators: ["kim@example.com", "jo@example.com"] })} me="pat@example.com" />);
+    await user.click(screen.getByRole("combobox", { name: "Collaborators" }));
+    expect(screen.queryByTitle("Clear")).toBeNull();
+    expect(screen.getAllByTestId("CancelIcon")).toHaveLength(2);
+    await user.click(screen.getAllByTestId("CancelIcon")[1]);
+    expect(mutations.removeCollaborator).toHaveBeenCalledTimes(1);
+    expect(mutations.removeCollaborator).toHaveBeenCalledWith("jo@example.com", expect.anything());
+  });
+
   it("stops offering people once the request has twenty collaborators", async () => {
     state.directory = loaded([person("Drew Parker", "drew.parker@example.com")]);
     const user = userEvent.setup();

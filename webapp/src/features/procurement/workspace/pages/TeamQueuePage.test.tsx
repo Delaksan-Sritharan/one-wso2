@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -35,9 +35,10 @@ const row = (id: string, patch: Partial<QueueItem> = {}): QueueItem => ({
 });
 
 const asked = vi.hoisted(() => vi.fn());
+const identity = vi.hoisted(() => ({ value: {} as Record<string, unknown>, refetch: vi.fn() }));
 vi.mock("../../api/useProcurement", () => ({
-  useTeamQueue: (filter: unknown) => {
-    asked(filter);
+  useTeamQueue: (filter: unknown, active: boolean = true) => {
+    asked(filter, active);
     return {
       data: [
         row("1"),
@@ -48,8 +49,14 @@ vi.mock("../../api/useProcurement", () => ({
       isError: false,
     };
   },
-  useProcurementMe: () => ({ data: { email: "Pat@example.com" }, isPending: false, isError: false }),
+  useProcurementMe: () => identity.value,
 }));
+
+beforeEach(() => {
+  asked.mockClear();
+  identity.refetch.mockClear();
+  identity.value = { data: { email: "Pat@example.com" }, isPending: false, isError: false, refetch: identity.refetch };
+});
 
 function renderPage() {
   return render(
@@ -77,25 +84,46 @@ describe("TeamQueuePage", () => {
     expect(screen.getByRole("heading", { name: "Handling page" })).toBeInTheDocument();
   });
 
-  it("shows only the requests the user holds under Assigned to me, asking the backend for the assigned ones", async () => {
+  it("asks the backend for the assigned requests of the user under Assigned to me, since it cannot filter them itself", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Assigned to me" }));
+    expect(asked).toHaveBeenLastCalledWith({ status: "assigned", assignee: "Pat@example.com" }, true);
+    await user.click(screen.getByRole("button", { name: "All" }));
+    expect(asked).toHaveBeenLastCalledWith({ status: undefined, assignee: undefined }, true);
+  });
+
+  it("waits for who the user is before asking for Assigned to me, and does not wait for the other chips", async () => {
+    identity.value = { data: undefined, isPending: true, isError: false, refetch: identity.refetch };
+    const user = userEvent.setup();
+    renderPage();
+    expect(asked).toHaveBeenLastCalledWith({ status: undefined, assignee: undefined }, true);
+    await user.click(screen.getByRole("button", { name: "Assigned to me" }));
+    expect(asked).toHaveBeenLastCalledWith({ status: "assigned", assignee: undefined }, false);
+  });
+
+  it("says who the user could not be read, with a Retry, instead of an empty queue, and leaves the other chips usable", async () => {
+    identity.value = { data: undefined, isPending: false, isError: true, error: new Error("Identity unavailable."), refetch: identity.refetch };
     const user = userEvent.setup();
     renderPage();
     expect(screen.getByText("Title 1")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Assigned to me" }));
-    expect(asked).toHaveBeenLastCalledWith({ status: "assigned" });
-    expect(screen.getByText("Title 2")).toBeInTheDocument();
+    expect(screen.getByText(/Identity unavailable\./)).toBeInTheDocument();
+    expect(screen.queryByText("No requests match")).toBeNull();
     expect(screen.queryByText("Title 1")).toBeNull();
-    expect(screen.queryByText("Title 3")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "All" }));
-    expect(screen.getByText("Title 3")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    expect(identity.refetch).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("button", { name: "Assigned" }));
+    expect(screen.queryByText(/Identity unavailable\./)).toBeNull();
+    expect(screen.getByText("Title 1")).toBeInTheDocument();
   });
 
   it("asks for one stage when a chip is picked, and for none with All", async () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(screen.getByRole("button", { name: "Assigned" }));
-    expect(asked).toHaveBeenLastCalledWith({ status: "assigned" });
+    expect(asked).toHaveBeenLastCalledWith({ status: "assigned", assignee: undefined }, true);
     await user.click(screen.getByRole("button", { name: "All" }));
-    expect(asked).toHaveBeenLastCalledWith({ status: undefined });
+    expect(asked).toHaveBeenLastCalledWith({ status: undefined, assignee: undefined }, true);
   });
 });

@@ -417,6 +417,23 @@ describe("the Procurement backend adapter", () => {
     expect(authedPost).toHaveBeenCalledWith("/requests/7/decision", "token", { decision: "APPROVED", comment: null, disclaimerAccepted: true });
   });
 
+  it("finds the requests assigned to one person on every page of the queue, since the backend cannot filter by assignee", async () => {
+    const row = (id: number, assignee: string | null) => ({
+      id, referenceNo: `PR-2026-${id}`, title: `Request ${id}`, category: "NON_IT", status: "ASSIGNED", version: 1, submittedOn: null,
+      updatedOn: "2026-11-01T00:00:00Z", priority: null, assigneeEmail: assignee, requesterName: "Alex Morgan", requesterEmail: "alex@example.com",
+    });
+    answers["/procurement/requests?limit=100&status=ASSIGNED"] = Array.from({ length: 100 }, (_, i) => row(i + 1, i === 3 ? "pat@example.com" : "sam@example.com"));
+    answers["/procurement/requests?limit=100&status=ASSIGNED&offset=100"] = [row(101, "PAT@example.com"), row(102, "sam@example.com")];
+    const mine = await api().listTeamQueue({ status: "assigned", assignee: "Pat@example.com" });
+    expect(mine.map((r) => r.id)).toEqual(["4", "101"]);
+    expect(asked()).toEqual(["/procurement/requests?limit=100&status=ASSIGNED", "/procurement/requests?limit=100&status=ASSIGNED&offset=100"]);
+  });
+
+  it("stops reading the queue at the first page that is not full, and reads only one page when no assignee is asked for", async () => {
+    await api().listTeamQueue({ status: "assigned", priority: "P1" });
+    expect(asked()).toEqual(["/procurement/requests?limit=100&status=ASSIGNED&priority=P1"]);
+  });
+
   it("lists the Procurement queue, narrowed by stage and priority when asked", async () => {
     expect((await api().listTeamQueue()).map((r) => [r.id, r.requester.name])).toEqual([["8", "Alex Morgan"]]);
     expect(await api().listTeamQueue({ status: "assigned", priority: "P1" })).toEqual([]);

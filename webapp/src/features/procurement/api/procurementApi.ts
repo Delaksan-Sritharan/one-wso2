@@ -96,7 +96,12 @@ export interface ProcurementApi {
   /** Approve or reject a request that waits for the user's decision. */
   decideRequest: (requestId: string, decision: ApprovalDecisionInput) => Promise<void>;
   /** The approved and assigned requests Procurement handles, the most urgent first. */
-  listTeamQueue: (filter?: { status?: RequestStatus; priority?: Priority }) => Promise<QueueItem[]>;
+  /**
+   * The requests Procurement handles, the most urgent first.
+   *
+   * @param filter.assignee - Only the requests assigned to this email. The backend cannot filter by it, so every page of the queue is read
+   */
+  listTeamQueue: (filter?: { status?: RequestStatus; priority?: Priority; assignee?: string }) => Promise<QueueItem[]>;
   /** Assign an approved request to the signed-in user, or to `email` when given. */
   assignRequest: (requestId: string, email?: string) => Promise<void>;
   /** Take the assignee off an assigned request. */
@@ -133,6 +138,9 @@ const REFERENCE_TYPES = ["BUDGET_CATEGORY", "BUSINESS_UNIT", "PRODUCT", "REGION"
 
 /** My Requests shows one page of this many, the most the backend allows. */
 const REQUEST_PAGE_SIZE = 100;
+
+/** The most pages read of the queue to find the requests assigned to one person, so a fault in the paging cannot read for ever. */
+const MAX_QUEUE_PAGES = 50;
 
 const ALREADY_SUBMITTED = "This request was already submitted. Check My Requests before sending it again.";
 
@@ -262,8 +270,18 @@ function createHttpProcurementApi(getAccessToken: () => Promise<string>, user: P
     decideRequest: async (requestId, decision) => {
       await authedPost(urls.decideRequest(requestId), await getAccessToken(), toNewDecision(decision));
     },
-    listTeamQueue: async ({ status, priority } = {}) =>
-      (await get<BackendProcurementItem[]>(urls.teamQueue(REQUEST_PAGE_SIZE, status && toBackendStatus(status), priority))).map(toQueueItem),
+    listTeamQueue: async ({ status, priority, assignee } = {}) => {
+      const page = async (offset: number): Promise<QueueItem[]> =>
+        (await get<BackendProcurementItem[]>(urls.teamQueue(REQUEST_PAGE_SIZE, status && toBackendStatus(status), priority, offset))).map(toQueueItem);
+      if (!assignee) return page(0);
+      const mine: QueueItem[] = [];
+      for (let index = 0; index < MAX_QUEUE_PAGES; index += 1) {
+        const rows = await page(index * REQUEST_PAGE_SIZE);
+        mine.push(...rows.filter((r) => r.assignee.toLowerCase() === assignee.toLowerCase()));
+        if (rows.length < REQUEST_PAGE_SIZE) break;
+      }
+      return mine;
+    },
     assignRequest: async (requestId, email) => {
       await authedPost(urls.assignRequest(requestId, email), await getAccessToken(), {});
     },

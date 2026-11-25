@@ -160,6 +160,22 @@ describe("the Procurement sample data", () => {
     expect((await api.listTeamQueue()).map((r) => r.id)).toEqual(["approval-2", "seed-3", "team-2", "team-1"]);
   });
 
+  it("lists only the requests assigned to a person when asked, whatever the case of the email", async () => {
+    const api = createMockProcurementApi(user);
+    expect((await api.listTeamQueue({ assignee: "BLAKE.RIVERS@example.com" })).map((r) => r.id)).toEqual(["team-2"]);
+    expect(await api.listTeamQueue({ assignee: "nobody@example.com" })).toEqual([]);
+  });
+
+  it("gives each read of a request as a new object, so a save that changes it is seen as new data", async () => {
+    const api = createMockProcurementApi(user);
+    const before = await api.getRequest("team-1");
+    await api.addCollaborator("team-1", "kim@example.com");
+    const after = await api.getRequest("team-1");
+    expect(after).not.toBe(before);
+    expect(after.collaborators).toEqual(["kim@example.com"]);
+    expect(before.collaborators).toEqual([]);
+  });
+
   it("has requests that someone else raised and approved, which the user can handle and whose budget they can change", async () => {
     const api = createMockProcurementApi(user);
     await api.assignRequest("team-1");

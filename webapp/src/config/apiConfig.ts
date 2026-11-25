@@ -2142,8 +2142,8 @@ export const procurementServiceUrls = {
   requests: (limit: number): string => `${procurementBackendUrl}/requests?limit=${encodeSegment(limit)}`,
   approvals: (limit: number, status?: string): string =>
     `${procurementBackendUrl}/approvals?limit=${encodeSegment(limit)}${status ? `&status=${encodeSegment(status)}` : ""}`,
-  teamQueue: (limit: number, status?: string, priority?: string): string =>
-    `${procurementBackendUrl}/procurement/requests?limit=${encodeSegment(limit)}${status ? `&status=${encodeSegment(status)}` : ""}${priority ? `&priority=${encodeSegment(priority)}` : ""}`,
+  teamQueue: (limit: number, status?: string, priority?: string, offset = 0): string =>
+    `${procurementBackendUrl}/procurement/requests?limit=${encodeSegment(limit)}${status ? `&status=${encodeSegment(status)}` : ""}${priority ? `&priority=${encodeSegment(priority)}` : ""}${offset > 0 ? `&offset=${encodeSegment(offset)}` : ""}`,
   assignRequest: (requestId: string, email?: string): string =>
     `${procurementBackendUrl}/requests/${encodeSegment(requestId)}/assign${email ? `/${encodeSegment(email)}` : ""}`,
   unassignRequest: (requestId: string): string => `${procurementBackendUrl}/requests/${encodeSegment(requestId)}/unassign`,

@@ -49,18 +49,33 @@ const SHOWS: { value: Show; label: string }[] = [
 
 export default function TeamQueuePage() {
   const [show, setShow] = useState<Show>(ALL);
-  // The backend filters by stage only, so "Assigned to me" asks for the assigned ones and keeps those the user holds.
-  const queue = useTeamQueue({ status: show === ALL ? undefined : ((show === MINE ? "assigned" : show) as RequestStatus) });
   const me = useProcurementMe();
+  const mine = show === MINE;
+  // "Assigned to me" needs the user's email, so it waits for it and the other chips do not.
+  const queue = useTeamQueue(
+    { status: show === ALL ? undefined : ((mine ? "assigned" : show) as RequestStatus), assignee: mine ? me.data?.email : undefined },
+    !mine || Boolean(me.data),
+  );
   const navigate = useNavigate();
-  const myEmail = me.data?.email.toLowerCase() ?? "";
-  const rows = show === MINE ? queue.data?.filter((r) => r.assignee.toLowerCase() === myEmail) : queue.data;
-  const waitingForMe = show === MINE && !me.data && !me.isError;
+  const rows = queue.data;
+  const identityFailed = mine && !me.data && me.isError;
 
   return (
     <>
       <FilterChips label="Show" options={SHOWS} value={show} onChange={setShow} />
-      {queue.isError && (
+      {identityFailed && (
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={() => void me.refetch()}>
+              Retry
+            </Button>
+          }
+        >
+          Your requests could not be found because who you are could not be read. {describeError(me.error)}
+        </Alert>
+      )}
+      {!identityFailed && queue.isError && (
         <Alert
           severity="error"
           action={
@@ -72,9 +87,9 @@ export default function TeamQueuePage() {
           {describeError(queue.error)}
         </Alert>
       )}
-      {(queue.isPending || waitingForMe) && !queue.isError && <Skeleton variant="rounded" height={200} />}
-      {rows && !waitingForMe && rows.length === 0 && <Typography color="text.secondary">No requests match</Typography>}
-      {rows && !waitingForMe && rows.length > 0 && (
+      {!identityFailed && queue.isPending && !queue.isError && <Skeleton variant="rounded" height={200} />}
+      {!identityFailed && rows && rows.length === 0 && <Typography color="text.secondary">No requests match</Typography>}
+      {!identityFailed && rows && rows.length > 0 && (
         <TableContainer>
           <Table size="small">
             <TableHead>

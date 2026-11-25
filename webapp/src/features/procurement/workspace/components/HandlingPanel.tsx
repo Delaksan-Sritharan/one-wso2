@@ -177,6 +177,8 @@ export default function HandlingPanel({ request, me }: { request: PurchaseReques
         </Typography>
         <Autocomplete
           multiple
+          // No clear-all: it would take off every collaborator in one change, and a change is handled one person at a time.
+          disableClearable
           filterSelectedOptions
           forcePopupIcon={false}
           size="small"

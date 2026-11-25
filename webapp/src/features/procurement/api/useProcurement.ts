@@ -223,11 +223,15 @@ export function useDecideRequest(requestId: string) {
   });
 }
 
-export function useTeamQueue(filter: { status?: RequestStatus; priority?: Priority }) {
+/**
+ * @param filter.assignee - Only the requests assigned to this email
+ * @param active - Whether to ask yet; "Assigned to me" waits until the signed-in user's email is known
+ */
+export function useTeamQueue(filter: { status?: RequestStatus; priority?: Priority; assignee?: string }, active = true) {
   const { api, userId, enabled } = useProcurementContext();
   return useQuery({
-    queryKey: [...root(userId), "team-queue", filter.status ?? "all", filter.priority ?? "all"],
-    enabled,
+    queryKey: [...root(userId), "team-queue", filter.status ?? "all", filter.priority ?? "all", filter.assignee?.toLowerCase() ?? "anyone"],
+    enabled: enabled && active,
     retry: defaultQueryRetry,
     queryFn: () => api!.listTeamQueue(filter),
   });

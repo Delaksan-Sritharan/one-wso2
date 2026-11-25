@@ -441,7 +441,8 @@ function buildMockProcurementApi(user: Person): ProcurementApi {
       [...requests]
         .sort((a, b) => (b.submittedAt ?? b.updatedAt).localeCompare(a.submittedAt ?? a.updatedAt))
         .map(({ id, reference, title, category, status, submittedAt, updatedAt }) => ({ id, reference, title, category, status, submittedAt, updatedAt })),
-    getRequest: async (requestId) => find(requestId),
+    // A copy, so that a save which changes the stored request is seen as new data by the screens that read it.
+    getRequest: async (requestId) => ({ ...find(requestId) }),
     submitRequest: async (input) => {
       if (!input.declarationAccepted) throw new Error("Confirm the declaration before submitting.");
       assertApprovers(input);
@@ -520,9 +521,10 @@ function buildMockProcurementApi(user: Person): ProcurementApi {
         updatedAt: new Date().toISOString(),
       });
     },
-    listTeamQueue: async ({ status, priority } = {}) =>
+    listTeamQueue: async ({ status, priority, assignee } = {}) =>
       [...requests, ...toApprove, ...forTeam]
         .filter((r) => (r.status === "approved" || r.status === "assigned") && (!status || r.status === status) && (!priority || r.priority === priority))
+        .filter((r) => !assignee || r.assignee.toLowerCase() === assignee.toLowerCase())
         .sort((a, b) => urgencyRank(a.priority) - urgencyRank(b.priority))
         .map(({ id, reference, title, category, status: stage, priority: urgency, assignee, requester, updatedAt }) => ({
           id,
