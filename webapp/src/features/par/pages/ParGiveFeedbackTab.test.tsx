@@ -187,14 +187,15 @@ vi.mock("../components/Leadership360FeedbackDialog", () => ({
 
 const { default: ParGiveFeedbackTab } = await import("./ParGiveFeedbackTab");
 
-const tab = () => (
-  <MemoryRouter initialEntries={["/me/performance/give-feedback"]}>
+const tab = (search = "") => (
+  <MemoryRouter initialEntries={[`/me/performance/give-feedback${search}`]}>
     <ParGiveFeedbackTab />
   </MemoryRouter>
 );
 
-function show() {
-  return render(tab());
+/** The tab, on Requested unless `search` picks another filter. */
+function show(search = "") {
+  return render(tab(search));
 }
 
 const noFeedback = (): Leadership360MyFeedback => ({ drafts: [], named: [], anonymous: [] });
@@ -242,7 +243,7 @@ describe("ParGiveFeedbackTab", () => {
     ];
     mine = { ...noFeedback(), drafts: [{ leaderEmail: "hannah@example.com", answers: {}, anonymous: false }] };
     window.localStorage.setItem("par-l360-anonymous-draft:me@example.com:3:elena@example.com", "{}");
-    show();
+    show("?show=all");
     expect(screen.queryByRole("button", { name: /Requests to me/ })).not.toBeInTheDocument();
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(screen.getByText("Anonymous draft")).toBeInTheDocument();
@@ -278,7 +279,7 @@ describe("ParGiveFeedbackTab", () => {
       named: [{ leaderEmail: "hannah@example.com", submittedOn: "2026-11-02", answers: { q1: 4 } }],
       anonymous: [{ leaderEmail: "elena@example.com" }],
     };
-    show();
+    show("?show=voluntary");
     expect(screen.getByText("Submitted · 2 Nov '26")).toBeInTheDocument();
     expect(screen.getByText("Submitted anonymously")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "View" })).toHaveLength(1);
@@ -290,7 +291,7 @@ describe("ParGiveFeedbackTab", () => {
     const user = userEvent.setup();
     mine = { ...noFeedback(), drafts: [{ leaderEmail: "hannah@example.com", answers: {}, anonymous: false }] };
     window.localStorage.setItem("par-l360-anonymous-draft:me@example.com:3:elena@example.com", "{}");
-    show();
+    show("?show=voluntary");
     expect(screen.getAllByRole("button", { name: "Discard" })).toHaveLength(2);
     await user.click(screen.getAllByRole("button", { name: "Discard" })[0]);
     const dialog = screen.getByRole("dialog");
@@ -404,13 +405,15 @@ describe("ParGiveFeedbackTab", () => {
       { ...alexAsked, employeeEmail: "sam@example.com", employeeName: "Sam", isRequested: false },
     ];
     show();
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Requested" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Alex")).toBeInTheDocument();
+    expect(screen.queryByText("Sam")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Voluntary" }));
     expect(screen.getByText("Sam")).toBeInTheDocument();
     expect(screen.queryByText("Alex")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Requested" }));
+    await user.click(screen.getByRole("button", { name: "All" }));
     expect(screen.getByText("Alex")).toBeInTheDocument();
-    expect(screen.queryByText("Sam")).not.toBeInTheDocument();
+    expect(screen.getByText("Sam")).toBeInTheDocument();
   });
 
   it("describes the tab, and under the filter what Requested or Voluntary holds", async () => {
@@ -421,17 +424,18 @@ describe("ParGiveFeedbackTab", () => {
     const requestedDescription = /Here you'll find feedback requests from colleagues.*Please ensure your comments are/;
     const voluntaryDescription = /Share feedback proactively with anyone you have worked with.*Please ensure your comments/;
     expect(screen.getByText(tabDescription)).toBeInTheDocument();
-    expect(screen.queryByText(requestedDescription)).not.toBeInTheDocument();
-    expect(screen.queryByText(voluntaryDescription)).not.toBeInTheDocument();
-    expect(screen.getByText(/decline instead/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Requested" }));
-    expect(screen.getByText(tabDescription)).toBeInTheDocument();
     expect(screen.getByText(requestedDescription)).toBeInTheDocument();
-    // Its description already says when to decline.
-    expect(screen.queryByText(/decline instead/)).not.toBeInTheDocument();
+    expect(screen.queryByText(voluntaryDescription)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Voluntary" }));
+    expect(screen.getByText(tabDescription)).toBeInTheDocument();
     expect(screen.getByText(voluntaryDescription)).toBeInTheDocument();
     expect(screen.queryByText(requestedDescription)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.queryByText(requestedDescription)).not.toBeInTheDocument();
+    expect(screen.queryByText(voluntaryDescription)).not.toBeInTheDocument();
+    expect(screen.queryByText(/decline instead/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/five minutes/)).not.toBeInTheDocument();
+    expect(screen.getByText(/^Due /)).toBeInTheDocument();
   });
 
   it("says nobody asked when there's nothing, with no banner for the open survey", () => {
@@ -440,7 +444,7 @@ describe("ParGiveFeedbackTab", () => {
     expect(screen.queryByText("Leadership 360 · 2026 H2")).not.toBeInTheDocument();
   });
 
-  it("outside a cycle's 360° window, says feedback counts toward the next cycle, with no due date", () => {
+  it("outside a cycle's 360° window, lists what you gave with no filter and no due date", () => {
     parts = {
       cycle: undefined,
       feedbackCycle: { ...cycle, parCycleId: 0, parThreeSixtyRatingDeadline: "9999-12-31" },
@@ -449,11 +453,20 @@ describe("ParGiveFeedbackTab", () => {
       leadership: true,
     };
     requests = [{ ...alexAsked, employeeName: "Alex", reviewStatus: "DRAFT", isRequested: false }];
-    show();
-    expect(
-      screen.getByText("No PAR cycle is taking feedback right now. Feedback you give now counts toward the next PAR cycle."),
-    ).toBeInTheDocument();
+    // Even from a link to Requested, such as the request email's.
+    show("?show=requested");
+    // The forms say it counts toward their next PAR cycle; the list doesn't repeat it.
+    expect(screen.queryByText(/No PAR cycle is taking feedback/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Due /)).not.toBeInTheDocument();
+    // Nobody can ask between cycles: all of it is voluntary, so there's nothing to filter.
+    expect(screen.queryByRole("group", { name: "Show" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Voluntary" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Share feedback proactively with anyone you have worked with, without needing a request. Please ensure your comments are professional, constructive, and detailed to add meaningful insights.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Alex")).toBeInTheDocument();
   });
 });
 
@@ -518,7 +531,7 @@ describe("Provide Feedback", () => {
 
   it("shows an offer you opened but didn't answer as your draft, with nothing to decline", () => {
     requests = [{ ...alexAsked, employeeName: "Alex", isRequested: false }];
-    show();
+    show("?show=voluntary");
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Decline" })).not.toBeInTheDocument();
@@ -527,7 +540,7 @@ describe("Provide Feedback", () => {
   it("lets you discard feedback you offered, after confirming", async () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, employeeName: "Alex", reviewStatus: "DRAFT", isRequested: false }];
-    show();
+    show("?show=voluntary");
     await user.click(screen.getByRole("button", { name: "Discard" }));
     expect(screen.getByText("Discard your feedback for Alex?")).toBeInTheDocument();
     expect(

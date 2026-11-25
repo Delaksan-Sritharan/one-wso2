@@ -60,18 +60,22 @@ import ParDueChip from "../components/ParDueChip";
 
 type Show = "all" | "requested" | "voluntary";
 
+const FILTERS: Show[] = ["all", "requested", "voluntary"];
+const SHOW_LABEL: Record<Show, string> = { all: "All", requested: "Requested", voluntary: "Voluntary" };
+
 const EMPTY: Record<Show, string> = {
   all: "No one has asked for your feedback yet",
   requested: "No one has asked for your feedback yet",
   voluntary: "You haven't given feedback nobody asked for this cycle",
 };
 
+// Asked of all feedback, at the end of Requested's and Voluntary's descriptions.
+const COMMENTS_NOTE = "Please ensure your comments are professional, constructive, and detailed to add meaningful insights.";
+
 // What the Requested and Voluntary filters show; All has only the tab's own description.
 const SHOW_DESCRIPTION: Partial<Record<Show, string>> = {
-  requested:
-    "Here you'll find feedback requests from colleagues. You can share your feedback or decline it if you haven't worked closely enough with the person to provide meaningful feedback. Please ensure your comments are professional, constructive, and detailed to add meaningful insights.",
-  voluntary:
-    "Share feedback proactively with anyone you have worked with, without needing a request. Please ensure your comments are professional, constructive, and detailed to add meaningful insights.",
+  requested: `Here you'll find feedback requests from colleagues. You can share your feedback or decline it if you haven't worked closely enough with the person to provide meaningful feedback. ${COMMENTS_NOTE}`,
+  voluntary: `Share feedback proactively with anyone you have worked with, without needing a request. ${COMMENTS_NOTE}`,
 };
 
 // Provide Feedback: one list of everyone who asked for your feedback and the
@@ -102,10 +106,11 @@ export default function ParGiveFeedbackTab() {
   const [viewing, setViewing] = useState<GiveFeedbackItem | null>(null);
   const [declining, setDeclining] = useState<GiveFeedbackItem | null>(null);
   const [discarding, setDiscarding] = useState<GiveFeedbackItem | null>(null);
-  // Which rows to show, kept in the URL so a reload or a link keeps it.
+  // Which rows to show, kept in the URL so a reload or a link keeps it; Requested unless said otherwise.
+  // While feedback is held for the next cycle nobody can ask: all of it is voluntary, with no filter.
   const [params, setParams] = useSearchParams();
   const showParam = params.get("show");
-  const show: Show = showParam === "requested" || showParam === "voluntary" ? showParam : "all";
+  const show: Show = held ? "voluntary" : (FILTERS.find((f) => f === showParam) ?? "requested");
 
   const employee = profile.data?.employee;
   const workedWith = useMemo(
@@ -190,25 +195,26 @@ export default function ParGiveFeedbackTab() {
         disabled={Boolean(loading || leadersFailed)}
         onStart={setGiving}
       />
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={show}
-          onChange={(_, next: Show | null) => next && setParams(next === "all" ? {} : { show: next }, { replace: true })}
-          aria-label="Show"
-        >
-          <ToggleButton value="all" sx={{ textTransform: "none", px: 2 }}>
-            All
-          </ToggleButton>
-          <ToggleButton value="requested" sx={{ textTransform: "none", px: 2 }}>
-            Requested
-          </ToggleButton>
-          <ToggleButton value="voluntary" sx={{ textTransform: "none", px: 2 }}>
-            Voluntary
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
+      {!held && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={show}
+            onChange={(_, next: Show | null) =>
+              next && setParams(next === "requested" ? {} : { show: next }, { replace: true })
+            }
+            aria-label="Show"
+          >
+            {FILTERS.map((f) => (
+              <ToggleButton key={f} value={f} sx={{ textTransform: "none", px: 2 }}>
+                {SHOW_LABEL[f]}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Box>
+      )}
+      {/* Between cycles there's no filter, but everything is voluntary: Voluntary's description stays. */}
       {SHOW_DESCRIPTION[show] && (
         <Typography variant="body2" color="text.secondary">
           {SHOW_DESCRIPTION[show]}
@@ -227,25 +233,14 @@ export default function ParGiveFeedbackTab() {
         </ErrorNotice>
       ) : (
         <Card variant="outlined" sx={{ p: 2 }}>
-          {held && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              No PAR cycle is taking feedback right now. Feedback you give now counts toward the next PAR cycle.
-            </Typography>
-          )}
           {shown.length === 0 ? (
             <ParEmptyState text={held ? "You haven't given any feedback yet" : EMPTY[show]} />
           ) : (
             <>
-              {waiting.length > 0 && (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    About five minutes each.
-                    {/* Requested's own description already says when to decline. */}
-                    {show !== "requested" &&
-                      waiting.some((item) => !isVoluntary(item)) &&
-                      " If you haven't worked closely enough with someone to help, decline instead."}
-                  </Typography>
-                  {!held && !deadlinePassed && <ParDueChip due={cycle.parThreeSixtyRatingDeadline} />}
+              {/* The due date only while a cycle is taking feedback. */}
+              {waiting.length > 0 && !held && !deadlinePassed && (
+                <Box sx={{ display: "flex", mb: 1 }}>
+                  <ParDueChip due={cycle.parThreeSixtyRatingDeadline} />
                 </Box>
               )}
               <Stack divider={<Box sx={{ borderTop: 1, borderColor: "divider" }} />}>
