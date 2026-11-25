@@ -2153,6 +2153,8 @@ export const procurementServiceUrls = {
   request: (requestId: string): string => `${procurementBackendUrl}/requests/${encodeSegment(requestId)}`,
   submitRequest: (requestId: string): string => `${procurementBackendUrl}/requests/${encodeSegment(requestId)}/submit`,
   cancelRequest: (requestId: string): string => `${procurementBackendUrl}/requests/${encodeSegment(requestId)}/cancel`,
+  /** PUT names another team lead for a request that waits for its first decision. */
+  requestTeamLead: (requestId: string): string => `${procurementBackendUrl}/requests/${encodeSegment(requestId)}/team-lead`,
   /** GET lists a request's files; POST attaches one. */
   attachments: (requestId: string): string => `${procurementBackendUrl}/requests/${encodeSegment(requestId)}/attachments`,
   /** GET downloads one file of a request; DELETE removes it. */

@@ -185,6 +185,20 @@ export function useResubmitRequest(requestId: string) {
   });
 }
 
+/** Name another team lead for a request. Refreshes that request and the list. */
+export function useChangeTeamLead(requestId: string) {
+  const { api, userId } = useProcurementContext();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (email: string) => api!.changeTeamLead(requestId, email),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...root(userId), "request", requestId] }),
+        queryClient.invalidateQueries({ queryKey: [...root(userId), "requests"] }),
+      ]),
+  });
+}
+
 /** Withdraw a request. Refreshes that request and the list. */
 export function useCancelRequest(requestId: string) {
   const { api, userId } = useProcurementContext();

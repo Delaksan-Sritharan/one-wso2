@@ -160,6 +160,16 @@ describe("the Procurement sample data", () => {
     expect((await api.listTeamQueue()).map((r) => r.id)).toEqual(["approval-2", "seed-3", "team-2", "team-1"]);
   });
 
+  it("lets the requester name another team lead while the request waits for its first decision, and refuses what the backend refuses", async () => {
+    const api = createMockProcurementApi(user);
+    await expect(api.changeTeamLead("seed-1", "casey.lane@example.com")).rejects.toThrow(/active team lead/);
+    await expect(api.changeTeamLead("seed-1", "alex.morgan@example.com")).resolves.toBeUndefined();
+    expect((await api.getRequest("seed-1")).teamLead?.email).toBe("alex.morgan@example.com");
+    await expect(api.changeTeamLead("seed-1", "alex.morgan@example.com")).rejects.toThrow(/cannot be the team lead/);
+    await expect(api.changeTeamLead("seed-3", "alex.morgan@example.com")).rejects.toThrow(/no longer waits/);
+    await expect(api.changeTeamLead("approval-1", "alex.morgan@example.com")).rejects.toThrow(/Only the requester/);
+  });
+
   it("lists only the requests assigned to a person when asked, whatever the case of the email", async () => {
     const api = createMockProcurementApi(user);
     expect((await api.listTeamQueue({ assignee: "BLAKE.RIVERS@example.com" })).map((r) => r.id)).toEqual(["team-2"]);

@@ -113,6 +113,8 @@ export interface ProcurementApi {
   listAttachments: (requestId: string) => Promise<Attachment[]>;
   /** The bytes of a saved file. */
   downloadAttachment: (requestId: string, attachmentId: string) => Promise<Blob>;
+  /** Name another team lead, by email, for a request of the signed-in user that waits for its first decision. Both leads are emailed. */
+  changeTeamLead: (requestId: string, email: string) => Promise<void>;
   /** The people a request can be assigned to: the members of the Procurement groups. */
   listTeamMembers: () => Promise<Person[]>;
   /** Replace the budget details of an approved or assigned request. */
@@ -301,6 +303,9 @@ function createHttpProcurementApi(getAccessToken: () => Promise<string>, user: P
       const res = await fetchWithReauth(url, {}, await getAccessToken());
       if (!res.ok) throw new HttpError(url, res.status, await res.text().catch(() => ""));
       return res.blob();
+    },
+    changeTeamLead: async (requestId, email) => {
+      await authedPut(urls.requestTeamLead(requestId), await getAccessToken(), { email });
     },
     listTeamMembers: async () => (await get<BackendDirectoryUser[]>(urls.teamMembers)).map(toPerson),
     changeBudget: async (requestId, change) => {

@@ -553,6 +553,16 @@ function buildMockProcurementApi(user: Person): ProcurementApi {
       if (found.status !== "approved" && found.status !== "assigned") throw new Error("Only an approved or assigned request has a priority.");
       Object.assign(found, { priority, updatedAt: new Date().toISOString() });
     },
+    changeTeamLead: async (requestId, email) => {
+      const found = find(requestId);
+      if (found.requester.email.toLowerCase() !== user.email.toLowerCase()) throw new Error("Only the requester can change the team lead.");
+      if (found.status !== "submitted" || found.teamLeadDecision.decision !== "pending") throw new Error("The request no longer waits for a decision.");
+      const lead = MOCK_DIRECTORY.find((p) => p.email.toLowerCase() === email.toLowerCase());
+      if (!lead || NON_LEADS.has(lead.email)) throw new Error("The person must be an active team lead.");
+      const taken = [found.requester.email, found.teamLead?.email ?? "", ...found.additionalApprovers].map((e) => e.toLowerCase());
+      if (taken.includes(lead.email.toLowerCase())) throw new Error("That person cannot be the team lead of this request.");
+      Object.assign(found, { teamLead: lead, updatedAt: new Date().toISOString() });
+    },
     cancelRequest: async (requestId) => {
       const existing = find(requestId);
       if (existing.status !== "submitted" && existing.status !== "rejected") {

@@ -399,6 +399,12 @@ describe("the Procurement backend adapter", () => {
     });
   });
 
+  it("names another team lead for a request, by email", async () => {
+    authedPut.mockResolvedValue({ id: 7, status: "PENDING_APPROVAL" });
+    await api().changeTeamLead("7", "drew.parker@example.com");
+    expect(authedPut).toHaveBeenCalledWith("/requests/7/team-lead", "token", { email: "drew.parker@example.com" });
+  });
+
   it("cancels a request", async () => {
     authedPost.mockResolvedValue(null);
     await api().cancelRequest("7");
