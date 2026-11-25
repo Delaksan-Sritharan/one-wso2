@@ -231,15 +231,10 @@ export const parBackendUrl: string =
   window.config?.ONE_WSO2_PAR_BACKEND_URL ?? "";
 
 // The Lead Portal's evidence-attachment picker (ParLeadReviewPanel.tsx) is
-// the only caller — a plain OAuth client ID, not a backend URL, so it lives
-// here rather than in parServiceUrls.
+// the only caller. The PAR backend sends its own client ID (parAppConfig
+// below); this one is used only when it doesn't.
 export const googleOAuthClientId: string =
   window.config?.ONE_WSO2_PAR_GOOGLE_OAUTH_CLIENT_ID ?? "";
-// Optional — par-app's own useGoogleDrivePicker.ts never calls
-// PickerBuilder.setDeveloperKey either and works without it. Only needed if
-// Google's "API developer key is invalid" error shows up in practice.
-export const googlePickerApiKey: string =
-  window.config?.ONE_WSO2_PAR_GOOGLE_PICKER_API_KEY ?? "";
 
 // The ratings that unlock Top 5%/20% and need evidence, for deployments
 // where `par2` is off: there the cycle doesn't carry its own rating rules
@@ -259,6 +254,9 @@ export const parServiceUrls = {
   // par-app's own backend rather than assumed from a different one's org
   // chart. Self-lookup is allowed (isSelf in service.bal).
   parEmployeeInfo: (workEmail: string) => `${parBackendUrl}/employees/${encodeURIComponent(workEmail)}`,
+  // GET /meta/app-config — the settings the web app takes from the PAR
+  // deployment (the Drive picker's Google OAuth client ID). Anyone signed in.
+  parAppConfig: () => `${parBackendUrl}/meta/app-config`,
   // GET /par-cycles?email=<workEmail>&status=OPEN — returns ParCycle[] for
   // the caller's own active review cycles. Non-lead/non-admin callers can
   // only query their own email.

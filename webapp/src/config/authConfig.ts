@@ -97,13 +97,10 @@ declare global {
       // "not configured" state.
       ONE_WSO2_PAR_BACKEND_URL?: string;
       // OAuth client ID for the Lead Portal's "attach from Google Drive"
-      // evidence picker (scope: drive.readonly). Optional — when absent,
-      // the picker button still renders but the token request fails, same
-      // as par-app's own GOOGLE_OAUTH_CLIENT_ID behavior.
+      // evidence picker (scope: drive.readonly), used only when the PAR
+      // backend doesn't send its own. Optional — when neither is set, the
+      // picker button still renders but the token request fails.
       ONE_WSO2_PAR_GOOGLE_OAUTH_CLIENT_ID?: string;
-      // Browser API key for the same picker. Optional — see apiConfig.ts's
-      // googlePickerApiKey for why it's unset by default.
-      ONE_WSO2_PAR_GOOGLE_PICKER_API_KEY?: string;
       // The PAR rating names that trigger the Top 5%/20% checkbox and the
       // evidence-attachment requirement. Optional — see apiConfig.ts's
       // top5p20pEnabledRating/evidenceEnabledRating for why.

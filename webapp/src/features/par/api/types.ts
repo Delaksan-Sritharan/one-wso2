@@ -32,6 +32,12 @@ export interface ParEmployeeInfo {
   isAdmin?: boolean;
 }
 
+// GET /meta/app-config: the settings the web app takes from the PAR
+// deployment. Each is absent when the deployment doesn't set it.
+export interface ParAppConfig {
+  googleOAuthClientId?: string;
+}
+
 export type ParCycleStatus =
   | "PENDING"
   | "PENDING_QUOTA"

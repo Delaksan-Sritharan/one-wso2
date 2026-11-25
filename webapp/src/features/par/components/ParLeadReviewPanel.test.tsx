@@ -573,3 +573,50 @@ describe("ParLeadReviewPanel: a department's own rules", () => {
     expect(screen.getByLabelText("Rating auto-assigned and locked")).toBeInTheDocument();
   });
 });
+
+describe("ParLeadReviewPanel: evidence links", () => {
+  const evidenceCycle = {
+    ...cycle,
+    parCycleConfigurations: {
+      parRatings: ["Successful", "Needs Improvements"],
+      employeeRatings: ["Successful", "Needs Improvements"],
+      top5p20pEnabledRating: "Successful",
+      evidenceEnabledRating: "Needs Improvements",
+    },
+  } as unknown as ParCycle;
+  const LINK = "https://drive.google.com/file/d/abc/view";
+  const showWithLink = () => {
+    rating = {
+      parRatingId: 7,
+      parCycleId: 2,
+      parEmployeeEmail: "alex@example.com",
+      parEmployeeStatus: "SHARED",
+      parLeadStatus: "DRAFT",
+      parIsLeadershipEmployee: false,
+      parRating: "Needs Improvements",
+      parLeadComment: encodeParComment("<p>Let's work on this.</p>"),
+      parPerformanceNoticeAck: LINK,
+    } as ParRating;
+    render(<ParLeadReviewPanel cycle={evidenceCycle} employeeEmail="alex@example.com" />);
+  };
+  const savedPayload = () => ratingMutate.mock.calls.at(-1)![0].payload;
+
+  it("takes the saved links away once the lead removes them all", async () => {
+    showWithLink();
+    fireEvent.click(screen.getByRole("button", { name: `Remove ${LINK}` }));
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await act(async () => {});
+    expect(savedPayload()).toMatchObject({ parPerformanceNoticeAck: "" });
+  });
+
+  it("leaves them out of a save that doesn't change them", async () => {
+    showWithLink();
+    fireEvent.change(screen.getByLabelText("Enter your comment here"), {
+      target: { value: "<p>Let's work on this together.</p>" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await act(async () => {});
+    expect(savedPayload()).toMatchObject({ parRating: "Needs Improvements" });
+    expect(savedPayload()).not.toHaveProperty("parPerformanceNoticeAck");
+  });
+});

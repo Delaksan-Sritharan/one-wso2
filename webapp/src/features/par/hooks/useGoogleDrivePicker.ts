@@ -15,7 +15,12 @@
 // under the License.
 
 import { useCallback, useRef, useState } from "react";
-import { googleOAuthClientId, googlePickerApiKey } from "@config/apiConfig";
+import { useQueryClient } from "@tanstack/react-query";
+import { authedGet } from "@api/http";
+import { useAccessToken } from "@hooks/useAccessToken";
+import { googleOAuthClientId, parServiceUrls } from "@config/apiConfig";
+import { digiopsHeaders } from "@features/my/util/digiopsHeaders";
+import type { ParAppConfig } from "../api/types";
 import type { DriveFile } from "../util/parDriveFile";
 
 export type DrivePickerError = "SCRIPT_LOAD_FAILED" | "POPUP_BLOCKED" | "ACCESS_DENIED" | null;
@@ -38,32 +43,45 @@ function loadScript(src: string): Promise<void> {
   });
 }
 
-// Ports par-app's own hooks/useGoogleDrivePicker.ts verbatim — the Lead
-// Portal's "attach from Google Drive" evidence picker (ParLeadReviewPanel.tsx).
-// Scripts are loaded lazily (only once this is actually invoked, not on
-// every Lead Portal page load) and the OAuth token is cached in a ref so a
-// second attach in the same session skips the consent popup.
+// The Lead Portal's "attach from Google Drive" evidence picker
+// (ParLeadReviewPanel.tsx). Scripts and the OAuth client ID are loaded lazily
+// (only once this is actually invoked, not on every Lead Portal page load)
+// and the OAuth token is cached in a ref so a second attach in the same
+// session skips the consent popup.
 export function useGoogleDrivePicker() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<DrivePickerError>(null);
+  const queryClient = useQueryClient();
+  const getAccessToken = useAccessToken();
 
   const tokenRef = useRef<string | null>(null);
   const tokenClientRef = useRef<google.accounts.oauth2.TokenClient | null>(null);
+  const tokenClientIdRef = useRef<string | null>(null);
   const pendingCallbackRef = useRef<((files: DriveFile[]) => void) | null>(null);
 
+  // The PAR backend's client ID, or config.js's when the backend sends none
+  // or can't be reached. A failed read isn't kept, so the next attach asks
+  // again.
+  const loadClientId = useCallback(async () => {
+    try {
+      const config = await queryClient.fetchQuery<ParAppConfig>({
+        queryKey: ["par-app-config"],
+        queryFn: async () =>
+          authedGet<ParAppConfig>(parServiceUrls.parAppConfig(), await getAccessToken(), digiopsHeaders()),
+        staleTime: Infinity,
+      });
+      return config.googleOAuthClientId || googleOAuthClientId;
+    } catch {
+      return googleOAuthClientId;
+    }
+  }, [queryClient, getAccessToken]);
+
   const openPickerWithToken = useCallback((token: string, onFilesSelected: (files: DriveFile[]) => void) => {
-    let builder = new google.picker.PickerBuilder()
+    const picker = new google.picker.PickerBuilder()
       .addView(new google.picker.DocsView().setIncludeFolders(false))
       .addView(google.picker.ViewId.RECENTLY_PICKED)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .setOAuthToken(token);
-    // Passed only when actually configured (see apiConfig.ts's
-    // googlePickerApiKey) — an empty string here could itself trigger
-    // Google's "API developer key is invalid" error.
-    if (googlePickerApiKey) {
-      builder = builder.setDeveloperKey(googlePickerApiKey);
-    }
-    const picker = builder
+      .setOAuthToken(token)
       .setCallback((data: google.picker.ResponseObject) => {
         if (data.action === google.picker.Action.PICKED) {
           const files: DriveFile[] = data.docs.map((doc) => ({
@@ -84,8 +102,10 @@ export function useGoogleDrivePicker() {
       setError(null);
       setIsLoading(true);
 
+      let clientId: string;
       try {
-        await Promise.all([loadScript(GIS_URL), loadScript(GAPI_URL)]);
+        // The client ID is read alongside the scripts, so it adds no wait of its own.
+        [clientId] = await Promise.all([loadClientId(), loadScript(GIS_URL), loadScript(GAPI_URL)]);
         await new Promise<void>((resolve) => gapi.load("picker", resolve));
       } catch {
         setError("SCRIPT_LOAD_FAILED");
@@ -95,6 +115,13 @@ export function useGoogleDrivePicker() {
 
       setIsLoading(false);
 
+      // A token is reused only for the client ID it was got for. The client ID can change, as when an earlier
+      // read of the backend's failed: the token client is then made again and the old token dropped.
+      if (tokenClientIdRef.current !== clientId) {
+        tokenRef.current = null;
+        tokenClientRef.current = null;
+      }
+
       if (tokenRef.current) {
         openPickerWithToken(tokenRef.current, onFilesSelected);
         return;
@@ -103,8 +130,9 @@ export function useGoogleDrivePicker() {
       pendingCallbackRef.current = onFilesSelected;
 
       if (!tokenClientRef.current) {
+        tokenClientIdRef.current = clientId;
         tokenClientRef.current = google.accounts.oauth2.initTokenClient({
-          client_id: googleOAuthClientId,
+          client_id: clientId,
           scope: DRIVE_SCOPE,
           callback: (response) => {
             if (response.error) {
@@ -130,7 +158,7 @@ export function useGoogleDrivePicker() {
       // a login popup only if there isn't one.
       tokenClientRef.current.requestAccessToken({ prompt: "" });
     },
-    [openPickerWithToken],
+    [loadClientId, openPickerWithToken],
   );
 
   return { openPicker, isLoading, error };

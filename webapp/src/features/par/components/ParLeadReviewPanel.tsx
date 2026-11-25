@@ -213,6 +213,10 @@ export default function ParLeadReviewPanel({
     setDriveFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
+  // The attached links as they're saved: one per line.
+  const evidenceLinks = driveFiles.map((f) => f.url).join("\n");
+  const savedEvidenceLinks = parRatingData?.parPerformanceNoticeAck ?? "";
+
   // Every value below is derived with parRatingData possibly still
   // undefined (loading/error/not-found are handled further down, but hooks
   // must stay unconditional), so the submit/autosave logic guards on it
@@ -319,17 +323,9 @@ export default function ParLeadReviewPanel({
                 ...(specialRating !== toSpecialRatingUi(parRatingData.parSpecialRating)
                   ? { parSpecialRating: specialRating === "NONE" ? "NOT_ASSIGNED" : specialRating }
                   : {}),
-                // Omitted entirely rather than sent as "" when there's no
-                // evidence — the backend requires a non-empty string whenever
-                // this field is present, so an empty string 400s.
-                //
-                // One consequence: there is no way to CLEAR a saved attachment
-                // through this endpoint. The backend also ignores an empty
-                // value as an update, so removing every file and saving leaves
-                // the old URLs on the record and they reappear on the next
-                // fetch. Fixing that needs a backend change (a real clear
-                // operation), not a frontend one.
-                ...(driveFiles.length > 0 ? { parPerformanceNoticeAck: driveFiles.map((f) => f.url).join("\n") } : {}),
+                // Sent only when the links changed. With none left it's "",
+                // which takes the saved ones away.
+                ...(evidenceLinks !== savedEvidenceLinks ? { parPerformanceNoticeAck: evidenceLinks } : {}),
               }),
           // Only an admin caller may set this field — the backend rejects a
           // non-empty value from anyone else.
@@ -419,7 +415,7 @@ export default function ParLeadReviewPanel({
     (isAdminView && adminComment.trim() !== savedAdminComment.trim()) ||
     (parRatingValue !== (parRatingData.parRating ?? "") && parRatingValue !== "") ||
     specialRating !== toSpecialRatingUi(parRatingData.parSpecialRating) ||
-    driveFiles.map((f) => f.url).join("\n") !== (parRatingData.parPerformanceNoticeAck ?? "");
+    evidenceLinks !== savedEvidenceLinks;
 
   const statusAlert = readOnly ? (
     <Alert severity={shared ? "success" : "info"}>
