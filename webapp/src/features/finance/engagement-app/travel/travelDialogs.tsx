@@ -42,9 +42,9 @@ const CURRENCIES: readonly string[] = (() => {
   return ["AED", "AUD", "BRL", "CAD", "CHF", "EUR", "GBP", "INR", "JPY", "LKR", "NZD", "SGD", "USD"];
 })();
 
-function Select({ label, value, options, onChange, required, disabled, hint }: { label: string; value: string; options: readonly (string | readonly [string, string])[]; onChange: (v: string) => void; required?: boolean; disabled?: boolean; hint?: string }) {
+function Select({ label, value, options, onChange, required, disabled, hint, error }: { label: string; value: string; options: readonly (string | readonly [string, string])[]; onChange: (v: string) => void; required?: boolean; disabled?: boolean; hint?: string; error?: string }) {
   return (
-    <TextField select fullWidth size="small" label={label} value={value} required={required} disabled={disabled} helperText={hint} onChange={(e) => onChange(e.target.value)}>
+    <TextField select fullWidth size="small" label={label} value={value} required={required} disabled={disabled} error={Boolean(error)} helperText={error ?? hint} onChange={(e) => onChange(e.target.value)}>
       {options.map((o) => {
         const [v, l] = typeof o === "string" ? [o, o] : o;
         return (
@@ -57,9 +57,19 @@ function Select({ label, value, options, onChange, required, disabled, hint }: {
   );
 }
 
+/** The confirm step of Assign, by the status picked: what it asks and what its button says. */
+const ASSIGN_STEP = {
+  "In Progress": { title: "Assign Travel Agent", text: (job: string) => `Are you sure you want to assign the travel agent to ${job}? It then goes In Progress.`, label: "Assign", busy: "Assigning…", danger: false },
+  "On Hold": { title: "Put Travel Request On Hold", text: (job: string) => `Are you sure you want to put ${job} on hold?`, label: "Put On Hold", busy: "Putting On Hold…", danger: false },
+  Cancelled: { title: "Cancel Travel Request", text: (job: string) => `Are you sure you want to cancel ${job}?`, label: "Cancel Travel Request", busy: "Cancelling…", danger: true },
+} as const;
+
+/** Each field's own message, set when a Save is refused. */
+type FieldErrors = Readonly<Record<string, string>>;
+
 const sub = (t: TravelRequestSummary) => `${t.jobNumber} for ${t.traveller.name}`;
 
-/** Assign a new travel request: Travel Handled By, Travel Status and Select Visa. */
+/** Assign a new travel request: Travel Agent, Travel Status and Select Visa. */
 export function AssignDialog({ trip, onClose }: { trip: TravelRequestSummary; onClose: () => void }): JSX.Element {
   const ref = useReferenceData();
   const options = useVisaOptions(trip.jobNumber);
@@ -68,32 +78,43 @@ export function AssignDialog({ trip, onClose }: { trip: TravelRequestSummary; on
   const [agent, setAgent] = useState("");
   const [status, setStatus] = useState<TravelStatus | "">("");
   const [visa, setVisa] = useState("");
-  const [error, setError] = useState<unknown>();
+  const [errs, setErrs] = useState<FieldErrors>({});
   const [confirm, setConfirm] = useState(false);
-  const verb = status === "In Progress" ? "Assign" : status === "On Hold" ? "Make On Hold" : "Cancel";
+  // The confirm step replaces the form for a moment: No (or a failed save) goes back to it with everything still filled in.
   if (confirm) {
+    const step = ASSIGN_STEP[status === "In Progress" || status === "On Hold" ? status : "Cancelled"];
     return (
       <ConfirmDialog
-        title={`${verb} Travel Request`}
-        text={`Are you sure you want to ${verb.toLowerCase()} ${trip.jobNumber}?`}
+        title={step.title}
+        text={step.text(trip.jobNumber)}
+        confirmLabel={step.label}
+        busyLabel={step.busy}
+        cancelLabel="Go Back"
+        danger={step.danger}
         run={() => save.mutateAsync({ jobNumber: trip.jobNumber, status: status as TravelStatus, agency: agent || undefined, visa: visa || undefined })}
-        onDone={() => notify.showSuccess("Travel request updated successfully")}
-        onClose={onClose}
+        onDone={() => {
+          notify.showSuccess("Travel request updated successfully");
+          onClose();
+        }}
+        onClose={() => setConfirm(false)}
       />
     );
   }
   return (
     <EaDialog
-      title="Assign Travel Request"
+      title="Assign Travel Agent"
       subtitle={sub(trip)}
       confirmLabel="Continue"
-      error={error}
       onClose={onClose}
       onConfirm={() => {
-        if (!status) return setError("Select the travel status");
-        if (needsAgentAndVisa(status) && (!agent || !visa)) return setError("In Progress needs a travel agent and a visa");
-        setError(undefined);
-        setConfirm(true);
+        const next: Record<string, string> = {};
+        if (!status) next.status = "Select the travel status";
+        else if (needsAgentAndVisa(status)) {
+          if (!agent) next.agent = "Select a travel agent to put the request in progress";
+          if (!visa) next.visa = "Select a visa to put the request in progress";
+        }
+        setErrs(next);
+        if (!Object.keys(next).length) setConfirm(true);
       }}
     >
       <Box sx={{ display: "grid", gap: 2, pt: 1 }}>
@@ -107,21 +128,22 @@ export function AssignDialog({ trip, onClose }: { trip: TravelRequestSummary; on
           ]}
         />
         <Select
-          label="Travel Handled By"
+          label="Travel Agent"
           value={agent}
+          error={errs.agent}
           options={ref.data?.travelAgents ?? []}
           onChange={(v) => {
             setAgent(v);
             if (v) setStatus("In Progress");
           }}
         />
-        <Select label="Travel Status" required value={status} options={["In Progress", "On Hold", "Cancelled"]} onChange={(v) => setStatus(v as TravelStatus)} />
+        <Select label="Travel Status" required value={status} error={errs.status} options={["In Progress", "On Hold", "Cancelled"]} onChange={(v) => setStatus(v as TravelStatus)} />
         {options.isPending ? (
           <Skeleton variant="rounded" height={40} />
         ) : options.isError ? (
           <Failed what="the traveller's visas" error={options.error} onRetry={() => void options.refetch()} retrying={options.isFetching} />
         ) : (
-          <Select label="Select Visa" value={visa} options={options.data.map((o) => [o.id, o.label] as const)} onChange={setVisa} />
+          <Select label="Select Visa" value={visa} error={errs.visa} options={options.data.map((o) => [o.id, o.label] as const)} onChange={setVisa} />
         )}
       </Box>
     </EaDialog>
@@ -138,6 +160,7 @@ export function UpdateTravelDialog({ trip, onClose }: { trip: TravelRequest; onC
   const [agent, setAgent] = useState(trip.travelAgent ?? "");
   const [visa, setVisa] = useState("");
   const [error, setError] = useState<unknown>();
+  const [errs, setErrs] = useState<FieldErrors>({});
   const editable = isOpenTrip(status);
   const a = trip.actions;
   const canStatus = a ? Boolean(a.editStatus) : p.t.has(TRAVEL.EDIT_STATUS);
@@ -158,7 +181,13 @@ export function UpdateTravelDialog({ trip, onClose }: { trip: TravelRequest; onC
       error={error}
       onClose={onClose}
       onConfirm={() => {
-        if (needsAgentAndVisa(status) && (!agency || !(shownVisa || trip.visa))) return setError("In Progress, Completed and Extended need a travel agent and a visa");
+        const next: Record<string, string> = {};
+        if (needsAgentAndVisa(status)) {
+          if (!agency) next.agent = `Select a travel agent to set the status to ${status}`;
+          if (!(shownVisa || trip.visa)) next.visa = `Select a visa to set the status to ${status}`;
+        }
+        setErrs(next);
+        if (Object.keys(next).length) return;
         setError(undefined);
         save.mutate(
           {
@@ -187,12 +216,13 @@ export function UpdateTravelDialog({ trip, onClose }: { trip: TravelRequest; onC
             value={agent}
             options={ref.data?.travelAgents ?? []}
             disabled={!canAgent || !editable}
+            error={errs.agent}
             hint={editable ? undefined : "The travel agent and visa can be changed while the request is In Progress or Extended."}
             onChange={setAgent}
           />
         )}
         {canVisa && editable ? (
-          <Select label="Visa" value={shownVisa} options={(options.data ?? []).map((o) => [o.id, o.label] as const)} onChange={setVisa} />
+          <Select label="Visa" value={shownVisa} error={errs.visa} options={(options.data ?? []).map((o) => [o.id, o.label] as const)} onChange={setVisa} />
         ) : (
           <TextField size="small" label="Visa" value={trip.visa ?? ""} disabled />
         )}
@@ -215,6 +245,7 @@ export function PerDiemDialog({ trip, perDiems: rows, onClose }: { trip: TravelR
   const [currency, setCurrency] = useState(fixedCurrency ?? "");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<unknown>();
+  const [errs, setErrs] = useState<FieldErrors>({});
   const add = useAddPerDiem();
   const idem = useIdempotencyKey();
   const shownCurrency = currency || fixedCurrency || rate?.currency || "";
@@ -231,8 +262,14 @@ export function PerDiemDialog({ trip, perDiems: rows, onClose }: { trip: TravelR
       error={error}
       onClose={onClose}
       onConfirm={() => {
-        if (!start || !end || !shownCurrency || !(Number(shownAmount) > 0)) return setError("Some fields need attention.");
-        if (end <= start) return setError("End Date/Time should be later than Start Date/Time");
+        const next: Record<string, string> = {};
+        if (!start) next.start = "Enter the start date and time";
+        if (!end) next.end = "Enter the end date and time";
+        else if (start && end <= start) next.end = "End Date/Time should be later than Start Date/Time";
+        if (!shownCurrency) next.currency = "Select the currency";
+        if (!(Number(shownAmount) > 0)) next.amount = "Enter an amount greater than 0";
+        setErrs(next);
+        if (Object.keys(next).length) return;
         setError(undefined);
         add.mutate(
           {
@@ -255,12 +292,13 @@ export function PerDiemDialog({ trip, perDiems: rows, onClose }: { trip: TravelR
         );
       }}
     >
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, pt: 1 }}>
-        <TextField size="small" type="datetime-local" required label="Start Date/Time" value={start} onChange={(e) => setStart(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-        <TextField size="small" type="datetime-local" required label="End Date/Time" value={end} onChange={(e) => setEnd(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, pt: 1 }}>
+        <TextField size="small" type="datetime-local" required label="Start Date/Time" error={Boolean(errs.start)} helperText={errs.start} value={start} onChange={(e) => setStart(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        <TextField size="small" type="datetime-local" required label="End Date/Time" error={Boolean(errs.end)} helperText={errs.end} value={end} onChange={(e) => setEnd(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
         <Select
           label="Currency"
           required
+          error={errs.currency}
           value={shownCurrency}
           options={ref.data?.currencies.length ? ref.data.currencies : CURRENCIES}
           disabled={Boolean(fixedCurrency)}
@@ -274,7 +312,8 @@ export function PerDiemDialog({ trip, perDiems: rows, onClose }: { trip: TravelR
           label="Per Diem Amount"
           value={shownAmount}
           onChange={(e) => setAmount(e.target.value)}
-          helperText={rate ? `Rate for ${rate.country}: ${rate.currency} ${rate.amount} per day` : undefined}
+          error={Boolean(errs.amount)}
+          helperText={errs.amount ?? (rate ? `Rate for ${rate.country}: ${rate.currency} ${rate.amount} per day` : undefined)}
           slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
         />
         <FactsGrid
@@ -302,6 +341,7 @@ export function InvoiceDialog({ trip, onClose }: { trip: TravelRequest; onClose:
   const hasPayments = (payments.data?.items ?? []).length > 0;
   const [f, setF] = useState({ number: "", month: "", costType: "", amount: "", currency: "", paidAmount: "", paidCurrency: "USD" });
   const [error, setError] = useState<unknown>();
+  const [errs, setErrs] = useState<FieldErrors>({});
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
   return (
     <EaDialog
@@ -313,9 +353,15 @@ export function InvoiceDialog({ trip, onClose }: { trip: TravelRequest; onClose:
       onClose={onClose}
       onConfirm={() => {
         const paid = f.paidAmount === "" ? null : Number(f.paidAmount);
-        if (!f.number.trim() || !f.month || !f.costType || !(Number(f.amount) > 0) || !f.currency || (paid !== null && paid > 0 && !f.paidCurrency)) {
-          return setError("Some fields need attention.");
-        }
+        const next: Record<string, string> = {};
+        if (!f.number.trim()) next.number = "Enter the invoice number";
+        if (!f.month) next.month = "Select the month";
+        if (!f.costType) next.costType = "Select the cost type";
+        if (!(Number(f.amount) > 0)) next.amount = "Enter an amount greater than 0";
+        if (!f.currency) next.currency = "Select the invoice currency";
+        if (paid !== null && paid > 0 && !f.paidCurrency) next.paidCurrency = "Select the paid currency";
+        setErrs(next);
+        if (Object.keys(next).length) return;
         setError(undefined);
         add.mutate(
           {
@@ -341,14 +387,14 @@ export function InvoiceDialog({ trip, onClose }: { trip: TravelRequest; onClose:
         );
       }}
     >
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, pt: 1 }}>
-        <TextField size="small" required label="Invoice Number" placeholder="e.g. CT-60001" value={f.number} onChange={(e) => set("number")(e.target.value)} sx={{ gridColumn: "1 / -1" }} />
-        <Select label="Month" required value={f.month} options={MONTH_NAMES} onChange={set("month")} />
-        <Select label="Cost Type" required value={f.costType} options={(ref.data?.costTypes ?? []).filter((c) => !(hasPayments && c === "Currency"))} onChange={set("costType")} />
-        <TextField size="small" type="number" required label="Invoice Amount" value={f.amount} onChange={(e) => set("amount")(e.target.value)} slotProps={{ htmlInput: { min: 0, step: 0.01 } }} />
-        <Select label="Invoice Currency" required value={f.currency} options={INVOICE_CURRENCIES} onChange={set("currency")} />
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, pt: 1 }}>
+        <TextField size="small" required label="Invoice Number" placeholder="e.g. CT-60001" error={Boolean(errs.number)} helperText={errs.number} value={f.number} onChange={(e) => set("number")(e.target.value)} sx={{ gridColumn: "1 / -1" }} />
+        <Select label="Month" required error={errs.month} value={f.month} options={MONTH_NAMES} onChange={set("month")} />
+        <Select label="Cost Type" required error={errs.costType} value={f.costType} options={(ref.data?.costTypes ?? []).filter((c) => !(hasPayments && c === "Currency"))} onChange={set("costType")} />
+        <TextField size="small" type="number" required label="Invoice Amount" error={Boolean(errs.amount)} helperText={errs.amount} value={f.amount} onChange={(e) => set("amount")(e.target.value)} slotProps={{ htmlInput: { min: 0, step: 0.01 } }} />
+        <Select label="Invoice Currency" required error={errs.currency} value={f.currency} options={INVOICE_CURRENCIES} onChange={set("currency")} />
         <TextField size="small" type="number" label="Paid Amount" value={f.paidAmount} onChange={(e) => set("paidAmount")(e.target.value)} slotProps={{ htmlInput: { min: 0, step: 0.01 } }} />
-        <Select label="Paid Currency" required={Number(f.paidAmount) > 0} value={f.paidCurrency} options={CURRENCIES} onChange={set("paidCurrency")} />
+        <Select label="Paid Currency" required={Number(f.paidAmount) > 0} error={errs.paidCurrency} value={f.paidCurrency} options={CURRENCIES} onChange={set("paidCurrency")} />
       </Box>
     </EaDialog>
   );
@@ -362,6 +408,7 @@ export function TravelCardDialog({ trip, onClose }: { trip: TravelRequest; onClo
   const [currency, setCurrency] = useState("");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<unknown>();
+  const [errs, setErrs] = useState<FieldErrors>({});
   return (
     <EaDialog
       title="Add Travel Card"
@@ -371,7 +418,11 @@ export function TravelCardDialog({ trip, onClose }: { trip: TravelRequest; onClo
       error={error}
       onClose={onClose}
       onConfirm={() => {
-        if (!currency || !(Number(amount) > 0)) return setError("Some fields need attention.");
+        const next: Record<string, string> = {};
+        if (!currency) next.currency = "Select the currency";
+        if (!(Number(amount) > 0)) next.amount = "Enter an amount greater than 0";
+        setErrs(next);
+        if (Object.keys(next).length) return;
         setError(undefined);
         add.mutate(
           { jobNumber: trip.jobNumber, idempotencyKey: idem.key, currency, amount: Number(amount) },
@@ -385,9 +436,9 @@ export function TravelCardDialog({ trip, onClose }: { trip: TravelRequest; onClo
         );
       }}
     >
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, pt: 1 }}>
-        <Select label="Travel Card Currency" required value={currency} options={TRAVEL_CARD_CURRENCIES} onChange={setCurrency} />
-        <TextField size="small" type="number" required label="Travel Card Amount" value={amount} onChange={(e) => setAmount(e.target.value)} slotProps={{ htmlInput: { min: 0, step: 0.01 } }} />
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, pt: 1 }}>
+        <Select label="Travel Card Currency" required error={errs.currency} value={currency} options={TRAVEL_CARD_CURRENCIES} onChange={setCurrency} />
+        <TextField size="small" type="number" required label="Travel Card Amount" error={Boolean(errs.amount)} helperText={errs.amount} value={amount} onChange={(e) => setAmount(e.target.value)} slotProps={{ htmlInput: { min: 0, step: 0.01 } }} />
       </Box>
     </EaDialog>
   );
@@ -411,6 +462,7 @@ export function PaymentDialog({
   const notify = useNotifications();
   const [amount, setAmount] = useState(payment ? String(payment.amount) : "");
   const [error, setError] = useState<unknown>();
+  const [amountError, setAmountError] = useState("");
   const left = s ? s.remaining + (payment ? payment.amount : 0) : 0;
   const nextNumber = payment?.id ?? `${trip.jobNumber}-${String((payments.data?.items.length ?? 0) + 1).padStart(3, "0")}`;
   return (
@@ -423,8 +475,9 @@ export function PaymentDialog({
       onClose={onClose}
       onConfirm={() => {
         const n = Number(amount);
-        if (!(n > 0)) return setError("Some fields need attention.");
-        if (n > left) return setError("The payment amount is more than the remaining balance");
+        const problem = !(n > 0) ? "Enter an amount greater than 0" : n > left ? "The payment amount is more than the remaining balance" : "";
+        setAmountError(problem);
+        if (problem) return;
         setError(undefined);
         save.mutate(
           { jobNumber: trip.jobNumber, id: payment?.id, amount: n, idempotencyKey: payment ? undefined : idem.key },
@@ -450,7 +503,7 @@ export function PaymentDialog({
         <Typography variant="caption" color="text.secondary">
           Converted to the traveller&apos;s subsidiary currency when it is pushed to NetSuite.
         </Typography>
-        <TextField size="small" type="number" required label="Payment Amount" value={amount} onChange={(e) => setAmount(e.target.value)} slotProps={{ htmlInput: { min: 0, step: 0.01 } }} />
+        <TextField size="small" type="number" required label="Payment Amount" error={Boolean(amountError)} helperText={amountError} value={amount} onChange={(e) => setAmount(e.target.value)} slotProps={{ htmlInput: { min: 0, step: 0.01 } }} />
       </Box>
     </EaDialog>
   );

@@ -124,9 +124,9 @@ export function usdShort(v: number): string {
   return `USD ${n0(v)}`;
 }
 
-/** The legacy "Expires In" (getTimeLabelAndColor): years, else months, else days; past is Expired; none is No Expire. */
+/** The legacy "Expires In" (getTimeLabelAndColor): years, else months, else days; past is Expired; none is No expiry date. */
 export function expiresIn(end: string | undefined, today: string): { label: string; expired: boolean; soon: boolean } {
-  if (!end) return { label: "No Expire", expired: false, soon: false };
+  if (!end) return { label: "No expiry date", expired: false, soon: false };
   const n = daysBetween(today, end);
   if (n < 0) return { label: "Expired", expired: true, soon: false };
   const y = Math.floor(n / 365);
@@ -151,6 +151,16 @@ export function engagementName(e: { kind: string; account: string; title: string
 
 /** "3 consultants". */
 export const plural = (n: number, one: string, many = `${one}s`): string => `${n0(n)} ${n === 1 ? one : many}`;
+
+/** Dark text for a light fill and white for a dark one (`#rrggbb` fills; anything else gets white), so a label stays readable on any allocation type colour. */
+export function readableOn(fill: string): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(fill.trim());
+  if (!m) return "#fff";
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  // Against white the contrast is 1.05 / (L + 0.05), against this near-black (L 0.01) it is (L + 0.05) / 0.06: they meet at L 0.2.
+  return luminance > 0.2 ? "#111827" : "#fff";
+}
 
 /** A stable colour per allocation type, when the type defines none. */
 export function typeColor(name: string, defined?: string): string {

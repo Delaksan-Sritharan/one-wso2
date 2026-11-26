@@ -14,9 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import type { JSX, ReactNode } from "react";
+import type { JSX, MouseEvent, ReactNode } from "react";
 import { Box, ButtonBase, Stack, Tooltip, Typography } from "@wso2/oxygen-ui";
-import { addDays, daysBetween, fmtShort } from "../model/format";
+import { addDays, daysBetween, fmtShort, readableOn } from "../model/format";
 
 export interface TimelineBar {
   readonly key: string;
@@ -25,6 +25,8 @@ export interface TimelineBar {
   readonly label: string;
   readonly title: string;
   readonly color: string;
+  /** What the colour stands for, listed in the legend under the timeline. */
+  readonly type?: string;
   /** Hourly allocations are drawn thinner. */
   readonly thin?: boolean;
   /** Opens something for the bar; handed the bar, to anchor a menu on. */
@@ -80,6 +82,9 @@ export default function Timeline({
   // Week ticks across the window.
   const ticks: string[] = [];
   for (let d = start; d <= end; d = addDays(d, 7)) ticks.push(d);
+
+  // One entry per allocation type on show, in the colour its bars use.
+  const legend = [...new Map(rows.flatMap((r) => r.bars).flatMap((b) => (b.type ? [[b.type, b.color] as const] : []))).entries()];
 
   if (!rows.length) {
     return (
@@ -148,11 +153,15 @@ export default function Timeline({
                   const left = pct(bar.start < start ? start : bar.start);
                   const right = pct(addDays(bar.end > end ? end : bar.end, 1));
                   return (
-                    <Tooltip key={bar.key} title={bar.title}>
+                    <Tooltip key={bar.key} title={bar.title} enterTouchDelay={0} leaveTouchDelay={4000}>
                       <ButtonBase
-                        onClick={bar.onClick ? (ev) => bar.onClick?.(ev.currentTarget) : undefined}
-                        disabled={!bar.onClick}
+                        onClick={bar.onClick ? (ev: MouseEvent<HTMLElement>) => bar.onClick?.(ev.currentTarget) : undefined}
+                        // A bar that opens nothing still takes focus and a tap, so its tooltip reaches keyboard and touch users.
+                        component={bar.onClick ? "button" : "div"}
+                        tabIndex={0}
+                        aria-label={bar.title}
                         sx={{
+                          cursor: bar.onClick ? "pointer" : "default",
                           position: "absolute",
                           left: `${left}%`,
                           width: `${Math.max(0.8, right - left)}%`,
@@ -160,7 +169,7 @@ export default function Timeline({
                           height: bar.thin ? 12 : 22,
                           bgcolor: bar.color,
                           borderRadius: 1,
-                          color: "#fff",
+                          color: readableOn(bar.color),
                           fontSize: 11,
                           fontWeight: 600,
                           px: 0.75,
@@ -168,7 +177,7 @@ export default function Timeline({
                           overflow: "hidden",
                           whiteSpace: "nowrap",
                           textOverflow: "ellipsis",
-                          "&.Mui-disabled": { color: "#fff" },
+                          "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 1 },
                         }}
                       >
                         {bar.thin ? "" : bar.label}
@@ -182,6 +191,18 @@ export default function Timeline({
           );
         })}
       </Box>
+      {legend.length ? (
+        <Stack direction="row" spacing={2} aria-label="Colour legend" role="list" sx={{ px: 1.5, py: 1, flexWrap: "wrap", rowGap: 0.75, borderTop: 1, borderColor: "divider" }}>
+          {legend.map(([type, color]) => (
+            <Stack key={type} direction="row" spacing={0.75} role="listitem" sx={{ alignItems: "center" }}>
+              <Box aria-hidden sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: color }} />
+              <Typography variant="caption" color="text.secondary">
+                {type}
+              </Typography>
+            </Stack>
+          ))}
+        </Stack>
+      ) : null}
     </Box>
   );
 }

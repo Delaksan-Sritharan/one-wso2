@@ -38,13 +38,14 @@ import { useDebouncedValue } from "@hooks/useDebouncedValue";
 import type { Campaign, ReferenceData, SalesforceAccount } from "../api/engagementTypes";
 import { useAccounts, useCampaigns } from "../api/useEngagementApi";
 import { TABLE_HEAD_SX } from "../components/eaStyles";
+import SearchSelect from "../components/SearchSelect";
 import { emptyFunding, type FundingRow } from "../model/engagementForm";
 
 /** A lock beside a label: the value came from Salesforce, or cannot change after creation. */
 export function Locked({ title = "Filled from Salesforce" }: { title?: string }): JSX.Element {
   return (
     <Tooltip title={title}>
-      <Box component="span" sx={{ display: "inline-flex", verticalAlign: "middle", ml: 0.5, color: "text.disabled" }}>
+      <Box component="span" tabIndex={0} role="img" aria-label={title} sx={{ display: "inline-flex", verticalAlign: "middle", ml: 0.5, color: "text.disabled" }}>
         <LockIcon size={12} />
       </Box>
     </Tooltip>
@@ -72,6 +73,7 @@ export function SelectField({
   lock,
   lockTitle,
   placeholder,
+  searchable,
 }: {
   label: string;
   value: string;
@@ -83,7 +85,12 @@ export function SelectField({
   lock?: boolean;
   lockTitle?: string;
   placeholder?: string;
+  /** Type to find an option, for a long list (countries, sub regions). */
+  searchable?: boolean;
 }): JSX.Element {
+  if (searchable) {
+    return <SearchSelect label={<LabelWithLock label={label} lock={lock} title={lockTitle} />} value={value} options={options} onChange={onChange} required={required} disabled={disabled} error={error} />;
+  }
   return (
     <TextField
       select
@@ -288,7 +295,7 @@ export function FundingSourcesField({
                 {cell(
                   <SelectField label="Region" value={r.region} options={(reference?.regions ?? []).map((x) => x.name)} onChange={(v) => set(i, { region: v, subRegion: "" })} />,
                 )}
-                {cell(<SelectField label="Sub Region" value={r.subRegion} options={subRegions(r.region)} onChange={(v) => set(i, { subRegion: v })} />)}
+                {cell(<SelectField searchable label="Sub Region" value={r.subRegion} options={subRegions(r.region)} onChange={(v) => set(i, { subRegion: v })} />)}
                 <TableCell align="right" sx={{ px: 0.75, width: 96 }}>
                   <TextField
                     size="small"

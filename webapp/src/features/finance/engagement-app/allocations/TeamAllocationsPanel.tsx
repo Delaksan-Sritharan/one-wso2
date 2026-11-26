@@ -83,6 +83,7 @@ export default function TeamAllocationsPanel(): JSX.Element {
       label: a.label || `${a.code}: ${a.allocationType}`,
       title: `${a.id}: ${a.kind === "default" ? a.allocationType : a.label}, ${fmtRange(a.start, a.end)}`,
       color: a.color || typeColor(a.allocationType, teamTypes.find((x) => x.name === a.allocationType)?.color),
+      type: a.allocationType,
       thin: Boolean(a.hourly),
       // A team allocation still within its 30 days opens Edit / Delete.
       onClick: a.kind === "default" && a.editable ? (anchor: HTMLElement) => setBarMenu({ anchor, allocation: a, who }) : undefined,
@@ -183,6 +184,8 @@ export default function TeamAllocationsPanel(): JSX.Element {
       {deleting ? (
         <ConfirmDialog
           title="Delete Allocation"
+          confirmLabel="Delete"
+          busyLabel="Deleting…"
           text={`Are you sure you want to delete ${deleting.id} (${deleting.allocationType}, ${fmtRange(deleting.start, deleting.end)})?`}
           danger
           run={() => remove.mutateAsync({ id: deleting.id })}
@@ -226,6 +229,7 @@ function TeamAllocationDialog({
     <EaDialog
       title={allocation ? "Update Allocation" : "Add New Allocation"}
       subtitle="Team allocation"
+      confirmLabel={allocation ? "Update Allocation" : "Add Allocation"}
       busy={busy}
       error={error}
       onClose={onClose}
@@ -260,7 +264,7 @@ function TeamAllocationDialog({
         }
       }}
     >
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, pt: 1 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, pt: 1 }}>
         <TextField size="small" label="Email" value={who.email} slotProps={{ input: { readOnly: true } }} sx={{ gridColumn: "1 / -1" }} />
         <TextField
           select

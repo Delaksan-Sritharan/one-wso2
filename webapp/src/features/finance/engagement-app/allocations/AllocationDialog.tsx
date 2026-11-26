@@ -21,6 +21,7 @@ import { defaultOverlapsOf } from "../api/engagementHttp";
 import type { AllocationStatus, Engagement, Person, TimelineItem } from "../api/engagementTypes";
 import { useCreateAllocation, useIdempotencyKey, type AllocationInput } from "../api/useEngagementMutations";
 import EaDialog from "../components/EaDialog";
+import SearchSelect from "../components/SearchSelect";
 import { isPaidType } from "../model/engagementAccess";
 import { addDays, fmtRange } from "../model/format";
 import { defaultEnd, validateAllocation, type AllocationFormState } from "../model/allocationForm";
@@ -92,7 +93,7 @@ export default function AllocationDialog({
       busy={create.isPending}
       error={error}
       onClose={onClose}
-      confirmLabel={trim.length ? "Yes" : undefined}
+      confirmLabel={trim.length ? "Add Anyway" : "Add Allocation"}
       onConfirm={() => {
         const problem = validateAllocation(f, { engStart: e.start, engEnd: e.end, needsStatus });
         if (problem) return setError(problem);
@@ -136,7 +137,7 @@ export default function AllocationDialog({
             .join(", ")}). They will be shortened or split around it. Do you want to continue?`}
         </Alert>
       ) : null}
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, pt: 1 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, pt: 1 }}>
         <TextField size="small" label="Email" value={consultant.email} slotProps={{ input: { readOnly: true } }} sx={{ gridColumn: "1 / -1" }} />
         <TextField size="small" label="Allocation Type" value={e.allocationType} slotProps={{ input: { readOnly: true } }} />
         <TextField size="small" label="Engagement Code" value={e.code} slotProps={{ input: { readOnly: true } }} />
@@ -149,19 +150,15 @@ export default function AllocationDialog({
         />
         {f.hourly ? (
           <>
-            <TextField select size="small" required label="Select Time Zone" value={f.timeZone} onChange={(ev) => set("timeZone", ev.target.value)} sx={{ gridColumn: "1 / -1" }}>
-              {timeZones.map((z) => (
-                <MenuItem key={z} value={z}>
-                  {z}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Box sx={{ gridColumn: "1 / -1" }}>
+              <SearchSelect label="Select Time Zone" required value={f.timeZone} options={timeZones} onChange={(v) => set("timeZone", v)} />
+            </Box>
             <TextField size="small" type="time" required label="Recurring Start Time" value={f.from} onChange={(ev) => set("from", ev.target.value)} slotProps={{ inputLabel: { shrink: true }, htmlInput: { step: 900 } }} />
             <TextField size="small" type="time" required label="Recurring End Time" value={f.to} onChange={(ev) => set("to", ev.target.value)} slotProps={{ inputLabel: { shrink: true }, htmlInput: { step: 900 } }} />
           </>
         ) : null}
         {needsStatus ? (
-          <TextField select size="small" required label="Clearance Status" value={f.status} onChange={(ev) => set("status", ev.target.value)}>
+          <TextField select size="small" required label="Allocation Status" value={f.status} onChange={(ev) => set("status", ev.target.value)}>
             {INTERNAL_START_STATUSES.map((s) => (
               <MenuItem key={s} value={s}>
                 {s}

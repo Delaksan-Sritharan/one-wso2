@@ -49,7 +49,7 @@ describe("dates and amounts", () => {
   });
 
   it("says Expires In the legacy way", () => {
-    expect(expiresIn(undefined, "2026-11-05").label).toBe("No Expire");
+    expect(expiresIn(undefined, "2026-11-05").label).toBe("No expiry date");
     expect(expiresIn("2026-11-01", "2026-11-05")).toMatchObject({ label: "Expired", expired: true });
     expect(expiresIn("2026-12-05", "2026-11-05")).toMatchObject({ label: "1 mo", soon: true });
     expect(expiresIn("2029-11-05", "2026-11-05").label).toBe("3 yrs");

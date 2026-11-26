@@ -16,7 +16,7 @@
 
 import { useState, type JSX, type ReactNode } from "react";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
-import { Alert, Box, Button, Card, Checkbox, FormControlLabel, Skeleton, TextField, Typography } from "@wso2/oxygen-ui";
+import { Alert, Box, Button, Card, Checkbox, FormControlLabel, TextField, Typography } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import type { Engagement, EngagementTypeId } from "../api/engagementTypes";
@@ -47,6 +47,8 @@ import { EVENT_NATURES, NATURES } from "../model/statuses";
 import { HttpError } from "@api/http";
 import { CheckIcon } from "@wso2/oxygen-ui-icons-react";
 import { eaError } from "../api/engagementHttp";
+import { FactsSkeleton } from "../components/EaSkeletons";
+import { useUnsavedGuard } from "../components/useUnsavedGuard";
 import { AccountSearchField, CampaignField, FundingSourcesField, LabelWithLock, SelectField } from "./formFields";
 
 /** Create Customer Engagement, or Create Internal Engagement / Marketing Event. */
@@ -81,7 +83,7 @@ export function EditEngagementPage({ pending: pendingMode = false }: { pending?:
   if (engagement.isPending) {
     return (
       <EaPage title={`Edit ${id}`} back={back}>
-        <Skeleton variant="rounded" height={420} />
+        <FactsSkeleton count={10} columns={2} />
       </EaPage>
     );
   }
@@ -160,6 +162,7 @@ function EngagementForm({
   const campaignLocked = isEdit && !pendingEdit && Boolean(base.campaignId);
   const code = isEdit && !(pendingEdit && f.allocationType !== base.allocationType) ? edit!.e.code : engagementCode(f, { opportunity, lineItem, allocationType: allocTypeDef });
   const lockAfterApproval = isEdit && !pendingEdit;
+  const guard = useUnsavedGuard(JSON.stringify(f) !== JSON.stringify(base));
   const changes = isEdit ? changesOf(base, f, allocTypeDef ? Number(allocTypeDef.id) : undefined) : {};
   const changed = Object.keys(changes).length > 0;
 
@@ -201,16 +204,12 @@ function EngagementForm({
     create.mutate({ body: inputOf(f, allocTypeDef ? Number(allocTypeDef.id) : undefined), idempotencyKey: idempotency.key }, {
       onSuccess: (created) => {
         idempotency.renew();
-        const id = created?.id ?? "";
-        if (cust) {
-          notify.showSuccess(`Engagement ${id} added successfully`);
-          navigate(id ? engagementPaths.engagement(id) : engagementPaths.engagements("customer"), { replace: true });
-        } else {
-          notify.showSuccess(`${mkt ? "Event" : "Engagement"} ${id} added successfully. It is waiting for approval`);
-          navigate(access.approvals ? engagementPaths.approvals(mkt ? "marketing" : "internal") : engagementPaths.engagements(mkt ? "marketing" : "internal"), {
-            replace: true,
-          });
-        }
+        const id = created?.id;
+        const noun = cust ? "Engagement" : mkt ? "Event" : "Engagement";
+        notify.showSuccess(`${noun}${id ? ` ${id}` : ""} added successfully${cust ? "" : ". It is waiting for approval"}`);
+        // Into the new record. Internal ones and events are waiting for approval, so they open on Details.
+        const list = engagementPaths.engagements(cust ? "customer" : mkt ? "marketing" : "internal");
+        navigate(id ? engagementPaths.engagement(id, cust ? "allocations" : "details") : access.approvals && !cust ? engagementPaths.approvals(mkt ? "marketing" : "internal") : list, { replace: true });
       },
       onError: (err) => {
         // NetSuite already has an event with this name: say so on the Event Name field.
@@ -428,13 +427,14 @@ function EngagementForm({
               <SelectField
                 label={mkt ? "Event Nature" : cust ? "Engagement On-site/Off-site" : "On-site/Off-site"}
                 required
-                placeholder={mkt ? "Select Event Nature" : "Select Location"}
+                placeholder={mkt ? "Select Event Nature" : "Select On-site or Off-site"}
                 value={f.nature}
                 options={mkt ? EVENT_NATURES : NATURES}
                 error={errors.nature}
                 onChange={(v) => set("nature", v)}
               />
               <SelectField
+                searchable
                 label="Country"
                 required
                 value={f.country}
@@ -469,6 +469,7 @@ function EngagementForm({
                     onChange={(v) => set("productUnit", v)}
                   />
                   <SelectField
+                    searchable
                     label="Sales Sub Region"
                     required={subRegionRequired}
                     value={f.subRegion}
@@ -581,7 +582,7 @@ function EngagementForm({
           </Alert>
         ) : null}
         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, borderTop: 1, borderColor: "divider", pt: 2, mt: 3 }}>
-          <Button onClick={() => navigate(back.to)} disabled={create.isPending || update.isPending}>
+          <Button onClick={() => guard.leave(back.to)} disabled={create.isPending || update.isPending}>
             {isEdit ? "Discard Changes" : "Cancel"}
           </Button>
           {isEdit && pendingEdit && e && canApprove(access.p, e.typeId) ? (
@@ -600,11 +601,12 @@ function EngagementForm({
           )}
         </Box>
       </Card>
+      {guard.prompt}
       {confirm && e ? (
         <EaDialog
           title={confirm === "approve" ? (mkt ? "Approve Event" : "Approve Engagement") : mkt ? "Update Event" : "Update Engagement"}
-          confirmLabel="Yes"
-          cancelLabel="No"
+          confirmLabel={confirm === "approve" ? "Approve" : mkt ? "Update Event" : "Update Engagement"}
+          busyLabel={confirm === "approve" ? "Approving…" : "Updating…"}
           busy={update.isPending}
           error={failure}
           onClose={() => setConfirm(null)}
