@@ -81,7 +81,7 @@ describe("SearchPage", () => {
 
   it("draws a card per kind with its total and its hits", () => {
     page();
-    const travel = screen.getByRole("region", { name: "Travel Requests" });
+    const travel = screen.getByRole("region", { name: "Travels" });
     expect(travel.textContent).toContain("40");
     expect(travel.textContent).toContain("Jane Doe, India");
     expect(screen.getByRole("region", { name: "Invoices" }).textContent).toContain("INV-77");
@@ -90,7 +90,7 @@ describe("SearchPage", () => {
 
   it("links each card to its own list with the search typed in", () => {
     page();
-    expect(href("View All in Travel Requests")).toBe("/finance/engagement-app/travel-requests/all?q=2026");
+    expect(href("View All in Travels")).toBe("/finance/engagement-app/travel-requests/all?q=2026");
     expect(href("View All in Invoices")).toBe("/finance/engagement-app/invoices/all-invoices?q=2026");
     expect(href("View All in Per Diem Payments")).toBe("/finance/engagement-app/invoices/all-payments?q=2026");
     expect(href("View All in Allocations")).toBe("/finance/engagement-app/allocations/engagement?q=2026");
@@ -98,7 +98,7 @@ describe("SearchPage", () => {
 
   it("links each hit to its page, or to its list for a record with no page", () => {
     page();
-    expect(href(/TRV-2026-11-0003/, screen.getByRole("region", { name: "Travel Requests" }))).toBe("/finance/engagement-app/travel-requests/TRV-2026-11-0003/info");
+    expect(href(/TRV-2026-11-0003/, screen.getByRole("region", { name: "Travels" }))).toBe("/finance/engagement-app/travel-requests/TRV-2026-11-0003/info");
     expect(href(/INV-77/)).toBe("/finance/engagement-app/invoices/all-invoices?q=TRV-2026-11-0003");
     expect(href(/PD-5/)).toBe("/finance/engagement-app/invoices/all-payments?q=PD-5");
     expect(href(/A-1/)).toBe("/finance/engagement-app/allocations/engagement?q=A-1");

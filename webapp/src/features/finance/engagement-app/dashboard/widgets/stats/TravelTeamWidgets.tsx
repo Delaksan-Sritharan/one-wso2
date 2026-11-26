@@ -46,7 +46,7 @@ export function PoAgeWidget({ ctx }: { ctx: WidgetCtx }): JSX.Element | null {
 export function FrequentTravellersWidget({ ctx }: { ctx: WidgetCtx }): JSX.Element | null {
   const t = team(ctx);
   if (!t?.frequentTravellers) return null;
-  return <HBars rows={t.frequentTravellers.map((f) => ({ label: f.traveller.name, count: f.trips }))} format={(n) => plural(n, "trip")} />;
+  return <HBars rows={t.frequentTravellers.map((f) => ({ label: f.traveller.name, count: f.trips }))} format={(n) => plural(n, "travel")} />;
 }
 
 /** Trips under way or starting within 60 days, by travel agent. */

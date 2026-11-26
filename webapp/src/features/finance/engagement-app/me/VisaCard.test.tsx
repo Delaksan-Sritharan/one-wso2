@@ -88,7 +88,7 @@ describe("the visa card on the Me overview", () => {
       ],
     };
     draw();
-    expect(screen.getByText("Trips Waiting for a Visa")).toBeTruthy();
+    expect(screen.getByText("Travels Waiting for a Visa")).toBeTruthy();
     expect(screen.getByText("1")).toBeTruthy();
     expect(screen.getByText("Waiting for a visa")).toBeTruthy();
     expect(screen.getByText("Covered")).toBeTruthy();

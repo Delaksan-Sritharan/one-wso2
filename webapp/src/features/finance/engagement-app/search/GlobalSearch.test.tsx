@@ -110,7 +110,7 @@ describe("GlobalSearch", () => {
 
   it("groups the suggestions with each group's total, and names a group that failed", () => {
     type(box() as HTMLElement, "2026");
-    const travel = screen.getByRole("group", { name: "Travel Requests" });
+    const travel = screen.getByRole("group", { name: "Travels" });
     expect(travel.textContent).toContain("12");
     expect(travel.textContent).toContain("Jane Doe, India");
     expect(travel.textContent).toContain("In Progress");

@@ -46,7 +46,7 @@ export function CostBars({ ctx, dimension, firstColumn, withTrips = false }: { c
         : []),
       ...(withTrips
         ? [
-            { key: "trips", label: "Trips", align: "right", render: (b: CostBucket) => (b.trips === undefined ? "—" : n0(b.trips)) } as Column<CostBucket>,
+            { key: "trips", label: "Travels", align: "right", render: (b: CostBucket) => (b.trips === undefined ? "—" : n0(b.trips)) } as Column<CostBucket>,
             { key: "avg", label: "Average per Trip", align: "right", render: (b: CostBucket) => (b.averagePerTrip === undefined ? "—" : usd2(b.averagePerTrip)) } as Column<CostBucket>,
           ]
         : []),

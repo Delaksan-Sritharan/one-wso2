@@ -39,20 +39,20 @@ export default function AgentDashboard({ d }: { d: Dashboard }): JSX.Element {
   const a = d.agency!;
   const tiles = [
     { key: "open", count: a.inProgress, label: "Assigned and In Progress", to: engagementPaths.travelRequests("in-progress"), hot: false, hint: "Your agency's requests that are In Progress, Extended or On Hold" },
-    { key: "7", count: a.startingIn7Days, label: "Starting in 7 Days", to: engagementPaths.travelRequests("in-progress"), hot: a.startingIn7Days > 0, hint: "Trips that start this week" },
+    { key: "7", count: a.startingIn7Days, label: "Starting in 7 Days", to: engagementPaths.travelRequests("in-progress"), hot: a.startingIn7Days > 0, hint: "Travels that start this week" },
     {
       key: "noinv",
       count: a.completedWithoutInvoice,
       label: "Completed Without an Invoice",
       to: engagementPaths.travelRequests("completed"),
       hot: a.completedWithoutInvoice > 0,
-      hint: "Completed trips with no invoice from your agency yet",
+      hint: "Completed travels with no invoice from your agency yet",
     },
     { key: "rej", count: a.invoicesRejected, label: "Invoices Rejected", to: engagementPaths.travelRequests("all"), hot: a.invoicesRejected > 0, hint: "Rejected by travel or finance" },
   ];
   const panels = [
     a.upcoming.length ? (
-      <Mini key="upcoming" title="Upcoming Trips" aside={a.upcomingTotal > 5 ? <ViewAll to={engagementPaths.travelRequests("in-progress")} /> : undefined}>
+      <Mini key="upcoming" title="Upcoming Travels" aside={a.upcomingTotal > 5 ? <ViewAll to={engagementPaths.travelRequests("in-progress")} /> : undefined}>
         {a.upcoming.slice(0, 5).map((x) => (
           <DateRow
             key={x.jobNumber}
@@ -76,13 +76,13 @@ export default function AgentDashboard({ d }: { d: Dashboard }): JSX.Element {
       </Mini>
     ) : null,
     a.tripsByMonth.some((m) => m.value) ? (
-      <Mini key="months" title="Trips by Month">
-        <MonthColumns rows={a.tripsByMonth} name="Trips" />
+      <Mini key="months" title="Travels by Month">
+        <MonthColumns rows={a.tripsByMonth} name="Travels" />
       </Mini>
     ) : null,
   ].filter(Boolean);
   return (
-    <EaPage title="Dashboard" subtitle={`Travel requests handled by ${a.name} on ${fmtDate(d.date ?? localIsoDate())}.`}>
+    <EaPage title="Dashboard" subtitle={`Travels handled by ${a.name} on ${fmtDate(d.date ?? localIsoDate())}.`}>
       <Section title="At a Glance">
         <QueueTiles tiles={tiles} />
       </Section>

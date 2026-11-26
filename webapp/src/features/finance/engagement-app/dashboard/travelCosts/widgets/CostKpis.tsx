@@ -30,7 +30,7 @@ export default function CostKpis({ ctx }: { ctx: WidgetCtx }): JSX.Element | nul
   return (
     <KpiRow>
       <Kpi label="Total Travel Cost" value={usd0(k.total.value)} delta={deltaText(k.total, compared)} deltaTone={deltaTone(k.total, compared, "spend")} />
-      <Kpi label="Trips" value={n0(k.trips.value)} delta={deltaText(k.trips, compared)} deltaTone={deltaTone(k.trips, compared, "volume")} />
+      <Kpi label="Travels" value={n0(k.trips.value)} delta={deltaText(k.trips, compared)} deltaTone={deltaTone(k.trips, compared, "volume")} />
       <Kpi label="Average per Trip" value={usd0(k.averagePerTrip.value)} delta={deltaText(k.averagePerTrip, compared)} deltaTone={deltaTone(k.averagePerTrip, compared, "spend")} />
       <Kpi label="Travellers" value={n0(k.travellers.value)} delta={deltaText(k.travellers, compared)} deltaTone={deltaTone(k.travellers, compared, "volume")} />
       <Kpi
