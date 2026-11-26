@@ -32,7 +32,7 @@ import {
 } from "@wso2/oxygen-ui";
 import { Info } from "@wso2/oxygen-ui-icons-react";
 import type { JSX, ReactNode } from "react";
-import { likelihoodBasis } from "./suggestionBasis";
+import { likelihoodBasis, suggestionIsCurrent } from "./suggestionBasis";
 import type { AddRiskFormValues, ImpactLevel, LikelihoodLevel } from "./types";
 import type { RiskScore } from "../../api/riskApi";
 import { suggestLikelihood } from "../../api/riskApi";
@@ -115,6 +115,15 @@ export default function RiskAssessmentStep({ riskScores }: RiskAssessmentStepPro
   const aiLikelihoodSuggestion = useWatch({ control, name: "aiLikelihoodSuggestion" });
   const [suggesting, setSuggesting] = useState(false);
   const [suggestError, setSuggestError] = useState<string | null>(null);
+
+  // Guidance and the highlighted row describe the inputs the suggestion was
+  // made for; once any of them changes they are hidden.
+  const currentLikelihoodSuggestion = suggestionIsCurrent(
+    aiLikelihoodSuggestion,
+    likelihoodBasis(riskTitle, riskDescription, impactDescription, complianceReferences, riskCategory, sourceRegister),
+  )
+    ? aiLikelihoodSuggestion
+    : null;
 
   const canSuggestLikelihood =
     !!riskTitle && !!riskDescription && !!impactDescription && riskCategory !== "" && sourceRegister !== "";
@@ -327,11 +336,11 @@ export default function RiskAssessmentStep({ riskScores }: RiskAssessmentStepPro
           </Typography>
 
           {suggestError && <Alert severity="warning">{suggestError}</Alert>}
-          {!suggestError && aiLikelihoodSuggestion && (
+          {!suggestError && currentLikelihoodSuggestion && (
             <Alert severity="info">
               <Typography variant="body2">
-                <strong>Suggested Likelihood: {aiLikelihoodSuggestion.score}</strong>{" "}
-                ({aiLikelihoodSuggestion.confidence} confidence): {aiLikelihoodSuggestion.reason}.
+                <strong>Suggested Likelihood: {currentLikelihoodSuggestion.score}</strong>{" "}
+                ({currentLikelihoodSuggestion.confidence} confidence): {currentLikelihoodSuggestion.reason}.
                 The highlighted row below is the suggestion — pick the cell in that row matching
                 this risk's Impact.
               </Typography>
@@ -356,7 +365,7 @@ export default function RiskAssessmentStep({ riskScores }: RiskAssessmentStepPro
                 impact={impact ?? 0}
                 onChange={(l, i) => handleCellClick(l as LikelihoodLevel, i as ImpactLevel)}
                 error={fieldState.error?.message}
-                suggestedLikelihood={aiLikelihoodSuggestion?.score}
+                suggestedLikelihood={currentLikelihoodSuggestion?.score}
                 showSelectedSummary={false}
               />
             )}

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   actionPlanBasis,
   actionPlanStillUsed,
+  suggestionIsCurrent,
   categoryBasis,
   likelihoodBasis,
   suggestionsToSend,
@@ -97,5 +98,19 @@ describe("actionPlanStillUsed", () => {
   it("compares trimmed text", () => {
     expect(actionPlanStillUsed({ description: "A b", used: true }, "  A b ")).toBe(true);
     expect(actionPlanStillUsed({ description: "A b", used: true }, "A c")).toBe(false);
+  });
+});
+
+describe("suggestionIsCurrent", () => {
+  it("is true only while the inputs still match the suggestion's basis", () => {
+    expect(suggestionIsCurrent(category(catBasis), categoryBasis("  Title ", "Description", [2, 1]))).toBe(true);
+    expect(suggestionIsCurrent(category(catBasis), categoryBasis("Title", "Edited description", [1, 2]))).toBe(false);
+    expect(suggestionIsCurrent(category(catBasis), categoryBasis("Title", "Description", [1]))).toBe(false);
+    expect(suggestionIsCurrent(likelihood(likBasis), likelihoodBasis("Title", "Description", "Impact", [1, 2], 8, 3))).toBe(false);
+  });
+
+  it("is false when there is no suggestion", () => {
+    expect(suggestionIsCurrent(null, catBasis)).toBe(false);
+    expect(suggestionIsCurrent(undefined, catBasis)).toBe(false);
   });
 });

@@ -307,6 +307,9 @@ export default function ActionPlanDialog({
               placeholder="Summarise the management-directed remediation…"
               disabled={submitting}
               helperText="High level description of the plan (optional)"
+              // The visible heading sits beside the Generate button, so it is
+              // not a <label>; name the textarea itself.
+              slotProps={{ htmlInput: { "aria-label": "Action Plan Description" } }}
             />
             {suggestError && (
               <Alert severity="warning" sx={{ mt: 1 }}>

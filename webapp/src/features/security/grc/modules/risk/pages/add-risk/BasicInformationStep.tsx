@@ -39,7 +39,7 @@ import {
   Typography,
 } from "@wso2/oxygen-ui";
 import type { JSX } from "react";
-import { categoryBasis } from "./suggestionBasis";
+import { categoryBasis, suggestionIsCurrent } from "./suggestionBasis";
 import type { AddRiskFormValues } from "./types";
 import { QUARTERS, RISK_ACCEPTORS, YEAR_OPTIONS } from "./constants";
 import FieldLabel from "./FieldLabel";
@@ -582,7 +582,9 @@ export default function BasicInformationStep({
                     {suggestError}
                   </Alert>
                 )}
-                {!suggestError && aiCategorySuggestion && (
+                {!suggestError &&
+                  aiCategorySuggestion &&
+                  suggestionIsCurrent(aiCategorySuggestion, categoryBasis(riskTitle, riskDescription, complianceReferences)) && (
                   <Alert severity="info" sx={{ mt: 1 }}>
                     <Typography variant="body2">
                       <strong>Suggested</strong> ({aiCategorySuggestion.confidence} confidence):{" "}

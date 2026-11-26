@@ -42,6 +42,13 @@ export function actionPlanBasis(
   return JSON.stringify([text(title), text(description), category ?? "", ids(complianceReferences), text(treatmentStrategy)]);
 }
 
+// True while a suggestion still describes the inputs on screen. The guidance
+// shown next to a suggestion is hidden once it stops matching, so it never
+// explains text the user has since edited. Saving applies the same rule.
+export function suggestionIsCurrent(suggestion: { basis: string } | null | undefined, currentBasis: string): boolean {
+  return !!suggestion && suggestion.basis === currentBasis;
+}
+
 // A plan suggestion counts as "used" only if the user clicked "Use this
 // suggestion" AND the description they are saving is still that text. Editing
 // or clearing it afterwards makes it an override.
