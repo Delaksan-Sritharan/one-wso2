@@ -555,6 +555,9 @@ export default function ActionPlanStep({
                 placeholder="Summarise the overall approach for treating this risk…"
                 error={!!fieldState.error}
                 helperText={fieldState.error?.message ?? "High level description of the plan (Optional)"}
+                // The visible heading sits beside the Generate button, so it is
+                // not a <label>; name the textarea itself.
+                slotProps={{ htmlInput: { "aria-label": "Action Plan Description" } }}
               />
               {actionPlanSuggestError && (
                 <Alert severity="warning" sx={{ mt: 1 }}>
