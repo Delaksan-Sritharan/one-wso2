@@ -34,6 +34,7 @@ import { isPreviewEnabled } from "@config/previewFeatures";
 import { useParGlobalConfig } from "../api/useParAdmin";
 import { useUpdateParGlobalConfig } from "../api/useParMutations";
 import ParRatingSettingsFields from "../components/ParRatingSettingsFields";
+import ParDepartmentSettingsFields from "../components/ParDepartmentSettingsFields";
 import {
   allRatings,
   ratingSettingsFrom,
@@ -44,9 +45,10 @@ import {
 // Ports GlobalSettings.tsx: the org-wide defaults ParCycleCreationDialog.tsx
 // prefills new cycles from. Editing here never touches a cycle already
 // created — only what the next one starts with. Field set and validation
-// mirror that dialog's: where `par2` is on, the ratings and their rules;
-// elsewhere the two questions and the two rating lists. A save sends only
-// those, and the backend keeps the rest as it is.
+// mirror that dialog's: where `par2` is on, the ratings and their rules, and
+// the departments that need no evidence; elsewhere the two questions and the
+// two rating lists. A save sends only those, and the backend keeps the rest as
+// it is.
 export default function ParAdminGlobalConfigTab() {
   const globalConfig = useParGlobalConfig();
   const updateConfig = useUpdateParGlobalConfig();
@@ -57,6 +59,7 @@ export default function ParAdminGlobalConfigTab() {
   const [ratings, setRatings] = useState<string[]>([]);
   const [reviewRatings, setReviewRatings] = useState<string[]>([]);
   const [ratingSettings, setRatingSettings] = useState<RatingSettings>(ratingSettingsFrom(undefined));
+  const [noEvidence, setNoEvidence] = useState<string[]>([]);
   const [seeded, setSeeded] = useState(false);
   const par2 = isPreviewEnabled("par2");
   const [confirmContent, setConfirmContent] = useState<ConfirmationContent | null>(null);
@@ -71,6 +74,7 @@ export default function ParAdminGlobalConfigTab() {
     setRatings(globalConfig.data.parRatings);
     setReviewRatings(globalConfig.data.threeSixtyReviewRatings);
     setRatingSettings(ratingSettingsFrom(globalConfig.data));
+    setNoEvidence(globalConfig.data.evidenceExemptDepartments ?? []);
   }
 
   if (globalConfig.isLoading) {
@@ -88,6 +92,7 @@ export default function ParAdminGlobalConfigTab() {
   }
 
   const savedRatingSettings = ratingSettingsFrom(globalConfig.data);
+  const savedNoEvidence = globalConfig.data.evidenceExemptDepartments ?? [];
 
   const reset = () => {
     setEmployeeQuestion(globalConfig.data.employeeParQuestion);
@@ -95,6 +100,7 @@ export default function ParAdminGlobalConfigTab() {
     setRatings(globalConfig.data.parRatings);
     setReviewRatings(globalConfig.data.threeSixtyReviewRatings);
     setRatingSettings(savedRatingSettings);
+    setNoEvidence(savedNoEvidence);
   };
 
   const isValid = par2
@@ -102,7 +108,8 @@ export default function ParAdminGlobalConfigTab() {
     : employeeQuestion.trim() && reviewQuestion.trim() && ratings.length > 0 && reviewRatings.length > 0;
 
   const hasChanged = par2
-    ? JSON.stringify(ratingSettings) !== JSON.stringify(savedRatingSettings)
+    ? JSON.stringify(ratingSettings) !== JSON.stringify(savedRatingSettings) ||
+      JSON.stringify(noEvidence) !== JSON.stringify(savedNoEvidence)
     : employeeQuestion !== globalConfig.data.employeeParQuestion ||
       reviewQuestion !== globalConfig.data.threeSixtyReviewQuestion ||
       JSON.stringify(ratings) !== JSON.stringify(globalConfig.data.parRatings) ||
@@ -115,7 +122,7 @@ export default function ParAdminGlobalConfigTab() {
       confirmAction: () => {
         updateConfig.mutate(
           par2
-            ? ratingSettings
+            ? { ...ratingSettings, evidenceExemptDepartments: noEvidence }
             : {
                 employeeParQuestion: employeeQuestion.trim(),
                 threeSixtyReviewQuestion: reviewQuestion.trim(),
@@ -156,12 +163,20 @@ export default function ParAdminGlobalConfigTab() {
 
       <Card variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
         {par2 ? (
-          <ParRatingSettingsFields
-            value={ratingSettings}
-            onChange={setRatingSettings}
-            suggestions={allRatings(savedRatingSettings)}
-            disabled={updateConfig.isPending}
-          />
+          <Stack spacing={2}>
+            <ParRatingSettingsFields
+              value={ratingSettings}
+              onChange={setRatingSettings}
+              suggestions={allRatings(savedRatingSettings)}
+              disabled={updateConfig.isPending}
+            />
+            <ParDepartmentSettingsFields
+              evidenceRating={ratingSettings.evidenceEnabledRating}
+              noEvidence={noEvidence}
+              onNoEvidenceChange={setNoEvidence}
+              disabled={updateConfig.isPending}
+            />
+          </Stack>
         ) : (
           <Stack spacing={2.5}>
             <TextField

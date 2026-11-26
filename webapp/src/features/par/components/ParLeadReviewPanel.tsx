@@ -67,6 +67,7 @@ import { formatShortDate, formatShortDateTime } from "../util/parDate";
 import { downloadParPdf } from "../util/parPdf";
 import { isOpenableUrl, parseSavedUrls, type DriveFile } from "../util/parDriveFile";
 import { isEvidenceMissing, missedDeadlineRatingFor, ratingOptions, ratingRulesFor } from "../util/parLeadership";
+import { employeeDeadlineFor, needsNoEvidence } from "../util/parDepartments";
 import ParRichTextField, { type ParRichTextFieldHandle } from "./ParRichTextField";
 import { ParCommentView } from "./ParContent";
 import { ParAutoAssignedChip } from "./ParChips";
@@ -151,8 +152,9 @@ export default function ParLeadReviewPanel({
   const autoSaveTokenRef = useRef(0);
 
   const parRatingData = rating.data;
-  // When the self-review has closed everywhere: nobody can still share theirs.
-  const selfReviewClosesAt = deadlineEndsEverywhereAt(cycle.parEmployeeDeadline);
+  // When the employee's self-review has closed everywhere (their department's
+  // own deadline, or the cycle's): they can no longer share it.
+  const selfReviewClosesAt = deadlineEndsEverywhereAt(employeeDeadlineFor(cycle, parRatingData?.parDepartment));
   const selfReviewClosesAtMs = selfReviewClosesAt.getTime();
   const selfReviewClosed = new Date() > selfReviewClosesAt;
   // A PAR the employee didn't share by then gets the cycle's missed-deadline
@@ -169,6 +171,10 @@ export default function ParLeadReviewPanel({
   // auto-assigned after a missed deadline; an admin can still correct it.
   const ratingLocked = !isAdminView && (parRatingData?.parRatingUpdatedBy === "SYSTEM" || selfReviewMissed);
   const shownRating = selfReviewMissed ? missedDeadlineRating : parRatingValue;
+  // The rating that needs evidence, unless the employee's department shares it without.
+  const evidenceRating = needsNoEvidence(cycle.parCycleConfigurations, parRatingData?.parDepartment)
+    ? undefined
+    : evidenceEnabledRating;
 
   // Seed once per record, so a background refetch doesn't overwrite mid-typing.
   if (parRatingData && parRatingData.parRatingId !== seededForId) {
@@ -206,6 +212,10 @@ export default function ParLeadReviewPanel({
   const handleRemoveFile = (fileId: string) => {
     setDriveFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
+
+  // The attached links as they're saved: one per line.
+  const evidenceLinks = driveFiles.map((f) => f.url).join("\n");
+  const savedEvidenceLinks = parRatingData?.parPerformanceNoticeAck ?? "";
 
   // Every value below is derived with parRatingData possibly still
   // undefined (loading/error/not-found are handled further down, but hooks
@@ -313,17 +323,9 @@ export default function ParLeadReviewPanel({
                 ...(specialRating !== toSpecialRatingUi(parRatingData.parSpecialRating)
                   ? { parSpecialRating: specialRating === "NONE" ? "NOT_ASSIGNED" : specialRating }
                   : {}),
-                // Omitted entirely rather than sent as "" when there's no
-                // evidence — the backend requires a non-empty string whenever
-                // this field is present, so an empty string 400s.
-                //
-                // One consequence: there is no way to CLEAR a saved attachment
-                // through this endpoint. The backend also ignores an empty
-                // value as an update, so removing every file and saving leaves
-                // the old URLs on the record and they reappear on the next
-                // fetch. Fixing that needs a backend change (a real clear
-                // operation), not a frontend one.
-                ...(driveFiles.length > 0 ? { parPerformanceNoticeAck: driveFiles.map((f) => f.url).join("\n") } : {}),
+                // Sent only when the links changed. With none left it's "",
+                // which takes the saved ones away.
+                ...(evidenceLinks !== savedEvidenceLinks ? { parPerformanceNoticeAck: evidenceLinks } : {}),
               }),
           // Only an admin caller may set this field — the backend rejects a
           // non-empty value from anyone else.
@@ -413,7 +415,7 @@ export default function ParLeadReviewPanel({
     (isAdminView && adminComment.trim() !== savedAdminComment.trim()) ||
     (parRatingValue !== (parRatingData.parRating ?? "") && parRatingValue !== "") ||
     specialRating !== toSpecialRatingUi(parRatingData.parSpecialRating) ||
-    driveFiles.map((f) => f.url).join("\n") !== (parRatingData.parPerformanceNoticeAck ?? "");
+    evidenceLinks !== savedEvidenceLinks;
 
   const statusAlert = readOnly ? (
     <Alert severity={shared ? "success" : "info"}>
@@ -461,7 +463,7 @@ export default function ParLeadReviewPanel({
     !isEmptyHtml(leadComment) &&
     !isEvidenceMissing({
       rating: shownRating,
-      evidenceEnabledRating,
+      evidenceEnabledRating: evidenceRating,
       ratingLocked,
       evidenceConfirmed,
       fileCount: driveFiles.length,
@@ -725,7 +727,8 @@ export default function ParLeadReviewPanel({
                   />
                 )}
 
-                {shownRating === top5p20pEnabledRating && (
+                {/* The leadership team can't get Top 5%/20%, so it isn't offered. */}
+                {shownRating === top5p20pEnabledRating && !isLeadership && (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                     <Typography
                       id="lead-review-special-rating-label"
@@ -782,7 +785,7 @@ export default function ParLeadReviewPanel({
                   </Box>
                 )}
 
-                {!readOnly && !selfReviewMissed && shownRating === evidenceEnabledRating && (
+                {!readOnly && !selfReviewMissed && evidenceRating !== undefined && shownRating === evidenceRating && (
                   <Box>
                     <FormControlLabel
                       control={

@@ -40,6 +40,7 @@ import { useSaveParRating } from "../api/useParMutations";
 import { useSelfReview } from "../api/useSelfReview";
 import { decodeParComment, encodeParComment, isEmptyHtml } from "../util/parComment";
 import { isDeadlinePassed } from "../util/parDeadline";
+import { employeeDeadlineFor } from "../util/parDepartments";
 import ParRatingSummary from "../components/ParRatingSummary";
 import ParSelfReviewForm from "../components/ParSelfReviewForm";
 import ParRichTextField from "../components/ParRichTextField";
@@ -223,7 +224,9 @@ function SelfReviewForm({
   onSubmit: () => void;
   onUnshare: () => void;
 }) {
-  const deadlinePassed = isDeadlinePassed(cycle.parEmployeeDeadline);
+  // Their department's own self-review deadline, or the cycle's.
+  const deadline = employeeDeadlineFor(cycle, rating.parDepartment);
+  const deadlinePassed = isDeadlinePassed(deadline);
   const status = rating.parEmployeeStatus;
   const shared = status === "SHARED" || status === "SHARED_BLOCKED";
   // The finalized summary (+ PDF) only shows once actually shared
@@ -284,10 +287,10 @@ function SelfReviewForm({
       {!shared && (
         <Alert severity={deadlinePassed ? "error" : status === "DRAFT" ? "warning" : "info"}>
           {deadlinePassed
-            ? `The deadline for submitting your PAR passed on ${formatShortDate(cycle.parEmployeeDeadline)}.`
+            ? `The deadline for submitting your PAR passed on ${formatShortDate(deadline)}.`
             : status === "DRAFT"
-              ? `Draft saved. Share it on or before ${formatShortDate(cycle.parEmployeeDeadline)}.`
-              : `Share your PAR before the deadline: ${formatShortDate(cycle.parEmployeeDeadline)}.`}
+              ? `Draft saved. Share it on or before ${formatShortDate(deadline)}.`
+              : `Share your PAR before the deadline: ${formatShortDate(deadline)}.`}
         </Alert>
       )}
       {status === "SHARED" && (

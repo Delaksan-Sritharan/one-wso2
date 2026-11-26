@@ -104,7 +104,8 @@ describe("Par360AboutMe", () => {
     render(<Par360AboutMe cycle={cycle(OPEN)} workEmail="ravi@example.com" />);
     expect(screen.queryByRole("button", { name: "Request feedback" })).not.toBeInTheDocument();
     // How many have come in, against the 3 needed, sits on the title's line.
-    expect(count()).toHaveTextContent("Feedback requestsYou need at least 3 feedback. 1 received.");
+    expect(count()).toHaveTextContent("Feedback requests1 of 3 feedback responses received");
+    expect(screen.getByText(/You are required to receive feedback from at least 3 colleagues/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
     expect(screen.getByText("Suggested from your calendar:")).toBeInTheDocument();
     const field = screen.getByRole("combobox");
@@ -141,22 +142,22 @@ describe("Par360AboutMe", () => {
     expect(screen.queryByText(/360° index/)).not.toBeInTheDocument();
   });
 
-  it("says None yet until someone is asked, and drops the minimum once 3 have come in", () => {
+  it("says 0 of 3 until someone is asked, and drops the minimum once 3 have come in", () => {
     reviewers = [];
     receivedCount = 0;
     const { unmount } = render(<Par360AboutMe cycle={cycle(OPEN)} workEmail="ravi@example.com" />);
-    expect(count()).toHaveTextContent("You need at least 3 feedback. None yet.");
+    expect(count()).toHaveTextContent("0 of 3 feedback responses received");
     unmount();
     reviewers = [0, 1, 2, 3].map((n) => ({ ...alex, reviewerEmail: `r${n}@example.com`, reviewStatus: n < 3 ? "SHARED" : "PENDING" }));
     receivedCount = 3;
     render(<Par360AboutMe cycle={cycle(OPEN)} workEmail="ravi@example.com" />);
-    expect(count()).toHaveTextContent(/^Feedback requests3 received\.$/);
+    expect(count()).toHaveTextContent(/^Feedback requests3 feedback responses received$/);
   });
 
   it("counts feedback offered unasked, without listing who gave it", () => {
     receivedCount = 2;
     render(<Par360AboutMe cycle={cycle(OPEN)} workEmail="ravi@example.com" />);
-    expect(count()).toHaveTextContent("You need at least 3 feedback. 2 received.");
+    expect(count()).toHaveTextContent("2 of 3 feedback responses received");
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
   });
 
@@ -182,7 +183,7 @@ describe("Par360AboutMe", () => {
     reviewers = [{ ...alex, reviewStatus: "PENDING" }];
     leadershipResponses = 2;
     render(<Par360AboutMe cycle={cycle(OPEN)} workEmail="ravi@example.com" />);
-    expect(count()).toHaveTextContent("You need at least 3 feedback. 2 received.");
+    expect(count()).toHaveTextContent("2 of 3 feedback responses received");
   });
 
   it("has no picker after the 360° deadline", () => {
@@ -196,7 +197,7 @@ describe("Par360AboutMe", () => {
     rating = { parLeadStatus: "PENDING", parIsLeadershipEmployee: true };
     leadershipResponses = 2;
     render(<Par360AboutMe cycle={cycle(OPEN)} workEmail="ravi@example.com" />);
-    expect(count()).toHaveTextContent("You need at least 3 feedback. 1 received.");
+    expect(count()).toHaveTextContent("1 of 3 feedback responses received");
   });
 
   it("shows no total while the count loads", () => {
@@ -205,20 +206,20 @@ describe("Par360AboutMe", () => {
     expect(count()).toHaveTextContent(/^Feedback requests$/);
   });
 
-  it("says when the count couldn't be loaded, with Retry, rather than None yet", () => {
+  it("says when the count couldn't be loaded, with Retry, rather than 0 of 3", () => {
     countState = { isError: true };
     render(<Par360AboutMe cycle={cycle(OPEN)} workEmail="ravi@example.com" />);
     expect(screen.getByText(/Couldn't load how much feedback you've received/)).toBeInTheDocument();
-    expect(screen.queryByText(/None yet/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/feedback responses received/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(retryCount).toHaveBeenCalled();
   });
 
-  it("says when the PAR record couldn't be loaded, rather than None yet, since no count can be chosen", () => {
+  it("says when the PAR record couldn't be loaded, rather than 0 of 3, since no count can be chosen", () => {
     ratingFails = true;
     render(<Par360AboutMe cycle={cycle(OPEN)} workEmail="ravi@example.com" />);
     expect(screen.getByText(/Couldn't load how much feedback you've received/)).toBeInTheDocument();
-    expect(screen.queryByText(/None yet/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/feedback responses received/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(retryRating).toHaveBeenCalled();
   });

@@ -23,6 +23,7 @@ import type { ParCycle } from "../api/types";
 import { formatShortDate } from "../util/parDate";
 import { daysLeft, daysLeftLabel } from "../util/parDeadline";
 import { useHomeInput } from "../api/useHomeInput";
+import { progressBlue } from "../util/parProgressBlue";
 import {
   STEP_STATE_LABEL,
   homeSteps,
@@ -42,14 +43,25 @@ const STEP_SEGMENT: Record<HomeStepKey, string> = {
   f2f: "cycle/f2f",
 };
 
-// The state word's colour; the step's number and name look the same in every state.
-const STATE_COLOR: Record<StepState, string> = {
-  "not-started": "primary.main",
-  "in-progress": "info.main",
-  "not-available": "text.secondary",
-  done: "success.main",
-  incomplete: "error.main",
+// The state word's colour; the step's number and name look the same in every state. Nothing done yet is
+// neutral, under way is blue, done is green and missed is red; orange stays for what's selected or clicked.
+type Tone = "neutral" | "progress" | "primary" | "warning" | "success" | "error";
+const STATE_TONE: Record<StepState, Tone> = {
+  "not-started": "neutral",
+  "in-progress": "progress",
+  "not-available": "neutral",
+  done: "success",
+  incomplete: "error",
 };
+
+// A tone as small text: its main shade on a dark surface and its darker one on a light surface, where
+// the main shades are under 4.5:1 (as the theme's own alert and link text).
+const toneText = (theme: Theme, tone: Tone) =>
+  tone === "neutral"
+    ? { color: palette(theme).text.secondary }
+    : tone === "progress"
+      ? { color: progressBlue(theme).colour, ...theme.applyStyles("light", { color: progressBlue(theme).light }) }
+      : { color: palette(theme)[tone].main, ...theme.applyStyles("light", { color: theme.palette[tone].dark }) };
 
 // PAR 2.0, Active cycle: the four steps as tabs, each with its state, and under them the open step's
 // panel, which `children` fills. The panel starts with the step's heading and, on its right, its date;
@@ -203,20 +215,28 @@ function TrackerStep({
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
           {/* A dot in the state's colour before the state word. */}
+          {/* Not started is a ring: nothing in it yet. */}
           <Box
             aria-hidden
-            sx={{
+            sx={(theme) => ({
               width: 7,
               height: 7,
               borderRadius: "50%",
               flexShrink: 0,
-              bgcolor: step.state === "not-available" ? "text.disabled" : STATE_COLOR[step.state],
-            }}
+              ...(step.state === "not-available"
+                ? { bgcolor: "text.disabled" }
+                : step.state === "not-started"
+                  ? { border: "1.5px solid currentColor", ...toneText(theme, "neutral") }
+                  : { bgcolor: "currentColor", ...toneText(theme, STATE_TONE[step.state]) }),
+            })}
           />
           <Typography
             variant="caption"
             component="div"
-            sx={{ fontWeight: step.state === "not-available" ? 500 : 600, color: STATE_COLOR[step.state] }}
+            sx={(theme) => ({
+              fontWeight: step.state === "not-available" ? 500 : 600,
+              ...toneText(theme, STATE_TONE[step.state]),
+            })}
           >
             {STEP_STATE_LABEL[step.state]}
           </Typography>
@@ -272,7 +292,10 @@ function PanelHeader({ header }: { header: StepHeader }) {
           <Typography variant="body2">
             {header.due.label} {formatShortDate(header.due.date)}
             {showDays && (
-              <Box component="span" sx={{ fontWeight: 600, color: days <= 3 ? "warning.main" : "primary.main" }}>
+              <Box
+                component="span"
+                sx={(theme) => ({ fontWeight: 600, ...toneText(theme, days <= 3 ? "warning" : "primary") })}
+              >
                 {" · "}
                 {daysLeftLabel(days)}
               </Box>

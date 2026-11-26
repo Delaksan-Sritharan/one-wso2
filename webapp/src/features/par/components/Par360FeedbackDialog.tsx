@@ -61,7 +61,6 @@ export default function Par360FeedbackDialog({
   employeeName,
   deadline,
   held = false,
-  offered = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -71,8 +70,6 @@ export default function Par360FeedbackDialog({
   deadline: string;
   /** No cycle is taking feedback: it's held for the employee's next cycle. */
   held?: boolean;
-  /** Nobody asked you for it. */
-  offered?: boolean;
 }) {
   const form = useReviewForm(parCycleId, employeeEmail, open);
   // The form closes itself, saving first; Escape and the backdrop go through it too.
@@ -107,7 +104,6 @@ export default function Par360FeedbackDialog({
           employeeName={employeeName}
           deadline={deadline}
           held={held}
-          offered={offered || held}
           onClose={onClose}
           closeRef={closeForm}
         />
@@ -122,7 +118,6 @@ function FeedbackForm({
   employeeName,
   deadline,
   held,
-  offered,
   onClose,
   closeRef,
 }: {
@@ -131,7 +126,6 @@ function FeedbackForm({
   employeeName: string;
   deadline: string;
   held: boolean;
-  offered: boolean;
   onClose: () => void;
   /** Set to this form's close, which saves first. */
   closeRef: MutableRefObject<(() => void) | null>;
@@ -264,9 +258,8 @@ function FeedbackForm({
             <Alert severity="error">The deadline for 360° feedback passed on {formatShortDate(deadline)}.</Alert>
           ) : (
             <Typography variant="body2" color="text.secondary">
-              {offered
-                ? `${employeeName}'s lead sees your feedback with your name.`
-                : `${employeeName} doesn't see your answers; their lead sees them with your name.`}
+              Your feedback will not be visible to {employeeName}. However, their team lead will be able to view
+              your feedback and see who provided it.
               {held && " It counts toward their next PAR cycle."}
             </Typography>
           )}
@@ -354,8 +347,8 @@ function OptionalMark() {
 
 const isWrittenSection = (section: FormSection) => section.questions.every((q) => q.type === "TEXT");
 
-// One section of the template. Choice and rating questions take a line each, the options on the
-// right; written questions are text boxes.
+// One section of the template. Choice and rating questions show their name with the options across
+// the line under it, room enough for long rating names; written questions are text boxes.
 function SectionFields({
   section,
   definition,
@@ -401,12 +394,9 @@ function SectionFields({
           key={q.id}
           sx={{
             display: "flex",
-            flexWrap: { xs: "wrap", md: "nowrap" },
-            alignItems: "center",
-            justifyContent: "space-between",
-            columnGap: 2,
+            flexDirection: "column",
             rowGap: 0.75,
-            py: 0.75,
+            py: 1,
             borderTop: single ? 0 : 1,
             borderBottom: !single && i === section.questions.length - 1 ? 1 : 0,
             borderColor: "divider",
@@ -471,7 +461,7 @@ function QuestionName({ question, missing, readOnly }: { question: FormQuestion;
   );
 }
 
-const OPTION_SX = { px: 1.5, py: 0.75, fontSize: 13, lineHeight: 1.3, textTransform: "none", whiteSpace: "nowrap" } as const;
+const OPTION_SX = { px: 1.5, py: 0.75, fontSize: 13, lineHeight: 1.3, textTransform: "none" } as const;
 
 /** A question's options. A picked rating takes its colour on the scale, red to green. */
 function OptionToggles({
@@ -496,19 +486,7 @@ function OptionToggles({
   const scale = definition.scales[question.scale ?? ""];
   if (!scale) return null;
   return (
-    <Box
-      role="group"
-      aria-label={name}
-      sx={{
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        columnGap: 1.5,
-        rowGap: 0.75,
-        flexShrink: 0,
-        maxWidth: "100%",
-      }}
-    >
+    <Box role="group" aria-label={name} sx={{ display: "flex" }}>
       <OptionGroup options={ratingLabels(scale)} value={value} readOnly={readOnly} onChange={onChange} tinted />
     </Box>
   );
@@ -540,13 +518,17 @@ function OptionGroup({
       aria-label={label}
       sx={[
         (theme) => ({
-          flexShrink: 0,
-          flexWrap: "wrap",
-          maxWidth: "100%",
-          "& .MuiToggleButton-root": OPTION_SX,
+          // One joined row across the line, the buttons sharing it; a long name takes a second line
+          // rather than pushing a button off the row.
+          flex: 1,
+          minWidth: 0,
+          "& .MuiToggleButton-root": { ...OPTION_SX, flex: "1 1 auto" },
           // Too narrow for one row: separate buttons that wrap, rather than a joined row cut off at the edge.
           [theme.breakpoints.down("md")]: {
+            flex: "0 1 auto",
+            flexWrap: "wrap",
             gap: 0.75,
+            "& .MuiToggleButton-root": { flex: "0 0 auto", whiteSpace: "nowrap" },
             "& .MuiToggleButtonGroup-grouped": {
               m: 0,
               borderRadius: 1,

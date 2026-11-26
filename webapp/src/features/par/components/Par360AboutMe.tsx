@@ -26,6 +26,7 @@ import { MIN_360_RESPONSES } from "../api/review360Types";
 import type { ParCycle } from "../api/types";
 import { Par360RequestPicker } from "./Par360RequestDialog";
 import { isDeadlinePassed } from "../util/parDeadline";
+import { progressBlue } from "../util/parProgressBlue";
 
 // Your own 360° feedback in a PAR 2.0 cycle: everyone asked for feedback on you,
 // by you or your lead, without saying who asked (who submitted, never what they
@@ -83,22 +84,24 @@ export default function Par360AboutMe({
     <Stack spacing={2}>
       {beforeRequests}
 
+      <Typography variant="body2" color="text.secondary">
+        Invite colleagues who have worked closely with you during this review cycle to share feedback on your
+        contributions, collaboration and areas for development. You are required to receive feedback from at least{" "}
+        {MIN_360_RESPONSES} colleagues to complete this section.
+      </Typography>
       <Box sx={{ display: "flex", alignItems: "baseline", columnGap: 1.5, rowGap: 0.5, flexWrap: "wrap" }}>
         <Typography sx={{ fontWeight: 600 }}>Feedback requests</Typography>
         {!countLoading && !countFailed && (
           <Typography variant="body2" color="text.secondary">
+            {/* Past the minimum, "5 of 3" would read wrong: only the number shows. */}
+            <Count n={received} />
             {received < MIN_360_RESPONSES && (
               <>
-                You need at least <Count n={MIN_360_RESPONSES} /> feedback.{" "}
+                {" "}
+                of <Count n={MIN_360_RESPONSES} />
               </>
-            )}
-            {received > 0 ? (
-              <>
-                <Count n={received} /> received.
-              </>
-            ) : (
-              "None yet."
-            )}
+            )}{" "}
+            feedback responses received
           </Typography>
         )}
       </Box>
@@ -207,21 +210,24 @@ function StatePill({ state }: { state: "requested" | "submitted" | "declined" })
     <Box
       component="span"
       sx={(theme) => {
-        const colour = {
-          requested: palette(theme).info.main,
-          submitted: palette(theme).success.main,
-          declined: palette(theme).error.main,
-        }[state];
+        // Waiting for an answer is blue, as an In progress step. Submitted and Declined take their tone's darker
+        // shade as text on a light surface, where the main shades are under 4.5:1.
+        if (state === "requested") {
+          const { colour: blue, light } = progressBlue(theme);
+          return {
+            ...PILL,
+            color: blue,
+            bgcolor: soft(blue),
+            ...theme.applyStyles("light", { color: light, bgcolor: soft(light) }),
+          };
+        }
+        const tone = ({ submitted: "success", declined: "error" } as const)[state];
+        const colour = palette(theme)[tone].main;
         return {
-          flexShrink: 0,
-          px: 1.25,
-          py: 0.25,
-          borderRadius: 999,
-          fontSize: 12.5,
-          fontWeight: 600,
-          whiteSpace: "nowrap",
+          ...PILL,
           color: colour,
           bgcolor: soft(colour),
+          ...theme.applyStyles("light", { color: theme.palette[tone].dark }),
         };
       }}
     >
@@ -229,6 +235,16 @@ function StatePill({ state }: { state: "requested" | "submitted" | "declined" })
     </Box>
   );
 }
+
+const PILL = {
+  flexShrink: 0,
+  px: 1.25,
+  py: 0.25,
+  borderRadius: 999,
+  fontSize: 12.5,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+} as const;
 
 // theme.palette holds the light scheme only; theme.vars follows the light/dark switch.
 const palette = (theme: Theme) => (theme.vars ?? theme).palette;

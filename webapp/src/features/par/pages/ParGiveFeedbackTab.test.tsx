@@ -15,7 +15,7 @@
 // under the License.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import type { ParCycle, ParParticipant, Par360ReviewRequest } from "../api/types";
@@ -103,6 +103,7 @@ let surveys: Leadership360Survey[];
 let mine: Leadership360MyFeedback;
 let requests: Par360ReviewRequest[];
 let participants: ParParticipant[];
+let participantsError: Error | null = null;
 const offerMutate = vi.fn();
 let offerPending = false;
 const declineMutate = vi.fn();
@@ -134,7 +135,8 @@ vi.mock("../api/usePar360", () => ({
   useReviewRequests: () => query(requests),
   useReviewers: () => query([]),
   useSubmitReview: () => ({ ...mutation(), mutate: declineMutate }),
-  useParticipants: () => query(participants),
+  useParticipants: () =>
+    participantsError ? { ...query(undefined), isError: true, error: participantsError } : query(participants),
   useOfferToReview: () => ({ ...mutation(), mutate: offerMutate, isPending: offerPending }),
 }));
 
@@ -148,7 +150,10 @@ vi.mock("../api/useReview360", () => ({
 }));
 
 let ownReports = new Set<string>();
-vi.mock("../api/useLeadTeams", () => ({ useOwnReports: () => ({ emails: ownReports, isLoading: false }) }));
+let ownReportsLoading = false;
+vi.mock("../api/useLeadTeams", () => ({
+  useOwnReports: () => ({ emails: ownReports, isLoading: ownReportsLoading }),
+}));
 
 const discardLeadershipMutate = vi.fn();
 vi.mock("../api/useLeadership360", () => ({
@@ -182,22 +187,22 @@ vi.mock("../components/Leadership360FeedbackDialog", () => ({
 
 const { default: ParGiveFeedbackTab } = await import("./ParGiveFeedbackTab");
 
-const tab = () => (
-  <MemoryRouter initialEntries={["/me/performance/give-feedback"]}>
+const tab = (search = "") => (
+  <MemoryRouter initialEntries={[`/me/performance/give-feedback${search}`]}>
     <ParGiveFeedbackTab />
   </MemoryRouter>
 );
 
-function show() {
-  return render(tab());
+/** The tab, on Requested unless `search` picks another filter. */
+function show(search = "") {
+  return render(tab(search));
 }
 
 const noFeedback = (): Leadership360MyFeedback => ({ drafts: [], named: [], anonymous: [] });
 
-/** Give feedback, then a person from the list. */
+/** A person from the search on the tab. */
 async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.click(screen.getByRole("button", { name: "Give feedback" }));
-  await user.type(screen.getByRole("combobox", { name: "Who is it for?" }), name);
+  await user.type(screen.getByRole("combobox", { name: "Search people" }), name);
   await user.click(screen.getByRole("option", { name: new RegExp(name) }));
 }
 
@@ -212,6 +217,8 @@ beforeEach(() => {
   leaders = query([elena, hannah]);
   parts = { cycle, hasLead: true, leadership: true };
   ownReports = new Set();
+  ownReportsLoading = false;
+  participantsError = null;
   participants = [
     { workEmail: "elena@example.com", employeeName: "Elena" },
     { workEmail: "alex@example.com", employeeName: "Alex" },
@@ -236,7 +243,7 @@ describe("ParGiveFeedbackTab", () => {
     ];
     mine = { ...noFeedback(), drafts: [{ leaderEmail: "hannah@example.com", answers: {}, anonymous: false }] };
     window.localStorage.setItem("par-l360-anonymous-draft:me@example.com:3:elena@example.com", "{}");
-    show();
+    show("?show=all");
     expect(screen.queryByRole("button", { name: /Requests to me/ })).not.toBeInTheDocument();
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(screen.getByText("Anonymous draft")).toBeInTheDocument();
@@ -272,7 +279,7 @@ describe("ParGiveFeedbackTab", () => {
       named: [{ leaderEmail: "hannah@example.com", submittedOn: "2026-11-02", answers: { q1: 4 } }],
       anonymous: [{ leaderEmail: "elena@example.com" }],
     };
-    show();
+    show("?show=voluntary");
     expect(screen.getByText("Submitted · 2 Nov '26")).toBeInTheDocument();
     expect(screen.getByText("Submitted anonymously")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "View" })).toHaveLength(1);
@@ -284,7 +291,7 @@ describe("ParGiveFeedbackTab", () => {
     const user = userEvent.setup();
     mine = { ...noFeedback(), drafts: [{ leaderEmail: "hannah@example.com", answers: {}, anonymous: false }] };
     window.localStorage.setItem("par-l360-anonymous-draft:me@example.com:3:elena@example.com", "{}");
-    show();
+    show("?show=voluntary");
     expect(screen.getAllByRole("button", { name: "Discard" })).toHaveLength(2);
     await user.click(screen.getAllByRole("button", { name: "Discard" })[0]);
     const dialog = screen.getByRole("dialog");
@@ -398,13 +405,37 @@ describe("ParGiveFeedbackTab", () => {
       { ...alexAsked, employeeEmail: "sam@example.com", employeeName: "Sam", isRequested: false },
     ];
     show();
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Requested" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Alex")).toBeInTheDocument();
+    expect(screen.queryByText("Sam")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Voluntary" }));
     expect(screen.getByText("Sam")).toBeInTheDocument();
     expect(screen.queryByText("Alex")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Requested" }));
+    await user.click(screen.getByRole("button", { name: "All" }));
     expect(screen.getByText("Alex")).toBeInTheDocument();
-    expect(screen.queryByText("Sam")).not.toBeInTheDocument();
+    expect(screen.getByText("Sam")).toBeInTheDocument();
+  });
+
+  it("describes the tab, and under the filter what Requested or Voluntary holds", async () => {
+    const user = userEvent.setup();
+    requests = [{ ...alexAsked, employeeName: "Alex" }];
+    show();
+    const tabDescription = /help your colleagues recognise their strengths/;
+    const requestedDescription = /Here you'll find feedback requests from colleagues.*Please ensure your comments are/;
+    const voluntaryDescription = /Share feedback proactively with anyone you have worked with.*Please ensure your comments/;
+    expect(screen.getByText(tabDescription)).toBeInTheDocument();
+    expect(screen.getByText(requestedDescription)).toBeInTheDocument();
+    expect(screen.queryByText(voluntaryDescription)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Voluntary" }));
+    expect(screen.getByText(tabDescription)).toBeInTheDocument();
+    expect(screen.getByText(voluntaryDescription)).toBeInTheDocument();
+    expect(screen.queryByText(requestedDescription)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.queryByText(requestedDescription)).not.toBeInTheDocument();
+    expect(screen.queryByText(voluntaryDescription)).not.toBeInTheDocument();
+    expect(screen.queryByText(/decline instead/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/five minutes/)).not.toBeInTheDocument();
+    expect(screen.getByText(/^Due /)).toBeInTheDocument();
   });
 
   it("says nobody asked when there's nothing, with no banner for the open survey", () => {
@@ -413,7 +444,7 @@ describe("ParGiveFeedbackTab", () => {
     expect(screen.queryByText("Leadership 360 · 2026 H2")).not.toBeInTheDocument();
   });
 
-  it("outside a cycle's 360° window, says feedback counts toward the next cycle, with no due date", () => {
+  it("outside a cycle's 360° window, lists what you gave with no filter and no due date", () => {
     parts = {
       cycle: undefined,
       feedbackCycle: { ...cycle, parCycleId: 0, parThreeSixtyRatingDeadline: "9999-12-31" },
@@ -422,20 +453,30 @@ describe("ParGiveFeedbackTab", () => {
       leadership: true,
     };
     requests = [{ ...alexAsked, employeeName: "Alex", reviewStatus: "DRAFT", isRequested: false }];
-    show();
-    expect(
-      screen.getByText("No PAR cycle is taking feedback right now. Feedback you give now counts toward the next PAR cycle."),
-    ).toBeInTheDocument();
+    // Even from a link to Requested, such as the request email's.
+    show("?show=requested");
+    // The forms say it counts toward their next PAR cycle; the list doesn't repeat it.
+    expect(screen.queryByText(/No PAR cycle is taking feedback/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Due /)).not.toBeInTheDocument();
+    // Nobody can ask between cycles: all of it is voluntary, so there's nothing to filter.
+    expect(screen.queryByRole("group", { name: "Show" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Voluntary" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Share feedback proactively with anyone you have worked with, without needing a request. Please ensure your comments are professional, constructive, and detailed to add meaningful insights.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Alex")).toBeInTheDocument();
   });
 });
 
-describe("Give feedback", () => {
-  it("has one Give feedback button; a request is answered with Respond", async () => {
+describe("Provide Feedback", () => {
+  it("has the person search on the tab, no button for it; a request is answered with Respond", async () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, employeeName: "Alex" }];
     show();
-    expect(screen.getAllByRole("button", { name: "Give feedback" })).toHaveLength(1);
+    expect(screen.getByRole("combobox", { name: "Search people" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Provide Feedback" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Respond" }));
     expect(screen.getByText("PAR form for Alex")).toBeInTheDocument();
   });
@@ -443,9 +484,8 @@ describe("Give feedback", () => {
   it("asks for the person first, from everyone, and a leader gets the Leadership 360° form", async () => {
     const user = userEvent.setup();
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
     expect(screen.queryByRole("button", { name: /For a PAR/ })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     const options = screen.getAllByRole("option").map((o) => o.textContent);
     expect(options).toHaveLength(3);
     expect(options[0]).toContain("Hannah");
@@ -459,25 +499,39 @@ describe("Give feedback", () => {
     const user = userEvent.setup();
     ownReports = new Set(["alex@example.com", "elena@example.com"]);
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Elena/ })).toHaveTextContent("Leadership 360°");
+  });
+
+  it("keeps the leadership team in the search when the cycle's people can't be loaded", async () => {
+    const user = userEvent.setup();
+    participantsError = new Error("HTTP 500");
+    show();
+    expect(screen.getByText(/Couldn't load people to choose from/)).toBeInTheDocument();
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
+    expect(screen.getByRole("option", { name: /Elena/ })).toHaveTextContent("Leadership 360°");
+    expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
+  });
+
+  it("waits for a lead's own reports before the search can be used", () => {
+    ownReportsLoading = true;
+    show();
+    expect(screen.getByRole("combobox", { name: "Search people" })).toBeDisabled();
   });
 
   it("leaves out people already in your list: you respond or continue there", async () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, employeeName: "Alex" }];
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Elena/ })).toBeInTheDocument();
   });
 
   it("shows an offer you opened but didn't answer as your draft, with nothing to decline", () => {
     requests = [{ ...alexAsked, employeeName: "Alex", isRequested: false }];
-    show();
+    show("?show=voluntary");
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Decline" })).not.toBeInTheDocument();
@@ -486,7 +540,7 @@ describe("Give feedback", () => {
   it("lets you discard feedback you offered, after confirming", async () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, employeeName: "Alex", reviewStatus: "DRAFT", isRequested: false }];
-    show();
+    show("?show=voluntary");
     await user.click(screen.getByRole("button", { name: "Discard" }));
     expect(screen.getByText("Discard your feedback for Alex?")).toBeInTheDocument();
     expect(
@@ -512,9 +566,11 @@ describe("Give feedback", () => {
     await pick(user, "Alex");
     expect(screen.getByText(/Offer feedback for Alex's 2026 H2 PAR\?/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByRole("combobox", { name: "Who is it for?" })).toHaveValue("");
+    // The confirmation fades out before the tab is reachable again.
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("combobox", { name: "Search people" })).toHaveValue("");
     expect(offerMutate).not.toHaveBeenCalled();
-    await user.type(screen.getByRole("combobox", { name: "Who is it for?" }), "Alex");
+    await user.type(screen.getByRole("combobox", { name: "Search people" }), "Alex");
     await user.click(screen.getByRole("option", { name: /Alex/ }));
     expect(screen.queryByRole("button", { name: "Cross-team" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Offer feedback" }));
@@ -539,8 +595,7 @@ describe("Give feedback", () => {
     const user = userEvent.setup();
     requests = [{ ...alexAsked, reviewStatus: "SHARED" }];
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     expect(screen.queryByRole("option", { name: /Alex/ })).not.toBeInTheDocument();
   });
 
@@ -548,8 +603,7 @@ describe("Give feedback", () => {
     const user = userEvent.setup();
     currentSurvey = null;
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     const elenaOption = screen.getByRole("option", { name: /Elena/ });
     expect(elenaOption).toHaveAttribute("aria-disabled", "true");
     expect(elenaOption).toHaveTextContent("Leadership 360° closed");
@@ -566,8 +620,7 @@ describe("Give feedback", () => {
     const user = userEvent.setup();
     mine = { ...noFeedback(), anonymous: [{ leaderEmail: "elena@example.com" }] };
     show();
-    await user.click(screen.getByRole("button", { name: "Give feedback" }));
-    await user.click(screen.getByRole("combobox", { name: "Who is it for?" }));
+    await user.click(screen.getByRole("combobox", { name: "Search people" }));
     const elenaOption = screen.getByRole("option", { name: /Elena/ });
     expect(elenaOption).not.toHaveAttribute("aria-disabled", "true");
     expect(elenaOption).toHaveTextContent("Leadership 360° · Submitted");
@@ -577,16 +630,16 @@ describe("Give feedback", () => {
 });
 
 describe("ParGiveFeedbackTab: the leadership team", () => {
-  it("waits for it before Give feedback, so a leader isn't taken for anyone else", () => {
+  it("waits for it before the person search, so a leader isn't taken for anyone else", () => {
     leaders = { ...query(undefined), isLoading: true };
     show();
-    expect(screen.getByRole("button", { name: "Give feedback" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Search people" })).toBeDisabled();
   });
 
   it("says when it couldn't be loaded, instead of listing requests as PAR feedback", () => {
     leaders = { ...query(undefined), isError: true, error: new Error("HTTP 500") };
     show();
     expect(screen.getByText(/Couldn't load the leadership team/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Give feedback" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Search people" })).toBeDisabled();
   });
 });

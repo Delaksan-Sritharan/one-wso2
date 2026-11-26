@@ -26,6 +26,7 @@ import {
   useLatestReviewCycle,
   useParRating,
 } from "@features/par/api/useParData";
+import { employeeDeadlineFor } from "@features/par/util/parDepartments";
 import { formatDate } from "../api/derive";
 
 // Compact horizontal 4-stage breadcrumb for the Performance & growth
@@ -118,7 +119,8 @@ export default function PerformanceStages({ workEmail }: { workEmail?: string })
       shortLabel: "Emp",
       fullLabel: "Employee PAR",
       status: mapEmployeeStatus(par?.parEmployeeStatus, cycleStatus),
-      deadline: cycle.parEmployeeDeadline,
+      // Their department's own self-review deadline, or the cycle's.
+      deadline: employeeDeadlineFor(cycle, par?.parDepartment),
     },
     {
       index: 2,

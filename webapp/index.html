@@ -22,10 +22,7 @@
       media="(prefers-color-scheme: light)"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Limit referrer leakage across origins. -->
-    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>One App</title>
-    <!-- Runtime config injected at deploy time. See public/config.js.example. -->
     <!-- Covers the moment before the two scripts below have downloaded, when the
          browser would otherwise paint its default white: the default theme's
          dark background, since dark is the default mode. The CSP allows inline
@@ -36,6 +33,7 @@
         background-color: #050a1c;
       }
     </style>
+    <!-- Runtime config injected at deploy time. See public/config.js.example. -->
     <script src="/config.js"></script>
     <!-- Paints the theme's background before the bundle loads, so dark mode
          doesn't flash white on every full load. After config.js: it reads

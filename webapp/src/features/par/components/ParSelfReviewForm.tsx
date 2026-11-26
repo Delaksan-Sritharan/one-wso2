@@ -37,6 +37,7 @@ import type { SelfReview, SelfReviewAnswers } from "../api/selfReviewTypes";
 import { useSaveParRating } from "../api/useParMutations";
 import { useSaveSelfReview, useShareSelfReview } from "../api/useSelfReview";
 import { isDeadlinePassed } from "../util/parDeadline";
+import { employeeDeadlineFor } from "../util/parDepartments";
 import { answersToSave, isSectionAnswered, shareBlockers } from "../util/selfReviewForm";
 
 const AUTOSAVE_DELAY_MS = 1200;
@@ -74,7 +75,8 @@ export default function ParSelfReviewForm({
 
   const status = rating.parEmployeeStatus;
   const shared = status === "SHARED" || status === "SHARED_BLOCKED";
-  const deadlinePassed = isDeadlinePassed(cycle.parEmployeeDeadline);
+  // Their department's own self-review deadline, or the cycle's.
+  const deadlinePassed = isDeadlinePassed(employeeDeadlineFor(cycle, rating.parDepartment));
   const editable = !shared && !deadlinePassed && (started || status === "DRAFT");
   // Same rule as the single comment: unshare until the lead shares their side.
   const canUnshare = status === "SHARED" && rating.parLeadStatus !== "SHARED" && !deadlinePassed;
@@ -182,12 +184,17 @@ export default function ParSelfReviewForm({
   if (shared) {
     return (
       <Stack spacing={1.5} sx={{ maxWidth: 1100 }}>
-        {/* Each section in a box of its own, with its answer. */}
+        {/* Each section in a box of its own, with its hint and its answer. */}
         {definition.sections.map((section) => (
           <Box key={section.id} sx={{ border: 1, borderColor: "divider", borderRadius: "10px", px: 2, py: 1.75 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: section.hint ? 0.25 : 0.5 }}>
               {section.title}
             </Typography>
+            {section.hint && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
+                {section.hint}
+              </Typography>
+            )}
             {section.questions.map((q) => {
               const text = (selfReview.answers[q.id] ?? "").trim();
               return (
@@ -353,7 +360,8 @@ export default function ParSelfReviewForm({
         <DialogTitle>Share your self-review?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
-            <b>{leadEmail ?? "Your lead"}</b> will be able to read it. You can unshare it until they start their review.
+            If you share this review, your feedback will be made available to <b>{leadEmail || "your lead"}</b>. Do you
+            wish to continue?
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

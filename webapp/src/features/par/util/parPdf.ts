@@ -152,8 +152,10 @@ export function downloadPar2Pdf({
   for (const s of selfReview.definition.sections) {
     for (const q of s.questions) {
       const text = selfReview.answers[q.id] ?? "";
-      // A section of one question is named by its title; with more, each answer by its question.
-      rows.push([s.questions.length > 1 ? q.text : s.title, { content: text || "-", styles: TEXT_CELL }]);
+      // A section of one question is named by its title, with its hint under it as on screen; with more,
+      // each answer by its question.
+      const label = s.questions.length > 1 ? q.text : s.hint ? `${s.title}\n${s.hint}` : s.title;
+      rows.push([label, { content: text || "-", styles: TEXT_CELL }]);
     }
   }
 

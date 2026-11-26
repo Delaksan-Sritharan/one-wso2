@@ -165,7 +165,7 @@ function show(initial = "/me/performance") {
           />
           <Route path="history" element={<Tab name="History" />} />
           <Route path="cycle/*" element={<Tab name="Active cycle" />} />
-          <Route path="give-feedback" element={<Tab name="Give feedback" />} />
+          <Route path="give-feedback" element={<Tab name="Provide Feedback" />} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -378,7 +378,7 @@ describe("a PAR 2.0 cycle", () => {
       hasLead("lead@wso2.com");
       show();
       expect(await screen.findByRole("tab", { name: "Active cycle" })).toBeInTheDocument();
-      expect(screen.getByRole("tab", { name: "Give feedback" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Provide Feedback" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "History" })).toBeInTheDocument();
       expect(screen.getAllByRole("tab")).toHaveLength(3);
       expect(await screen.findByTestId("url")).toHaveTextContent("/me/performance/cycle/self-review");
@@ -386,11 +386,11 @@ describe("a PAR 2.0 cycle", () => {
   );
 
   it(
-    "without a lead, has Give feedback and History and opens on Give feedback",
+    "without a lead, has Provide Feedback and History and opens on it",
     withPar2(async () => {
       hasLead(null);
       show();
-      expect(await screen.findByRole("tab", { name: "Give feedback" })).toBeInTheDocument();
+      expect(await screen.findByRole("tab", { name: "Provide Feedback" })).toBeInTheDocument();
       expect(screen.queryByRole("tab", { name: "Active cycle" })).not.toBeInTheDocument();
       expect(screen.getAllByRole("tab")).toHaveLength(2);
       expect(await screen.findByTestId("url")).toHaveTextContent("/me/performance/give-feedback");

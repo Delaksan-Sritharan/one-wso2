@@ -57,6 +57,23 @@ describe("downloadPar2Pdf", () => {
     expect(text).not.toContain("360° index");
   });
 
+  it("writes each self-review section's hint under its title, as on screen", () => {
+    downloadPar2Pdf({
+      rating: { parEmployeeEmail: "e@x.com" } as ParRating,
+      leadComment: "",
+      selfReview: {
+        definition: {
+          ...selfReviewDefinition,
+          sections: [{ ...selfReviewDefinition.sections[0], hint: "What did you contribute?" }, selfReviewDefinition.sections[1]],
+        },
+        answers: { impact: "Shipped it.", growth: "Learned to plan." },
+      },
+    });
+    const text = JSON.stringify(tables.at(-1));
+    expect(text).toContain('"Impact this cycle\\nWhat did you contribute?"');
+    expect(text).toContain('"Growth & learning"');
+  });
+
   it("adds the lead's 360° summary to the lead's feedback", () => {
     downloadPar2Pdf({
       rating: {

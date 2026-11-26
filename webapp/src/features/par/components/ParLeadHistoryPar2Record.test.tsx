@@ -44,7 +44,14 @@ const template = {
     version: 2,
     title: "Self-review",
     scales: {},
-    sections: [{ id: "impact", title: "Impact this cycle", questions: [{ id: "impact", type: "TEXT", text: "Impact" }] }],
+    sections: [
+      {
+        id: "impact",
+        title: "Impact this cycle",
+        hint: "What did you contribute, and what changed because of it?",
+        questions: [{ id: "impact", type: "TEXT", text: "Impact" }],
+      },
+    ],
   },
 } as SelfReview["template"];
 
@@ -66,6 +73,7 @@ describe("ParLeadHistoryPar2Record", () => {
     show(false);
     expect(screen.getByText("Great half.")).toBeInTheDocument();
     expect(screen.getByText("Shipped the sandbox")).toBeInTheDocument();
+    expect(screen.getByText("What did you contribute, and what changed because of it?")).toBeInTheDocument();
     expect(screen.getByText("PAR 360° evidence")).toBeInTheDocument();
     expect(screen.queryByText(/Leadership 360° results/)).not.toBeInTheDocument();
   });

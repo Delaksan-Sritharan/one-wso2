@@ -116,6 +116,21 @@ describe("giveFeedbackItems", () => {
       ["hannah@example.com", "submitted"],
     ]);
     expect(list[1].anonymousDraft).toBe(true);
+    // Only Ravi asked: Elena's is feedback you started unasked.
+    expect(waitingCount(list)).toBe(1);
+  });
+
+  it("counts requests waiting on you, drafts of them too, but not feedback you started unasked", () => {
+    const list = items([
+      request("PENDING"),
+      { ...request("DRAFT"), employeeEmail: "sam@example.com" },
+      { ...request("PENDING"), employeeEmail: "alex@example.com", isRequested: false },
+    ]);
+    expect(list.map((i) => [i.email, i.state])).toEqual([
+      ["ravi@example.com", "todo"],
+      ["sam@example.com", "draft"],
+      ["alex@example.com", "draft"],
+    ]);
     expect(waitingCount(list)).toBe(2);
   });
 

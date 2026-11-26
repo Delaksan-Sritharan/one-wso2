@@ -29,6 +29,7 @@ const globalConfig: ParCycleConfigurations = {
   evidenceEnabledRating: "Needs Improvements",
   missedDeadlineRating: "Needs Improvements",
   leadershipMissedDeadlineRating: "Step Up",
+  evidenceExemptDepartments: ["FIELD OPS", "PARTNER OPS"],
 };
 const mutate = vi.fn();
 const loaded = { isSuccess: true, data: globalConfig };
@@ -36,6 +37,7 @@ let configQuery: Record<string, unknown> = loaded;
 
 vi.mock("../api/useParAdmin", () => ({
   useParGlobalConfig: () => configQuery,
+  useParDepartments: () => ({ data: ["PARTNER OPS", "FIELD OPS", "FIELD OPS ENGINEERING"], isLoading: false, isError: false }),
 }));
 vi.mock("../api/useParMutations", () => ({
   useCreateParCycle: () => ({ mutate, isPending: false, isError: false, error: null }),
@@ -98,7 +100,33 @@ describe("ParCycleCreationDialog", () => {
       evidenceEnabledRating: "Needs Improvements",
       missedDeadlineRating: "Needs Improvements",
       leadershipMissedDeadlineRating: "Step Up",
+      evidenceExemptDepartments: ["FIELD OPS", "PARTNER OPS"],
+      departmentEmployeeDeadlines: [],
     });
+  });
+
+  it("gives a department its own self-review deadline, before the lead deadline, with par2 on", () => {
+    setPar2(true);
+    render(<ParCycleCreationDialog open onClose={vi.fn()} />);
+    fillNameAndDates();
+    fireEvent.click(screen.getByRole("button", { name: "Add a department's deadline" }));
+    expect(screen.getByRole("button", { name: "Start Cycle" })).toBeDisabled();
+    expect(screen.getByText("Pick a department for each self-review deadline.")).toBeInTheDocument();
+
+    const department = screen.getByRole("combobox", { name: "Department 1" });
+    fireEvent.keyDown(department, { key: "ArrowDown" });
+    fireEvent.click(screen.getByRole("option", { name: "FIELD OPS" }));
+    fireEvent.change(screen.getByLabelText("Self-review deadline 1"), { target: { value: "2027-07-15" } });
+    expect(screen.getByText("FIELD OPS's self-review deadline must be before the deadline for lead's feedback.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start Cycle" })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Self-review deadline 1"), { target: { value: "2027-07-08" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start Cycle" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Start PAR Cycle" })).getByRole("button", { name: "Confirm" }));
+    const [payload] = mutate.mock.calls[0];
+    expect(payload.parCycleConfigurations.departmentEmployeeDeadlines).toEqual([
+      { department: "FIELD OPS", deadline: "2027-07-08" },
+    ]);
   });
 
   it("can't start once a rating a rule uses is removed", () => {

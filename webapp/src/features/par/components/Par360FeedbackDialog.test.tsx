@@ -76,7 +76,7 @@ function pending(answers: Review360Form["answers"] = {}, reviewStatus: Review360
   } as Review360Form;
 }
 
-function renderDialog(offered = false) {
+function renderDialog() {
   render(
     <Par360FeedbackDialog
       open
@@ -85,7 +85,6 @@ function renderDialog(offered = false) {
       employeeEmail="alex@wso2.com"
       employeeName="Alex Morgan"
       deadline="9999-12-31"
-      offered={offered}
     />,
   );
 }
@@ -97,16 +96,13 @@ beforeEach(() => {
 });
 
 describe("Par360FeedbackDialog", () => {
-  it("says in one line who sees what", () => {
+  it("says who sees the feedback", () => {
     renderDialog();
     expect(
-      screen.getByText("Alex Morgan doesn't see your answers; their lead sees them with your name."),
+      screen.getByText(
+        "Your feedback will not be visible to Alex Morgan. However, their team lead will be able to view your feedback and see who provided it.",
+      ),
     ).toBeInTheDocument();
-  });
-
-  it("says only who reads feedback nobody asked for", () => {
-    renderDialog(true);
-    expect(screen.getByText("Alex Morgan's lead sees your feedback with your name.")).toBeInTheDocument();
   });
 
   it("keeps a behaviour's description behind its help icon", () => {

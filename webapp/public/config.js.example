@@ -93,12 +93,9 @@ window.config = {
   // powers the Me page's active-review row.
   // ONE_WSO2_PAR_BACKEND_URL: "<your-par-backend-url>",
   // OAuth client ID for the Lead Portal's "Attach from Google Drive" evidence
-  // picker (scope: drive.readonly). When absent, the picker's token request
-  // fails.
+  // picker (scope: drive.readonly). The PAR backend's googleOAuthClientId
+  // setting takes precedence; this is read only when that isn't set.
   // ONE_WSO2_PAR_GOOGLE_OAUTH_CLIENT_ID: "<your-google-oauth-client-id>",
-  // Browser API key for the same picker. Usually not needed; set it only if
-  // Google reports an invalid developer key. Restrict it by HTTP referrer.
-  // ONE_WSO2_PAR_GOOGLE_PICKER_API_KEY: "<your-google-picker-api-key>",
   // The PAR rating names that trigger the Top 5%/20% checkbox and the evidence
   // requirement. Configurable because admins can rename the rating list.
   // ONE_WSO2_PAR_TOP5P20P_ENABLED_RATING: "Successful",

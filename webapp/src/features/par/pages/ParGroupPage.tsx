@@ -68,17 +68,17 @@ const HISTORY_ONLY_TABS: RoutedTabDef[] = [{ segment: "history", label: "PAR His
 
 // A PAR 2.0 cycle (one with the structured 360° form, behind the `par2`
 // preview flag): three tabs. 360° feedback runs all year, so with the flag on
-// and no cycle open, Give feedback stays, next to History.
+// and no cycle open, Provide Feedback stays, next to History.
 //
 // With a cycle: Active cycle holds everything about your own PAR
-// (self-review, asking for 360° feedback, F2F); Give feedback holds feedback
+// (self-review, asking for 360° feedback, F2F); Provide Feedback holds feedback
 // for others, PAR and Leadership 360°; History holds past cycles. Without a
 // lead there's no PAR of your own to work on, only feedback to give.
 const ACTIVE_CYCLE_TAB: RoutedTabDef = { segment: "cycle", label: "Active cycle" };
 const PAR2_HISTORY_TAB: RoutedTabDef = { segment: "history", label: "History" };
 const giveFeedbackTab = (waiting: number): RoutedTabDef => ({
   segment: "give-feedback",
-  label: waiting > 0 ? `Give feedback (${waiting})` : "Give feedback",
+  label: waiting > 0 ? `Provide Feedback (${waiting})` : "Provide Feedback",
 });
 
 // One page frame for everything an employee does with their own PAR — the
@@ -110,7 +110,11 @@ export default function ParGroupPage() {
   return (
     <ParShell
       title="Performance Appraisal Review"
-      subtitle="Complete your own feedback, request and give 360° feedback and see your record from past cycles."
+      subtitle={
+        isPreviewEnabled("par2")
+          ? "Reflect on your contributions, recognise your growth, exchange 360° feedback and revisit your progress from previous review cycles."
+          : "Complete your own feedback, request and give 360° feedback and see your record from past cycles."
+      }
     >
       {loadError ? (
         // Without the open cycle, or whether it uses the PAR 2.0 forms, there's no
@@ -136,9 +140,9 @@ export default function ParGroupPage() {
   );
 }
 
-/** People waiting on your feedback in a PAR 2.0 cycle, for the Give feedback
- * tab's label: requests not yet answered and Leadership 360° drafts (named ones
- * on the server, anonymous ones in this browser), one per person. */
+/** Requests waiting on your feedback in a PAR 2.0 cycle, for the Provide
+ * Feedback tab's label: requests to you not yet answered, one per person.
+ * Feedback you started unasked (PAR or Leadership 360°) isn't counted. */
 function useFeedbackWaiting(workEmail: string | undefined, cycle: ParCycle | undefined): number {
   // After the cycle's 360° deadline, feedback is held for the next cycle (cycle 0): count that.
   const windowOpen = cycle !== undefined && !isDeadlinePassed(cycle.parThreeSixtyRatingDeadline);

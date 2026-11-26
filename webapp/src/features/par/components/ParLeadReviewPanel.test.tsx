@@ -16,7 +16,7 @@
 
 import { useEffect, useImperativeHandle, type ReactNode, type Ref } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ParCycle, ParRating } from "../api/types";
 import { encodeParComment } from "../util/parComment";
 import type { ParRichTextFieldHandle } from "./ParRichTextField";
@@ -181,6 +181,11 @@ describe("ParLeadReviewPanel: Top 5%/20%", () => {
     pick("N/A");
     expect(screen.queryByText(STATEMENT)).not.toBeInTheDocument();
     expect(specialRatingSelect()).toHaveTextContent("N/A");
+  });
+
+  it("isn't offered to the leadership team", () => {
+    show({ parRating: "Successful", parIsLeadershipEmployee: true, parSpecialRatingEligibility: false });
+    expect(screen.queryByText("Top 5%/20%")).not.toBeInTheDocument();
   });
 });
 
@@ -507,5 +512,111 @@ describe("ParLeadReviewPanel: a PAR not shared by its deadline", () => {
       screen.getByText(/You can share once Alex shares their self-review\. If they don't by .+, their rating will be Needs Improvements\./),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Share" })).toBeDisabled();
+  });
+});
+
+describe("ParLeadReviewPanel: a department's own rules", () => {
+  const rulesCycle = {
+    ...cycle,
+    parCycleConfigurations: {
+      parRatings: ["Successful", "Needs Improvements", "Step Up"],
+      employeeRatings: ["Successful", "Needs Improvements"],
+      leadershipAllowedRatings: ["Successful", "Step Up"],
+      top5p20pEnabledRating: "Successful",
+      evidenceEnabledRating: "Needs Improvements",
+      missedDeadlineRating: "Needs Improvements",
+      leadershipMissedDeadlineRating: "Step Up",
+      evidenceExemptDepartments: ["FIELD OPS", "PARTNER OPS"],
+      departmentEmployeeDeadlines: [{ department: "FIELD OPS", deadline: "2999-12-01" }],
+    },
+  } as unknown as ParCycle;
+  const needsImprovement = {
+    parRatingId: 7,
+    parCycleId: 2,
+    parEmployeeEmail: "alex@example.com",
+    parEmployeeName: "Alex Morgan",
+    parEmployeeStatus: "SHARED",
+    parLeadStatus: "DRAFT",
+    parIsLeadershipEmployee: false,
+    parRating: "Needs Improvements",
+    parLeadComment: encodeParComment("<p>Needs work.</p>"),
+  } as ParRating;
+  const EVIDENCE = /Performance gaps were discussed/;
+
+  it("needs the confirmation and a file for Needs Improvements elsewhere", () => {
+    rating = { ...needsImprovement, parDepartment: "FIELD OPS ENGINEERING" };
+    render(<ParLeadReviewPanel cycle={rulesCycle} employeeEmail="alex@example.com" />);
+    expect(screen.getByRole("checkbox", { name: EVIDENCE })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Share" })).toBeDisabled();
+  });
+
+  it("shares Needs Improvements without them in a department that needs no evidence", () => {
+    rating = { ...needsImprovement, parDepartment: "Field Ops" };
+    render(<ParLeadReviewPanel cycle={rulesCycle} employeeEmail="alex@example.com" />);
+    expect(screen.queryByRole("checkbox", { name: EVIDENCE })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Attach from Google Drive/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Share" })).toBeEnabled();
+  });
+
+  it("follows the department's own self-review deadline", () => {
+    const passed = {
+      ...rulesCycle,
+      parEmployeeDeadline: "2020-01-01",
+    } as unknown as ParCycle;
+    rating = { ...needsImprovement, parEmployeeStatus: "PENDING", parRating: "Successful", parDepartment: "FIELD OPS" };
+    render(<ParLeadReviewPanel cycle={passed} employeeEmail="alex@example.com" />);
+    expect(screen.queryByLabelText("Rating auto-assigned and locked")).not.toBeInTheDocument();
+
+    cleanup();
+    rating = { ...rating, parDepartment: "FIELD OPS ENGINEERING" };
+    render(<ParLeadReviewPanel cycle={passed} employeeEmail="alex@example.com" />);
+    expect(screen.getByLabelText("Rating auto-assigned and locked")).toBeInTheDocument();
+  });
+});
+
+describe("ParLeadReviewPanel: evidence links", () => {
+  const evidenceCycle = {
+    ...cycle,
+    parCycleConfigurations: {
+      parRatings: ["Successful", "Needs Improvements"],
+      employeeRatings: ["Successful", "Needs Improvements"],
+      top5p20pEnabledRating: "Successful",
+      evidenceEnabledRating: "Needs Improvements",
+    },
+  } as unknown as ParCycle;
+  const LINK = "https://drive.google.com/file/d/abc/view";
+  const showWithLink = () => {
+    rating = {
+      parRatingId: 7,
+      parCycleId: 2,
+      parEmployeeEmail: "alex@example.com",
+      parEmployeeStatus: "SHARED",
+      parLeadStatus: "DRAFT",
+      parIsLeadershipEmployee: false,
+      parRating: "Needs Improvements",
+      parLeadComment: encodeParComment("<p>Let's work on this.</p>"),
+      parPerformanceNoticeAck: LINK,
+    } as ParRating;
+    render(<ParLeadReviewPanel cycle={evidenceCycle} employeeEmail="alex@example.com" />);
+  };
+  const savedPayload = () => ratingMutate.mock.calls.at(-1)![0].payload;
+
+  it("takes the saved links away once the lead removes them all", async () => {
+    showWithLink();
+    fireEvent.click(screen.getByRole("button", { name: `Remove ${LINK}` }));
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await act(async () => {});
+    expect(savedPayload()).toMatchObject({ parPerformanceNoticeAck: "" });
+  });
+
+  it("leaves them out of a save that doesn't change them", async () => {
+    showWithLink();
+    fireEvent.change(screen.getByLabelText("Enter your comment here"), {
+      target: { value: "<p>Let's work on this together.</p>" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await act(async () => {});
+    expect(savedPayload()).toMatchObject({ parRating: "Needs Improvements" });
+    expect(savedPayload()).not.toHaveProperty("parPerformanceNoticeAck");
   });
 });
