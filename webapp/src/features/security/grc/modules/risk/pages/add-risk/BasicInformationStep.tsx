@@ -90,7 +90,7 @@ export default function BasicInformationStep({
   lookups,
   onCustomerAdded,
 }: BasicInformationStepProps): JSX.Element {
-  const { control, clearErrors, setValue } = useFormContext<AddRiskFormValues>();
+  const { control, clearErrors, setValue, getValues } = useFormContext<AddRiskFormValues>();
   const authFetch = useAuthApiClient();
 
   const year             = useWatch({ control, name: "year" });
@@ -113,6 +113,8 @@ export default function BasicInformationStep({
   const handleSuggestCategory = useCallback(async () => {
     setSuggesting(true);
     setSuggestError(null);
+    const requestBasis = categoryBasis(riskTitle, riskDescription, complianceReferences);
+    const requestCategory = getValues("riskCategory");
     try {
       const result = await suggestCategory(
         authFetch,
@@ -120,6 +122,16 @@ export default function BasicInformationStep({
         riskDescription,
         complianceReferences ?? [],
       );
+      // The category and the text can be edited while the request runs. A
+      // response for different inputs, or one that would overwrite a category
+      // the user picked meanwhile, is dropped.
+      const now = getValues();
+      if (
+        categoryBasis(now.riskTitle, now.riskDescription, now.complianceReferences) !== requestBasis ||
+        now.riskCategory !== requestCategory
+      ) {
+        return;
+      }
       setValue("riskCategory", result.category_id, { shouldValidate: true, shouldDirty: true });
       setValue("aiCategorySuggestion", {
         categoryId: result.category_id,
@@ -142,7 +154,7 @@ export default function BasicInformationStep({
     } finally {
       setSuggesting(false);
     }
-  }, [authFetch, riskTitle, riskDescription, complianceReferences, setValue, clearErrors]);
+  }, [authFetch, riskTitle, riskDescription, complianceReferences, setValue, getValues, clearErrors]);
 
   // Risk Assigned To is restricted to users who already hold RISK_CREATE in
   // the chosen source register — the same grant handleCreateRisk itself
@@ -550,19 +562,9 @@ export default function BasicInformationStep({
                   onChange={(e) => {
                     field.onChange(e);
                     if (e.target.value) clearErrors("riskCategory");
-                    // Clear the suggestion banner once the user picks
-                    // something other than what was suggested — otherwise it
-                    // keeps showing a confidence/reason that no longer
-                    // matches the now-selected category. The actual
-                    // accept/override decision is still correct either way
-                    // (the backend compares against the real final value),
-                    // this only fixes what's displayed.
-                    if (
-                      aiCategorySuggestion &&
-                      e.target.value !== aiCategorySuggestion.categoryId
-                    ) {
-                      setValue("aiCategorySuggestion", null);
-                    }
+                    // The suggestion snapshot is kept when the user picks a
+                    // different category, so the backend can record the
+                    // override; only the banner is hidden (see below).
                   }}
                 >
                   <ComplexSelect.MenuItem value="" disabled sx={{ display: "none" }}>
@@ -584,6 +586,7 @@ export default function BasicInformationStep({
                 )}
                 {!suggestError &&
                   aiCategorySuggestion &&
+                  field.value === aiCategorySuggestion.categoryId &&
                   suggestionIsCurrent(aiCategorySuggestion, categoryBasis(riskTitle, riskDescription, complianceReferences)) && (
                   <Alert severity="info" sx={{ mt: 1 }}>
                     <Typography variant="body2">

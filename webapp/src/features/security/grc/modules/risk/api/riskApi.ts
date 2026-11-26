@@ -446,12 +446,9 @@ export interface CreateAssessmentPayload {
   assigner_id?: number;
   action_owner_id?: number;
   // Residual counterpart to buildCreateRiskPayload's ai_likelihood_suggestion
-  // (Gross). The backend already supports this (handleAssessRisk,
-  // apps/grc-platform/backend/internal/risk/handler/assessment.go) — the
-  // reassessment UI itself doesn't populate it yet; that's a "Suggest
-  // Likelihood" button on whatever renders this form (RiskRegisters.tsx),
-  // not yet built, same kind of gap as EditRiskDialog's missing Category
-  // field.
+  // (Gross). The Reassess dialog's "Suggest Likelihood" button fills it, and it
+  // is sent only while the risk's inputs still match what the suggestion was
+  // made for.
   ai_likelihood_suggestion?: {
     score: number;
     reason: string;

@@ -331,9 +331,9 @@ export default function ActionPlanDialog({
                       size="small"
                       variant="contained"
                       onClick={handleUseSuggestion}
-                      disabled={suggestion.used || submitting}
+                      disabled={actionPlanStillUsed(suggestion, description) || submitting}
                     >
-                      {suggestion.used ? "Suggestion in use" : "Use this suggestion"}
+                      {actionPlanStillUsed(suggestion, description) ? "Suggestion in use" : "Use this suggestion"}
                     </Button>
                   </Box>
                 </Stack>

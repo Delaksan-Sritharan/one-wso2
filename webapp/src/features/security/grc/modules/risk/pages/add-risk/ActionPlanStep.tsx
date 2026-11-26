@@ -35,7 +35,7 @@ import { Plus, Trash2 } from "@wso2/oxygen-ui-icons-react";
 import type { JSX, ReactNode } from "react";
 import EvidenceAttachments from "@features/security/grc/components/evidence-attachments/EvidenceAttachments";
 import AIDraftNotice from "./AIDraftNotice";
-import { actionPlanBasis } from "./suggestionBasis";
+import { actionPlanBasis, actionPlanStillUsed, suggestionIsCurrent } from "./suggestionBasis";
 import type { AddRiskFormValues } from "./types";
 import { TREATMENT_STRATEGIES } from "./constants";
 import {
@@ -561,7 +561,12 @@ export default function ActionPlanStep({
                   {actionPlanSuggestError}
                 </Alert>
               )}
-              {!actionPlanSuggestError && aiActionPlanSuggestion && (
+              {!actionPlanSuggestError &&
+                aiActionPlanSuggestion &&
+                suggestionIsCurrent(
+                  aiActionPlanSuggestion,
+                  actionPlanBasis(riskTitle, riskDescription, riskCategory, complianceReferences, treatmentStrategy),
+                ) && (
                 <Alert severity="info" sx={{ mt: 1 }}>
                   <Stack gap={1}>
                     <AIDraftNotice />
@@ -576,9 +581,9 @@ export default function ActionPlanStep({
                         size="small"
                         variant="contained"
                         onClick={handleUseActionPlanSuggestion}
-                        disabled={aiActionPlanSuggestion.used}
+                        disabled={actionPlanStillUsed(aiActionPlanSuggestion, field.value)}
                       >
-                        {aiActionPlanSuggestion.used ? "Suggestion in use" : "Use this suggestion"}
+                        {actionPlanStillUsed(aiActionPlanSuggestion, field.value) ? "Suggestion in use" : "Use this suggestion"}
                       </Button>
                     </Box>
                   </Stack>

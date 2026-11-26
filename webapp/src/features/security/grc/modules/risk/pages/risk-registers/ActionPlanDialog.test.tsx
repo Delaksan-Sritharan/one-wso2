@@ -15,12 +15,21 @@
 // under the License.
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import ActionPlanDialog from "./ActionPlanDialog";
 import { riskDetail } from "./riskDetailFixture";
 
 vi.mock("@features/security/grc/shim/useAuthApiClient", () => ({ useAuthApiClient: () => vi.fn() }));
 vi.mock("@features/security/grc/shim/apiConfig", () => ({ BACKEND_BASE_URL: "http://backend.test" }));
+
+const suggestActionPlan = vi.hoisted(() => vi.fn());
+vi.mock("../../api/riskApi", async (importActual) => ({
+  ...(await importActual<typeof import("../../api/riskApi")>()),
+  suggestActionPlan,
+}));
+
+beforeEach(() => suggestActionPlan.mockReset());
 
 describe("ActionPlanDialog", () => {
   it("gives the description textarea the accessible name Action Plan Description", () => {
@@ -28,5 +37,19 @@ describe("ActionPlanDialog", () => {
 
     const field = screen.getByRole("textbox", { name: "Action Plan Description" });
     expect(field.tagName).toBe("TEXTAREA");
+  });
+
+  it("lets the user apply the suggestion again after editing the text it filled in", async () => {
+    suggestActionPlan.mockResolvedValue({ description: "Rotate the keys.", reason: "r", confidence: "high" });
+    const detail = riskDetail({ risk_categories: [{ id: 7, name: "Secrets", description: null }] });
+    render(<ActionPlanDialog open onClose={vi.fn()} onConfirm={vi.fn()} riskDetail={detail} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Generate Action Description" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Use this suggestion" }));
+    expect(screen.getByRole("button", { name: "Suggestion in use" })).toBeDisabled();
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Action Plan Description" }), " Also rotate tokens.");
+
+    expect(screen.getByRole("button", { name: "Use this suggestion" })).toBeEnabled();
   });
 });

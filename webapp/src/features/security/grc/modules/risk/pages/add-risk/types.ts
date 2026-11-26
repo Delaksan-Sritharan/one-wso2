@@ -42,9 +42,8 @@ export interface ActionStep {
 
 // Confidence is the model's own self-reported confidence, not a calibrated
 // probability. Held in form state from the moment "Suggest category" returns
-// a result until the form is actually submitted — nothing is persisted
-// server-side until then (see AICategorySuggestion's doc comment on the
-// backend, apps/grc-platform/backend/internal/risk/model/suggestion.go).
+// a result until the form is actually submitted. Nothing is persisted
+// server-side until then.
 export interface AICategorySuggestion {
   categoryId: number;
   reason: string;
