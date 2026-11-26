@@ -159,63 +159,66 @@ function Header({ product, basicsUnsaved }: HeaderProps): JSX.Element {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+      {/* The title on the left, the actions at the top right (below it on narrow screens). */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
-        <Typography component="h1" variant="h5" sx={{ m: 0 }}>
-          {product ? product.name : "New product"}
-        </Typography>
-        {product && <TintedChip color={STATUS_CHIP[product.status].color} label={STATUS_CHIP[product.status].label} />}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap", minWidth: 0 }}>
+          <Typography component="h1" variant="h5" sx={{ m: 0 }}>
+            {product ? product.name : "New product"}
+          </Typography>
+          {product && <TintedChip color={STATUS_CHIP[product.status].color} label={STATUS_CHIP[product.status].label} />}
+        </Box>
+        {product && (
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1, flexWrap: "wrap", ml: "auto" }}>
+            {product.status !== "ACTIVE" && (
+              <Button
+                variant="contained"
+                disabled={setStatus.isPending || basicsUnsaved}
+                onClick={() => setStatus.mutate({ status: "ACTIVE" })}
+              >
+                {setStatus.isPending ? "Saving…" : product.status === "DRAFT" ? "Publish" : "Restore"}
+              </Button>
+            )}
+            {product.status !== "ACTIVE" && basicsUnsaved && (
+              <Typography variant="body2" color="text.secondary" sx={{ alignSelf: "center" }}>
+                Save the basics first.
+              </Typography>
+            )}
+            {product.status === "ACTIVE" && (
+              <Button variant="outlined" color="error" onClick={() => setRemoving(true)}>
+                Remove from store
+              </Button>
+            )}
+            {product.status === "DRAFT" && !confirmDelete && (
+              <Button color="error" onClick={() => setConfirmDelete(true)}>
+                Delete draft
+              </Button>
+            )}
+            {product.status === "DRAFT" && confirmDelete && (
+              <>
+                <Typography variant="body2" sx={{ alignSelf: "center" }}>
+                  Delete this draft for good?
+                </Typography>
+                <Button
+                  color="error"
+                  variant="contained"
+                  disabled={deleteDraft.isPending}
+                  onClick={() => deleteDraft.mutate(undefined, { onSuccess: () => navigate(swagStoreAdminPaths.productsTab("draft")) })}
+                >
+                  {deleteDraft.isPending ? "Deleting…" : "Yes, delete"}
+                </Button>
+                <Button onClick={() => setConfirmDelete(false)} disabled={deleteDraft.isPending}>
+                  Cancel
+                </Button>
+              </>
+            )}
+          </Box>
+        )}
       </Box>
       {product?.status === "REMOVED" && (
         <Alert severity="info">
           Removed{product.removedAt ? ` ${formatInstant(product.removedAt)}` : ""}.{product.removalNote ? ` ${product.removalNote}` : ""} Orders
           placed before that are still being served.
         </Alert>
-      )}
-      {product && (
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-          {product.status !== "ACTIVE" && (
-            <Button
-              variant="contained"
-              disabled={setStatus.isPending || basicsUnsaved}
-              onClick={() => setStatus.mutate({ status: "ACTIVE" })}
-            >
-              {setStatus.isPending ? "Saving…" : product.status === "DRAFT" ? "Publish" : "Restore"}
-            </Button>
-          )}
-          {product.status !== "ACTIVE" && basicsUnsaved && (
-            <Typography variant="body2" color="text.secondary" sx={{ alignSelf: "center" }}>
-              Save the basics first.
-            </Typography>
-          )}
-          {product.status === "ACTIVE" && (
-            <Button variant="outlined" color="error" onClick={() => setRemoving(true)}>
-              Remove from store
-            </Button>
-          )}
-          {product.status === "DRAFT" && !confirmDelete && (
-            <Button color="error" onClick={() => setConfirmDelete(true)}>
-              Delete draft
-            </Button>
-          )}
-          {product.status === "DRAFT" && confirmDelete && (
-            <>
-              <Typography variant="body2" sx={{ alignSelf: "center" }}>
-                Delete this draft for good?
-              </Typography>
-              <Button
-                color="error"
-                variant="contained"
-                disabled={deleteDraft.isPending}
-                onClick={() => deleteDraft.mutate(undefined, { onSuccess: () => navigate(swagStoreAdminPaths.productsTab("draft")) })}
-              >
-                {deleteDraft.isPending ? "Deleting…" : "Yes, delete"}
-              </Button>
-              <Button onClick={() => setConfirmDelete(false)} disabled={deleteDraft.isPending}>
-                Cancel
-              </Button>
-            </>
-          )}
-        </Box>
       )}
       {setStatus.isError && <Alert severity="error">{messageFor(setStatus.error)}</Alert>}
       {deleteDraft.isError && <Alert severity="error">{messageFor(deleteDraft.error)}</Alert>}
