@@ -17,6 +17,7 @@
 import { useCallback, useMemo } from "react";
 import type { EngagementQueryParams } from "@config/apiConfig";
 import { useUrlViewState, type UrlViewCodec } from "@hooks/useUrlViewState";
+import { PAGE_SIZES, usePageSize } from "./pageSize";
 
 /** A list's applied search, filters and page, all in the query string. */
 export type ListView = Readonly<Record<string, string>>;
@@ -35,11 +36,13 @@ const codec: UrlViewCodec<ListView> = {
   },
 };
 
-export const PAGE_SIZE = 25;
-
-/** A list screen's view, bound to the address bar: the search (`q`), each applied filter by its key (several values comma-joined), the page, and the column sort (`sort`, `-` for descending). */
-export function useListView() {
+/**
+ * A list screen's view, bound to the address bar: the search (`q`), each applied filter by its key (several values comma-joined), the page, and the column sort (`sort`, `-` for descending).
+ * `id` names the list for its rows-per-page choice, which is kept per list in this browser. `defaultSort` is the order the list asks for until a header is clicked.
+ */
+export function useListView(id = "list", { defaultSort }: { defaultSort?: string } = {}) {
   const { view, setView } = useUrlViewState(codec);
+  const [pageSize, choosePageSize] = usePageSize(id);
   const page = Math.max(0, Number(view.page ?? 0) || 0);
   const sort = view.sort ?? "";
 
@@ -54,11 +57,16 @@ export function useListView() {
     [setView, view.q, view.sort],
   );
 
+  const setPage = (p: number) => setView({ ...view, page: p > 0 ? String(p) : "" });
+
   const filters = useMemo(() => {
     const out: Record<string, string> = {};
     for (const [k, v] of Object.entries(view)) if (k !== "q" && k !== "page" && k !== "sort") out[k] = v;
     return out;
   }, [view]);
+
+  /** A new sort goes back to the first page; `""` is the default order. */
+  const setSort = (next: string) => setView({ ...filters, ...(view.q ? { q: view.q } : {}), ...(next ? { sort: next } : {}) });
 
   return {
     view,
@@ -67,9 +75,25 @@ export function useListView() {
     sort,
     filters,
     setSearch: (q: string) => setView({ ...filters, ...(q ? { q } : {}), ...(sort ? { sort } : {}) }),
-    /** A new sort goes back to the first page; `""` is the default order. */
-    setSort: (next: string) => setView({ ...filters, ...(view.q ? { q: view.q } : {}), ...(next ? { sort: next } : {}) }),
-    setPage: (p: number) => setView({ ...view, page: p > 0 ? String(p) : "" }),
+    setSort,
+    setPage,
+    pageSize,
+    /** The pager a table shows for `total` rows: page, rows per page and the handlers for both. */
+    pager: (total: number) => ({
+      page,
+      pageSize,
+      total,
+      onPage: setPage,
+      pageSizes: PAGE_SIZES,
+      onPageSize: (size: number) => {
+        choosePageSize(size);
+        setView({ ...view, page: "" });
+      },
+    }),
+    /** The rows of the current page, for a list that holds all its rows in the browser. */
+    pageOf: <T,>(rows: readonly T[]): T[] => rows.slice(page * pageSize, (page + 1) * pageSize),
+    /** What a table's `sorting` takes. */
+    sorting: { sort, onSort: setSort },
     setFilters,
     removeFilter: (key: string) => {
       const rest = { ...filters };
@@ -82,7 +106,7 @@ export function useListView() {
       for (const [k, v] of Object.entries(filters)) {
         out[k] = defs.find((d) => d.key === k)?.type === "multi" ? v.split(",").filter(Boolean) : v;
       }
-      return { ...out, search: view.q || undefined, sort: sort || undefined, limit: PAGE_SIZE, offset: page * PAGE_SIZE };
+      return { ...out, search: view.q || undefined, sort: sort || defaultSort || undefined, limit: pageSize, offset: page * pageSize };
     },
   };
 }

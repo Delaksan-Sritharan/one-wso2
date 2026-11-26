@@ -19,6 +19,11 @@ import { Box, Button, IconButton, Menu, MenuItem } from "@wso2/oxygen-ui";
 import { EllipsisVerticalIcon } from "@wso2/oxygen-ui-icons-react";
 import type { RowAction } from "./EaTable";
 
+/** How a table row shows its actions: one is a button, two or more share the row's menu. */
+export function rowActionLayout(actions: readonly RowAction[]): { readonly button?: RowAction; readonly menu: readonly RowAction[] } {
+  return actions.length === 1 ? { button: actions[0], menu: [] } : { menu: actions };
+}
+
 /** A record's actions on its own page: the primary one filled, the rest in a menu, on the right. */
 export default function RowActions({
   primary,

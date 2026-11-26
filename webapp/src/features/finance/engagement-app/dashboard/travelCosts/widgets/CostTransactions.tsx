@@ -29,7 +29,8 @@ import { COST_SOURCE_LABEL } from "../../travelCostText";
 import { monthWithin } from "../dateRanges";
 import { deltaCell, deltaTone, originalText, PAID_LABEL, PAID_TONE, rateSourceText, usd2 } from "../costFormat";
 import { Change } from "../../dashboardParts";
-import { clampPage, GROUPS, PAGE_SIZES, transactionParams, type CostSort, type FilterKey, type GroupBy } from "../costView";
+import { PAGE_SIZES } from "../../../model/pageSize";
+import { clampPage, GROUPS, transactionParams, type CostSort, type FilterKey, type GroupBy } from "../costView";
 import { useTransactionPageSize } from "../useTransactionPageSize";
 import TransactionDrawer from "./TransactionDrawer";
 
@@ -89,7 +90,7 @@ export default function CostTransactions({ ctx }: { ctx: WidgetCtx }): JSX.Eleme
   const groupColumns: Column<CostGroup>[] = [
     { key: "label", label: view.group ? GROUP_LABEL[view.group] : "", render: (g) => g.label },
     { key: "lines", label: "Lines", align: "right", render: (g) => n0(g.lines) },
-    { key: "trips", label: "Trips", align: "right", render: (g) => n0(g.trips) },
+    { key: "trips", label: "Travels", align: "right", render: (g) => n0(g.trips) },
     { key: "travellers", label: "Travellers", align: "right", render: (g) => n0(g.travellers) },
     { key: "total", label: "Total", align: "right", render: (g) => usd2(g.total) },
     ...(compared

@@ -20,20 +20,20 @@ import type { Allocation } from "../api/engagementTypes";
 import { useMyAllocations } from "../api/useEngagementApi";
 import { HourlyLabel, TravelCell } from "../allocations/allocationCells";
 import EaPage from "../components/EaPage";
-import EaTable, { type Column } from "../components/EaTable";
+import EaTable, { type Column, tableState } from "../components/EaTable";
 import { Empty, Failed, ListCard } from "../components/ListCard";
 import ListToolbar, { type FilterDef } from "../components/ListToolbar";
-import { AllocationStatusChip, Two, Mono } from "../components/StatusChips";
+import { AllocationStatusChip, codeSub, Two, Mono } from "../components/StatusChips";
 import { myEngagementPaths } from "../engagementPaths";
 import { AllocationsFocus } from "./FocusCards";
 import { engagementName, fmtRange, place } from "../model/format";
 import { ALLOCATION_STATUSES } from "../model/statuses";
-import { PAGE_SIZE, useListView } from "../model/useListView";
+import { useListView } from "../model/useListView";
 
 /** My Allocations: the person's own allocations, read-only. */
 export default function MyAllocationsPage(): JSX.Element {
   const navigate = useNavigate();
-  const list = useListView();
+  const list = useListView("my-allocations");
   const pair = (v: string): readonly [string, string] => [v, v];
   const filters: FilterDef[] = [
     { key: "clearanceStatus", label: "Allocation Status", type: "multi", options: ALLOCATION_STATUSES.map(pair) },
@@ -48,16 +48,17 @@ export default function MyAllocationsPage(): JSX.Element {
       key: "eng",
       label: "Engagement",
       width: "28%",
+      sortKey: "engagement",
       render: (a) => <Two main={<Mono>{a.engagement.id}</Mono>} sub={engagementName(a.engagement)} />,
     },
-    { key: "type", label: "Allocation Type", render: (a) => <Two main={a.engagement.allocationType} sub={<Mono>{a.engagement.code}</Mono>} /> },
+    { key: "type", label: "Allocation Type", sortKey: "type", render: (a) => <Two main={a.engagement.allocationType} sub={codeSub(a.engagement.kind, a.engagement.code)} /> },
     { key: "where", label: "Location", render: (a) => <Two main={place(a.engagement.country)} sub={a.engagement.address} /> },
-    { key: "dates", label: "Dates", render: (a) => <Two main={<span style={{ whiteSpace: "nowrap" }}>{fmtRange(a.start, a.end)}</span>} sub={<HourlyLabel allocation={a} />} /> },
+    { key: "dates", label: "Dates", sortKey: "startDate", render: (a) => <Two main={<span style={{ whiteSpace: "nowrap" }}>{fmtRange(a.start, a.end)}</span>} sub={<HourlyLabel allocation={a} />} /> },
     { key: "travel", label: "Travel", render: (a) => <TravelCell allocation={a} travelBase={myEngagementPaths.travelRequest} /> },
-    { key: "status", label: "Allocation Status", render: (a) => <AllocationStatusChip status={a.status} /> },
+    { key: "status", label: "Allocation Status", sortKey: "status", render: (a) => <AllocationStatusChip status={a.status} /> },
   ];
   return (
-    <EaPage title="Allocations" subtitle="Where you are allocated, and when. Allocation managers set your allocations, and the status follows the clearance process.">
+    <EaPage collapsedSearch title="Allocations" subtitle="Where you are allocated, and when. Allocation managers set your allocations, and the status follows the clearance process.">
       <AllocationsFocus canOpen={(id) => (allocations.data?.items ?? []).some((a) => a.engagement.id === id && a.engagement.canOpen)} />
       <ListCard>
         <ListToolbar
@@ -77,10 +78,11 @@ export default function MyAllocationsPage(): JSX.Element {
             columns={columns}
             rows={allocations.data?.items ?? []}
             rowKey={(a) => a.id}
-            loading={allocations.isPending || allocations.isPlaceholderData}
+            {...tableState(allocations)}
+            sorting={list.sorting}
             canOpen={(a) => a.engagement.canOpen === true}
             onRowClick={(a) => navigate(myEngagementPaths.allocation(a.engagement.id))}
-            pagination={{ page: list.page, pageSize: PAGE_SIZE, total: allocations.data?.total ?? 0, onPage: list.setPage }}
+            pagination={list.pager(allocations.data?.total ?? 0)}
             empty={
               filtered ? (
                 <Empty title="No Allocations Match" body="Change the search or the filters to see more." />

@@ -52,6 +52,9 @@ export function useIdempotencyKey(): { key: string; renew: () => void; keyFor: (
 
 const idem = (key: string | undefined): Record<string, string> | undefined => (key ? { "Idempotency-Key": key } : undefined);
 
+/** Reports and search read the same records every write changes, so every write refreshes them too. */
+const EVERYWHERE: readonly Parts[] = [["reports"], ["search"]];
+
 function useEngagementMutation<V, R = unknown>(run: (vars: V, token: string) => Promise<R>, affects: (vars: V) => readonly Parts[]) {
   const { getToken, key } = useEngagementBasis();
   const queryClient = useQueryClient();
@@ -59,7 +62,7 @@ function useEngagementMutation<V, R = unknown>(run: (vars: V, token: string) => 
     mutationKey: [ENGAGEMENT_KEY_ROOT, "mutation"],
     mutationFn: async (vars) => run(vars, await getToken()),
     onSuccess: (_result, vars) =>
-      Promise.all(affects(vars).map((parts) => queryClient.invalidateQueries({ queryKey: key(...parts) }))).then(() => undefined),
+      Promise.all([...affects(vars), ...EVERYWHERE].map((parts) => queryClient.invalidateQueries({ queryKey: key(...parts) }))).then(() => undefined),
   });
 }
 
@@ -109,7 +112,7 @@ export interface EngagementChange {
   readonly approve?: boolean;
 }
 
-const ENGAGEMENT_ALL: readonly Parts[] = [...ENGAGEMENT_AFFECTS, ["allocations"], ["travel-requests"], ["me"]];
+const ENGAGEMENT_ALL: readonly Parts[] = [...ENGAGEMENT_AFFECTS, ["allocations"], ["team-allocations"], ["travel-requests"], ["me"]];
 
 export const useUpdateEngagement = () =>
   useEngagementMutation(
@@ -225,7 +228,7 @@ export interface TravelRequestChange {
   readonly visa?: string;
 }
 
-const TRAVEL_AFFECTS: readonly Parts[] = [["travel-requests"], ["invoices"], ["per-diem-payments"], ["ns-sync-failures"], ["dashboard"], ["me"]];
+const TRAVEL_AFFECTS: readonly Parts[] = [["travel-requests"], ["invoices"], ["per-diem-payments"], ["ns-sync-failures"], ["engagements"], ["allocations"], ["dashboard"], ["me"]];
 
 export const useUpdateTravelRequest = () =>
   useEngagementMutation(
@@ -336,14 +339,14 @@ export const useSaveTravelDocument = (own: boolean) =>
       const url = own ? (visa ? urls.myVisas() : urls.myTravelDocuments) : visa ? urls.visas() : urls.travelDocuments();
       return engagementUpload<unknown>(url, token, documentForm(input), "POST", idempotencyKey);
     },
-    () => [["visas"], ["travel-documents"], ["me", "visas"], ["me", "travel-documents"], ["passports"], ["travel-requests"]],
+    () => [["visas"], ["travel-documents"], ["me", "visas"], ["me", "travel-documents"], ["me", "overview"], ["dashboard"], ["passports"], ["travel-requests"]],
   );
 
 // ---------------------------------------------------------------- settings
 
 export const useSaveAllocationType = () =>
   useEngagementMutation(
-    ({ id, ...t }: Omit<AllocationTypeDef, "id"> & { id?: string }, token) => {
+    ({ id, idempotencyKey, ...t }: Omit<AllocationTypeDef, "id"> & { id?: string; idempotencyKey?: string }, token) => {
       const body = {
         engagementTypeId: t.engagementTypeId,
         allocationTypeName: t.name,
@@ -353,7 +356,7 @@ export const useSaveAllocationType = () =>
         emailToAllocations: t.notifyToAllocations,
         color: t.color,
       };
-      return id ? authedPut<unknown>(urls.allocationType(id), token, body) : authedPost<unknown>(urls.allocationTypes(), token, body);
+      return id ? authedPut<unknown>(urls.allocationType(id), token, body) : authedPost<unknown>(urls.allocationTypes(), token, body, idem(idempotencyKey));
     },
     () => [["settings", "allocation-types"], ["reference-data"]],
   );

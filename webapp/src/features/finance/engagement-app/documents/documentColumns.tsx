@@ -27,22 +27,22 @@ export const documentStatus = (d: TravelDocument, today: string): "Active" | "Ex
 
 export function visaColumns(own: boolean, today: string): Column<Visa>[] {
   return [
-    ...(own ? [] : [{ key: "who", label: "Traveller", render: (v: Visa) => (v.owner ? <Two main={v.owner.name} sub={v.owner.email} /> : "—") }]),
-    { key: "country", label: "Country", render: (v) => v.country },
-    { key: "type", label: "Visa Type", render: (v) => v.visaType },
+    ...(own ? [] : [{ key: "who", label: "Traveller", sortKey: "traveller", sortValue: (v: Visa) => v.owner?.email, render: (v: Visa) => (v.owner ? <Two main={v.owner.name} sub={v.owner.email} /> : "—") }]),
+    { key: "country", label: "Country", sortKey: "country", sortValue: (v) => v.country, render: (v) => v.country },
+    { key: "type", label: "Visa Type", sortKey: "visaType", sortValue: (v) => v.visaType, render: (v) => v.visaType },
     { key: "entry", label: "Entry Type", render: (v) => v.entryType },
-    { key: "valid", label: "Valid", render: (v) => fmtRange(v.start, v.end) },
-    { key: "expires", label: "Expires In", render: (v) => <ExpiresIn end={v.end} today={today} /> },
+    { key: "valid", label: "Valid", sortKey: "validFrom", sortValue: (v) => v.start, render: (v) => fmtRange(v.start, v.end) },
+    { key: "expires", label: "Expires In", sortKey: "expiry", sortValue: (v) => v.end, render: (v) => <ExpiresIn end={v.end} today={today} /> },
   ];
 }
 
 export function documentColumns(own: boolean, today: string): Column<TravelDocument>[] {
   return [
-    ...(own ? [] : [{ key: "who", label: "Traveller", render: (d: TravelDocument) => (d.owner ? <Two main={d.owner.name} sub={d.owner.email} /> : "—") }]),
-    { key: "doc", label: "Document", render: (d) => <Two main={d.type} sub={<Mono>{d.number}</Mono>} /> },
-    { key: "country", label: "Issued Country", render: (d) => d.country },
-    { key: "issued", label: "Issued", render: (d) => (d.issued ? fmtDate(d.issued) : "—") },
-    { key: "expiry", label: "Expiry", render: (d) => (d.expires ? fmtDate(d.expires) : "No Expire") },
-    { key: "expires", label: "Expires In", render: (d) => <ExpiresIn end={d.expires} today={today} /> },
+    ...(own ? [] : [{ key: "who", label: "Traveller", sortKey: "traveller", sortValue: (d: TravelDocument) => d.owner?.email, render: (d: TravelDocument) => (d.owner ? <Two main={d.owner.name} sub={d.owner.email} /> : "—") }]),
+    { key: "doc", label: "Document", sortKey: "type", sortValue: (d) => d.type, render: (d) => <Two main={d.type} sub={<Mono>{d.number}</Mono>} /> },
+    { key: "country", label: "Issued Country", sortKey: "country", sortValue: (d) => d.country, render: (d) => d.country },
+    { key: "issued", label: "Issued", sortKey: "issued", sortValue: (d) => d.issued, render: (d) => (d.issued ? fmtDate(d.issued) : "—") },
+    { key: "expiry", label: "Expiry", render: (d) => (d.expires ? fmtDate(d.expires) : "No expiry date") },
+    { key: "expires", label: "Expires In", sortKey: "expiry", sortValue: (d) => d.expires, render: (d) => <ExpiresIn end={d.expires} today={today} /> },
   ];
 }

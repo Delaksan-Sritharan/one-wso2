@@ -14,10 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useEffect, useState, type JSX, type ReactNode } from "react";
+import type { JSX, ReactNode } from "react";
 import { Box, Card, Skeleton } from "@wso2/oxygen-ui";
 import EaTable from "./EaTable";
 import { ListCard } from "./ListCard";
+import { SKELETON_DELAY_MS, useAfterDelay } from "./useAfterDelay";
 
 /** A facts card while its record loads: label and value bars in the same grid as FactsGrid. */
 export function FactsSkeleton({ count = 8, columns = 4 }: { readonly count?: number; readonly columns?: 2 | 3 | 4 }): JSX.Element {
@@ -62,20 +63,6 @@ export function DetailSkeleton({ facts = 8, tabs = 2, columns = 4 }: { readonly 
       </ListCard>
     </>
   );
-}
-
-/** How long a response may take before a skeleton is worth showing: a quicker one would only blink. */
-const SKELETON_DELAY_MS = 150;
-
-/** True once `active` has been true for `ms`. A response that comes sooner never shows the skeleton. */
-function useAfterDelay(active: boolean, ms: number = SKELETON_DELAY_MS): boolean {
-  const [late, setLate] = useState(false);
-  useEffect(() => {
-    if (!active) return;
-    const t = setTimeout(() => setLate(true), ms);
-    return () => clearTimeout(t);
-  }, [active, ms]);
-  return active && late;
 }
 
 /**

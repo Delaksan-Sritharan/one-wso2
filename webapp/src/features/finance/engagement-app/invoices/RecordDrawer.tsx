@@ -48,7 +48,7 @@ export function InvoiceDrawer({ invoice: i, actions, onClose, agent = false, job
         facts={[
           { label: "PO Approval", value: <PoApprovalChip invoice={i} /> },
           { label: "Finance Approval", value: <FinanceApprovalChip invoice={i} /> },
-          { label: "NS Status", value: <NsStatusChip record={i} /> },
+          { label: "NetSuite Status", value: <NsStatusChip record={i} /> },
         ]}
       />
     </RecordDrawer>
@@ -67,7 +67,7 @@ export function PaymentDrawer({ payment: x, actions, onClose, jobBase }: { payme
           { label: "Payment Amount", value: money(x.amount, x.currency) },
           { label: "Converted Amount", value: money(x.convertedAmount, x.convertedCurrency) },
           { label: "Added", value: <Two main={fmtDate(x.addedDate)} sub={x.addedBy} /> },
-          { label: "NS Status", value: <NsStatusChip record={x} /> },
+          { label: "NetSuite Status", value: <NsStatusChip record={x} /> },
         ]}
       />
     </RecordDrawer>
