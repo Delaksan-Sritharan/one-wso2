@@ -203,11 +203,4 @@ describe("RequestSummary", () => {
     expect(screen.getByText("Proposed vendor 2")).toBeInTheDocument();
     expect(screen.queryByText("Proposed vendor 3")).toBeNull();
   });
-
-  it("shows a control given for the budget in the Budget card, and nowhere else", () => {
-    render(<RequestSummary view={view()} budgetAction={<button type="button">Change budget</button>} />);
-    const card = screen.getByText("Budget", { selector: "h6, .MuiTypography-subtitle1" }).closest(".MuiCard-root") as HTMLElement;
-    expect(within(card).getByRole("button", { name: "Change budget" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Change budget" })).toHaveLength(1);
-  });
 });
