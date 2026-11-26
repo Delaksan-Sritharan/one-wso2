@@ -71,7 +71,7 @@ export default function EngagementsPage({ segment }: { segment: EngagementSegmen
       key: "requestStatus",
       label: "Request Status",
       type: "multi",
-      options: (cust ? ["New", "Updated", "In Progress", "Completed", "Cancelled"] : ["Approved", "Updated", "In Progress", "Completed", "Cancelled"]).map(pair),
+      options: (cust ? ["New", "Updated", "In Progress", "Completed", "Cancelled"] : ["Pending Approval", "Approved", "Updated", "In Progress", "Completed", "Cancelled"]).map(pair),
     },
     { key: "engagementStatus", label: "Engagement Status", type: "multi", options: ENGAGEMENT_STATUSES.map(pair) },
     { key: "businessUnit", label: "Business Unit", type: "select", options: (ref.data?.businessUnits ?? []).map(pair) },
@@ -81,7 +81,11 @@ export default function EngagementsPage({ segment }: { segment: EngagementSegmen
     { key: "startTo", label: "Start Date To", type: "date" },
     { key: "endTo", label: "End Date To", type: "date" },
   ];
-  const engagements = useEngagements({ segment, ...list.paramsFor(filters) }, segments.includes(segment));
+  const engagements = useEngagements(
+    // includePending: what was just created, still waiting for approval, is in the list.
+    { segment, includePending: true, ...list.paramsFor(filters) },
+    segments.includes(segment),
+  );
 
   if (!segments.includes(segment)) return <Navigate to={engagementPaths.engagements(segments[0])} replace />;
 

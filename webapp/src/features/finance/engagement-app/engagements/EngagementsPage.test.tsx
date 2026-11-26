@@ -105,7 +105,30 @@ describe("Engagements", () => {
   it("rebuilds the list from the address: the search and filters go to the backend", () => {
     state.info = user([3]);
     draw("?q=orion&requestStatus=New");
-    expect(state.listParams).toMatchObject({ segment: "customer", search: "orion", requestStatus: ["New"], offset: 0 });
+    expect(state.listParams).toMatchObject({ segment: "customer", includePending: true, search: "orion", requestStatus: ["New"], offset: 0 });
+  });
+
+  it("shows a pending event with its Pending Approval chip and only Edit and Approve, no Allocate", () => {
+    state.info = user([13, 16, 15, 27, 28, 4]);
+    state.rows = [
+      {
+        ...engagement,
+        id: "EVT00271",
+        typeId: 5,
+        kind: "marketing",
+        requestStatus: "Pending Approval",
+        actions: { allocate: false, edit: false, editPending: true, approve: true },
+      },
+    ];
+    render(
+      <MemoryRouter initialEntries={["/finance/engagement-app/engagements/marketing"]}>
+        <EngagementsPage segment="marketing" />
+      </MemoryRouter>,
+    );
+    expect(state.listParams).toMatchObject({ segment: "marketing", includePending: true });
+    expect(screen.getByText("Pending Approval")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Allocate" })).toBeNull();
   });
 
   it("says why the list is empty and offers Create when nothing exists yet", () => {
