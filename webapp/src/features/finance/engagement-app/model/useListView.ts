@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { EngagementQueryParams } from "@config/apiConfig";
 import { useUrlViewState, type UrlViewCodec } from "@hooks/useUrlViewState";
 import { PAGE_SIZES, usePageSize } from "./pageSize";
@@ -57,6 +57,15 @@ export function useListView(id = "list", { defaultSort }: { defaultSort?: string
     [setView, view.q, view.sort],
   );
 
+  // The rows of the latest pager, so a page left behind by a shrinking list can move back onto the last one.
+  const shownTotal = useRef(0);
+  const lastPage = (total: number) => Math.max(0, Math.ceil(total / pageSize) - 1);
+  useEffect(() => {
+    // A list still loading reports no rows, and must not reset a page taken from the address bar.
+    const last = lastPage(shownTotal.current);
+    if (shownTotal.current > 0 && page > last) setView({ ...view, page: last > 0 ? String(last) : "" });
+  });
+
   const setPage = (p: number) => setView({ ...view, page: p > 0 ? String(p) : "" });
 
   const filters = useMemo(() => {
@@ -79,19 +88,22 @@ export function useListView(id = "list", { defaultSort }: { defaultSort?: string
     setPage,
     pageSize,
     /** The pager a table shows for `total` rows: page, rows per page and the handlers for both. */
-    pager: (total: number) => ({
-      page,
-      pageSize,
-      total,
-      onPage: setPage,
-      pageSizes: PAGE_SIZES,
-      onPageSize: (size: number) => {
-        choosePageSize(size);
-        setView({ ...view, page: "" });
-      },
-    }),
+    pager: (total: number) => {
+      shownTotal.current = total;
+      return {
+        page: Math.min(page, lastPage(total)),
+        pageSize,
+        total,
+        onPage: setPage,
+        pageSizes: PAGE_SIZES,
+        onPageSize: (size: number) => {
+          choosePageSize(size);
+          setView({ ...view, page: "" });
+        },
+      };
+    },
     /** The rows of the current page, for a list that holds all its rows in the browser. */
-    pageOf: <T,>(rows: readonly T[]): T[] => rows.slice(page * pageSize, (page + 1) * pageSize),
+    pageOf: <T,>(rows: readonly T[]): T[] => rows.slice(Math.min(page, lastPage(rows.length)) * pageSize, (Math.min(page, lastPage(rows.length)) + 1) * pageSize),
     /** What a table's `sorting` takes. */
     sorting: { sort, onSort: setSort },
     setFilters,

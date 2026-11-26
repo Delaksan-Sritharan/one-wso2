@@ -16,7 +16,7 @@
 
 // Visas and travel documents: the tables, the details drawer and the Add / Edit dialogs, shared by Finance → Visas & Documents (the Travel Team's view of everyone's) and Me → Passport & Visas (the person's own).
 
-import { useState, type JSX } from "react";
+import { useId, useState, type JSX } from "react";
 import { Alert, Box, Button, MenuItem, TextField, Typography } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import { authedGet } from "@api/http";
@@ -149,6 +149,7 @@ export function DocumentDrawer({
 }
 
 function FilePicker({ label, file, onFile, hint, error }: { label: string; file: File | null; onFile: (f: File | null, problem?: string) => void; hint: string; error?: string }) {
+  const messageId = useId();
   return (
     <Box sx={{ gridColumn: "1 / -1" }}>
       <Button variant="outlined" component="label" size="small">
@@ -157,6 +158,8 @@ function FilePicker({ label, file, onFile, hint, error }: { label: string; file:
           hidden
           type="file"
           accept=".jpg,.jpeg,.png"
+          aria-invalid={Boolean(error)}
+          aria-describedby={messageId}
           onChange={(e) => {
             const f = e.target.files?.[0] ?? null;
             if (f && !IMAGE_TYPES.includes(f.type)) return onFile(null, "Upload a JPG or PNG image.");
@@ -165,7 +168,7 @@ function FilePicker({ label, file, onFile, hint, error }: { label: string; file:
           }}
         />
       </Button>
-      <Typography variant="caption" color={error ? "error" : "text.secondary"} component="div" sx={{ mt: 0.5 }}>
+      <Typography id={messageId} role={error ? "alert" : undefined} variant="caption" color={error ? "error" : "text.secondary"} component="div" sx={{ mt: 0.5 }}>
         {error ?? (file ? file.name : hint)}
       </Typography>
     </Box>
@@ -208,6 +211,8 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
   const [error, setError] = useState<unknown>();
   const [errs, setErrs] = useState<FieldErrors>({});
   const [confirm, setConfirm] = useState<{ text: string; label: string; busy: string; danger?: boolean } | null>(null);
+  // Going back from the confirm step restores the form with its edits, so Cancel keeps asking before it discards them.
+  const [wentBack, setWentBack] = useState(false);
   const passportsQuery = usePassports(own ? undefined : owner?.email, own);
   const passports = (passportsQuery.data ?? []).filter((d) => d.status !== "Inactive");
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
@@ -246,7 +251,10 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
           notify.showSuccess(visa ? "Visa updated successfully" : "Visa added successfully");
           onClose();
         }}
-        onClose={() => setConfirm(null)}
+        onClose={() => {
+          setConfirm(null);
+          setWentBack(true);
+        }}
       />
     );
   }
@@ -256,6 +264,7 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
       title={visa ? "Edit Visa" : "Add Visa"}
       confirmLabel="Continue"
       error={error}
+      edited={wentBack}
       onClose={onClose}
       onConfirm={async () => {
         const inactive = f.status === "Inactive";
@@ -378,6 +387,8 @@ export function DocumentDialog({
   const [error, setError] = useState<unknown>();
   const [errs, setErrs] = useState<FieldErrors>({});
   const [confirm, setConfirm] = useState<{ text: string; label: string; busy: string; danger?: boolean } | null>(null);
+  // Going back from the confirm step restores the form with its edits, so Cancel keeps asking before it discards them.
+  const [wentBack, setWentBack] = useState(false);
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
   const other = f.type === "Other ID Document";
   const { getToken } = useEngagementBasis();
@@ -412,7 +423,10 @@ export function DocumentDialog({
           notify.showSuccess(doc ? "Travel document updated successfully" : "Travel document added successfully");
           onClose();
         }}
-        onClose={() => setConfirm(null)}
+        onClose={() => {
+          setConfirm(null);
+          setWentBack(true);
+        }}
       />
     );
   }
@@ -422,6 +436,7 @@ export function DocumentDialog({
       title={doc ? "Edit Travel Document" : "Add Travel Document"}
       confirmLabel="Continue"
       error={error}
+      edited={wentBack}
       onClose={onClose}
       onConfirm={async () => {
         // On edit the masked number stands unless a new one is typed.

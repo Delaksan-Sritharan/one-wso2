@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useEffect, useRef, useState, type FormEvent, type JSX, type ReactNode } from "react";
+import { useCallback, useState, type FormEvent, type JSX, type ReactNode } from "react";
 import {
   Alert,
   Box,
@@ -55,6 +55,7 @@ export default function EaDialog({
   maxWidth = "sm",
   confirmDisabled = false,
   dirty,
+  edited = false,
 }: {
   readonly title: string;
   readonly subtitle?: ReactNode;
@@ -77,14 +78,16 @@ export default function EaDialog({
   readonly confirmDisabled?: boolean;
   /** Whether closing would lose edits. Defaults to "something was typed or ticked in the form". */
   readonly dirty?: boolean;
+  /** Set when the dialog reopens with edits already in the form (e.g. after Go Back from a confirm step), so Cancel still asks before discarding. */
+  readonly edited?: boolean;
 }): JSX.Element {
   const message = error === undefined || error === null || error === "" ? "" : typeof error === "string" ? error : describeError(eaError(error));
-  const formRef = useRef<HTMLFormElement>(null);
-  const [touched, setTouched] = useState(false);
+  const [touched, setTouched] = useState(edited);
   const [discarding, setDiscarding] = useState(false);
   const unsaved = Boolean(onConfirm) && (dirty ?? touched);
-  useEffect(() => {
-    formRef.current?.querySelector<HTMLElement>(FIRST_FIELD)?.focus();
+  // The dialog renders its content in a portal, so the form is not mounted when this component's effects run.
+  const focusFirstField = useCallback((form: HTMLFormElement | null) => {
+    form?.querySelector<HTMLElement>(FIRST_FIELD)?.focus();
   }, []);
   const submit = (ev: FormEvent) => {
     ev.preventDefault();
@@ -139,7 +142,7 @@ export default function EaDialog({
         </DialogTitle>
         <Box
           component="form"
-          ref={formRef}
+          ref={focusFirstField}
           noValidate
           onSubmit={submit}
           onChange={() => setTouched(true)}

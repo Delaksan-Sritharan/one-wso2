@@ -41,7 +41,9 @@ const isBlank = (v: SortValue): v is null | undefined | "" => v === null || v ==
  */
 export function sortRows<T>(rows: readonly T[], sort: string, accessors: SortAccessors<T>): T[] {
   const desc = sort.startsWith("-");
-  const get = accessors[desc ? sort.slice(1) : sort];
+  const key = desc ? sort.slice(1) : sort;
+  // Own keys only: `?sort=__proto__` must fall back to the given order, not call an inherited property.
+  const get = Object.hasOwn(accessors, key) ? accessors[key] : undefined;
   if (!sort || !get) return [...rows];
   const sign = desc ? -1 : 1;
   return rows

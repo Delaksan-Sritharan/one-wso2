@@ -345,7 +345,16 @@ function SyncFailures(): JSX.Element {
                 else next.add(id);
                 return next;
               }),
-            onToggleAll: (ids) => setSelected((s) => (ids.every((id) => s.has(id)) ? new Set() : new Set(ids))),
+            onToggleAll: (ids) =>
+              setSelected((s) => {
+                const next = new Set(s);
+                const all = ids.every((id) => s.has(id));
+                for (const id of ids) {
+                  if (all) next.delete(id);
+                  else next.add(id);
+                }
+                return next;
+              }),
           }}
           empty={<Empty title="No NetSuite Sync Failures" body="Every pushed invoice and payment has its NetSuite status." />}
         />

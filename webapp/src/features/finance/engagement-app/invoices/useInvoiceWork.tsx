@@ -41,7 +41,7 @@ export function useBatchReport() {
 
 type InvoiceDialog = { kind: "approve" | "reject" | "push" | "resync"; ids: string[]; stage: InvoiceStage };
 
-/** Invoice approval as the Travel app had it: PO approval, finance approval, Push to NetSuite and Re-sync. */
+/** Invoice approval: PO approval, finance approval, Push to NetSuite and Re-sync. */
 export function useInvoiceWork(rows: readonly Invoice[], { tripOpen }: { tripOpen?: boolean } = {}) {
   const { p } = useEngagementAccess();
   const steps = invoiceSteps(p);

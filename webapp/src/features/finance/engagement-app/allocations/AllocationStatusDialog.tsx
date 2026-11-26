@@ -41,6 +41,7 @@ export default function AllocationStatusDialog({ allocation, onClose }: { alloca
       busy={save.isPending}
       error={error}
       onClose={onClose}
+      dirty={status !== "" || comment !== (a.comment ?? "")}
       onConfirm={() => {
         setStatusError(status ? "" : "Select the new allocation status");
         if (!status) return;

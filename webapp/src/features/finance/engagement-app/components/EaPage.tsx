@@ -82,7 +82,7 @@ export default function EaPage({
         </Box>
         {searchable && collapsedSearch ? (
           <>
-            <IconButton aria-label="Search Engagement App" size="small" onClick={() => searchBox.current?.querySelector("input")?.focus()} sx={{ display: { xs: "none", md: "inline-flex" } }}>
+            <IconButton aria-label="Search Engagement App" size="small" onClick={() => searchBox.current?.querySelector("input")?.focus()}>
               <SearchIcon size={18} />
             </IconButton>
             {/* Kept in the page but out of sight until it has focus, so `/` keeps working. */}

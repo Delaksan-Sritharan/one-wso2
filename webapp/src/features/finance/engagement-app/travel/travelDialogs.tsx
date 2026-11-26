@@ -80,6 +80,7 @@ export function AssignDialog({ trip, onClose }: { trip: TravelRequestSummary; on
   const [visa, setVisa] = useState("");
   const [errs, setErrs] = useState<FieldErrors>({});
   const [confirm, setConfirm] = useState(false);
+  const [wentBack, setWentBack] = useState(false);
   // The confirm step replaces the form for a moment: No (or a failed save) goes back to it with everything still filled in.
   if (confirm) {
     const step = ASSIGN_STEP[status === "In Progress" || status === "On Hold" ? status : "Cancelled"];
@@ -96,7 +97,10 @@ export function AssignDialog({ trip, onClose }: { trip: TravelRequestSummary; on
           notify.showSuccess("Travel request updated successfully");
           onClose();
         }}
-        onClose={() => setConfirm(false)}
+        onClose={() => {
+          setConfirm(false);
+          setWentBack(true);
+        }}
       />
     );
   }
@@ -105,6 +109,7 @@ export function AssignDialog({ trip, onClose }: { trip: TravelRequestSummary; on
       title="Assign Travel Agent"
       subtitle={sub(trip)}
       confirmLabel="Continue"
+      edited={wentBack}
       onClose={onClose}
       onConfirm={() => {
         const next: Record<string, string> = {};
@@ -224,7 +229,7 @@ export function UpdateTravelDialog({ trip, onClose }: { trip: TravelRequest; onC
         {canVisa && editable ? (
           <Select label="Visa" value={shownVisa} error={errs.visa} options={(options.data ?? []).map((o) => [o.id, o.label] as const)} onChange={setVisa} />
         ) : (
-          <TextField size="small" label="Visa" value={trip.visa ?? ""} disabled />
+          <TextField size="small" label="Visa" value={trip.visa ?? ""} error={Boolean(errs.visa)} helperText={errs.visa} disabled />
         )}
       </Box>
     </EaDialog>
