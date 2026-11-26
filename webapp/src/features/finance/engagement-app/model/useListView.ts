@@ -87,11 +87,11 @@ export function useListView(id = "list", { defaultSort }: { defaultSort?: string
     setSort,
     setPage,
     pageSize,
-    /** The pager a table shows for `total` rows: page, rows per page and the handlers for both. */
-    pager: (total: number) => {
-      shownTotal.current = total;
+    /** The pager a table shows for `total` rows: page, rows per page and the handlers for both. Pass `placeholder` while `total` is a previous query's, so it does not move the page. */
+    pager: (total: number, placeholder = false) => {
+      shownTotal.current = placeholder ? 0 : total;
       return {
-        page: Math.min(page, lastPage(total)),
+        page: placeholder ? page : Math.min(page, lastPage(total)),
         pageSize,
         total,
         onPage: setPage,

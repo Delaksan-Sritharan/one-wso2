@@ -347,6 +347,7 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
           onFile={(x, problem) => {
             setFile(x);
             if (problem) setError(problem);
+            else if (x) setErrs((e) => Object.fromEntries(Object.entries(e).filter(([k]) => k !== "image")));
           }}
           error={errs.image}
           hint="Browse an image of the visa information page (JPG or PNG, 5 MB at most)."
@@ -520,6 +521,7 @@ export function DocumentDialog({
           onFile={(x, problem) => {
             setFile(x);
             if (problem) setError(problem);
+            else if (x) setErrs((e) => Object.fromEntries(Object.entries(e).filter(([k]) => k !== "image")));
           }}
           error={errs.image}
           hint="Browse an image of the document details page (JPG or PNG, 5 MB at most)."

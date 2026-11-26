@@ -146,7 +146,7 @@ function InvoiceQueue({ queue }: { queue: "po" | "finance" | "push" }): JSX.Elem
           selection={work.selection}
           onRowClick={setOpen}
           sorting={list.sorting}
-          pagination={list.pager(invoices.data?.total ?? 0)}
+          pagination={list.pager(invoices.data?.total ?? 0, invoices.isPlaceholderData)}
           empty={<Empty title="No Invoices Waiting" body="Invoices at this step appear here as soon as they arrive." />}
         />
       )}
@@ -200,7 +200,7 @@ function AllInvoices(): JSX.Element {
           selection={work.selection}
           onRowClick={setOpen}
           sorting={list.sorting}
-          pagination={list.pager(invoices.data?.total ?? 0)}
+          pagination={list.pager(invoices.data?.total ?? 0, invoices.isPlaceholderData)}
           empty={
             Object.keys(list.filters).length || list.search ? (
               <Empty title="No Invoices Match" body="Change the search or the filters to see more." />
@@ -260,7 +260,7 @@ function PaymentsList({ queue }: { queue: boolean }): JSX.Element {
           selection={work.selection}
           onRowClick={setOpen}
           sorting={list.sorting}
-          pagination={list.pager(payments.data?.total ?? 0)}
+          pagination={list.pager(payments.data?.total ?? 0, payments.isPlaceholderData)}
           empty={
             queue ? (
               <Empty title="No Per Diem Payments Waiting" body="Per diem payments to push appear here once finance adds them." />
