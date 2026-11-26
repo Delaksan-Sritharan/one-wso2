@@ -28,6 +28,7 @@ import EaPage from "../components/EaPage";
 import EaTable, { type Column } from "../components/EaTable";
 import { FactsCard, FactsGrid } from "../components/Facts";
 import { Empty, Failed, ListCard } from "../components/ListCard";
+import { PersonTwo } from "../components/PersonChip";
 import { AllocationStatusChip, EngagementStatusChip, RequestStatusChip, Two, Mono } from "../components/StatusChips";
 import { engagementPaths, myEngagementPaths, type EngagementTab } from "../engagementPaths";
 import { canEditAllocationStatus } from "../model/engagementAccess";
@@ -232,7 +233,7 @@ function DetailsTab({ e }: { e: Engagement }): JSX.Element {
           { label: "Technical Owner", value: e.technicalOwner },
           e.kind === "customer" && { label: "Contracts Signed", value: e.contractsSigned ? "Yes" : "No" },
           e.kind === "customer" && { label: "Tentative Dates", value: e.tentativeDates ? "Yes" : "No" },
-          { label: "Created By", value: e.createdBy?.name },
+          { label: "Created By", value: e.createdBy && <PersonTwo name={e.createdBy.name} email={e.createdBy.email} /> },
           { label: "Created On", value: e.createdOn ? fmtDate(e.createdOn) : undefined },
           { label: "Location Address", value: e.address ? <span style={{ whiteSpace: "pre-line" }}>{e.address}</span> : undefined, full: true },
           { label: "Description", value: e.description, full: true },

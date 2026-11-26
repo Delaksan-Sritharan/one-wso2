@@ -32,6 +32,7 @@ import { DetailSkeleton, TableSkeleton } from "../components/EaSkeletons";
 import EaTable, { type Column } from "../components/EaTable";
 import { FactsCard, FactsGrid } from "../components/Facts";
 import { Empty, Failed, ListCard, SectionTitle } from "../components/ListCard";
+import { PersonTwo } from "../components/PersonChip";
 import { ExpenseStatusChip, TravelStatusChip, Two, Mono } from "../components/StatusChips";
 import { engagementPaths, myEngagementPaths, type TravelTab } from "../engagementPaths";
 import { TRAVEL } from "../model/engagementAccess";
@@ -139,7 +140,7 @@ function TravelRequestView({ t, tab, area, back }: { t: TravelRequest; tab: Trav
     >
       <FactsCard
         facts={[
-          { label: "Traveller", value: <Two main={t.traveller.name} sub={[t.traveller.email, t.location].filter(Boolean).join("\n")} /> },
+          { label: "Traveller", value: <PersonTwo name={t.traveller.name} email={t.traveller.email} sub={[t.traveller.email, t.location].filter(Boolean).join("\n")} /> },
           t.engagement && {
             label: "Engagement",
             value:
