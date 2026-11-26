@@ -53,6 +53,10 @@ export default function ProductImage({ src, alt, height = 180 }: ProductImagePro
       sx={{
         height,
         display: "grid",
+        // One cell exactly the box's size: an auto track would grow to the photo's
+        // natural height, and the overflow would crop it instead of scaling it down.
+        gridTemplateRows: "minmax(0, 1fr)",
+        gridTemplateColumns: "minmax(0, 1fr)",
         placeItems: "center",
         bgcolor: "action.hover",
         borderRadius: 1,
