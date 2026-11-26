@@ -43,18 +43,18 @@ import {
 import { Download, Upload } from "@wso2/oxygen-ui-icons-react";
 import type { JSX } from "react";
 import { useAuthApiClient } from "@features/security/grc/shim/useAuthApiClient";
-import {
-  downloadBulkImportResult,
-  downloadBulkImportTemplate,
-  fetchBulkImportJob,
-  fetchSourceRegisterTeams,
-  startBulkImport,
+import { downloadBulkImportTemplate, fetchSourceRegisterTeams, runBulkImport } from "../../api/riskApi";
+import type {
+  BulkImportFinding,
+  BulkImportFiles,
+  BulkImportMode,
+  BulkImportProgress,
+  BulkImportResult,
+  RiskTeam,
 } from "../../api/riskApi";
-import type { BulkImportDownload, BulkImportFinding, BulkImportJob, RiskTeam } from "../../api/riskApi";
 import { dialogPaperSx } from "../cardStyles";
 import { downloadBlob } from "./utils";
 
-const POLL_INTERVAL_MS = 1500;
 // Findings shown in the table. The full list is in the errors.csv download.
 const MAX_FINDINGS_SHOWN = 100;
 
@@ -72,11 +72,18 @@ const PHASE_LABELS: Record<string, string> = {
   verify: "Verifying what was written",
 };
 
-const DOWNLOAD_LABELS: Record<BulkImportDownload, string> = {
-  errors: "errors.csv",
-  report: "report.txt",
-  "risk-codes": "risk_codes.csv",
-};
+// The result's files: which field holds each, what it is called, and how it is saved.
+const DOWNLOADS: { key: keyof BulkImportFiles; fileName: string; csv: boolean }[] = [
+  { key: "errors_csv", fileName: "errors.csv", csv: true },
+  { key: "report", fileName: "report.txt", csv: false },
+  { key: "risk_codes_csv", fileName: "risk_codes.csv", csv: true },
+];
+
+// A run that is in flight: what it is and how far it has got.
+interface RunningState {
+  mode: BulkImportMode;
+  progress: BulkImportProgress;
+}
 
 const SEVERITY_ORDER: Record<string, number> = { REJECT: 0, MISMATCH: 1, WARN: 2 };
 
@@ -90,11 +97,16 @@ interface BulkImportDialogProps {
 // Imports a historical register from a CSV into one register — Compliance Admin
 // only (the backend enforces it; the page only shows the button to holders).
 //
-// The flow is deliberately two-step, and the server enforces the order: a dry run
-// reads the whole file and reports every problem without writing anything, and
-// the import is offered only for a file whose dry run found nothing to reject.
+// The flow is deliberately two-step: a dry run reads the whole file and reports
+// every problem without writing anything, and the import is offered only for a
+// file whose dry run found nothing to reject. The server does not rely on that:
+// an import re-validates the whole file and writes nothing if any row is rejected.
 // Choosing a different file or register clears the dry run, because its result
 // says nothing about the new one.
+//
+// A run is one open request that streams its progress back. Closing the window
+// is not offered while it runs; if the connection drops anyway the run stops, and
+// running the same file again continues where an import got to.
 export default function BulkImportDialog({ open, onClose, onImported }: BulkImportDialogProps): JSX.Element {
   const authFetch = useAuthApiClient();
 
@@ -103,17 +115,30 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
   const [registerId, setRegisterId] = useState<number | "">("");
   const [file, setFile] = useState<File | null>(null);
 
-  // The latest job — a dry run, then an import — and an error from starting one.
-  const [job, setJob] = useState<BulkImportJob | null>(null);
-  // The last dry run, kept while the import that follows replaces `job`.
-  const [dryRun, setDryRun] = useState<BulkImportJob | null>(null);
-  const [startError, setStartError] = useState("");
-  const [starting, setStarting] = useState(false);
+  // The run in flight, the latest finished result, and the last dry run's result
+  // (kept while the import that follows replaces `result`).
+  const [runningState, setRunning] = useState<RunningState | null>(null);
+  const [result, setResult] = useState<BulkImportResult | null>(null);
+  const [dryRun, setDryRun] = useState<BulkImportResult | null>(null);
+  // Which kind of run was started last, and why the last one stopped, if it did.
+  const [lastMode, setLastMode] = useState<BulkImportMode | null>(null);
+  const [runError, setRunError] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [downloadError, setDownloadError] = useState("");
 
   const onImportedRef = useRef(onImported);
   onImportedRef.current = onImported;
+
+  // Leaving the page ends the request, which stops the run on the server.
+  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      abortRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -131,77 +156,62 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
     };
   }, [open, authFetch]);
 
-  // Poll a running job until it finishes. Closing the dialog stops the polling,
-  // not the job: it keeps running on the server.
-  const runningId = job?.status === "running" ? job.id : null;
-  const runningMode = job?.mode;
-  useEffect(() => {
-    if (!open || !runningId) return;
-    let cancelled = false;
-    const timer = setInterval(() => {
-      fetchBulkImportJob(authFetch, runningId)
-        .then((next) => {
-          if (cancelled) return;
-          setJob(next);
-          if (next.status !== "running") {
-            if (runningMode === "dry_run") setDryRun(next);
-            if (runningMode === "import") onImportedRef.current();
-          }
-        })
-        .catch((e: unknown) => {
-          // A poll that fails (the service restarted, say) is shown, not retried
-          // forever: the admin can run the same file again and it resumes.
-          if (cancelled) return;
-          setStartError(e instanceof Error ? e.message : "Lost track of the import.");
-          setJob(null);
-        });
-    }, POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [open, runningId, runningMode, authFetch]);
-
   const reset = useCallback(() => {
-    setJob(null);
+    setResult(null);
     setDryRun(null);
-    setStartError("");
+    setLastMode(null);
+    setRunError("");
     setAcknowledged(false);
     setDownloadError("");
   }, []);
 
-  const running = job?.status === "running";
+  const running = runningState !== null;
   const selectedRegister = registers.find((r) => r.id === registerId) ?? null;
 
   const handleClose = () => {
-    if (running || starting) return;
+    if (running) return;
     reset();
     setFile(null);
     setRegisterId("");
     onClose();
   };
 
-  const start = async (mode: "dry_run" | "import") => {
+  const start = async (mode: BulkImportMode) => {
     if (registerId === "" || !file) return;
-    setStarting(true);
-    setStartError("");
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setRunning({ mode, progress: { phase: "preflight", done: 0, total: 0 } });
+    setLastMode(mode);
+    setResult(null);
+    setRunError("");
     setDownloadError("");
+    if (mode === "dry_run") {
+      setDryRun(null);
+      setAcknowledged(false);
+    }
     try {
-      const accepted = await startBulkImport(authFetch, {
+      const finished = await runBulkImport(authFetch, {
         registerId,
         mode,
         file,
         acknowledgeWarnings: mode === "import" && acknowledged,
+        signal: controller.signal,
+        onProgress: (progress) => {
+          if (mountedRef.current) setRunning({ mode, progress });
+        },
       });
-      setJob(accepted);
-      if (mode === "dry_run") {
-        setDryRun(null);
-        setAcknowledged(false);
-      }
+      if (!mountedRef.current) return;
+      setResult(finished);
+      if (mode === "dry_run") setDryRun(finished);
     } catch (e: unknown) {
-      setStartError(e instanceof Error ? e.message : "Could not start the import.");
+      if (!mountedRef.current) return;
+      setRunError(e instanceof Error ? e.message : "The run could not complete.");
     } finally {
-      setStarting(false);
+      if (mountedRef.current) {
+        setRunning(null);
+        // An import that stopped part-way may still have written rows.
+        if (mode === "import") onImportedRef.current();
+      }
     }
   };
 
@@ -215,8 +225,16 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
     }
   };
 
-  // What the latest dry run allows. The server decides; this only mirrors it so
-  // the button is not offered for a file that would be refused.
+  // A result file is text held in the page. CSVs get the byte order mark Excel
+  // needs to read non-ASCII text as UTF-8.
+  const saveFile = (text: string, fileName: string, csv: boolean) =>
+    downloadBlob(
+      new Blob([csv ? `\uFEFF${text}` : text], { type: csv ? "text/csv;charset=utf-8" : "text/plain;charset=utf-8" }),
+      fileName,
+    );
+
+  // What the latest dry run allows. The server re-checks everything on an import;
+  // this only avoids offering a button for a file that would be refused.
   const dryCounts = dryRun?.counts;
   const warnings = dryCounts?.warnings ?? 0;
   // When the dry run knows what the import would write, nothing to write means
@@ -224,14 +242,14 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
   const toWrite = dryCounts?.plan_known ? (dryCounts.to_write ?? 0) : (dryRun?.rows ?? 0);
   const canImport =
     !!dryRun &&
-    dryRun.status === "succeeded" &&
-    dryRun.importable &&
+    dryCounts?.rejects === 0 &&
+    dryCounts.mismatches === 0 &&
     toWrite > 0 &&
     (warnings === 0 || acknowledged) &&
     !running &&
-    !starting &&
-    job?.mode !== "import";
-  const importFinished = job?.mode === "import" && job.status !== "running";
+    lastMode !== "import";
+  const importFinished = lastMode === "import" && result?.mode === "import";
+  const downloads = DOWNLOADS.filter((d) => !!result?.files?.[d.key]);
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md" PaperProps={{ sx: dialogPaperSx }}>
@@ -246,7 +264,7 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
 
           {registersError && <Alert severity="error">{registersError}</Alert>}
 
-          <FormControl fullWidth size="small" disabled={running || starting}>
+          <FormControl fullWidth size="small" disabled={running}>
             <InputLabel id="bulk-import-register">Register</InputLabel>
             <Select
               labelId="bulk-import-register"
@@ -270,7 +288,7 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
               variant="outlined"
               size="small"
               startIcon={<Download size={16} />}
-              disabled={!selectedRegister || running || starting}
+              disabled={!selectedRegister || running}
               onClick={() => selectedRegister && void download(() => downloadBulkImportTemplate(authFetch, selectedRegister.id))}
             >
               Download template
@@ -280,7 +298,7 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
               variant="outlined"
               size="small"
               startIcon={<Upload size={16} />}
-              disabled={!selectedRegister || running || starting}
+              disabled={!selectedRegister || running}
             >
               Choose CSV file
               <input
@@ -303,38 +321,29 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
             The template has only the columns this register needs, in order. Save your sheet as CSV (UTF-8). At most 1000 rows.
           </Typography>
 
-          {startError && <Alert severity="error">{startError}</Alert>}
+          {runError && <Alert severity="error">{runError}</Alert>}
           {downloadError && <Alert severity="error">{downloadError}</Alert>}
 
-          {running && job && <Progress job={job} />}
+          {runningState && <Progress run={runningState} />}
 
-          {job?.status === "failed" && (
-            <Alert severity="error">
-              {job.error ?? "The run could not complete."}
-              {job.mode === "import" && job.counts && job.counts.migrated + job.counts.skipped > 0
-                ? " Some rows may already be written; run the same file again to continue."
-                : ""}
-            </Alert>
-          )}
-
-          {dryRun?.status === "succeeded" && job?.mode === "dry_run" && (
+          {dryRun && lastMode === "dry_run" && !runError && (
             <DryRunResult dryRun={dryRun} acknowledged={acknowledged} onAcknowledge={setAcknowledged} />
           )}
 
-          {importFinished && job.status === "succeeded" && <ImportResult job={job} />}
+          {importFinished && result && <ImportResult result={result} />}
 
-          {job && job.status !== "running" && (job.downloads?.length ?? 0) > 0 && (
+          {!running && downloads.length > 0 && (
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
               <Typography variant="body2">Download:</Typography>
-              {job.downloads?.map((d) => (
+              {downloads.map((d) => (
                 <Button
-                  key={d}
+                  key={d.key}
                   size="small"
                   variant="text"
                   startIcon={<Download size={14} />}
-                  onClick={() => void download(() => downloadBulkImportResult(authFetch, job.id, d))}
+                  onClick={() => saveFile(result?.files?.[d.key] ?? "", d.fileName, d.csv)}
                 >
-                  {DOWNLOAD_LABELS[d]}
+                  {d.fileName}
                 </Button>
               ))}
             </Stack>
@@ -342,7 +351,7 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={running || starting}>
+        <Button onClick={handleClose} disabled={running}>
           {importFinished ? "Close" : "Cancel"}
         </Button>
         <Button
@@ -351,7 +360,7 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
           // import of the same file would only repeat. Left on after a FAILED import:
           // its message says to run the file again, and a fresh dry run is how the
           // admin finds out which rows are still to write.
-          disabled={registerId === "" || !file || running || starting || (job?.mode === "import" && job.status === "succeeded")}
+          disabled={registerId === "" || !file || running || importFinished}
           onClick={() => void start("dry_run")}
         >
           Run dry run
@@ -364,19 +373,23 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
   );
 }
 
-function Progress({ job }: { job: BulkImportJob }): JSX.Element {
-  const label = PHASE_LABELS[job.phase ?? ""] ?? "Working";
-  const determinate = job.total > 0 && job.phase === "write";
+function Progress({ run }: { run: RunningState }): JSX.Element {
+  const { mode, progress } = run;
+  const label = PHASE_LABELS[progress.phase] ?? "Working";
+  const determinate = progress.total > 0 && progress.phase === "write";
   return (
     <Box>
       <Typography variant="body2" sx={{ mb: 0.5 }}>
-        {job.mode === "dry_run" ? "Dry run" : "Import"}: {label}
-        {determinate ? ` (${job.done} of ${job.total})` : "…"}
+        {mode === "dry_run" ? "Dry run" : "Import"}: {label}
+        {determinate ? ` (${progress.done} of ${progress.total})` : "…"}
       </Typography>
-      <LinearProgress variant={determinate ? "determinate" : "indeterminate"} value={determinate ? (job.done / job.total) * 100 : 0} />
-      {job.mode === "import" && (
+      <LinearProgress
+        variant={determinate ? "determinate" : "indeterminate"}
+        value={determinate ? (progress.done / progress.total) * 100 : 0}
+      />
+      {mode === "import" && (
         <Typography variant="caption" color="text.secondary">
-          Keep this window open. If it closes, the import keeps running; run the same file again to see where it got to.
+          Keep this window open. If the connection drops, the import stops; run the same file again to continue.
         </Typography>
       )}
     </Box>
@@ -388,16 +401,16 @@ function DryRunResult({
   acknowledged,
   onAcknowledge,
 }: {
-  dryRun: BulkImportJob;
+  dryRun: BulkImportResult;
   acknowledged: boolean;
   onAcknowledge: (v: boolean) => void;
 }): JSX.Element {
   const counts = dryRun.counts;
-  const rejects = counts?.rejects ?? 0;
-  const warnings = counts?.warnings ?? 0;
-  const planKnown = !!counts?.plan_known;
-  const toWrite = counts?.to_write ?? 0;
-  const alreadyDone = counts?.already_done ?? 0;
+  const rejects = counts.rejects;
+  const warnings = counts.warnings;
+  const planKnown = !!counts.plan_known;
+  const toWrite = counts.to_write ?? 0;
+  const alreadyDone = counts.already_done ?? 0;
   const nothingToImport = rejects === 0 && planKnown && toWrite === 0;
   const findings = [...(dryRun.findings ?? [])].sort(
     (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9) || a.csv_row - b.csv_row,
@@ -429,7 +442,6 @@ function DryRunResult({
           {planKnown
             ? ` The import would write ${toWrite} ${toWrite === 1 ? "row" : "rows"}${alreadyDone > 0 ? ` and skip ${alreadyDone} that ${alreadyDone === 1 ? "is" : "are"} already there` : ""}.`
             : ""}
-          {dryRun.importable_until ? ` You can import this file until ${new Date(dryRun.importable_until).toLocaleTimeString()}.` : ""}
         </Alert>
       )}
 
@@ -482,15 +494,15 @@ function FindingsTable({ findings, truncated }: { findings: BulkImportFinding[];
   );
 }
 
-function ImportResult({ job }: { job: BulkImportJob }): JSX.Element {
-  const c = job.counts;
-  const problems = (c?.mismatches ?? 0) > 0 || (c?.rejects ?? 0) > 0;
+function ImportResult({ result }: { result: BulkImportResult }): JSX.Element {
+  const c = result.counts;
+  const problems = c.mismatches > 0 || c.rejects > 0;
   return (
     <Alert severity={problems ? "warning" : "success"}>
       {problems
         ? "The import finished, but the check afterwards found differences. Download errors.csv and report.txt."
         : "The import finished and what was written matches the file."}{" "}
-      {c ? `${c.migrated} written, ${c.skipped} already there.` : ""} Download risk_codes.csv for the risk number of every row.
+      {c.migrated} written, {c.skipped} already there. Download risk_codes.csv for the risk number of every row.
     </Alert>
   );
 }

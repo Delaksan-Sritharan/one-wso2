@@ -939,10 +939,14 @@ export async function deleteRiskEvidence(authFetch: AuthFetch, riskId: number, f
 
 // ── Bulk risk import (Compliance Admin) ───────────────────────────────────────
 //
-// A CSV is dry-run first and imported only if that dry run finished with
-// nothing rejected. Both run as a background job on the server: start one, then
-// poll it. The backend refuses an import for a file that was not dry-run clean,
-// so none of this is advisory.
+// A CSV is dry-run first, and imported only if that dry run finished with
+// nothing rejected. A run is one request: the upload stays open and the server
+// streams its progress, then the result, as one JSON object per line. Nothing is
+// kept on the server between requests. If the connection drops the run stops;
+// an import resumes where it stopped when the same file is run again.
+//
+// The backend re-validates the whole file on an import and writes nothing if any
+// row is rejected, so the dry run first is the admin's preview, not the guard.
 
 export type BulkImportMode = "dry_run" | "import";
 
@@ -968,35 +972,43 @@ export interface BulkImportCounts {
   plan_known?: boolean;
 }
 
-export type BulkImportDownload = "errors" | "report" | "risk-codes";
+// The result's files, as text. A file with nothing to say is absent.
+export interface BulkImportFiles {
+  errors_csv?: string;
+  report?: string;
+  risk_codes_csv?: string;
+}
 
-export interface BulkImportJob {
-  id: string;
+export interface BulkImportResult {
   mode: BulkImportMode;
-  status: "running" | "succeeded" | "failed";
-  // preflight | parse | resolve | write | verify, while running.
-  phase?: string;
-  done: number;
-  total: number;
   register_id: number;
   register_name: string;
   template: RegisterTemplate;
   file_name: string;
   file_sha256: string;
-  outcome?: "clean" | "completed_with_findings" | "aborted";
+  outcome: "clean" | "completed_with_findings" | "aborted";
   rows: number;
-  error?: string;
-  started_at: string;
-  finished_at?: string;
-  counts?: BulkImportCounts;
-  // True on a finished dry run with nothing rejected, until importable_until:
-  // the window in which the same file may be imported.
-  importable: boolean;
-  importable_until?: string;
+  counts: BulkImportCounts;
   findings?: BulkImportFinding[];
   findings_truncated?: boolean;
-  downloads?: BulkImportDownload[];
+  files?: BulkImportFiles;
 }
+
+export interface BulkImportProgress {
+  // preflight | parse | resolve | write | verify
+  phase: string;
+  done: number;
+  total: number;
+}
+
+type BulkImportEvent =
+  | ({ type: "progress" } & BulkImportProgress)
+  | { type: "ping" }
+  | ({ type: "result" } & BulkImportResult)
+  | { type: "error"; message: string; reference?: string };
+
+export const BULK_IMPORT_CONNECTION_LOST =
+  "The connection closed before the run finished. Nothing is lost: run the same file again to continue.";
 
 // A file response: the bytes and the name the server gave them.
 async function readFileResponse(res: Response, fallbackName: string): Promise<{ blob: Blob; fileName: string }> {
@@ -1019,37 +1031,81 @@ export async function downloadBulkImportTemplate(
   return readFileResponse(res, "risk-import-template.csv");
 }
 
-// Starts a dry run or an import and returns the accepted job. Throws with the
-// server's message when the upload is refused (wrong file type, too large,
-// another import running, no clean dry run for this file).
-export async function startBulkImport(
+// Runs a dry run or an import and resolves with its result. onProgress is called
+// as the server reports how far it has got.
+//
+// Rejects with the server's message when the upload is refused (wrong file type,
+// too large, another import running) or the run stops with an error, and with
+// BULK_IMPORT_CONNECTION_LOST when the stream ends without a result: the browser
+// cannot tell a cut connection from a stopped server, and the remedy for both is
+// to run the same file again.
+export async function runBulkImport(
   authFetch: AuthFetch,
-  params: { registerId: number; mode: BulkImportMode; file: File; acknowledgeWarnings?: boolean },
-): Promise<BulkImportJob> {
+  params: {
+    registerId: number;
+    mode: BulkImportMode;
+    file: File;
+    acknowledgeWarnings?: boolean;
+    signal?: AbortSignal;
+    onProgress?: (p: BulkImportProgress) => void;
+  },
+): Promise<BulkImportResult> {
   const form = new FormData();
   form.append("register_id", String(params.registerId));
   form.append("mode", params.mode);
   if (params.acknowledgeWarnings) form.append("acknowledge_warnings", "true");
   form.append("file", params.file, params.file.name);
 
-  const res = await authFetch(`${BACKEND_BASE_URL}/api/v1/risks/bulk-import`, { method: "POST", body: form });
-  return handleResponse<BulkImportJob>(res);
-}
+  const res = await authFetch(`${BACKEND_BASE_URL}/api/v1/risks/bulk-import`, {
+    method: "POST",
+    body: form,
+    signal: params.signal,
+  });
+  // Refusals before the run starts are ordinary JSON errors.
+  if (!res.ok) return handleResponse<never>(res);
 
-export async function fetchBulkImportJob(authFetch: AuthFetch, jobId: string): Promise<BulkImportJob> {
-  const res = await authFetch(`${BACKEND_BASE_URL}/api/v1/risks/bulk-import/jobs/${encodeURIComponent(jobId)}`);
-  return handleResponse<BulkImportJob>(res);
-}
+  const out: { result: BulkImportResult | null } = { result: null };
+  const handleLine = (line: string): void => {
+    const text = line.trim();
+    if (!text) return;
+    let event: BulkImportEvent;
+    try {
+      event = JSON.parse(text) as BulkImportEvent;
+    } catch {
+      return; // not one of ours (a proxy's note, say); the end of the stream still decides
+    }
+    if (event.type === "progress") params.onProgress?.(event);
+    else if (event.type === "result") out.result = event;
+    else if (event.type === "error") throw new Error(event.message);
+  };
 
-export async function downloadBulkImportResult(
-  authFetch: AuthFetch,
-  jobId: string,
-  artifact: BulkImportDownload,
-): Promise<{ blob: Blob; fileName: string }> {
-  const res = await authFetch(
-    `${BACKEND_BASE_URL}/api/v1/risks/bulk-import/jobs/${encodeURIComponent(jobId)}/${artifact}`,
-  );
-  return readFileResponse(res, artifact === "report" ? "report.txt" : `${artifact}.csv`);
+  const reader = res.body?.getReader();
+  if (!reader) {
+    // No streaming support: the whole body is read at once, then handled.
+    for (const line of (await res.text()).split("\n")) handleLine(line);
+  } else {
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = await reader.read();
+      } catch (e: unknown) {
+        if (params.signal?.aborted) throw e;
+        throw new Error(BULK_IMPORT_CONNECTION_LOST);
+      }
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+      for (let nl = buffer.indexOf("\n"); nl >= 0; nl = buffer.indexOf("\n")) {
+        handleLine(buffer.slice(0, nl));
+        buffer = buffer.slice(nl + 1);
+      }
+    }
+    handleLine(buffer + decoder.decode());
+  }
+
+  if (!out.result) throw new Error(BULK_IMPORT_CONNECTION_LOST);
+  return out.result;
 }
 
 // The filter half of ListRisksParams as a query string — everything but paging.
