@@ -147,7 +147,7 @@ export function useEngagementActions(): {
   }
   const rowActionsFor = (e: EngagementSummary) => {
     const { primary, menu } = actionsFor(e);
-    return primary ? [primary, ...menu] : menu;
+    return primary ? [{ ...primary, primary: true }, ...menu] : menu;
   };
   return { actionsFor, rowActionsFor, dialogs };
 }

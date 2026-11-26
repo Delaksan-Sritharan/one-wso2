@@ -53,13 +53,14 @@ export interface TableSort {
   readonly onSort: (sort: string) => void;
 }
 
-/** A row action. A row with one shows it as a button, a row with several keeps them all in its menu. */
+/** A row action. The one flagged `primary` is the row's button and the rest sit in its menu. With none flagged, a row with one action shows a button and a row with several keeps them all in the menu. */
 export interface RowAction {
   readonly label: string;
   readonly icon?: ReactNode;
   readonly onClick: () => void;
   readonly danger?: boolean;
   readonly disabled?: boolean;
+  readonly primary?: boolean;
 }
 
 /** `loading` and `refreshing` for a paged list's query: the first load is a skeleton, a new page, sort or search keeps the rows, dimmed. */
@@ -106,7 +107,7 @@ export default function EaTable<T>({
   readonly onRowClick?: (row: T) => void;
   /** Rows for which this is false are plain: no pointer, tab stop or click handler. */
   readonly canOpen?: (row: T) => boolean;
-  /** The actions a row offers: one shows as a button, two or more in the row's menu. The Actions column is left out when no row has any. */
+  /** The actions a row offers: the primary one is the button, the rest are in the row's menu (see `RowAction`). The Actions column is left out when no row has any. */
   readonly actions?: (row: T) => readonly RowAction[];
   readonly selection?: RowSelection<T>;
   readonly empty: ReactNode;

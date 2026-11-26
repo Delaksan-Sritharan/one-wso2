@@ -29,7 +29,7 @@ export function useTravelRowActions() {
   const canEdit = p.t.has(TRAVEL.EDIT_STATUS) || p.t.has(TRAVEL.EDIT_AGENT) || p.t.has(TRAVEL.EDIT_VISA);
   // The row's `actions` decide when present.
   const assign = (t: TravelRequestSummary): RowAction[] =>
-    t.status === "New" && (t.actions ? t.actions.assign : newTravelRequests) ? [{ label: "Assign Travel Agent", onClick: () => setAssigning(t) }] : [];
+    t.status === "New" && (t.actions ? t.actions.assign : newTravelRequests) ? [{ label: "Assign Travel Agent", primary: true, onClick: () => setAssigning(t) }] : [];
   const update = (t: TravelRequestSummary): RowAction[] =>
     t.status !== "New" && (t.actions ? t.actions.update : canEdit) ? [{ label: "Update Travel Details", onClick: () => setUpdating(t.jobNumber) }] : [];
   const rowActions = (t: TravelRequestSummary): RowAction[] => [...assign(t), ...update(t)];

@@ -114,6 +114,20 @@ describe("EaTable row actions", () => {
     expect(screen.getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
   });
 
+  it("keeps the primary action as the button and moves the rest to the menu", () => {
+    draw(() => [{ ...act("Allocate"), primary: true }, act("Edit"), act("Reopen")]);
+    expect(screen.getAllByRole("button", { name: "Allocate" })).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "More actions for A" }));
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Allocate" })).toBeNull();
+  });
+
+  it("shows a lone primary action as a button with no menu", () => {
+    draw(() => [{ ...act("Assign Travel Agent"), primary: true }]);
+    expect(screen.getAllByRole("button", { name: "Assign Travel Agent" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
+  });
+
   it("leaves the column out when no row has an action", () => {
     draw(() => []);
     expect(screen.queryByRole("columnheader", { name: "Actions" })).toBeNull();
