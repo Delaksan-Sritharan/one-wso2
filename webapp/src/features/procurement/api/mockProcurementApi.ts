@@ -342,6 +342,7 @@ function teamSeeds(): PurchaseRequest[] {
       priority: null,
       assignee: "",
       collaborators: [],
+      event: emptyEvent(),
       details: { ...emptyDetails(), description: "Forty ergonomic chairs.", businessJustification: "Replaces chairs that are past repair." },
     },
     {
@@ -354,6 +355,7 @@ function teamSeeds(): PurchaseRequest[] {
       priority: "P2",
       assignee: MOCK_DIRECTORY[1].email,
       collaborators: [MOCK_DIRECTORY[2].email],
+      event: emptyEvent(),
       details: { ...emptyDetails(), description: "Toner and paper for the second floor printers.", businessJustification: "Current stock runs out this month." },
     },
   ];
