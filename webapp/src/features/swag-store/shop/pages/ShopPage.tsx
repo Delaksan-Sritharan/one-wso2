@@ -23,21 +23,28 @@ import ProductGrid from "../components/ProductGrid";
 import ShopFilters from "../components/ShopFilters";
 import WalletBalance from "../components/WalletBalance";
 
-/** `/store`: the shopper's balance, then every item for sale, filtered and sorted from the address. */
+/**
+ * `/store`: the title with the shopper's balance at its right (below it on narrow
+ * screens), then every item for sale, filtered and sorted from the address.
+ */
 export default function ShopPage(): JSX.Element {
   useDocumentTitle("Swag Store");
   const { view, setView } = useUrlViewState(shopViewCodec);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Box>
-        <Typography component="h1" variant="h5" sx={{ mb: 0.5, mt: 0 }}>
-          Swag Store
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: "70ch", mb: 2 }}>
-          Spend your O2C coins on WSO2 swag, and pick your order up at your office.
-        </Typography>
-        <WalletBalance />
+      <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 2 }}>
+        <Box sx={{ flex: "1 1 320px", minWidth: 0 }}>
+          <Typography component="h1" variant="h5" sx={{ mb: 0.5, mt: 0 }}>
+            Swag Store
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: "70ch", mb: 0 }}>
+            Spend your O2C coins on WSO2 swag, and pick your order up at your office.
+          </Typography>
+        </Box>
+        <Box sx={{ flex: "0 1 auto", minWidth: 0 }}>
+          <WalletBalance />
+        </Box>
       </Box>
       <ShopFilters view={view} onChange={setView} />
       <ProductGrid view={view} onChange={setView} />
