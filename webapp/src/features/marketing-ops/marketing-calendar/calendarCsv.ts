@@ -28,7 +28,6 @@ import type { CalendarCategory, CalendarItem } from "./marketingCalendarTypes";
 // A list (BU, Region) is one cell, comma separated. A field with no value is
 // an empty cell, so every row has every column.
 
-// Excel reads a file without it as the system code page, so "São Paulo" breaks.
 const BOM = "﻿";
 const NUMERIC_LIKE = /^[-+]?\d+(\.\d+)?%?$/;
 
