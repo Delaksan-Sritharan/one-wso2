@@ -71,7 +71,8 @@ export const normaliseHeader = (h: string): string => h.trim().toLowerCase().rep
 export interface FrameworkControlCsvRow {
   controlNumber: string;
   description: string;
-  evidenceRequirement: string;
+  /** null when the cell is blank, matching the single-add form (stored as NULL, not ""). */
+  evidenceRequirement: string | null;
   requirementType: RequirementType;
   controlType: ControlType;
   scope: ControlScope;
@@ -83,6 +84,9 @@ export type FrameworkControlCsvResult =
 
 const REQUIRED = ["control_number", "description"];
 const MAX_ERRORS = 10;
+/** Mirror the server: one request holds at most 200 controls; control_number is VARCHAR(60). */
+export const MAX_CSV_CONTROLS = 200;
+const MAX_CONTROL_NUMBER_LENGTH = 60;
 
 export const FRAMEWORK_CONTROL_CSV_TEMPLATE =
   "control_number,description,evidence_requirement,requirement_type,control_type,scope\n" +
@@ -103,6 +107,13 @@ export function parseFrameworkControlsCsv(text: string): FrameworkControlCsvResu
   const missing = REQUIRED.filter((c) => !headers.includes(c));
   if (missing.length > 0) return { ok: false, errors: [`Missing required column(s): ${missing.join(", ")}`] };
 
+  if (table.length - 1 > MAX_CSV_CONTROLS) {
+    return {
+      ok: false,
+      errors: [`The file has ${table.length - 1} rows; at most ${MAX_CSV_CONTROLS} controls can be uploaded at once. Split it into smaller files.`],
+    };
+  }
+
   const col = (name: string) => headers.indexOf(name);
   const errors: string[] = [];
   const rows: FrameworkControlCsvRow[] = [];
@@ -114,6 +125,7 @@ export function parseFrameworkControlsCsv(text: string): FrameworkControlCsvResu
     const controlNumber = get("control_number");
     const description = get("description");
     if (!controlNumber) return void errors.push(`Row ${line}: control_number is empty`);
+    if ([...controlNumber].length > MAX_CONTROL_NUMBER_LENGTH) return void errors.push(`Row ${line}: control_number is longer than ${MAX_CONTROL_NUMBER_LENGTH} characters`);
     if (!description) return void errors.push(`Row ${line}: description is empty`);
 
     const req = (get("requirement_type") || "DESIGN").toUpperCase();
@@ -131,7 +143,7 @@ export function parseFrameworkControlsCsv(text: string): FrameworkControlCsvResu
     rows.push({
       controlNumber,
       description,
-      evidenceRequirement: get("evidence_requirement"),
+      evidenceRequirement: get("evidence_requirement") || null,
       requirementType: req,
       controlType: ctl,
       scope,

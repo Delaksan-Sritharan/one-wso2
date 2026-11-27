@@ -42,6 +42,7 @@ import { useCreateFrameworkControl } from "@features/security/grc/modules/audit/
 import { useBulkAddFrameworkControls } from "@features/security/grc/modules/audit/api/useBulkAddFrameworkControls";
 import {
   FRAMEWORK_CONTROL_CSV_TEMPLATE,
+  MAX_CSV_CONTROLS,
   parseFrameworkControlsCsv,
   type FrameworkControlCsvRow,
 } from "@features/security/grc/modules/audit/utils/controlCsv";
@@ -308,7 +309,8 @@ function CsvUpload({ frameworkId, existingCount, onCancel, onDone }: FormProps &
       <Typography variant="body2" color="text.secondary">
         Required columns: control_number, description. Optional: evidence_requirement, requirement_type (DESIGN or OE),
         control_type (CONFIG or NON_CONFIG), scope (COMMON or PRODUCT_SPECIFIC). Controls are added to the {existingCount}{" "}
-        already in this framework. A control number that already exists, or any invalid row, rejects the whole file.
+        already in this framework, up to {MAX_CSV_CONTROLS} per file. A control number that already exists, or any invalid row,
+        rejects the whole file.
       </Typography>
       <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
         <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={(e) => void handleFile(e)} />

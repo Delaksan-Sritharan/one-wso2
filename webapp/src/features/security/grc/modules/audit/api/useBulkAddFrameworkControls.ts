@@ -49,7 +49,8 @@ export function useBulkAddFrameworkControls() {
       return res.json() as Promise<FrameworkControlListResponse>;
     },
 
-    onSuccess: (_data, { frameworkId }) => {
+    // Also on error: a part-way failure (409) leaves some controls saved, so the list must refetch.
+    onSettled: (_data, _error, { frameworkId }) => {
       void queryClient.invalidateQueries({ queryKey: frameworkControlsQueryKey(frameworkId) });
     },
   });

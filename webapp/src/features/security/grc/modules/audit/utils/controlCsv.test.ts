@@ -15,7 +15,7 @@
 // under the License.
 
 import { describe, expect, it } from "vitest";
-import { FRAMEWORK_CONTROL_CSV_TEMPLATE, parseCsv, parseFrameworkControlsCsv } from "./controlCsv";
+import { FRAMEWORK_CONTROL_CSV_TEMPLATE, MAX_CSV_CONTROLS, parseCsv, parseFrameworkControlsCsv } from "./controlCsv";
 
 describe("parseCsv", () => {
   it("keeps commas, doubled quotes and newlines inside quoted fields", () => {
@@ -39,7 +39,7 @@ describe("parseFrameworkControlsCsv", () => {
     expect(res).toEqual({
       ok: true,
       rows: [{
-        controlNumber: "C-1", description: "Asset, ownership", evidenceRequirement: "",
+        controlNumber: "C-1", description: "Asset, ownership", evidenceRequirement: null,
         requirementType: "DESIGN", controlType: "NON_CONFIG", scope: "COMMON",
       }],
     });
@@ -74,6 +74,27 @@ describe("parseFrameworkControlsCsv", () => {
     const res = parseFrameworkControlsCsv(`${header}\n${rows}`);
     expect(!res.ok && res.errors).toHaveLength(11);
     expect(!res.ok && res.errors[10]).toBe("…and 5 more");
+  });
+
+  it("sends null, not an empty string, for blank evidence, and keeps real evidence", () => {
+    const res = parseFrameworkControlsCsv(`${header}\nC-1,d,,,,\nC-2,d,  ,,,\nC-3,d,Screenshot,,,`);
+    expect(res.ok && res.rows.map((r) => r.evidenceRequirement)).toEqual([null, null, "Screenshot"]);
+  });
+
+  it("refuses more than 200 rows before checking them", () => {
+    const rows = Array.from({ length: MAX_CSV_CONTROLS + 1 }, (_, i) => `C-${i},d`).join("\n");
+    const res = parseFrameworkControlsCsv(`control_number,description\n${rows}`);
+    expect(res.ok).toBe(false);
+    expect(!res.ok && res.errors[0]).toContain("at most 200");
+    const atCap = Array.from({ length: MAX_CSV_CONTROLS }, (_, i) => `C-${i},d`).join("\n");
+    expect(parseFrameworkControlsCsv(`control_number,description\n${atCap}`).ok).toBe(true);
+  });
+
+  it("limits control_number to 60 characters, counting characters not bytes", () => {
+    const fits = "é".repeat(60);
+    expect(parseFrameworkControlsCsv(`control_number,description\n${fits},d`).ok).toBe(true);
+    const res = parseFrameworkControlsCsv(`control_number,description\n${"a".repeat(61)},d`);
+    expect(res).toEqual({ ok: false, errors: ["Row 2: control_number is longer than 60 characters"] });
   });
 
   it("accepts its own download template", () => {
