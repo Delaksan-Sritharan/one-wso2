@@ -33,25 +33,26 @@ import {
   TableRow,
   TextField,
   Typography,
-  Skeleton,
 } from "@wso2/oxygen-ui";
 import { PlusIcon } from "@wso2/oxygen-ui-icons-react";
 import RoutedTabs from "@components/routed-tabs/RoutedTabs";
 import { useNotifications } from "@context/notifications/NotificationsContext";
 import type { AllocationTypeDef, EngagementTypeId } from "../api/engagementTypes";
 import { useAllocationTypes, useEngagementTypes, useRoleSettings } from "../api/useEngagementApi";
-import { useDeleteAllocationType, useSaveAllocationType, useSaveRolePrivileges } from "../api/useEngagementMutations";
+import { useDeleteAllocationType, useIdempotencyKey, useSaveAllocationType, useSaveRolePrivileges } from "../api/useEngagementMutations";
 import { useEngagementAccess } from "../api/useEngagementUserInfo";
 import EaDialog, { ConfirmDialog } from "../components/EaDialog";
 import EaPage from "../components/EaPage";
-import EaTable, { type Column } from "../components/EaTable";
+import { TableSkeleton } from "../components/EaSkeletons";
+import EaTable, { type Column, tableState } from "../components/EaTable";
 import { Empty, Failed, ListCard, SectionTitle } from "../components/ListCard";
 import ListToolbar from "../components/ListToolbar";
 import { Two, Mono } from "../components/StatusChips";
 import { engagementPaths, type SettingsTab } from "../engagementPaths";
 import type { EngagementAccess } from "../model/engagementAccess";
 import { TABLE_HEAD_SX } from "../components/eaStyles";
-import { PAGE_SIZE, useListView } from "../model/useListView";
+import { columnAccessors, sortRows } from "../model/sorting";
+import { useListView } from "../model/useListView";
 
 const LABEL: Record<SettingsTab, string> = {
   "allocation-roles": "Allocation Roles",
@@ -100,7 +101,7 @@ function RoleSettings({ app }: { app: "allocations" | "travel" }): JSX.Element {
   const [ticks, setTicks] = useState<Record<string, ReadonlySet<number>>>({});
   const [confirm, setConfirm] = useState(false);
   if (settings.isError) return <Failed what="the role settings" error={settings.error} onRetry={() => void settings.refetch()} retrying={settings.isFetching} />;
-  if (settings.isPending) return <Skeleton variant="rounded" height={240} />;
+  if (settings.isPending) return <TableSkeleton columns={3} rows={6} />;
   const roles = settings.data.roles;
   if (!roles.length) return <Empty title="No Roles Yet" body="Roles appear here once they are set up for this app." />;
   const current = roles.find((r) => r.role === role) ?? roles[0];
@@ -170,6 +171,8 @@ function RoleSettings({ app }: { app: "allocations" | "travel" }): JSX.Element {
       {confirm ? (
         <ConfirmDialog
           title="Update Role Privileges"
+          confirmLabel="Update Privileges"
+          busyLabel="Updating…"
           text={`Are you sure you want to update the privileges of ${current.role}?`}
           run={() => save.mutateAsync({ app, roleId: current.id, privileges: [...ticked].sort((a, b) => a - b) })}
           onDone={() => {
@@ -196,7 +199,7 @@ function AllocationTypes(): JSX.Element {
   const engagementTypes = useEngagementTypes();
   const remove = useDeleteAllocationType();
   const notify = useNotifications();
-  const list = useListView();
+  const list = useListView("allocation-types");
   const [editing, setEditing] = useState<AllocationTypeDef | "new" | null>(null);
   const [deleting, setDeleting] = useState<AllocationTypeDef | null>(null);
   const typeFilter = list.filters.engagementType ?? "";
@@ -206,9 +209,9 @@ function AllocationTypes(): JSX.Element {
     (x) => (!typeFilter || String(x.engagementTypeId) === typeFilter) && (!q || [x.name, x.department, x.code].some((v) => (v ?? "").toLowerCase().includes(q))),
   );
   const columns: Column<AllocationTypeDef>[] = [
-    { key: "name", label: "Allocation Type", render: (x) => x.name },
-    { key: "et", label: "Engagement Type", render: (x) => typeName(x.engagementTypeId) },
-    { key: "dept", label: "Department", render: (x) => (x.department ? titleCase(x.department) : "—") },
+    { key: "name", label: "Allocation Type", sortKey: "name", sortValue: (x) => x.name, render: (x) => x.name },
+    { key: "et", label: "Engagement Type", sortKey: "engagementType", sortValue: (x) => typeName(x.engagementTypeId), render: (x) => typeName(x.engagementTypeId) },
+    { key: "dept", label: "Department", sortKey: "department", sortValue: (x) => x.department, render: (x) => (x.department ? titleCase(x.department) : "—") },
     {
       key: "color",
       label: "Color Code",
@@ -222,8 +225,8 @@ function AllocationTypes(): JSX.Element {
           "—"
         ),
     },
-    { key: "code", label: "Engagement Code", render: (x) => <Two main={<Mono>{x.code || "—"}</Mono>} sub={x.suffix ? `Suffix ${x.suffix}` : undefined} /> },
-    { key: "notify", label: "Notify To Allocations", render: (x) => x.notifyToAllocations ?? "—" },
+    { key: "code", label: "Engagement Code", sortKey: "code", sortValue: (x) => x.code, render: (x) => <Two main={<Mono>{x.code || "—"}</Mono>} sub={x.suffix ? `Suffix ${x.suffix}` : undefined} /> },
+    { key: "notify", label: "Notify To Allocations", sortKey: "notify", sortValue: (x) => x.notifyToAllocations, render: (x) => x.notifyToAllocations ?? "—" },
   ];
   return (
     <>
@@ -242,7 +245,7 @@ function AllocationTypes(): JSX.Element {
         onRemove={list.removeFilter}
         right={
           <Button variant="contained" size="small" startIcon={<PlusIcon size={14} />} onClick={() => setEditing("new")}>
-            Add New Allocation Type
+            Add Allocation Type
           </Button>
         }
       />
@@ -252,11 +255,12 @@ function AllocationTypes(): JSX.Element {
         <EaTable
           ariaLabel="Allocation types"
           columns={columns}
-          rows={rows.slice(list.page * PAGE_SIZE, (list.page + 1) * PAGE_SIZE)}
-          pagination={{ page: list.page, pageSize: PAGE_SIZE, total: rows.length, onPage: list.setPage }}
+          rows={list.pageOf(sortRows(rows, list.sort, columnAccessors(columns)))}
+          sorting={list.sorting}
+          pagination={list.pager(rows.length)}
           rowKey={(x) => x.id}
-          loading={types.isPending || types.isPlaceholderData}
-          menu={(x) => [
+          {...tableState(types)}
+          actions={(x) => [
             { label: "Edit", onClick: () => setEditing(x) },
             { label: "Delete", danger: true, onClick: () => setDeleting(x) },
           ]}
@@ -274,6 +278,8 @@ function AllocationTypes(): JSX.Element {
       {deleting ? (
         <ConfirmDialog
           title="Delete Allocation Type"
+          confirmLabel="Delete"
+          busyLabel="Deleting…"
           text={`Are you sure you want to delete ${deleting.name} (${typeName(deleting.engagementTypeId)})?`}
           danger
           run={() => remove.mutateAsync({ id: deleting.id })}
@@ -298,6 +304,7 @@ function AllocationTypeDialog({
 }): JSX.Element {
   const engagementTypes = useEngagementTypes();
   const save = useSaveAllocationType();
+  const idem = useIdempotencyKey();
   const notify = useNotifications();
   const [f, setF] = useState({
     engagementTypeId: String(type?.engagementTypeId ?? defaultTypeId),
@@ -312,7 +319,8 @@ function AllocationTypeDialog({
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
   return (
     <EaDialog
-      title={type ? "Update Allocation Type" : "Add New Allocation Type"}
+      title={type ? "Edit Allocation Type" : "Add Allocation Type"}
+      confirmLabel={type ? "Save Changes" : "Add Allocation Type"}
       busy={save.isPending}
       error={error}
       onClose={onClose}
@@ -322,6 +330,7 @@ function AllocationTypeDialog({
         save.mutate(
           {
             id: type?.id,
+            idempotencyKey: type ? undefined : idem.key,
             engagementTypeId: Number(f.engagementTypeId) as EngagementTypeId,
             name: f.name.trim(),
             code: f.code.trim(),
@@ -340,7 +349,7 @@ function AllocationTypeDialog({
         );
       }}
     >
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, pt: 1 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, pt: 1 }}>
         <TextField select size="small" required label="Engagement Type" value={f.engagementTypeId} onChange={set("engagementTypeId")}>
           {(engagementTypes.data ?? []).map((t) => (
             <MenuItem key={t.id} value={String(t.id)}>

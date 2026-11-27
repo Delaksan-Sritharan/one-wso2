@@ -41,7 +41,7 @@ export function useBatchReport() {
 
 type InvoiceDialog = { kind: "approve" | "reject" | "push" | "resync"; ids: string[]; stage: InvoiceStage };
 
-/** Invoice approval as the Travel app had it: PO approval, finance approval, Push to NS and Re-sync. */
+/** Invoice approval: PO approval, finance approval, Push to NetSuite and Re-sync. */
 export function useInvoiceWork(rows: readonly Invoice[], { tripOpen }: { tripOpen?: boolean } = {}) {
   const { p } = useEngagementAccess();
   const steps = invoiceSteps(p);
@@ -84,6 +84,7 @@ export function useInvoiceWork(rows: readonly Invoice[], { tripOpen }: { tripOpe
     ? {
         selected,
         canSelect,
+        rowLabel: (i) => `Select invoice ${i.number}`,
         onToggle: (id) =>
           setSelected((s) => {
             const next = new Set(s);
@@ -125,14 +126,14 @@ export function useInvoiceWork(rows: readonly Invoice[], { tripOpen }: { tripOpe
     if (stage === "push") {
       return (
         <Button size="small" variant="contained" startIcon={<SendIcon size={14} />} onClick={() => open("push", ids, stage)}>
-          Push Invoices to NS
+          Push Invoices to NetSuite
         </Button>
       );
     }
     if (stage === "failed") {
       return (
         <Button size="small" variant="contained" startIcon={<RefreshCwIcon size={14} />} onClick={() => open("resync", ids, stage)}>
-          Re-sync with NS
+          Re-sync with NetSuite
         </Button>
       );
     }
@@ -163,6 +164,8 @@ export function useInvoiceWork(rows: readonly Invoice[], { tripOpen }: { tripOpe
     dialogs = (
       <ConfirmDialog
         title={dialog.stage === "po" ? "Approve Invoices (PO)" : "Approve Invoices"}
+        confirmLabel="Approve"
+        busyLabel="Approving…"
         text={`Approve ${plural(dialog.ids.length, "invoice")}? ${dialog.stage === "po" ? "They go to finance for approval next." : "They can then be pushed to NetSuite."}`}
         run={async () => report(await act("approve", dialog.ids), "approved", "invoice")}
         onDone={done}
@@ -173,6 +176,8 @@ export function useInvoiceWork(rows: readonly Invoice[], { tripOpen }: { tripOpe
     dialogs = (
       <ConfirmDialog
         title="Push Invoices to NetSuite"
+        confirmLabel="Push to NetSuite"
+        busyLabel="Pushing…"
         text={`Push ${plural(dialog.ids.length, "invoice")} to NetSuite as purchase orders? Each one is looked up in NetSuite first, so nothing is pushed twice.`}
         run={async () => report(await act("push", dialog.ids), "pushed", "invoice")}
         onDone={done}
@@ -183,7 +188,9 @@ export function useInvoiceWork(rows: readonly Invoice[], { tripOpen }: { tripOpe
     dialogs = (
       <ConfirmDialog
         title="Re-sync with NetSuite"
-        text={`Look up ${plural(dialog.ids.length, "record")} in NetSuite and update their NS status here. Nothing is pushed again.`}
+        confirmLabel="Re-sync"
+        busyLabel="Re-syncing…"
+        text={`Look up ${plural(dialog.ids.length, "record")} in NetSuite and update their NetSuite status here. Nothing is pushed again.`}
         run={async () => report(await act("resync", dialog.ids), "re-synced", "invoice")}
         onDone={done}
         onClose={() => setDialog(null)}
@@ -201,7 +208,7 @@ export function useInvoiceWork(rows: readonly Invoice[], { tripOpen }: { tripOpe
   return { selection, bulk, dialogs, actionsFor, any };
 }
 
-/** Per diem payments: Push Payments to NS while the trip is open, and Re-sync with NS. */
+/** Per diem payments: Push Payments to NetSuite while the trip is open, and Re-sync with NetSuite. */
 export function usePaymentWork(rows: readonly PerDiemPayment[]) {
   const { p } = useEngagementAccess();
   const can = invoiceSteps(p).pushPayments;
@@ -226,6 +233,7 @@ export function usePaymentWork(rows: readonly PerDiemPayment[]) {
     ? {
         selected,
         canSelect,
+        rowLabel: (x) => `Select per diem payment ${x.id}`,
         onToggle: (id) =>
           setSelected((s) => {
             const next = new Set(s);
@@ -240,11 +248,11 @@ export function usePaymentWork(rows: readonly PerDiemPayment[]) {
   const buttonFor = (list: string[], resyncing: boolean): ReactNode =>
     resyncing ? (
       <Button size="small" variant="contained" startIcon={<RefreshCwIcon size={14} />} onClick={() => setDialog({ kind: "resync", ids: list })}>
-        Re-sync with NS
+        Re-sync with NetSuite
       </Button>
     ) : (
       <Button size="small" variant="contained" startIcon={<SendIcon size={14} />} onClick={() => setDialog({ kind: "push", ids: list })}>
-        Push Payments to NS
+        Push Payments to NetSuite
       </Button>
     );
 
@@ -267,6 +275,8 @@ export function usePaymentWork(rows: readonly PerDiemPayment[]) {
     dialogs = (
       <ConfirmDialog
         title="Push Payments to NetSuite"
+        confirmLabel="Push to NetSuite"
+        busyLabel="Pushing…"
         text={`Push ${plural(dialog.ids.length, "per diem payment")} to NetSuite as vendor bills? Each one is looked up in NetSuite first, so nothing is pushed twice.`}
         run={async () => report(await batch.mutateAsync({ action: "push", ids: dialog.ids, idempotencyKey: pushKey.keyFor([...dialog.ids].sort().join(",")) }), "pushed", "per diem payment")}
         onDone={done}
@@ -277,7 +287,9 @@ export function usePaymentWork(rows: readonly PerDiemPayment[]) {
     dialogs = (
       <ConfirmDialog
         title="Re-sync with NetSuite"
-        text={`Look up ${plural(dialog.ids.length, "per diem payment")} in NetSuite and update their NS status here. Nothing is pushed again.`}
+        confirmLabel="Re-sync"
+        busyLabel="Re-syncing…"
+        text={`Look up ${plural(dialog.ids.length, "per diem payment")} in NetSuite and update their NetSuite status here. Nothing is pushed again.`}
         run={async () => report(await batch.mutateAsync({ action: "resync", ids: dialog.ids }), "re-synced", "per diem payment")}
         onDone={done}
         onClose={() => setDialog(null)}

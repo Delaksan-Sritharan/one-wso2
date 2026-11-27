@@ -24,13 +24,14 @@ import type { TravelDocument, Visa } from "../api/engagementTypes";
 import { useMyTravelDocuments, useMyVisas, useReferenceData, useTravelDocuments, useVisas } from "../api/useEngagementApi";
 import { useEngagementAccess } from "../api/useEngagementUserInfo";
 import EaPage from "../components/EaPage";
-import EaTable from "../components/EaTable";
+import EaTable, { tableState } from "../components/EaTable";
 import { Empty, Failed, ListCard } from "../components/ListCard";
 import ListToolbar, { type FilterDef } from "../components/ListToolbar";
 import { engagementPaths, myEngagementPaths, type DocumentsTab } from "../engagementPaths";
 import { TRAVEL, type EngagementAccess } from "../model/engagementAccess";
+import { columnAccessors, sortRows } from "../model/sorting";
 import { DOCUMENT_TYPES } from "../model/statuses";
-import { PAGE_SIZE, useListView } from "../model/useListView";
+import { useListView } from "../model/useListView";
 import { documentColumns, documentStatus, visaColumns, visaStatus } from "./documentColumns";
 import { DocumentDialog, DocumentDrawer, VisaDialog } from "./documentParts";
 
@@ -65,6 +66,7 @@ function Tabs({ own, tabs }: { own: boolean; tabs: DocumentsTab[] }) {
       basePath={own ? myEngagementPaths.documents() : engagementPaths.documents()}
       tabs={tabs.map((t) => ({ segment: t, label: label(t) }))}
       ariaLabel="Visas and documents"
+      keepSearchParams={["q", "country", "status"]}
     />
   );
 }
@@ -72,7 +74,7 @@ function Tabs({ own, tabs }: { own: boolean; tabs: DocumentsTab[] }) {
 function AllDocuments({ tab, tabs }: { tab: DocumentsTab; tabs: DocumentsTab[] }): JSX.Element {
   const { p } = useEngagementAccess();
   const today = localIsoDate();
-  const list = useListView();
+  const list = useListView("documents");
   const ref = useReferenceData();
   const [open, setOpen] = useState<Visa | TravelDocument | null>(null);
   const [editing, setEditing] = useState<Visa | TravelDocument | "new" | null>(null);
@@ -98,7 +100,7 @@ function AllDocuments({ tab, tabs }: { tab: DocumentsTab; tabs: DocumentsTab[] }
   const title = tabs.length > 1 ? "Visas & Documents" : isVisas ? "Visas" : "Travel Documents";
 
   return (
-    <EaPage
+    <EaPage collapsedSearch
       title={title}
       subtitle={
         p.t.has(TRAVEL.ADD_VISA)
@@ -126,10 +128,11 @@ function AllDocuments({ tab, tabs }: { tab: DocumentsTab; tabs: DocumentsTab[] }
             columns={visaColumns(false, today)}
             rows={visas.data?.items ?? []}
             rowKey={(v) => v.id}
-            loading={visas.isPending || visas.isPlaceholderData}
+            {...tableState(visas)}
             onRowClick={canInfo ? setOpen : undefined}
-            menu={canEdit ? (v) => [{ label: "Edit Visa", onClick: () => setEditing(v) }] : undefined}
-            pagination={{ page: list.page, pageSize: PAGE_SIZE, total: visas.data?.total ?? 0, onPage: list.setPage }}
+            actions={canEdit ? (v) => [{ label: "Edit Visa", onClick: () => setEditing(v) }] : undefined}
+            sorting={list.sorting}
+            pagination={list.pager(visas.data?.total ?? 0)}
             empty={
               filtered ? (
                 <Empty title="No Visas Match" body="Change the search or the filters to see more." />
@@ -144,10 +147,11 @@ function AllDocuments({ tab, tabs }: { tab: DocumentsTab; tabs: DocumentsTab[] }
             columns={documentColumns(false, today)}
             rows={docs.data?.items ?? []}
             rowKey={(d) => d.id}
-            loading={docs.isPending || docs.isPlaceholderData}
+            {...tableState(docs)}
             onRowClick={canInfo ? setOpen : undefined}
-            menu={canEdit ? (d) => [{ label: "Edit Travel Document", onClick: () => setEditing(d) }] : undefined}
-            pagination={{ page: list.page, pageSize: PAGE_SIZE, total: docs.data?.total ?? 0, onPage: list.setPage }}
+            actions={canEdit ? (d) => [{ label: "Edit Travel Document", onClick: () => setEditing(d) }] : undefined}
+            sorting={list.sorting}
+            pagination={list.pager(docs.data?.total ?? 0)}
             empty={
               filtered ? (
                 <Empty title="No Travel Documents Match" body="Change the search or the filters to see more." />
@@ -183,7 +187,7 @@ function AllDocuments({ tab, tabs }: { tab: DocumentsTab; tabs: DocumentsTab[] }
 function OwnDocuments({ tab, tabs }: { tab: DocumentsTab; tabs: DocumentsTab[] }): JSX.Element {
   const { p } = useEngagementAccess();
   const today = localIsoDate();
-  const list = useListView();
+  const list = useListView("my-documents");
   const visas = useMyVisas(tab === "visas");
   const docs = useMyTravelDocuments(tab === "documents");
   const [open, setOpen] = useState<Visa | TravelDocument | null>(null);
@@ -194,8 +198,10 @@ function OwnDocuments({ tab, tabs }: { tab: DocumentsTab; tabs: DocumentsTab[] }
   const visaRows = (visas.data ?? []).filter((v) => v.status === "Active" && (!q || [v.country, v.visaType].some((x) => x.toLowerCase().includes(q))));
   const docRows = (docs.data ?? []).filter((d) => d.status === "Active" && (!q || [d.country, d.type, d.number].some((x) => x.toLowerCase().includes(q))));
   const filterStatus = list.filters.status;
-  const shownVisas = filterStatus ? visaRows.filter((v) => visaStatus(v, today) === filterStatus) : visaRows;
-  const shownDocs = filterStatus ? docRows.filter((d) => documentStatus(d, today) === filterStatus) : docRows;
+  const visaCols = visaColumns(true, today);
+  const docCols = documentColumns(true, today);
+  const allVisas = sortRows(filterStatus ? visaRows.filter((v) => visaStatus(v, today) === filterStatus) : visaRows, list.sort, columnAccessors(visaCols));
+  const allDocs = sortRows(filterStatus ? docRows.filter((d) => documentStatus(d, today) === filterStatus) : docRows, list.sort, columnAccessors(docCols));
   const mine = isVisas ? (visas.data ?? []).filter((v) => v.status === "Active").length : (docs.data ?? []).filter((d) => d.status === "Active").length;
   const addButton = canAdd ? (
     <Button variant="contained" size="small" startIcon={<PlusIcon size={14} />} onClick={() => setAdding(true)}>
@@ -210,7 +216,7 @@ function OwnDocuments({ tab, tabs }: { tab: DocumentsTab; tabs: DocumentsTab[] }
   const query = isVisas ? visas : docs;
 
   return (
-    <EaPage
+    <EaPage collapsedSearch
       title="Passport & Visas"
       subtitle="Your passport, other travel documents and visas, as the Travel Team sees them when it books your trips."
     >
@@ -231,20 +237,22 @@ function OwnDocuments({ tab, tabs }: { tab: DocumentsTab; tabs: DocumentsTab[] }
         ) : isVisas ? (
           <EaTable
             ariaLabel="My visas"
-            columns={visaColumns(true, today)}
-            rows={shownVisas}
+            columns={visaCols}
+            rows={allVisas}
+            sorting={list.sorting}
             rowKey={(v) => v.id}
-            loading={visas.isPending || visas.isPlaceholderData}
+            {...tableState(visas)}
             onRowClick={p.t.has(TRAVEL.VIEW_OWN_VISA) ? setOpen : undefined}
             empty={mine ? <Empty title="No Visas Match" body="Change the search or the filters to see more." /> : none}
           />
         ) : (
           <EaTable
             ariaLabel="My travel documents"
-            columns={documentColumns(true, today)}
-            rows={shownDocs}
+            columns={docCols}
+            rows={allDocs}
+            sorting={list.sorting}
             rowKey={(d) => d.id}
-            loading={docs.isPending || docs.isPlaceholderData}
+            {...tableState(docs)}
             onRowClick={p.t.has(TRAVEL.VIEW_OWN_DOCUMENT) ? setOpen : undefined}
             empty={mine ? <Empty title="No Travel Documents Match" body="Change the search or the filters to see more." /> : none}
           />

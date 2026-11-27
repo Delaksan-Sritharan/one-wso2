@@ -131,7 +131,7 @@ const ALLOCATION_REOPEN: readonly AllocationStatus[] = ["Clearance In Progress",
 
 export const nextAllocationStatuses = (s: AllocationStatus): readonly AllocationStatus[] => ALLOCATION_NEXT[s] ?? ALLOCATION_REOPEN;
 
-/** The Clearance Status choices when allocating on an internal engagement or event. */
+/** The Allocation Status choices when allocating on an internal engagement or event. */
 export const INTERNAL_START_STATUSES: readonly AllocationStatus[] = ["Tentative", "Clearance In Progress", "Confirmed", "Confirmed - Visa Pending"];
 
 /** Legacy Travel Status transitions (TravelInformation.js), the current status first. */

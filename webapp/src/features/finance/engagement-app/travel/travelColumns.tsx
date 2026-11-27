@@ -26,6 +26,7 @@ export function travelColumns({ agent = false, traveller = true }: { agent?: boo
       key: "job",
       label: "Job Number",
       sortKey: "jobNumber",
+      sortValue: (t) => t.jobNumber,
       width: "17%",
       render: (t) => (
         <Two
@@ -35,10 +36,10 @@ export function travelColumns({ agent = false, traveller = true }: { agent?: boo
       ),
     },
     ...(traveller ? [{ key: "who", label: "Traveller", render: (t: TravelRequestSummary) => <Two main={t.traveller.name} sub={t.traveller.email} /> }] : []),
-    { key: "dest", label: "Destination", sortKey: "destination", render: (t) => <Two main={place(t.country, t.city)} sub={t.location} /> },
-    { key: "dates", label: "Dates", sortKey: "startDate", render: (t) => <span style={{ whiteSpace: "nowrap" }}>{fmtRange(t.start, t.end)}</span> },
-    ...(agent ? [] : [{ key: "agent", label: "Travel Agent", sortKey: "agency", render: (t: TravelRequestSummary) => t.travelAgent || "—" }]),
+    { key: "dest", label: "Destination", sortKey: "destination", sortValue: (t) => place(t.country, t.city), render: (t) => <Two main={place(t.country, t.city)} sub={t.location} /> },
+    { key: "dates", label: "Dates", sortKey: "startDate", sortValue: (t) => t.start, render: (t) => <span style={{ whiteSpace: "nowrap" }}>{fmtRange(t.start, t.end)}</span> },
+    ...(agent ? [] : [{ key: "agent", label: "Travel Agent", sortKey: "agency", sortValue: (t: TravelRequestSummary) => t.travelAgent, render: (t: TravelRequestSummary) => t.travelAgent || "—" }]),
     { key: "visa", label: "Visa", render: (t) => t.visa || "—" },
-    { key: "status", label: "Travel Status", sortKey: "status", render: (t) => <TravelStatusChip status={t.status} /> },
+    { key: "status", label: "Travel Status", sortKey: "status", sortValue: (t) => t.status, render: (t) => <TravelStatusChip status={t.status} /> },
   ];
 }

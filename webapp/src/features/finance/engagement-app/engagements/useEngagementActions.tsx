@@ -45,6 +45,8 @@ const what = (e: EngagementSummary) => (e.kind === "marketing" ? "event" : "enga
 /** The legacy row actions of an engagement, shared by Engagements, the engagement page and Approvals. */
 export function useEngagementActions(): {
   actionsFor: (e: EngagementSummary) => { primary?: RowAction; menu: RowAction[] };
+  /** All of a row's actions in one list, for a table. */
+  rowActionsFor: (e: EngagementSummary) => RowAction[];
   dialogs: ReactNode;
 } {
   const { p } = useEngagementAccess();
@@ -101,6 +103,8 @@ export function useEngagementActions(): {
     dialogs = (
       <ConfirmDialog
         title="Change Request Status"
+        confirmLabel={to === "Completed" ? "Mark as Completed" : "Reopen"}
+        busyLabel="Updating…"
         text={`Are you sure you want to change the Status of ${e.id} to ${to}?`}
         run={() => setRequestStatus.mutateAsync({ id: e.id, status: to })}
         onDone={() => notify.showSuccess("Status updated successfully")}
@@ -114,6 +118,8 @@ export function useEngagementActions(): {
     dialogs = (
       <ConfirmDialog
         title="Change Engagement Status"
+        confirmLabel={to === "Cancelled" ? `Cancel ${what(e) === "event" ? "Event" : "Engagement"}` : "Change Status"}
+        busyLabel="Updating…"
         danger={to === "Cancelled"}
         text={
           to === "Cancelled"
@@ -130,6 +136,8 @@ export function useEngagementActions(): {
     dialogs = (
       <ConfirmDialog
         title={what(e) === "event" ? "Approve Event" : "Approve Engagement"}
+        confirmLabel="Approve"
+        busyLabel="Approving…"
         text={`Are you sure you want to confirm and approve ${e.id}? Once approved, this action cannot be undone.`}
         run={() => approve.mutateAsync({ id: e.id })}
         onDone={() => notify.showSuccess(`${what(e) === "event" ? "Event" : "Engagement"} approved successfully`)}
@@ -137,5 +145,9 @@ export function useEngagementActions(): {
       />
     );
   }
-  return { actionsFor, dialogs };
+  const rowActionsFor = (e: EngagementSummary) => {
+    const { primary, menu } = actionsFor(e);
+    return primary ? [{ ...primary, primary: true }, ...menu] : menu;
+  };
+  return { actionsFor, rowActionsFor, dialogs };
 }

@@ -18,7 +18,7 @@ import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { nextSort } from "../model/sorting";
-import EaTable from "./EaTable";
+import EaTable, { type RowAction } from "./EaTable";
 
 describe("EaTable rows", () => {
   it("opens a clickable row from the keyboard", () => {
@@ -90,5 +90,53 @@ describe("EaTable sorting", () => {
 
   it("moves from another column's sort straight to ascending", () => {
     expect(nextSort("-other", "name")).toBe("name");
+  });
+});
+
+describe("EaTable row actions", () => {
+  const columns = [{ key: "name", label: "Name", render: (r: { id: string }) => r.id }];
+  const act = (label: string): RowAction => ({ label, onClick: vi.fn() });
+  const draw = (actions: (r: { id: string }) => readonly RowAction[]) =>
+    render(<EaTable ariaLabel="Things" columns={columns} rows={[{ id: "A" }, { id: "B" }]} rowKey={(r) => r.id} actions={actions} empty="None" />);
+
+  it("shows a single action as a button under a visible Actions header", () => {
+    draw(() => [act("Edit")]);
+    expect(screen.getByRole("columnheader", { name: "Actions" })).toHaveTextContent("Actions");
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
+  });
+
+  it("puts two or more actions in the row's menu", () => {
+    draw(() => [act("Edit"), act("Delete")]);
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "More actions for A" }));
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
+  });
+
+  it("keeps the primary action as the button and moves the rest to the menu", () => {
+    draw(() => [{ ...act("Allocate"), primary: true }, act("Edit"), act("Reopen")]);
+    expect(screen.getAllByRole("button", { name: "Allocate" })).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "More actions for A" }));
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Allocate" })).toBeNull();
+  });
+
+  it("shows a lone primary action as a button with no menu", () => {
+    draw(() => [{ ...act("Assign Travel Agent"), primary: true }]);
+    expect(screen.getAllByRole("button", { name: "Assign Travel Agent" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
+  });
+
+  it("leaves the column out when no row has an action", () => {
+    draw(() => []);
+    expect(screen.queryByRole("columnheader", { name: "Actions" })).toBeNull();
+  });
+
+  it("keeps the rows, dimmed, while another page is on its way, and a skeleton only for the first load", () => {
+    const { rerender } = render(<EaTable ariaLabel="Things" columns={columns} rows={[{ id: "A" }]} rowKey={(r) => r.id} refreshing empty="None" />);
+    expect(screen.getByText("A")).toBeInTheDocument();
+    rerender(<EaTable ariaLabel="Things" columns={columns} rows={[]} rowKey={(r: { id: string }) => r.id} loading empty="None" />);
+    expect(screen.queryByText("A")).toBeNull();
   });
 });

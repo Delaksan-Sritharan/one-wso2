@@ -21,15 +21,15 @@ import type { Allocation } from "../api/engagementTypes";
 import { useAllocations, useEngagementTypes } from "../api/useEngagementApi";
 import { useEngagementAccess } from "../api/useEngagementUserInfo";
 import EaPage from "../components/EaPage";
-import EaTable, { type Column } from "../components/EaTable";
+import EaTable, { type Column, tableState } from "../components/EaTable";
 import { Empty, Failed, ListCard } from "../components/ListCard";
 import ListToolbar, { type FilterDef } from "../components/ListToolbar";
-import { AllocationStatusChip, Two, Mono } from "../components/StatusChips";
+import { AllocationStatusChip, codeSub, Two, Mono } from "../components/StatusChips";
 import { engagementPaths, type AllocationsSegment } from "../engagementPaths";
 import { canEditAllocationStatus } from "../model/engagementAccess";
 import { engagementName, fmtRange } from "../model/format";
 import { ALLOCATION_STATUSES } from "../model/statuses";
-import { PAGE_SIZE, useListView } from "../model/useListView";
+import { useListView } from "../model/useListView";
 import { HourlyLabel, TravelCell } from "./allocationCells";
 import AllocationStatusDialog from "./AllocationStatusDialog";
 import TeamAllocationsPanel from "./TeamAllocationsPanel";
@@ -47,7 +47,7 @@ export default function AllocationsPage({ segment }: { segment: AllocationsSegme
   if (!allowed) return <Navigate to={engagementPaths.allocations(access.engagementAllocations ? "engagement" : "team")} replace />;
   const both = access.engagementAllocations && access.teamAllocations;
   return (
-    <EaPage
+    <EaPage collapsedSearch
       title="Allocations"
       subtitle={
         access.teamAllocations
@@ -75,7 +75,7 @@ export default function AllocationsPage({ segment }: { segment: AllocationsSegme
 function EngagementAllocations(): JSX.Element {
   const { p } = useEngagementAccess();
   const navigate = useNavigate();
-  const list = useListView();
+  const list = useListView("allocations", { defaultSort: "-created" });
   const types = useEngagementTypes();
   const [statusOf, setStatusOf] = useState<Allocation | null>(null);
   const pair = (v: string): readonly [string, string] => [v, v];
@@ -97,18 +97,19 @@ function EngagementAllocations(): JSX.Element {
   const allocations = useAllocations(list.paramsFor(filters));
 
   const columns: Column<Allocation>[] = [
-    { key: "id", label: "Allocation", render: (a) => <Mono>{a.id}</Mono> },
-    { key: "who", label: "Consultant", render: (a) => <Two main={a.consultant.name} sub={a.consultant.email} /> },
+    { key: "id", label: "Allocation", sortKey: "id", render: (a) => <Mono>{a.id}</Mono> },
+    { key: "who", label: "Consultant", sortKey: "consultant", render: (a) => <Two main={a.consultant.name} sub={a.consultant.email} /> },
     {
       key: "eng",
       label: "Engagement",
       width: "22%",
+      sortKey: "engagement",
       render: (a) => <Two main={<Mono>{a.engagement.id}</Mono>} sub={engagementName(a.engagement)} />,
     },
-    { key: "type", label: "Allocation Type", render: (a) => <Two main={a.engagement.allocationType} sub={<Mono>{a.engagement.code}</Mono>} /> },
-    { key: "dates", label: "Dates", render: (a) => <Two main={<span style={{ whiteSpace: "nowrap" }}>{fmtRange(a.start, a.end)}</span>} sub={<HourlyLabel allocation={a} />} /> },
+    { key: "type", label: "Allocation Type", sortKey: "type", render: (a) => <Two main={a.engagement.allocationType} sub={codeSub(a.engagement.kind, a.engagement.code)} /> },
+    { key: "dates", label: "Dates", sortKey: "startDate", render: (a) => <Two main={<span style={{ whiteSpace: "nowrap" }}>{fmtRange(a.start, a.end)}</span>} sub={<HourlyLabel allocation={a} />} /> },
     { key: "travel", label: "Travel", render: (a) => <TravelCell allocation={a} /> },
-    { key: "status", label: "Allocation Status", render: (a) => <AllocationStatusChip status={a.status} /> },
+    { key: "status", label: "Allocation Status", sortKey: "status", render: (a) => <AllocationStatusChip status={a.status} /> },
   ];
 
   const filtered = Object.keys(list.filters).length > 0 || Boolean(list.search);
@@ -131,15 +132,16 @@ function EngagementAllocations(): JSX.Element {
           columns={columns}
           rows={allocations.data?.items ?? []}
           rowKey={(a) => a.id}
-          loading={allocations.isPending || allocations.isPlaceholderData}
+          {...tableState(allocations)}
           onRowClick={(a) => navigate(engagementPaths.engagement(a.engagement.id))}
-          menu={(a) =>
+          actions={(a) =>
             (a.canChangeStatus ?? canEditAllocationStatus(p, a.engagement.typeId)) && !/Cancelled/.test(a.status) ? [{ label: "Update Allocation Status", onClick: () => setStatusOf(a) }] : []
           }
-          pagination={{ page: list.page, pageSize: PAGE_SIZE, total: allocations.data?.total ?? 0, onPage: list.setPage }}
+          sorting={list.sorting}
+          pagination={list.pager(allocations.data?.total ?? 0)}
           empty={
             filtered ? (
-              <Empty title="No Allocations Match the Filters" body="Change the search or the filters to see more." />
+              <Empty title="No Allocations Match" body="Change the search or the filters to see more." />
             ) : (
               <Empty title="No Allocations Yet" body="Allocations appear here once consultants are allocated to the engagements you can see." />
             )

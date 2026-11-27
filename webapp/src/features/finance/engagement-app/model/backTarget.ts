@@ -53,6 +53,16 @@ export function backTarget(to: string, currentPath: string): string {
   return to;
 }
 
+/** Of the `lists` (each a root path and its label), the one whose page, or one of its tabs, was visited last: where a record was most likely opened from. */
+export function lastVisitedList<T extends { readonly to: string }>(lists: readonly T[]): T | undefined {
+  for (let i = seen.length - 1; i >= 0; i--) {
+    const path = pathOf(seen[i]);
+    const hit = lists.find((l) => path === l.to || parentOf(path) === l.to);
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
 /** For tests: forgets every visit. */
 export function clearVisits(): void {
   seen.length = 0;

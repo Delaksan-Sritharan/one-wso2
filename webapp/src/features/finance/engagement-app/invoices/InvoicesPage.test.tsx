@@ -92,19 +92,19 @@ describe("Invoices & Payments", () => {
 
   it("lets the PO approver select only invoices at the PO step", () => {
     draw();
-    expect(screen.getByRole("checkbox", { name: "Select 1" })).toBeEnabled();
-    expect(screen.getByRole("checkbox", { name: "Select 3" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Select invoice NO-1" })).toBeEnabled();
+    expect(screen.getByRole("checkbox", { name: "Select invoice NO-3" })).toBeDisabled();
   });
 
   it("approves the selection in one request and reports what failed without stopping the rest", async () => {
     const user = userEvent.setup();
     batch.mockResolvedValueOnce({ done: ["1"], failed: [{ id: "2", message: "Problem in Travel Invoice Status" }] });
     draw();
-    await user.click(screen.getByRole("checkbox", { name: "Select 1" }));
-    await user.click(screen.getByRole("checkbox", { name: "Select 2" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select invoice NO-1" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select invoice NO-2" }));
     await user.click(screen.getByRole("button", { name: /Approve \(PO\)/ }));
     const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: "Yes" }));
+    await user.click(within(dialog).getByRole("button", { name: "Approve" }));
     expect(batch).toHaveBeenCalledTimes(1);
     expect(batch).toHaveBeenCalledWith({ action: "approve", ids: ["1", "2"], reason: undefined, idempotencyKey: undefined });
     expect(showSuccess).toHaveBeenCalledWith("1 invoice approved");
@@ -114,7 +114,7 @@ describe("Invoices & Payments", () => {
   it("needs a reason to reject", async () => {
     const user = userEvent.setup();
     draw();
-    await user.click(screen.getByRole("checkbox", { name: "Select 1" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select invoice NO-1" }));
     await user.click(screen.getByRole("button", { name: /Reject \(PO\)/ }));
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("button", { name: "Reject" }));

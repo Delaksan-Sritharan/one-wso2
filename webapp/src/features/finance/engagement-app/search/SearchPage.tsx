@@ -61,7 +61,7 @@ export default function SearchPage(): JSX.Element {
   const groups: readonly SearchGroup[] = search.data?.groups ?? [];
   const failed = search.data?.failed ?? [];
   return (
-    <EaPage title="Search Results" subtitle={wanted ? `Matches for "${q}" across the Engagement App.` : "Travel requests, invoices, per diem payments, engagements and allocations."}>
+    <EaPage title="Search Results" subtitle={wanted ? `Matches for "${q}" across the Engagement App.` : "Travels, invoices, per diem payments, engagements and allocations."}>
       <OutlinedInput
         size="small"
         value={text}

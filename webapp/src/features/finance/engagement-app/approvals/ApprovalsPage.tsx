@@ -21,14 +21,14 @@ import type { EngagementSummary } from "../api/engagementTypes";
 import { useApprovals } from "../api/useEngagementApi";
 import { useEngagementAccess } from "../api/useEngagementUserInfo";
 import EaPage from "../components/EaPage";
-import EaTable, { type Column } from "../components/EaTable";
+import EaTable, { type Column, tableState } from "../components/EaTable";
 import { Empty, Failed, ListCard } from "../components/ListCard";
 import ListToolbar from "../components/ListToolbar";
-import { Two, Mono } from "../components/StatusChips";
+import { codeSub, Two, Mono } from "../components/StatusChips";
 import { engagementPaths, type ApprovalSegment } from "../engagementPaths";
 import { ALLOC, type EngagementAccess } from "../model/engagementAccess";
 import { fmtDate, fmtRange, place } from "../model/format";
-import { PAGE_SIZE, useListView } from "../model/useListView";
+import { useListView } from "../model/useListView";
 import { useEngagementActions } from "../engagements/useEngagementActions";
 
 const segmentsOf = (access: EngagementAccess): ApprovalSegment[] => [
@@ -47,10 +47,10 @@ export default function ApprovalsPage({ segment }: { segment: ApprovalSegment })
   const access = useEngagementAccess();
   const segments = segmentsOf(access);
   const navigate = useNavigate();
-  const list = useListView();
+  const list = useListView("approvals");
   const mkt = segment === "marketing";
   const query = useApprovals(mkt ? "events" : "internal", list.paramsFor(), segments.includes(segment));
-  const { actionsFor, dialogs } = useEngagementActions();
+  const { rowActionsFor, dialogs } = useEngagementActions();
 
   if (!segments.includes(segment)) return <Navigate to={engagementPaths.approvals(segments[0])} replace />;
 
@@ -58,10 +58,10 @@ export default function ApprovalsPage({ segment }: { segment: ApprovalSegment })
   const rows = query.data?.items ?? [];
 
   const columns: Column<EngagementSummary>[] = [
-    { key: "e", label: mkt ? "Event" : "Engagement", width: "24%", render: (e) => <Two main={<Mono>{e.id}</Mono>} sub={e.title} /> },
-    { key: "type", label: mkt ? "Event Type" : "Allocation Type", render: (e) => <Two main={e.allocationType} sub={<Mono>{e.code}</Mono>} /> },
-    { key: "loc", label: "Location", render: (e) => <Two main={place(e.country, e.city)} sub={e.nature} /> },
-    { key: "dates", label: "Dates", render: (e) => <span style={{ whiteSpace: "nowrap" }}>{fmtRange(e.start, e.end)}</span> },
+    { key: "e", label: mkt ? "Event" : "Engagement", width: "24%", sortKey: "id", render: (e) => <Two main={<Mono>{e.id}</Mono>} sub={e.title} /> },
+    { key: "type", label: mkt ? "Event Type" : "Allocation Type", sortKey: "type", render: (e) => <Two main={e.allocationType} sub={codeSub(e.kind, e.code)} /> },
+    { key: "loc", label: "Location", sortKey: "country", render: (e) => <Two main={place(e.country, e.city)} sub={e.nature} /> },
+    { key: "dates", label: "Dates", sortKey: "startDate", render: (e) => <span style={{ whiteSpace: "nowrap" }}>{fmtRange(e.start, e.end)}</span> },
     mkt
       ? {
           key: "funding",
@@ -74,8 +74,8 @@ export default function ApprovalsPage({ segment }: { segment: ApprovalSegment })
             </>
           ),
         }
-      : { key: "bu", label: "Business Unit", render: (e) => e.businessUnit || "—" },
-    { key: "by", label: "Created By", render: (e) => <Two main={<span style={{ whiteSpace: "nowrap" }}>{e.createdBy?.name ?? "—"}</span>} sub={e.createdOn ? fmtDate(e.createdOn) : undefined} /> },
+      : { key: "bu", label: "Business Unit", sortKey: "businessUnit", render: (e) => e.businessUnit || "—" },
+    { key: "by", label: "Created By", sortKey: "created", render: (e) => <Two main={<span style={{ whiteSpace: "nowrap" }}>{e.createdBy?.name ?? "—"}</span>} sub={e.createdOn ? fmtDate(e.createdOn) : undefined} /> },
   ];
 
   const what = segments.length > 1 ? "Internal engagements and marketing events" : mkt ? "Marketing events" : "Internal engagements";
@@ -86,12 +86,13 @@ export default function ApprovalsPage({ segment }: { segment: ApprovalSegment })
   };
 
   return (
-    <EaPage title="Approvals" subtitle={`${what} waiting for approval. People can be allocated once they are approved.`}>
+    <EaPage collapsedSearch title="Approvals" subtitle={`${what} waiting for approval. People can be allocated once they are approved.`}>
       <ListCard>
         {segments.length > 1 ? (
           <RoutedTabs
             basePath={engagementPaths.approvals()}
             ariaLabel="Approval kinds"
+            keepSearchParams={["q", "sort"]}
             tabs={[
               { segment: "internal", label: "Internal Engagements", badge: count("internal") },
               { segment: "marketing", label: "Marketing Events", badge: count("events") },
@@ -107,21 +108,15 @@ export default function ApprovalsPage({ segment }: { segment: ApprovalSegment })
             columns={columns}
             rows={rows}
             rowKey={(e) => e.id}
-            loading={query.isPending || query.isPlaceholderData}
-            pagination={{ page: list.page, pageSize: PAGE_SIZE, total: query.data?.total ?? 0, onPage: list.setPage }}
-            onRowClick={(e) => navigate(engagementPaths.engagement(e.id))}
-            primaryAction={(e) => {
-              const a = actionsFor(e);
-              // Someone who can edit but not approve gets Edit as the row's button.
-              return a.primary ?? (a.menu.length === 1 ? a.menu[0] : undefined);
-            }}
-            menu={(e) => {
-              const a = actionsFor(e);
-              return a.primary ? a.menu : a.menu.length === 1 ? [] : a.menu;
-            }}
+            {...tableState(query)}
+            pagination={list.pager(query.data?.total ?? 0)}
+            // Everything here is waiting for approval, so a row opens on Details, where the approver reads what is being approved.
+            onRowClick={(e) => navigate(engagementPaths.engagement(e.id, "details"))}
+            actions={rowActionsFor}
+            sorting={list.sorting}
             empty={
               <Empty
-                title={list.search ? "Nothing Matches the Search" : mkt ? "No Marketing Events Waiting" : "No Internal Engagements Waiting"}
+                title={list.search ? (mkt ? "No Marketing Events Match" : "No Internal Engagements Match") : mkt ? "No Marketing Events Waiting" : "No Internal Engagements Waiting"}
                 body={list.search ? "Change the search to see more." : "New ones appear here as soon as they are created."}
               />
             }

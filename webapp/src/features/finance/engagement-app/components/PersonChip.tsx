@@ -14,9 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { Avatar, Box, Chip } from "@wso2/oxygen-ui";
-import type { PersonFace } from "../api/usePeopleFaces";
+import { usePeopleFaces, type PersonFace } from "../api/usePeopleFaces";
+import { Two } from "./StatusChips";
 
 const initials = (name: string): string =>
   name
@@ -52,5 +53,17 @@ export function PersonChip({ email, name, face, onDelete }: { readonly email: st
       onDelete={onDelete}
       sx={{ height: "auto", py: 0.5, borderRadius: 999, "& .MuiChip-avatar": { width: 28, height: 28, ml: 0.5 } }}
     />
+  );
+}
+
+/** A person on a detail page: their photo (initials when the directory has none) beside the name and the lines under it. */
+export function PersonTwo({ name, email, sub }: { readonly name: string; readonly email?: string; readonly sub?: ReactNode }): JSX.Element {
+  const faceOf = usePeopleFaces();
+  const face = email ? faceOf(email) : {};
+  return (
+    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.25, minWidth: 0 }}>
+      <PersonAvatar name={name || email || ""} photo={face.photo} size={32} />
+      <Two main={name} sub={sub} />
+    </Box>
   );
 }

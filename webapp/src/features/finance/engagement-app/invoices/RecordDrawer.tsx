@@ -18,6 +18,7 @@ import type { JSX, ReactNode } from "react";
 import { Box } from "@wso2/oxygen-ui";
 import type { Invoice, PerDiemPayment } from "../api/engagementTypes";
 import { FactsGrid } from "../components/Facts";
+import { PersonTwo } from "../components/PersonChip";
 import { FinanceApprovalChip, NsStatusChip, PoApprovalChip, Two } from "../components/StatusChips";
 import { fmtDate, money } from "../model/format";
 import RecordDrawer from "../components/RecordDrawer";
@@ -31,7 +32,7 @@ export function InvoiceDrawer({ invoice: i, actions, onClose, agent = false, job
         columns={2}
         facts={[
           { label: "Job Number", value: <JobLink job={i.jobNumber} to={jobBase} /> },
-          i.traveller && { label: "Traveller", value: <Two main={i.traveller.name} sub={i.traveller.email} /> },
+          i.traveller && { label: "Traveller", value: <PersonTwo name={i.traveller.name} email={i.traveller.email} sub={i.traveller.email} /> },
           i.campaign && { label: "Campaign", value: <Two main={i.campaign.name} sub={i.campaign.id} /> },
           { label: "Cost Type", value: i.costType },
           { label: "Month", value: i.month },
@@ -48,7 +49,7 @@ export function InvoiceDrawer({ invoice: i, actions, onClose, agent = false, job
         facts={[
           { label: "PO Approval", value: <PoApprovalChip invoice={i} /> },
           { label: "Finance Approval", value: <FinanceApprovalChip invoice={i} /> },
-          { label: "NS Status", value: <NsStatusChip record={i} /> },
+          { label: "NetSuite Status", value: <NsStatusChip record={i} /> },
         ]}
       />
     </RecordDrawer>
@@ -62,12 +63,12 @@ export function PaymentDrawer({ payment: x, actions, onClose, jobBase }: { payme
         columns={2}
         facts={[
           { label: "Job Number", value: <JobLink job={x.jobNumber} to={jobBase} /> },
-          x.traveller && { label: "Traveller", value: <Two main={x.traveller.name} sub={x.traveller.email} /> },
+          x.traveller && { label: "Traveller", value: <PersonTwo name={x.traveller.name} email={x.traveller.email} sub={x.traveller.email} /> },
           x.campaign && { label: "Campaign", value: <Two main={x.campaign.name} sub={x.campaign.id} /> },
           { label: "Payment Amount", value: money(x.amount, x.currency) },
           { label: "Converted Amount", value: money(x.convertedAmount, x.convertedCurrency) },
           { label: "Added", value: <Two main={fmtDate(x.addedDate)} sub={x.addedBy} /> },
-          { label: "NS Status", value: <NsStatusChip record={x} /> },
+          { label: "NetSuite Status", value: <NsStatusChip record={x} /> },
         ]}
       />
     </RecordDrawer>

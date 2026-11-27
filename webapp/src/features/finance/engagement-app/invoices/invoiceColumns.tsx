@@ -35,7 +35,7 @@ export function invoiceColumns({
   job?: boolean;
   /** The traveller beside the job number, for the work queues. */
   traveller?: boolean;
-  /** PO Approval, Finance Approval and NS Status: left out on a queue, where every row reads the same. */
+  /** PO Approval, Finance Approval and NetSuite Status: left out on a queue, where every row reads the same. */
   approvals?: boolean;
   /** The single Invoice Status column, as the Reports page shows it. */
   status?: boolean;
@@ -45,13 +45,15 @@ export function invoiceColumns({
   jobBase?: (job: string) => string;
 } = {}): Column<Invoice>[] {
   return [
-    { key: "no", label: "Invoice Number", render: (i) => <Two main={<Mono bold>{i.number}</Mono>} sub={agent ? undefined : i.travelAgent} /> },
+    { key: "no", label: "Invoice Number", sortKey: "invoiceNumber", sortValue: (i) => i.number, render: (i) => <Two main={<Mono bold>{i.number}</Mono>} sub={agent ? undefined : i.travelAgent} /> },
     ...(traveller ? [{ key: "who", label: "Traveller", render: (i: Invoice) => (i.traveller ? <Two main={i.traveller.name} sub={i.traveller.email} /> : "—") }] : []),
     ...(job
       ? [
           {
             key: "job",
             label: "Job Number",
+            sortKey: "jobNumber",
+            sortValue: (i: Invoice) => i.jobNumber,
             render: (i: Invoice) => (
               <Two
                 main={<JobLink job={i.jobNumber} to={jobBase} />}
@@ -61,22 +63,24 @@ export function invoiceColumns({
           },
         ]
       : []),
-    { key: "type", label: "Cost Type", render: (i) => <Two main={i.costType} sub={i.month} /> },
+    { key: "type", label: "Cost Type", sortKey: "costType", sortValue: (i) => i.costType, render: (i) => <Two main={i.costType} sub={i.month} /> },
     {
       key: "amount",
       align: "right",
       label: "Amount",
+      sortKey: "amount",
+      sortValue: (i) => i.amount,
       render: (i) => <Two main={money(i.amount, i.currency)} sub={i.paidAmount !== undefined && i.paidAmount !== null ? `Paid ${money(i.paidAmount, i.paidCurrency)}` : undefined} />,
     },
     ...(approvals
       ? [
           { key: "po", label: "PO Approval", render: (i: Invoice) => <PoApprovalChip invoice={i} /> },
           { key: "fin", label: "Finance Approval", render: (i: Invoice) => <FinanceApprovalChip invoice={i} /> },
-          { key: "ns", label: "NS Status", render: (i: Invoice) => <NsStatusChip record={i} /> },
+          { key: "ns", label: "NetSuite Status", render: (i: Invoice) => <NsStatusChip record={i} /> },
         ]
       : []),
-    ...(status ? [{ key: "status", label: "Invoice Status", render: (i: Invoice) => <InvoiceStatusChip invoice={i} /> }] : []),
-    ...(added ? [{ key: "added", label: "Added Date", render: (i: Invoice) => fmtDate(i.addedDate) }] : []),
+    ...(status ? [{ key: "status", label: "Invoice Status", sortKey: "status", sortValue: (i: Invoice) => i.status, render: (i: Invoice) => <InvoiceStatusChip invoice={i} /> }] : []),
+    ...(added ? [{ key: "added", label: "Added Date", sortKey: "addedDate", sortValue: (i: Invoice) => i.addedDate, render: (i: Invoice) => fmtDate(i.addedDate) }] : []),
   ];
 }
 
@@ -88,19 +92,21 @@ export function paymentColumns({
   jobBase,
 }: { traveller?: boolean; job?: boolean; ns?: boolean; added?: boolean; jobBase?: (job: string) => string } = {}): Column<PerDiemPayment>[] {
   return [
-    { key: "id", label: "Per Diem Payment Number", render: (x) => <Mono>{x.id}</Mono> },
+    { key: "id", label: "Per Diem Payment Number", sortKey: "number", sortValue: (x) => x.id, render: (x) => <Mono>{x.id}</Mono> },
     ...(traveller ? [{ key: "who", label: "Traveller", render: (x: PerDiemPayment) => (x.traveller ? <Two main={x.traveller.name} sub={x.traveller.email} /> : "—") }] : []),
     ...(job
       ? [
           {
             key: "job",
             label: "Job Number",
+            sortKey: "jobNumber",
+            sortValue: (x: PerDiemPayment) => x.jobNumber,
             render: (x: PerDiemPayment) => <Two main={<JobLink job={x.jobNumber} to={jobBase} />} sub={x.campaign ? `Campaign: ${x.campaign.name}` : undefined} />,
           },
         ]
       : []),
-    ...(added ? [{ key: "added", label: "Payment Added Date", render: (x: PerDiemPayment) => <Two main={fmtDate(x.addedDate)} sub={x.addedBy} /> }] : []),
-    { key: "amount", label: "Amount", align: "right", render: (x) => <Two main={money(x.amount, x.currency)} sub={money(x.convertedAmount, x.convertedCurrency)} /> },
-    ...(ns ? [{ key: "ns", label: "NS Status", render: (x: PerDiemPayment) => <NsStatusChip record={x} /> }] : []),
+    ...(added ? [{ key: "added", label: "Payment Added Date", sortKey: "addedDate", sortValue: (x: PerDiemPayment) => x.addedDate, render: (x: PerDiemPayment) => <Two main={fmtDate(x.addedDate)} sub={x.addedBy} /> }] : []),
+    { key: "amount", label: "Amount", align: "right", sortKey: "amount", sortValue: (x) => x.convertedAmount ?? x.amount, render: (x) => <Two main={money(x.amount, x.currency)} sub={money(x.convertedAmount, x.convertedCurrency)} /> },
+    ...(ns ? [{ key: "ns", label: "NetSuite Status", render: (x: PerDiemPayment) => <NsStatusChip record={x} /> }] : []),
   ];
 }

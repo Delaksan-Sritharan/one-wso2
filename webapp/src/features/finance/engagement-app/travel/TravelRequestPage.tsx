@@ -29,12 +29,14 @@ import { ConfirmDialog } from "../components/EaDialog";
 import EaPage from "../components/EaPage";
 import RecordLink from "../components/RecordLink";
 import { DetailSkeleton, TableSkeleton } from "../components/EaSkeletons";
-import EaTable from "../components/EaTable";
+import EaTable, { type Column } from "../components/EaTable";
 import { FactsCard, FactsGrid } from "../components/Facts";
 import { Empty, Failed, ListCard, SectionTitle } from "../components/ListCard";
+import { PersonTwo } from "../components/PersonChip";
 import { ExpenseStatusChip, TravelStatusChip, Two, Mono } from "../components/StatusChips";
 import { engagementPaths, myEngagementPaths, type TravelTab } from "../engagementPaths";
 import { TRAVEL } from "../model/engagementAccess";
+import { useSortedRows } from "../model/useSortedRows";
 import { engagementName, fmtDate, fmtDateTime, fmtRange, money, place } from "../model/format";
 import { canAddInvoiceTo, isOpenTrip } from "../model/statuses";
 import { invoiceColumns, paymentColumns } from "../invoices/invoiceColumns";
@@ -119,7 +121,7 @@ function TravelRequestView({ t, tab, area, back }: { t: TravelRequest; tab: Trav
     area === "finance" ? (
       t.status === "New" && canAssign ? (
         <Button variant="contained" onClick={() => setDialog("assign")}>
-          Assign
+          Assign Travel Agent
         </Button>
       ) : canEdit && t.status !== "New" ? (
         <Button variant="contained" onClick={() => setDialog("update")}>
@@ -138,7 +140,7 @@ function TravelRequestView({ t, tab, area, back }: { t: TravelRequest; tab: Trav
     >
       <FactsCard
         facts={[
-          { label: "Traveller", value: <Two main={t.traveller.name} sub={[t.traveller.email, t.location].filter(Boolean).join("\n")} /> },
+          { label: "Traveller", value: <PersonTwo name={t.traveller.name} email={t.traveller.email} sub={[t.traveller.email, t.location].filter(Boolean).join("\n")} /> },
           t.engagement && {
             label: "Engagement",
             value:
@@ -206,7 +208,7 @@ function InfoTab({ t }: { t: TravelRequest }): JSX.Element {
                 full: true,
                 value: (
                   <Card variant="outlined" sx={{ overflowX: "auto" }}>
-                    <Table size="small">
+                    <Table size="small" aria-label="Funding sources">
                       <TableHead>
                         <TableRow sx={TABLE_HEAD_SX}>
                           <TableCell>Business Unit</TableCell>
@@ -266,21 +268,24 @@ function PerDiemsTab({ t, s }: { t: TravelRequest; s: TripSections }): JSX.Eleme
   const canDelete = p.t.has(TRAVEL.DELETE_PER_DIEMS) && open;
   const rows = s.perDiems ?? [];
   const add = canAdd ? <AddButton label="Add Per Diem" allowed={open} why={`Per diems cannot be added: the travel request is ${t.status}.`} onClick={() => setAdding(true)} /> : null;
+  const columns: Column<PerDiem>[] = [
+    { key: "s", label: "Start Date/Time", sortKey: "start", sortValue: (r) => r.start, render: (r) => fmtDateTime(r.start) },
+    { key: "e", label: "End Date/Time", sortKey: "end", sortValue: (r) => r.end, render: (r) => fmtDateTime(r.end) },
+    { key: "d", label: "No. of Days", align: "right", sortKey: "days", sortValue: (r) => r.days, render: (r) => r.days },
+    { key: "r", label: "Per Diem Amount", align: "right", sortKey: "rate", sortValue: (r) => r.rate, render: (r) => money(r.rate, r.currency) },
+    { key: "t", label: "Total Amount", align: "right", sortKey: "total", sortValue: (r) => r.total, render: (r) => money(r.total, r.currency) },
+  ];
+  const sorted = useSortedRows(rows, columns);
   return (
     <>
       {rows.length && add ? <TabBar>{add}</TabBar> : null}
       <EaTable
         ariaLabel="Per diems"
-        columns={[
-          { key: "s", label: "Start Date/Time", render: (r: PerDiem) => fmtDateTime(r.start) },
-          { key: "e", label: "End Date/Time", render: (r: PerDiem) => fmtDateTime(r.end) },
-          { key: "d", label: "No. of Days", align: "right", render: (r: PerDiem) => r.days },
-          { key: "r", label: "Per Diem Amount", align: "right", render: (r: PerDiem) => money(r.rate, r.currency) },
-          { key: "t", label: "Total Amount", align: "right", render: (r: PerDiem) => money(r.total, r.currency) },
-        ]}
-        rows={rows}
+        columns={columns}
+        rows={sorted.rows}
         rowKey={(r) => r.id}
-        menu={canDelete ? (r) => ((r.canDelete ?? true) ? [{ label: "Delete", danger: true, onClick: () => setDeleting(r) }] : []) : undefined}
+        sorting={sorted.sorting}
+        actions={canDelete ? (r) => ((r.canDelete ?? true) ? [{ label: "Delete", danger: true, onClick: () => setDeleting(r) }] : []) : undefined}
         empty={
           <Empty
             title="No Per Diems"
@@ -293,6 +298,8 @@ function PerDiemsTab({ t, s }: { t: TravelRequest; s: TripSections }): JSX.Eleme
       {deleting ? (
         <ConfirmDialog
           title="Delete Per Diem"
+          confirmLabel="Delete"
+          busyLabel="Deleting…"
           text={`Are you sure you want to delete the per diem from ${fmtDateTime(deleting.start)} to ${fmtDateTime(deleting.end)}?`}
           danger
           run={() => remove.mutateAsync({ jobNumber: t.jobNumber, id: deleting.id })}
@@ -314,6 +321,8 @@ function InvoicesTab({ t, s, area }: { t: TravelRequest; s: TripSections; area: 
   const canAdd = finance && p.t.has(TRAVEL.ADD_INVOICES);
   const allowed = canAddInvoiceTo(t.status);
   const add = canAdd ? <AddButton label="Add Invoice" allowed={allowed} why={`Invoices cannot be added: the travel request is ${t.status}.`} onClick={() => setAdding(true)} /> : null;
+  const columns = invoiceColumns({ job: false, agent: isAgent });
+  const sorted = useSortedRows(rows, columns);
   return (
     <>
       {rows.length && (add || (finance && work.any)) ? (
@@ -324,9 +333,10 @@ function InvoicesTab({ t, s, area }: { t: TravelRequest; s: TripSections; area: 
       ) : null}
       <EaTable
         ariaLabel="Travel invoices"
-        columns={invoiceColumns({ job: false, agent: isAgent })}
-        rows={rows}
+        columns={columns}
+        rows={sorted.rows}
         rowKey={(i) => i.id}
+        sorting={sorted.sorting}
         selection={finance ? work.selection : undefined}
         onRowClick={setOpen}
         empty={
@@ -346,18 +356,21 @@ function InvoicesTab({ t, s, area }: { t: TravelRequest; s: TripSections; area: 
 
 /** Credit card transactions tagged with this travel's job number (read only). */
 function CardExpensesTab({ rows }: { rows: readonly CardExpense[] }): JSX.Element {
+  const columns: Column<CardExpense>[] = [
+    { key: "d", label: "Date", sortKey: "date", sortValue: (c) => c.date, render: (c) => (c.date ? fmtDate(c.date) : "—") },
+    { key: "t", label: "Expense Type", sortKey: "type", sortValue: (c) => c.expenseType, render: (c) => <Two main={c.expenseType ?? "—"} sub={c.reference} /> },
+    { key: "e", label: "Employee", sortKey: "employee", sortValue: (c) => c.employee, render: (c) => c.employee ?? "—" },
+    { key: "s", label: "Status", sortKey: "status", sortValue: (c) => c.status, render: (c) => <ExpenseStatusChip status={c.status} /> },
+    { key: "a", label: "Amount", align: "right", sortKey: "amount", sortValue: (c) => c.amount, render: (c) => money(c.amount, c.currency) },
+  ];
+  const sorted = useSortedRows(rows, columns);
   return (
     <EaTable
       ariaLabel="Credit card expenses"
-      columns={[
-        { key: "d", label: "Date", render: (c: CardExpense) => (c.date ? fmtDate(c.date) : "—") },
-        { key: "t", label: "Expense Type", render: (c: CardExpense) => <Two main={c.expenseType ?? "—"} sub={c.reference} /> },
-        { key: "e", label: "Employee", render: (c: CardExpense) => c.employee ?? "—" },
-        { key: "s", label: "Status", render: (c: CardExpense) => <ExpenseStatusChip status={c.status} /> },
-        { key: "a", label: "Amount", align: "right", render: (c: CardExpense) => money(c.amount, c.currency) },
-      ]}
-      rows={rows}
+      columns={columns}
+      rows={sorted.rows}
       rowKey={(c) => c.id}
+      sorting={sorted.sorting}
       empty={<Empty title="No Credit Card Expenses" body="Card transactions tagged with this travel's job number appear here." />}
     />
   );
@@ -365,19 +378,22 @@ function CardExpensesTab({ rows }: { rows: readonly CardExpense[] }): JSX.Elemen
 
 /** Expense claim lines tagged with this travel's job number (read only). */
 function ExpenseClaimsTab({ rows }: { rows: readonly ExpenseClaim[] }): JSX.Element {
+  const columns: Column<ExpenseClaim>[] = [
+    { key: "d", label: "Date", sortKey: "date", sortValue: (c) => c.date, render: (c) => (c.date ? fmtDate(c.date) : "—") },
+    { key: "n", label: "Claim", sortKey: "claim", sortValue: (c) => c.claimNumber, render: (c) => <Two main={c.expenseType ?? "—"} sub={c.claimNumber ? `Claim ${c.claimNumber}` : undefined} /> },
+    { key: "e", label: "Employee", sortKey: "employee", sortValue: (c) => c.employee, render: (c) => c.employee ?? "—" },
+    { key: "s", label: "Status", sortKey: "status", sortValue: (c) => c.status, render: (c) => <ExpenseStatusChip status={c.status} /> },
+    { key: "a", label: "Amount", align: "right", sortKey: "amount", sortValue: (c) => c.amount, render: (c) => money(c.amount, c.currency) },
+    { key: "r", label: "Reimbursement", align: "right", sortKey: "reimbursement", sortValue: (c) => c.reimbursementAmount, render: (c) => money(c.reimbursementAmount, c.reimbursementCurrency) },
+  ];
+  const sorted = useSortedRows(rows, columns);
   return (
     <EaTable
       ariaLabel="Expense claims"
-      columns={[
-        { key: "d", label: "Date", render: (c: ExpenseClaim) => (c.date ? fmtDate(c.date) : "—") },
-        { key: "n", label: "Claim", render: (c: ExpenseClaim) => <Two main={c.expenseType ?? "—"} sub={c.claimNumber ? `Claim ${c.claimNumber}` : undefined} /> },
-        { key: "e", label: "Employee", render: (c: ExpenseClaim) => c.employee ?? "—" },
-        { key: "s", label: "Status", render: (c: ExpenseClaim) => <ExpenseStatusChip status={c.status} /> },
-        { key: "a", label: "Amount", align: "right", render: (c: ExpenseClaim) => money(c.amount, c.currency) },
-        { key: "r", label: "Reimbursement", align: "right", render: (c: ExpenseClaim) => money(c.reimbursementAmount, c.reimbursementCurrency) },
-      ]}
-      rows={rows}
+      columns={columns}
+      rows={sorted.rows}
       rowKey={(c) => c.id}
+      sorting={sorted.sorting}
       empty={<Empty title="No Expense Claims" body="Expense claims tagged with this travel's job number appear here." />}
     />
   );
@@ -396,9 +412,11 @@ function PaymentsTab({ t, s: sections, area }: { t: TravelRequest; s: TripSectio
   const canEdit = finance && p.t.has(TRAVEL.EDIT_PAYMENT) && openTrip;
   const addAllowed = Boolean(s) && openTrip && (s?.remaining ?? 0) > 0;
   const why = !s ? "No per diems available." : !openTrip ? "The travel request is not In Progress or Extended." : "No available balance for per diem payments. Please verify the details and try again.";
+  const paymentCols = paymentColumns({ traveller: false, job: false });
+  const sorted = useSortedRows(rows, paymentCols);
   const tile = (label: string, value: string, tip: string) => (
     <Tooltip title={tip} key={label}>
-      <Box>
+      <Box tabIndex={0} role="group" aria-label={`${label}. ${tip}`}>
         <Kpi label={label} value={value} />
       </Box>
     </Tooltip>
@@ -431,12 +449,13 @@ function PaymentsTab({ t, s: sections, area }: { t: TravelRequest; s: TripSectio
       ) : null}
       <EaTable
         ariaLabel="Per diem payments"
-        columns={paymentColumns({ traveller: false, job: false })}
-        rows={rows}
+        columns={paymentCols}
+        rows={sorted.rows}
         rowKey={(x) => x.id}
+        sorting={sorted.sorting}
         selection={finance ? work.selection : undefined}
         onRowClick={setOpen}
-        menu={canEdit ? (x) => (x.status === "Pending" && !x.nsError ? [{ label: "Edit Payment", onClick: () => setEditing(x) }] : []) : undefined}
+        actions={canEdit ? (x) => (x.status === "Pending" && !x.nsError ? [{ label: "Edit Payment", onClick: () => setEditing(x) }] : []) : undefined}
         empty={
           <Empty
             title="No Per Diem Payments Yet"

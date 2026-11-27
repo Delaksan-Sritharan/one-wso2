@@ -18,11 +18,12 @@ import type { JSX } from "react";
 import { useNavigate } from "react-router";
 import { useMyTravelRequests } from "../api/useEngagementApi";
 import EaPage from "../components/EaPage";
-import EaTable from "../components/EaTable";
+import EaTable, { tableState } from "../components/EaTable";
 import { Empty, Failed, ListCard } from "../components/ListCard";
 import ListToolbar from "../components/ListToolbar";
 import { myEngagementPaths } from "../engagementPaths";
 import { TRAVEL_STATUSES } from "../model/statuses";
+import { columnAccessors, sortRows } from "../model/sorting";
 import { useListView } from "../model/useListView";
 import { travelColumns } from "../travel/travelColumns";
 import { TravelsFocus } from "./FocusCards";
@@ -31,7 +32,7 @@ import { TravelsFocus } from "./FocusCards";
 export default function MyTravelRequestsPage(): JSX.Element {
   const trips = useMyTravelRequests();
   const navigate = useNavigate();
-  const list = useListView();
+  const list = useListView("my-travels");
   const all = trips.data ?? [];
   const q = list.search.toLowerCase();
   const f = list.filters;
@@ -40,9 +41,11 @@ export default function MyTravelRequestsPage(): JSX.Element {
     .filter((t) => (!f.status || f.status.split(",").includes(t.status)) && (!f.country || t.country === f.country))
     .filter((t) => (!f.startFrom || t.start >= f.startFrom) && (!f.endTo || t.end <= f.endTo))
     .sort((a, b) => (a.start < b.start ? 1 : -1));
+  const columns = travelColumns({ traveller: false });
+  const sorted = sortRows(rows, list.sort, columnAccessors(columns));
   const pair = (v: string): readonly [string, string] => [v, v];
   return (
-    <EaPage title="Travels" subtitle="Your travels, with the per diems, invoices and payments booked against them.">
+    <EaPage collapsedSearch title="Travels" subtitle="Your travels, with the per diems, invoices and payments booked against them.">
       <TravelsFocus trips={all} />
       <ListCard>
         <ListToolbar
@@ -64,10 +67,12 @@ export default function MyTravelRequestsPage(): JSX.Element {
         ) : (
           <EaTable
             ariaLabel="My travels"
-            columns={travelColumns({ traveller: false })}
-            rows={rows}
+            columns={columns}
+            rows={list.pageOf(sorted)}
+            sorting={list.sorting}
+            pagination={list.pager(sorted.length)}
             rowKey={(t) => t.jobNumber}
-            loading={trips.isPending || trips.isPlaceholderData}
+            {...tableState(trips)}
             onRowClick={(t) => navigate(myEngagementPaths.travelRequest(t.jobNumber))}
             empty={
               all.length ? (

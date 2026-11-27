@@ -19,6 +19,7 @@ import {
   Box,
   Button,
   Checkbox,
+  LinearProgress,
   Skeleton,
   Table,
   TableBody,
@@ -30,8 +31,9 @@ import {
   Tooltip,
 } from "@wso2/oxygen-ui";
 import { TABLE_HEAD_SX } from "./eaStyles";
-import { nextSort } from "../model/sorting";
-import { RowMenu } from "./RowActions";
+import { nextSort, type SortValue } from "../model/sorting";
+import { RowMenu, rowActionLayout } from "./RowActions";
+import { useAfterDelay } from "./useAfterDelay";
 
 export interface Column<T> {
   readonly key: string;
@@ -41,6 +43,8 @@ export interface Column<T> {
   readonly render: (row: T) => ReactNode;
   /** The sort value of this column (`startDate`, or `-startDate` for descending); the header is clickable when the table has `onSort`. */
   readonly sortKey?: string;
+  /** What a client-side list sorts this column by (see `columnAccessors`); server lists sort by `sortKey` alone. */
+  readonly sortValue?: (row: T) => SortValue;
 }
 
 /** The sort a table shows (`""` is the default order) and the handler that asks for another. */
@@ -49,13 +53,19 @@ export interface TableSort {
   readonly onSort: (sort: string) => void;
 }
 
-/** A row action: the primary one is a filled button, the rest sit in the row's menu. */
+/** A row action. The one flagged `primary` is the row's button and the rest sit in its menu. With none flagged, a row with one action shows a button and a row with several keeps them all in the menu. */
 export interface RowAction {
   readonly label: string;
   readonly icon?: ReactNode;
   readonly onClick: () => void;
   readonly danger?: boolean;
   readonly disabled?: boolean;
+  readonly primary?: boolean;
+}
+
+/** `loading` and `refreshing` for a paged list's query: the first load is a skeleton, a new page, sort or search keeps the rows, dimmed. */
+export function tableState(q: { isPending: boolean; isPlaceholderData: boolean }): { loading: boolean; refreshing: boolean } {
+  return { loading: q.isPending, refreshing: q.isPlaceholderData };
 }
 
 export interface RowSelection<T> {
@@ -64,6 +74,8 @@ export interface RowSelection<T> {
   readonly onToggleAll?: (ids: readonly string[]) => void;
   /** `true`, or why the row cannot be ticked (shown on hover). */
   readonly canSelect: (row: T) => true | string;
+  /** What a screen reader announces for the row's checkbox ("Select invoice INV-1042"); the row's key when omitted. */
+  readonly rowLabel?: (row: T) => string;
 }
 
 
@@ -79,11 +91,11 @@ export default function EaTable<T>({
   rowKey,
   onRowClick,
   canOpen,
-  primaryAction,
-  menu,
+  actions,
   selection,
   empty,
   loading = false,
+  refreshing = false,
   pagination,
   sorting,
   ariaLabel,
@@ -95,11 +107,14 @@ export default function EaTable<T>({
   readonly onRowClick?: (row: T) => void;
   /** Rows for which this is false are plain: no pointer, tab stop or click handler. */
   readonly canOpen?: (row: T) => boolean;
-  readonly primaryAction?: (row: T) => RowAction | undefined;
-  readonly menu?: (row: T) => readonly RowAction[];
+  /** The actions a row offers: the primary one is the button, the rest are in the row's menu (see `RowAction`). The Actions column is left out when no row has any. */
+  readonly actions?: (row: T) => readonly RowAction[];
   readonly selection?: RowSelection<T>;
   readonly empty: ReactNode;
+  /** The first load: placeholder rows. */
   readonly loading?: boolean;
+  /** Another page, sort or search is on its way: the rows stay, dimmed, and a progress bar appears if it takes a moment. */
+  readonly refreshing?: boolean;
   /** `pageSizes` with `onPageSize` lets the reader pick how many rows a page shows. */
   readonly pagination?: { page: number; pageSize: number; total: number; onPage: (page: number) => void; pageSizes?: readonly number[]; onPageSize?: (size: number) => void };
   /** Makes the headers of columns with a `sortKey` clickable. */
@@ -108,15 +123,17 @@ export default function EaTable<T>({
   /** Inside a card (a dashboard widget): no box of its own, labels and figures kept on one line. */
   readonly bare?: boolean;
 }): JSX.Element {
-  const hasActions = Boolean(primaryAction || menu);
+  const slow = useAfterDelay(refreshing);
+  const hasActions = Boolean(actions) && (loading || rows.some((r) => (actions?.(r).length ?? 0) > 0));
   const colCount = columns.length + (selection ? 1 : 0) + (hasActions ? 1 : 0);
-  // Rows shown as a skeleton (or as placeholders of a new search) cannot be selected.
-  const selectable = selection && !loading ? rows.filter((r) => selection.canSelect(r) === true).map(rowKey) : [];
+  // Rows shown as a skeleton (or while a new page is on its way) cannot be selected.
+  const selectable = selection && !loading && !refreshing ? rows.filter((r) => selection.canSelect(r) === true).map(rowKey) : [];
   const allTicked = selectable.length > 0 && selectable.every((id) => selection?.selected.has(id));
 
   return (
     <Box sx={bare ? undefined : { border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" }}>
-      <Box sx={{ overflowX: "auto" }}>
+      {slow ? <LinearProgress aria-label="Loading" sx={{ height: 2 }} /> : null}
+      <Box sx={{ overflowX: "auto", ...(refreshing ? { opacity: 0.55, transition: "opacity 120ms" } : {}) }} aria-busy={loading || refreshing || undefined}>
         <Table size="small" aria-label={ariaLabel} sx={bare ? BARE_SX : undefined}>
           <TableHead>
             <TableRow sx={TABLE_HEAD_SX}>
@@ -153,7 +170,7 @@ export default function EaTable<T>({
                   </TableCell>
                 );
               })}
-              {hasActions ? <TableCell sx={{ width: 150 }} aria-label="Actions" /> : null}
+              {hasActions ? <TableCell align="right">Actions</TableCell> : null}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -188,8 +205,7 @@ export default function EaTable<T>({
             ) : null}
             {(loading ? [] : rows).map((row) => {
               const id = rowKey(row);
-              const action = primaryAction?.(row);
-              const items = menu?.(row) ?? [];
+              const { button: action, menu: items } = rowActionLayout(actions?.(row) ?? []);
               const can = selection?.canSelect(row);
               const open = onRowClick && (canOpen?.(row) ?? true) ? onRowClick : undefined;
               return (
@@ -222,9 +238,9 @@ export default function EaTable<T>({
                           <Checkbox
                             size="small"
                             checked={selection.selected.has(id)}
-                            disabled={can !== true}
+                            disabled={can !== true || refreshing}
                             onChange={() => selection.onToggle(id)}
-                            inputProps={{ "aria-label": `Select ${id}` }}
+                            inputProps={{ "aria-label": selection.rowLabel?.(row) ?? `Select ${id}` }}
                           />
                         </span>
                       </Tooltip>
@@ -241,7 +257,8 @@ export default function EaTable<T>({
                         {action ? (
                           <Button
                             size="small"
-                            variant="contained"
+                            variant="outlined"
+                            color={action.danger ? "error" : "primary"}
                             disabled={action.disabled}
                             startIcon={action.icon}
                             onClick={action.onClick}
@@ -250,10 +267,7 @@ export default function EaTable<T>({
                             {action.label}
                           </Button>
                         ) : null}
-                        {/* The menu keeps its slot so primary buttons line up across rows. */}
-                        <Box sx={{ width: 34, display: "inline-flex", justifyContent: "center" }}>
-                          {items.length ? <RowMenu items={items} label={id} /> : null}
-                        </Box>
+                        {items.length ? <RowMenu items={items} label={id} /> : null}
                       </Box>
                     </TableCell>
                   ) : null}

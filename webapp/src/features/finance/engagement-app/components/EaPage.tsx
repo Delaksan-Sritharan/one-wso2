@@ -14,10 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useEffect, type JSX, type ReactNode } from "react";
+import { useEffect, useRef, type JSX, type ReactNode } from "react";
 import { Link as RouterLink, useLocation } from "react-router";
-import { Box, Link, Stack, Typography } from "@wso2/oxygen-ui";
-import { ArrowLeftIcon } from "@wso2/oxygen-ui-icons-react";
+import { Box, IconButton, Link, Stack, Typography } from "@wso2/oxygen-ui";
+import { ArrowLeftIcon, SearchIcon } from "@wso2/oxygen-ui-icons-react";
 import { useDocumentTitle } from "@hooks/useDocumentTitle";
 import GlobalSearch from "../search/GlobalSearch";
 import { ENGAGEMENT_APP_PATH, engagementPaths } from "../engagementPaths";
@@ -31,6 +31,7 @@ export default function EaPage({
   chips,
   actions,
   back,
+  collapsedSearch = false,
   children,
 }: {
   readonly title: ReactNode;
@@ -40,6 +41,8 @@ export default function EaPage({
   readonly chips?: ReactNode;
   readonly actions?: ReactNode;
   readonly back?: { readonly to: string; readonly label: string };
+  /** A list page has its own search box: the header's shrinks to an icon (the `/` key and the icon still open it). */
+  readonly collapsedSearch?: boolean;
   readonly children: ReactNode;
 }): JSX.Element {
   useDocumentTitle(documentTitle ?? (typeof title === "string" ? title : undefined));
@@ -47,6 +50,7 @@ export default function EaPage({
   // The search box rides every Finance screen but the results page, which has its own field.
   const searchable = pathname.startsWith(`${ENGAGEMENT_APP_PATH}/`) && pathname !== engagementPaths.search();
   useEffect(() => rememberVisit(pathname + search), [pathname, search]);
+  const searchBox = useRef<HTMLDivElement>(null);
   return (
     <Box sx={{ minWidth: 0 }}>
       {back ? (
@@ -76,7 +80,29 @@ export default function EaPage({
             </Typography>
           ) : null}
         </Box>
-        {searchable ? <GlobalSearch /> : null}
+        {searchable && collapsedSearch ? (
+          <>
+            <IconButton aria-label="Search Engagement App" size="small" onClick={() => searchBox.current?.querySelector("input")?.focus()}>
+              <SearchIcon size={18} />
+            </IconButton>
+            {/* Kept in the page but out of sight until it has focus, so `/` keeps working. */}
+            <Box
+              ref={searchBox}
+              sx={{
+                position: "absolute",
+                width: 1,
+                height: 1,
+                overflow: "hidden",
+                clipPath: "inset(50%)",
+                "&:focus-within": { position: "static", width: { xs: "100%", md: "auto" }, height: "auto", overflow: "visible", clipPath: "none" },
+              }}
+            >
+              <GlobalSearch />
+            </Box>
+          </>
+        ) : searchable ? (
+          <GlobalSearch />
+        ) : null}
         {actions ? (
           <Stack direction="row" spacing={1} sx={{ flexShrink: 0, alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
             {actions}

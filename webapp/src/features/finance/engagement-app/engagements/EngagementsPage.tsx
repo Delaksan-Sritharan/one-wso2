@@ -23,16 +23,16 @@ import type { EngagementSummary } from "../api/engagementTypes";
 import { useEngagements, useEngagementTypes, useReferenceData } from "../api/useEngagementApi";
 import { useEngagementAccess } from "../api/useEngagementUserInfo";
 import EaPage from "../components/EaPage";
-import EaTable, { type Column } from "../components/EaTable";
+import EaTable, { type Column, tableState } from "../components/EaTable";
 import { Empty, Failed, ListCard } from "../components/ListCard";
 import ListToolbar, { type FilterDef } from "../components/ListToolbar";
-import { EngagementStatusChip, RequestStatusChip, Two, Mono } from "../components/StatusChips";
+import { codeSub, EngagementStatusChip, RequestStatusChip, Two, Mono } from "../components/StatusChips";
 import { engagementPaths, type EngagementSegment } from "../engagementPaths";
 import { ALLOC } from "../model/engagementAccess";
 import { engagementSegments } from "../model/landing";
 import { engagementName, fmtRange, place, plural } from "../model/format";
 import { ENGAGEMENT_STATUSES } from "../model/statuses";
-import { PAGE_SIZE, useListView } from "../model/useListView";
+import { useListView } from "../model/useListView";
 import { useEngagementActions } from "./useEngagementActions";
 
 const SEGMENT_LABEL: Record<EngagementSegment, string> = {
@@ -52,10 +52,10 @@ export default function EngagementsPage({ segment }: { segment: EngagementSegmen
   const access = useEngagementAccess();
   const segments = engagementSegments(access);
   const navigate = useNavigate();
-  const list = useListView();
+  const list = useListView("engagements", { defaultSort: "-created" });
   const types = useEngagementTypes();
   const ref = useReferenceData();
-  const { actionsFor, dialogs } = useEngagementActions();
+  const { rowActionsFor, dialogs } = useEngagementActions();
   const cust = segment === "customer";
   const consultants = access.p.a.has(cust ? ALLOC.CUSTOMER_CONSULTANTS : ALLOC.INTERNAL_CONSULTANTS);
   const segTypes = (types.data ?? []).filter((t) => (cust ? t.kind === "Customer" : t.id === (segment === "marketing" ? 5 : 1)));
@@ -71,7 +71,7 @@ export default function EngagementsPage({ segment }: { segment: EngagementSegmen
       key: "requestStatus",
       label: "Request Status",
       type: "multi",
-      options: (cust ? ["New", "Updated", "In Progress", "Completed", "Cancelled"] : ["Approved", "Updated", "In Progress", "Completed", "Cancelled"]).map(pair),
+      options: (cust ? ["New", "Updated", "In Progress", "Completed", "Cancelled"] : ["Pending Approval", "Approved", "Updated", "In Progress", "Completed", "Cancelled"]).map(pair),
     },
     { key: "engagementStatus", label: "Engagement Status", type: "multi", options: ENGAGEMENT_STATUSES.map(pair) },
     { key: "businessUnit", label: "Business Unit", type: "select", options: (ref.data?.businessUnits ?? []).map(pair) },
@@ -81,7 +81,11 @@ export default function EngagementsPage({ segment }: { segment: EngagementSegmen
     { key: "startTo", label: "Start Date To", type: "date" },
     { key: "endTo", label: "End Date To", type: "date" },
   ];
-  const engagements = useEngagements({ segment, ...list.paramsFor(filters) }, segments.includes(segment));
+  const engagements = useEngagements(
+    // includePending: what was just created, still waiting for approval, is in the list.
+    { segment, includePending: true, ...list.paramsFor(filters) },
+    segments.includes(segment),
+  );
 
   if (!segments.includes(segment)) return <Navigate to={engagementPaths.engagements(segments[0])} replace />;
 
@@ -90,15 +94,17 @@ export default function EngagementsPage({ segment }: { segment: EngagementSegmen
       key: "engagement",
       label: segment === "marketing" ? "Event" : "Engagement",
       width: "24%",
+      sortKey: "id",
       render: (e) => <Two main={<Mono>{e.id}</Mono>} sub={cust ? engagementName(e) : e.title} />,
     },
     {
       key: "type",
       label: segment === "marketing" ? "Event Type" : "Allocation Type",
-      render: (e) => <Two main={e.allocationType} sub={<Mono>{e.code}</Mono>} />,
+      sortKey: "type",
+      render: (e) => <Two main={e.allocationType} sub={codeSub(e.kind, e.code)} />,
     },
-    { key: "location", label: "Location", render: (e) => <Two main={place(e.country, e.city)} sub={e.nature} /> },
-    { key: "dates", label: "Dates", render: (e) => <span style={{ whiteSpace: "nowrap" }}>{fmtRange(e.start, e.end)}</span> },
+    { key: "location", label: "Location", sortKey: "country", render: (e) => <Two main={place(e.country, e.city)} sub={e.nature} /> },
+    { key: "dates", label: "Dates", sortKey: "startDate", render: (e) => <span style={{ whiteSpace: "nowrap" }}>{fmtRange(e.start, e.end)}</span> },
     ...(consultants
       ? [
           {
@@ -113,8 +119,8 @@ export default function EngagementsPage({ segment }: { segment: EngagementSegmen
           },
         ]
       : []),
-    { key: "request", label: "Request Status", render: (e) => <RequestStatusChip status={e.requestStatus} /> },
-    { key: "status", label: "Engagement Status", render: (e) => <EngagementStatusChip status={e.engagementStatus} /> },
+    { key: "request", label: "Request Status", sortKey: "requestStatus", render: (e) => <RequestStatusChip status={e.requestStatus} /> },
+    { key: "status", label: "Engagement Status", sortKey: "engagementStatus", render: (e) => <EngagementStatusChip status={e.engagementStatus} /> },
   ];
 
   const create =
@@ -132,7 +138,7 @@ export default function EngagementsPage({ segment }: { segment: EngagementSegmen
   const what = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
 
   return (
-    <EaPage
+    <EaPage collapsedSearch
       title="Engagements"
       subtitle={`${what.charAt(0).toUpperCase()}${what.slice(1)}, and who is working on them.`}
     >
@@ -141,6 +147,7 @@ export default function EngagementsPage({ segment }: { segment: EngagementSegmen
           <RoutedTabs
             basePath={engagementPaths.engagements()}
             ariaLabel="Engagement kinds"
+            keepSearchParams={["q", "sort", "country", "businessUnit", "consultants", "startFrom", "startTo", "endTo"]}
             tabs={segments.map((s) => ({
               segment: s,
               label: SEGMENT_LABEL[s],
@@ -166,14 +173,14 @@ export default function EngagementsPage({ segment }: { segment: EngagementSegmen
             columns={columns}
             rows={engagements.data?.items ?? []}
             rowKey={(e) => e.id}
-            loading={engagements.isPending || engagements.isPlaceholderData}
+            {...tableState(engagements)}
             onRowClick={(e) => navigate(engagementPaths.engagement(e.id))}
-            primaryAction={(e) => actionsFor(e).primary}
-            menu={(e) => actionsFor(e).menu}
-            pagination={{ page: list.page, pageSize: PAGE_SIZE, total: engagements.data?.total ?? 0, onPage: list.setPage }}
+            actions={rowActionsFor}
+            sorting={list.sorting}
+            pagination={list.pager(engagements.data?.total ?? 0)}
             empty={
               filtered ? (
-                <Empty title="No Engagements Match the Filters" body="Change the search or the filters to see more." />
+                <Empty title="No Engagements Match" body="Change the search or the filters to see more." />
               ) : (
                 <Empty
                   title={segment === "marketing" ? "No Marketing Events Yet" : "No Engagements Yet"}

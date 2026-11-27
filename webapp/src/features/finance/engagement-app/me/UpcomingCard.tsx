@@ -63,9 +63,9 @@ export default function UpcomingCard(): JSX.Element | null {
   if (overview.isError) {
     return (
       <Card variant="outlined" sx={{ p: 2 }}>
-        <Typography sx={{ ...CAP, mb: 1.5 }}>Allocations &amp; Trips</Typography>
+        <Typography sx={{ ...CAP, mb: 1.5 }}>Allocations &amp; Travels</Typography>
         <ErrorNotice error={overview.error} onRetry={() => void overview.refetch()} retrying={overview.isFetching}>
-          Couldn&apos;t load your upcoming allocations and trips.
+          Couldn&apos;t load your upcoming allocations and travels.
         </ErrorNotice>
       </Card>
     );
@@ -78,7 +78,7 @@ export default function UpcomingCard(): JSX.Element | null {
   const allocationsHeading = current === 0 ? "Upcoming Allocations" : current === allocations.length ? "Current Allocations" : "Current and Upcoming Allocations";
   return (
     <Card variant="outlined" sx={{ ...EA_SCOPE_SX, p: 2, display: "flex", flexDirection: "column" }}>
-      <Typography sx={{ ...CAP, mb: 1 }}>Allocations &amp; Trips</Typography>
+      <Typography sx={{ ...CAP, mb: 1 }}>Allocations &amp; Travels</Typography>
       {allocations.length ? (
         <>
           <Typography sx={{ fontSize: 12, fontWeight: 600, color: "text.secondary", mt: 0.5 }}>{allocationsHeading}</Typography>
@@ -95,7 +95,7 @@ export default function UpcomingCard(): JSX.Element | null {
       ) : null}
       {trips.length ? (
         <>
-          <Typography sx={{ fontSize: 12, fontWeight: 600, color: "text.secondary", mt: 1.25 }}>Upcoming Trips</Typography>
+          <Typography sx={{ fontSize: 12, fontWeight: 600, color: "text.secondary", mt: 1.25 }}>Upcoming Travels</Typography>
           {trips.map((t) => (
             <Line
               key={t.jobNumber}

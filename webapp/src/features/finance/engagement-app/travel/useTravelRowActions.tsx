@@ -27,16 +27,17 @@ export function useTravelRowActions() {
   const [assigning, setAssigning] = useState<TravelRequestSummary | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const canEdit = p.t.has(TRAVEL.EDIT_STATUS) || p.t.has(TRAVEL.EDIT_AGENT) || p.t.has(TRAVEL.EDIT_VISA);
-  // Assign is the row's button; Update Travel Details sits in the row menu. The row's `actions` decide when present.
-  const primary = (t: TravelRequestSummary): RowAction | undefined =>
-    t.status === "New" && (t.actions ? t.actions.assign : newTravelRequests) ? { label: "Assign", onClick: () => setAssigning(t) } : undefined;
-  const menu = (t: TravelRequestSummary): RowAction[] =>
+  // The row's `actions` decide when present.
+  const assign = (t: TravelRequestSummary): RowAction[] =>
+    t.status === "New" && (t.actions ? t.actions.assign : newTravelRequests) ? [{ label: "Assign Travel Agent", primary: true, onClick: () => setAssigning(t) }] : [];
+  const update = (t: TravelRequestSummary): RowAction[] =>
     t.status !== "New" && (t.actions ? t.actions.update : canEdit) ? [{ label: "Update Travel Details", onClick: () => setUpdating(t.jobNumber) }] : [];
+  const rowActions = (t: TravelRequestSummary): RowAction[] => [...assign(t), ...update(t)];
   const dialogs = (
     <>
       {assigning ? <AssignDialog trip={assigning} onClose={() => setAssigning(null)} /> : null}
       {updating ? <UpdateTravelLoader job={updating} onClose={() => setUpdating(null)} /> : null}
     </>
   );
-  return { primary, menu, dialogs };
+  return { rowActions, dialogs };
 }

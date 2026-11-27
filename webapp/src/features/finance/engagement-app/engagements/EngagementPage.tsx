@@ -28,10 +28,14 @@ import EaPage from "../components/EaPage";
 import EaTable, { type Column } from "../components/EaTable";
 import { FactsCard, FactsGrid } from "../components/Facts";
 import { Empty, Failed, ListCard } from "../components/ListCard";
+import { PersonTwo } from "../components/PersonChip";
 import { AllocationStatusChip, EngagementStatusChip, RequestStatusChip, Two, Mono } from "../components/StatusChips";
 import { engagementPaths, myEngagementPaths, type EngagementTab } from "../engagementPaths";
 import { canEditAllocationStatus } from "../model/engagementAccess";
+import { lastVisitedList } from "../model/backTarget";
 import { engagementSegments } from "../model/landing";
+import { canSearch } from "../model/searchLinks";
+import { useSortedRows } from "../model/useSortedRows";
 import { engagementName, fmtDate, fmtRange, place } from "../model/format";
 import { useEngagementActions } from "./useEngagementActions";
 import RowActions from "../components/RowActions";
@@ -52,17 +56,21 @@ export default function EngagementPage({ area = "finance" }: { area?: "finance" 
 
   const pathOf = area === "me" ? myEngagementPaths.allocation : engagementPaths.engagement;
   if (!TABS.includes(tab as EngagementTab)) return <Navigate to={pathOf(id)} replace />;
-  const back = area === "me"
-    ? { to: myEngagementPaths.allocations, label: "Allocations" }
-    : engagementSegments(access).length
-    ? { to: engagementPaths.engagements(), label: "Engagements" }
-    : access.approvals
-      ? { to: engagementPaths.approvals(), label: "Approvals" }
-      : { to: engagementPaths.home, label: "Dashboard" };
+  // The back link names the list this record was opened from.
+  const lists = [
+    ...(engagementSegments(access).length ? [{ to: engagementPaths.engagements(), label: "Engagements" }] : []),
+    ...(access.approvals ? [{ to: engagementPaths.approvals(), label: "Approvals" }] : []),
+    ...(access.engagementAllocations ? [{ to: engagementPaths.allocations(), label: "Allocations" }] : []),
+    ...(canSearch(access) ? [{ to: engagementPaths.search(), label: "Search" }] : []),
+  ];
+  const back =
+    area === "me"
+      ? { to: myEngagementPaths.allocations, label: "Allocations" }
+      : (lastVisitedList(lists) ?? lists[0] ?? { to: engagementPaths.home, label: "Dashboard" });
 
   if (engagement.isPending) {
     return (
-      <EaPage title={id} back={back}>
+      <EaPage title={`Engagement ${id}`} back={back}>
         <DetailSkeleton facts={10} />
       </EaPage>
     );
@@ -70,7 +78,7 @@ export default function EngagementPage({ area = "finance" }: { area?: "finance" 
   if (engagement.isError) {
     const gone = engagement.error instanceof HttpError && (engagement.error.status === 404 || engagement.error.status === 403);
     return (
-      <EaPage title={id} back={back}>
+      <EaPage title={`Engagement ${id}`} back={back}>
         {gone ? (
           <Alert severity="info">This engagement isn&apos;t one you can open, or it doesn&apos;t exist.</Alert>
         ) : (
@@ -87,7 +95,8 @@ export default function EngagementPage({ area = "finance" }: { area?: "finance" 
 
   return (
     <EaPage
-      title={e.id}
+      title={`${e.kind === "marketing" ? "Event" : "Engagement"} ${e.id}`}
+      documentTitle={e.id}
       subtitle={`${kindLabel(e)}: ${e.kind === "customer" ? engagementName(e) : e.title}`}
       chips={
         <>
@@ -132,16 +141,7 @@ export default function EngagementPage({ area = "finance" }: { area?: "finance" 
         {tab === "details" ? (
           <DetailsTab e={e} />
         ) : e.access === "consultants" ? (
-          <EaTable
-            ariaLabel="Consultants"
-            columns={[
-              { key: "who", label: "Consultant", render: (a: Allocation) => <Two main={a.consultant.name} sub={a.consultant.email} /> },
-              { key: "dates", label: "Allocation Dates", render: (a: Allocation) => fmtRange(a.start, a.end) },
-            ]}
-            rows={e.allocations}
-            rowKey={(a) => a.id}
-            empty={<Empty title="No Consultants Allocated Yet" body={`This engagement runs ${fmtRange(e.start, e.end)}.`} />}
-          />
+          <ConsultantsTable e={e} />
         ) : (
           <AllocationRecords
             allocations={e.allocations}
@@ -163,6 +163,24 @@ export default function EngagementPage({ area = "finance" }: { area?: "finance" 
   );
 }
 
+function ConsultantsTable({ e }: { e: Engagement }): JSX.Element {
+  const columns: Column<Allocation>[] = [
+    { key: "who", label: "Consultant", sortKey: "consultant", sortValue: (a) => a.consultant.email, render: (a) => <Two main={a.consultant.name} sub={a.consultant.email} /> },
+    { key: "dates", label: "Allocation Dates", sortKey: "startDate", sortValue: (a) => a.start, render: (a) => fmtRange(a.start, a.end) },
+  ];
+  const sorted = useSortedRows(e.allocations, columns);
+  return (
+    <EaTable
+      ariaLabel="Consultants"
+      columns={columns}
+      rows={sorted.rows}
+      rowKey={(a) => a.id}
+      sorting={sorted.sorting}
+      empty={<Empty title="No Consultants Allocated Yet" body={`This engagement runs ${fmtRange(e.start, e.end)}.`} />}
+    />
+  );
+}
+
 /** The allocation records: also the Allocate page's lower half. */
 export function AllocationRecords({
   allocations,
@@ -178,20 +196,22 @@ export function AllocationRecords({
   travelBase?: (job: string) => string;
 }): JSX.Element {
   const columns: Column<Allocation>[] = [
-    { key: "id", label: "Allocation", render: (a) => <Mono>{a.id}</Mono> },
-    { key: "who", label: "Consultant", render: (a) => <Two main={a.consultant.name} sub={a.consultant.email} /> },
-    { key: "dates", label: "Dates", render: (a) => <Two main={fmtRange(a.start, a.end)} sub={<HourlyLabel allocation={a} />} /> },
+    { key: "id", label: "Allocation", sortKey: "id", sortValue: (a) => a.id, render: (a) => <Mono>{a.id}</Mono> },
+    { key: "who", label: "Consultant", sortKey: "consultant", sortValue: (a) => a.consultant.email, render: (a) => <Two main={a.consultant.name} sub={a.consultant.email} /> },
+    { key: "dates", label: "Dates", sortKey: "startDate", sortValue: (a) => a.start, render: (a) => <Two main={fmtRange(a.start, a.end)} sub={<HourlyLabel allocation={a} />} /> },
     { key: "travel", label: "Travel", render: (a) => <TravelCell allocation={a} travelBase={travelBase} /> },
     { key: "comment", label: "Comment", width: "22%", render: (a) => <Box sx={{ color: "text.secondary", fontSize: 12.5 }}>{a.comment || "—"}</Box> },
-    { key: "status", label: "Allocation Status", render: (a) => <AllocationStatusChip status={a.status} /> },
+    { key: "status", label: "Allocation Status", sortKey: "status", sortValue: (a) => a.status, render: (a) => <AllocationStatusChip status={a.status} /> },
   ];
+  const sorted = useSortedRows(allocations, columns);
   return (
     <EaTable
       ariaLabel="Allocation records"
       columns={columns}
-      rows={allocations}
+      rows={sorted.rows}
       rowKey={(a) => a.id}
-      menu={canChangeStatus ? (a) => (/Cancelled/.test(a.status) ? [] : [{ label: "Update Allocation Status", onClick: () => onChangeStatus(a) }]) : undefined}
+      sorting={sorted.sorting}
+      actions={canChangeStatus ? (a) => (/Cancelled/.test(a.status) ? [] : [{ label: "Update Allocation Status", onClick: () => onChangeStatus(a) }]) : undefined}
       empty={empty}
     />
   );
@@ -213,7 +233,7 @@ function DetailsTab({ e }: { e: Engagement }): JSX.Element {
           { label: "Technical Owner", value: e.technicalOwner },
           e.kind === "customer" && { label: "Contracts Signed", value: e.contractsSigned ? "Yes" : "No" },
           e.kind === "customer" && { label: "Tentative Dates", value: e.tentativeDates ? "Yes" : "No" },
-          { label: "Created By", value: e.createdBy?.name },
+          { label: "Created By", value: e.createdBy && <PersonTwo name={e.createdBy.name} email={e.createdBy.email} /> },
           { label: "Created On", value: e.createdOn ? fmtDate(e.createdOn) : undefined },
           { label: "Location Address", value: e.address ? <span style={{ whiteSpace: "pre-line" }}>{e.address}</span> : undefined, full: true },
           { label: "Description", value: e.description, full: true },

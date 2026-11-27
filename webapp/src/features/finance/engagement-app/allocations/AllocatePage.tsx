@@ -31,8 +31,10 @@ import { useAllocationTimeline, useEngagement, useOrgStructure, useReferenceData
 import { useEngagementAccess } from "../api/useEngagementUserInfo";
 import EaPage from "../components/EaPage";
 import { FactsCard } from "../components/Facts";
+import { DetailSkeleton } from "../components/EaSkeletons";
 import { Empty, Failed, ListCard, SectionTitle } from "../components/ListCard";
 import PersonPicker from "../components/PersonPicker";
+import SearchSelect from "../components/SearchSelect";
 import RowActions from "../components/RowActions";
 import { RequestStatusChip, Two, Mono } from "../components/StatusChips";
 import { engagementPaths } from "../engagementPaths";
@@ -58,7 +60,7 @@ export default function AllocatePage(): JSX.Element {
   if (engagement.isPending) {
     return (
       <EaPage title={`Allocate ${id}`} back={back}>
-        <Skeleton variant="rounded" height={300} />
+        <DetailSkeleton facts={8} tabs={1} />
       </EaPage>
     );
   }
@@ -117,7 +119,7 @@ function Allocate({ e }: { e: Engagement }): JSX.Element {
     const covering = itemsOf(who.email).some((a) => a.kind === "engagement" && !a.hourly && a.start <= e.start && a.end >= e.end);
     if (covering) {
       return setNotice(
-        "This person is already allocated for the selected period of time. Please refresh the timeline if you do not have the latest / cannot see it in the timeline.",
+        "This person is already allocated for the whole engagement period. If the timeline does not show it, refresh the timeline and try again.",
       );
     }
     setNotice("");
@@ -138,6 +140,7 @@ function Allocate({ e }: { e: Engagement }): JSX.Element {
               ? `${a.id}: ${a.allocationType} (team allocation), ${fmtRange(a.start, a.end)}`
               : `${a.id}: ${a.label}, ${fmtRange(a.start, a.end)}${a.status ? ` (${a.status})` : ""}`,
           color: a.color || typeColor(a.allocationType),
+          type: a.allocationType,
           thin: Boolean(a.hourly),
         })),
         action: (
@@ -234,7 +237,7 @@ function Allocate({ e }: { e: Engagement }): JSX.Element {
           ) : null}
           <FilterDate label="Start Date" value={draftRange.start} onChange={(v) => setDraftRange((r) => ({ ...r, start: v }))} />
           <FilterDate label="End Date" value={draftRange.end} onChange={(v) => setDraftRange((r) => ({ ...r, end: v }))} />
-          <FilterSelect label="Select Time Zone" anyLabel={null} value={zone} options={ref.data?.timeZones ?? []} onChange={setTimeZone} />
+          <SearchSelect label="Select Time Zone" value={zone} options={ref.data?.timeZones ?? []} onChange={(v) => v && setTimeZone(v)} />
         </FilterBar>
         {notice ? (
           <Alert severity="info" sx={{ mb: 1.5 }} onClose={() => setNotice("")}>

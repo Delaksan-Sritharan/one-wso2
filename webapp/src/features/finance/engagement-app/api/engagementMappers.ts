@@ -581,7 +581,7 @@ export function dashboard(d: W.WDashboard): V.Dashboard {
           upcoming: d.travel.upcoming.map(upcomingTrip),
           upcomingTotal: d.travel.upcomingTotal ?? d.travel.upcoming.length,
           topDestinations: d.travel.topDestinations.map(bucket),
-          byMonth: series(d.travel.byMonth, "Trips"),
+          byMonth: series(d.travel.byMonth, "Travels"),
           byTravelAgent: d.travel.byAgency.map(bucket),
         }
       : undefined,
@@ -595,7 +595,7 @@ export function dashboard(d: W.WDashboard): V.Dashboard {
           upcoming: d.agent.upcoming.map(upcomingTrip),
           upcomingTotal: d.agent.upcomingTotal ?? d.agent.upcoming.length,
           invoicesByStatus: d.agent.invoicesByStatus.map(bucket),
-          tripsByMonth: series(d.agent.tripsByMonth, "Trips"),
+          tripsByMonth: series(d.agent.tripsByMonth, "Travels"),
         }
       : undefined,
   };

@@ -22,13 +22,13 @@ import type { TravelRequestSummary } from "../api/engagementTypes";
 import { useReferenceData, useTravelRequests } from "../api/useEngagementApi";
 import { useEngagementAccess } from "../api/useEngagementUserInfo";
 import EaPage from "../components/EaPage";
-import EaTable from "../components/EaTable";
+import EaTable, { tableState } from "../components/EaTable";
 import { Empty, Failed, ListCard, SectionTitle } from "../components/ListCard";
 import ListToolbar, { type FilterDef } from "../components/ListToolbar";
 import { engagementPaths, type TravelSegment } from "../engagementPaths";
 import type { EngagementAccess } from "../model/engagementAccess";
 import { TRAVEL_STATUSES } from "../model/statuses";
-import { PAGE_SIZE, useListView } from "../model/useListView";
+import { useListView } from "../model/useListView";
 import { useTravelRowActions } from "./useTravelRowActions";
 import { travelColumns } from "./travelColumns";
 
@@ -52,11 +52,11 @@ export default function TravelRequestsPage({ segment }: { segment: TravelSegment
   const access = useEngagementAccess();
   const segments = segmentsOf(access);
   const navigate = useNavigate();
-  const list = useListView();
+  const list = useListView("travel");
   const ref = useReferenceData();
   // With one or two new requests, In Progress shows them as a short block above it.
   const fresh = useTravelRequests({ segment: "new", limit: 3 }, access.newTravelRequests && segment === "in-progress" && !list.search);
-  const { primary, menu, dialogs } = useTravelRowActions();
+  const { rowActions, dialogs } = useTravelRowActions();
   const agent = access.isAgent;
   const pair = (v: string): readonly [string, string] => [v, v];
   const filters: FilterDef[] = [
@@ -75,11 +75,11 @@ export default function TravelRequestsPage({ segment }: { segment: TravelSegment
   const open = (t: TravelRequestSummary) => navigate(engagementPaths.travelRequest(t.jobNumber));
 
   return (
-    <EaPage
+    <EaPage collapsedSearch
       title="Travels"
       subtitle={
         agent
-          ? "Travel requests handled by your agency."
+          ? "Travels handled by your agency."
           : access.newTravelRequests
             ? "Travel requests from confirmed allocations. Assign the new ones and manage the rest."
             : "Every travel request with its travel agent, visa and status, and the costs booked against it."
@@ -88,8 +88,8 @@ export default function TravelRequestsPage({ segment }: { segment: TravelSegment
       {showFresh ? (
         <Box sx={{ mb: 2 }}>
           <ListCard>
-            <SectionTitle>New Travels</SectionTitle>
-            <EaTable ariaLabel="New travel requests" columns={columns} rows={freshRows} rowKey={(t) => t.jobNumber} onRowClick={open} primaryAction={primary} empty={null} />
+            <SectionTitle>New Travel Requests</SectionTitle>
+            <EaTable ariaLabel="New travel requests" columns={columns} rows={freshRows} rowKey={(t) => t.jobNumber} onRowClick={open} actions={rowActions} empty={null} />
           </ListCard>
         </Box>
       ) : null}
@@ -97,6 +97,7 @@ export default function TravelRequestsPage({ segment }: { segment: TravelSegment
         <RoutedTabs
           basePath={engagementPaths.travelRequests()}
           ariaLabel="Travel request status"
+          keepSearchParams={["q", "sort", "country", "agency", "status", "startFrom", "endTo"]}
           tabs={segments.map((s) => ({
             segment: s,
             label: LABEL[s],
@@ -105,7 +106,7 @@ export default function TravelRequestsPage({ segment }: { segment: TravelSegment
         />
         <ListToolbar
           search={list.search}
-          placeholder="Search travel requests"
+          placeholder="Search travels"
           onSearch={list.setSearch}
           filters={filters}
           applied={list.filters}
@@ -113,28 +114,27 @@ export default function TravelRequestsPage({ segment }: { segment: TravelSegment
           onRemove={list.removeFilter}
         />
         {trips.isError ? (
-          <Failed what="travel requests" error={trips.error} onRetry={() => void trips.refetch()} retrying={trips.isFetching} />
+          <Failed what="travels" error={trips.error} onRetry={() => void trips.refetch()} retrying={trips.isFetching} />
         ) : (
           <EaTable
-            ariaLabel="Travel requests"
+            ariaLabel="Travels"
             columns={columns}
             rows={trips.data?.items ?? []}
             rowKey={(t) => t.jobNumber}
-            loading={trips.isPending || trips.isPlaceholderData}
+            {...tableState(trips)}
             onRowClick={open}
-            primaryAction={primary}
-            menu={menu}
-            sorting={{ sort: list.sort, onSort: list.setSort }}
-            pagination={{ page: list.page, pageSize: PAGE_SIZE, total: trips.data?.total ?? 0, onPage: list.setPage }}
+            actions={rowActions}
+            sorting={list.sorting}
+            pagination={list.pager(trips.data?.total ?? 0)}
             empty={
               Object.keys(list.filters).length || list.search ? (
                 <Empty title="No Travels Match" body="Change the search or the filters to see more." />
               ) : segment === "new" ? (
-                <Empty title="No New Travels" body="Every travel request has a travel agent. New ones arrive when an allocation that needs travel is confirmed." />
+                <Empty title="No New Travel Requests" body="Every travel request has a travel agent. New ones arrive when an allocation that needs travel is confirmed." />
               ) : segment === "in-progress" ? (
                 <Empty title="No Travels In Progress" body="Requests move here once a travel agent is assigned." />
               ) : (
-                <Empty title="No Travels Yet" body="A travel request is created when an allocation with Travel Required = Yes is confirmed." />
+                <Empty title="No Travels Yet" body="A travel request is created when an allocation that needs travel is confirmed." />
               )
             }
           />

@@ -16,7 +16,7 @@
 
 // Visas and travel documents: the tables, the details drawer and the Add / Edit dialogs, shared by Finance → Visas & Documents (the Travel Team's view of everyone's) and Me → Passport & Visas (the person's own).
 
-import { useState, type JSX } from "react";
+import { useId, useState, type JSX } from "react";
 import { Alert, Box, Button, MenuItem, TextField, Typography } from "@wso2/oxygen-ui";
 import { describeError } from "@api/errors";
 import { authedGet } from "@api/http";
@@ -33,6 +33,7 @@ import { useIdempotencyKey, useSaveTravelDocument } from "../api/useEngagementMu
 import EaDialog, { ConfirmDialog } from "../components/EaDialog";
 import { FactsGrid } from "../components/Facts";
 import PersonPicker from "../components/PersonPicker";
+import SearchSelect from "../components/SearchSelect";
 import { DocumentStatusChip, Mono } from "../components/StatusChips";
 import { documentStatus, visaStatus } from "./documentColumns";
 import { fmtDate } from "../model/format";
@@ -137,7 +138,7 @@ export function DocumentDrawer({
                   { label: "Document Type", value: record.type },
                   { label: "Issued Country", value: record.country },
                   { label: "Issued Date", value: record.issued ? fmtDate(record.issued) : undefined },
-                  { label: "Expiry Date", value: record.expires ? fmtDate(record.expires) : "No Expire" },
+                  { label: "Expiry Date", value: record.expires ? fmtDate(record.expires) : "No expiry date" },
                   { label: "Status", value: <DocumentStatusChip status={documentStatus(record, today)} /> },
                 ]
           }
@@ -147,7 +148,8 @@ export function DocumentDrawer({
   );
 }
 
-function FilePicker({ label, file, onFile, hint }: { label: string; file: File | null; onFile: (f: File | null, problem?: string) => void; hint: string }) {
+function FilePicker({ label, file, onFile, hint, error }: { label: string; file: File | null; onFile: (f: File | null, problem?: string) => void; hint: string; error?: string }) {
+  const messageId = useId();
   return (
     <Box sx={{ gridColumn: "1 / -1" }}>
       <Button variant="outlined" component="label" size="small">
@@ -156,6 +158,8 @@ function FilePicker({ label, file, onFile, hint }: { label: string; file: File |
           hidden
           type="file"
           accept=".jpg,.jpeg,.png"
+          aria-invalid={Boolean(error)}
+          aria-describedby={messageId}
           onChange={(e) => {
             const f = e.target.files?.[0] ?? null;
             if (f && !IMAGE_TYPES.includes(f.type)) return onFile(null, "Upload a JPG or PNG image.");
@@ -164,15 +168,18 @@ function FilePicker({ label, file, onFile, hint }: { label: string; file: File |
           }}
         />
       </Button>
-      <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.5 }}>
-        {file ? file.name : hint}
+      <Typography id={messageId} role={error ? "alert" : undefined} variant="caption" color={error ? "error" : "text.secondary"} component="div" sx={{ mt: 0.5 }}>
+        {error ?? (file ? file.name : hint)}
       </Typography>
     </Box>
   );
 }
 
-const select = (label: string, value: string, options: readonly string[], onChange: (v: string) => void, required = true, disabled = false) => (
-  <TextField select size="small" required={required} disabled={disabled} label={label} value={value} onChange={(e) => onChange(e.target.value)}>
+/** Each field's own message, set when Continue is refused. */
+type FieldErrors = Readonly<Record<string, string>>;
+
+const select = (label: string, value: string, options: readonly string[], onChange: (v: string) => void, required = true, error?: string) => (
+  <TextField select size="small" required={required} label={label} value={value} error={Boolean(error)} helperText={error} onChange={(e) => onChange(e.target.value)}>
     {options.map((o) => (
       <MenuItem key={o} value={o}>
         {o}
@@ -202,7 +209,10 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
   });
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<unknown>();
-  const [confirm, setConfirm] = useState<string | null>(null);
+  const [errs, setErrs] = useState<FieldErrors>({});
+  const [confirm, setConfirm] = useState<{ text: string; label: string; busy: string; danger?: boolean } | null>(null);
+  // Going back from the confirm step restores the form with its edits, so Cancel keeps asking before it discards them.
+  const [wentBack, setWentBack] = useState(false);
   const passportsQuery = usePassports(own ? undefined : owner?.email, own);
   const passports = (passportsQuery.data ?? []).filter((d) => d.status !== "Inactive");
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
@@ -213,7 +223,11 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
     return (
       <ConfirmDialog
         title={visa ? "Edit Visa" : "Add Visa"}
-        text={confirm}
+        text={confirm.text}
+        confirmLabel={confirm.label}
+        busyLabel={confirm.busy}
+        cancelLabel="Go Back"
+        danger={confirm.danger}
         run={() =>
           save.mutateAsync({
             id: visa?.id,
@@ -233,8 +247,14 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
             image: file ?? undefined,
           })
         }
-        onDone={() => notify.showSuccess(visa ? "Visa updated successfully" : "Visa added successfully")}
-        onClose={onClose}
+        onDone={() => {
+          notify.showSuccess(visa ? "Visa updated successfully" : "Visa added successfully");
+          onClose();
+        }}
+        onClose={() => {
+          setConfirm(null);
+          setWentBack(true);
+        }}
       />
     );
   }
@@ -244,12 +264,25 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
       title={visa ? "Edit Visa" : "Add Visa"}
       confirmLabel="Continue"
       error={error}
+      edited={wentBack}
       onClose={onClose}
       onConfirm={async () => {
         const inactive = f.status === "Inactive";
-        const complete = (own || owner) && f.country && f.visaType && f.entryType && f.start && f.end && f.issued && f.passport && (file || visa?.hasFile);
-        if (!inactive && !complete) return setError("Some fields need attention.");
-        if (f.start > f.end) return setError("Please check the dates again");
+        const next: Record<string, string> = {};
+        if (!inactive) {
+          if (!own && !owner) next.owner = "Select the traveller";
+          if (!f.country) next.country = "Select the country";
+          if (!f.visaType) next.visaType = "Select the visa type";
+          if (!f.entryType) next.entryType = "Select the entry type";
+          if (!f.issued) next.issued = "Enter the issued date";
+          if (!f.start) next.start = "Enter the date the visa is valid from";
+          if (!f.end) next.end = "Enter the date the visa is valid to";
+          if (!f.passport) next.passport = "Select the passport";
+          if (!(file || visa?.hasFile)) next.image = "Add an image of the visa information page";
+        }
+        if (f.start && f.end && f.start > f.end) next.end = "Valid To must be on or after Valid From";
+        setErrs(next);
+        if (Object.keys(next).length) return;
         setError(undefined);
         let pool = existing;
         if (!visa && !own && owner) {
@@ -263,30 +296,33 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
         setConfirm(
           visa
             ? inactive
-              ? "You are about to Inactivate this Visa. This can not be undone. Please make sure the information is correct. Are you sure you want to edit this Visa?"
-              : "Please make sure the information is correct. Are you sure you want to edit this Visa?"
+              ? { text: "This visa will be marked as Inactive, and this cannot be undone. Check that the information is correct. Save your changes?", label: "Save Changes", busy: "Saving…", danger: true }
+              : { text: "Check that the information is correct. Save your changes to this visa?", label: "Save Changes", busy: "Saving…" }
             : clash
-              ? own
-                ? "There is an already existing Visa for the same Country. This will override that existing Visa and it can not be undone. Please make sure the information is correct. Are you sure you want to override and add this Visa?"
-                : "There is an already existing Visa for the same User and the same Country. This will override that existing Visa and it can not be undone. Please make sure the information is correct. Are you sure you want to override and add this Visa?"
-              : "Please make sure the information is correct. Are you sure you want to add this Visa?",
+              ? {
+                  text: `${own ? "You already have" : "This traveller already has"} a visa for the same country. Adding this one replaces it, and this cannot be undone. Check that the information is correct. Replace it?`,
+                  label: "Replace and Add Visa",
+                  busy: "Adding…",
+                  danger: true,
+                }
+              : { text: "Check that the information is correct. Add this visa?", label: "Add Visa", busy: "Adding…" },
         );
       }}
     >
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, pt: 1 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, pt: 1 }}>
         {visa ? (
           !own ? <TextField size="small" label="Traveller's Email" value={visa.owner?.email ?? ""} disabled sx={{ gridColumn: "1 / -1" }} /> : null
         ) : !own ? (
           <Box sx={{ gridColumn: "1 / -1" }}>
-            <PersonPicker label="Traveller's Email" required value={owner} onChange={setOwner} placeholder="Select the traveller" />
+            <PersonPicker label="Traveller's Email" required value={owner} onChange={setOwner} placeholder="Select the traveller" error={errs.owner} />
           </Box>
         ) : null}
-        {select("Country", f.country, ref.data?.countries ?? [], set("country"))}
-        {select("Visa Type", f.visaType, VISA_TYPES, set("visaType"))}
-        {select("Entry Type", f.entryType, ENTRY_TYPES, set("entryType"))}
-        <TextField size="small" type="date" required label="Issued Date" value={f.issued} onChange={(e) => set("issued")(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-        <TextField size="small" type="date" required label="Valid From" value={f.start} onChange={(e) => set("start")(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-        <TextField size="small" type="date" required label="Valid To" value={f.end} onChange={(e) => set("end")(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        <SearchSelect label="Country" required value={f.country} options={ref.data?.countries ?? []} onChange={set("country")} error={errs.country} />
+        {select("Visa Type", f.visaType, VISA_TYPES, set("visaType"), true, errs.visaType)}
+        {select("Entry Type", f.entryType, ENTRY_TYPES, set("entryType"), true, errs.entryType)}
+        <TextField size="small" type="date" required label="Issued Date" error={Boolean(errs.issued)} helperText={errs.issued} value={f.issued} onChange={(e) => set("issued")(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        <TextField size="small" type="date" required label="Valid From" error={Boolean(errs.start)} helperText={errs.start} value={f.start} onChange={(e) => set("start")(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        <TextField size="small" type="date" required label="Valid To" error={Boolean(errs.end)} helperText={errs.end} value={f.end} onChange={(e) => set("end")(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
         <TextField
           select
           size="small"
@@ -294,12 +330,13 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
           required
           value={f.passport}
           disabled={!own && !owner}
-          helperText={!own && !owner ? "Select the traveller first" : undefined}
+          error={Boolean(errs.passport)}
+          helperText={errs.passport ?? (!own && !owner ? "Select the traveller first" : undefined)}
           onChange={(e) => set("passport")(e.target.value)}
         >
           {passports.map((d) => (
             <MenuItem key={d.id} value={d.id} disabled={Boolean(d.expires && d.expires < today)}>
-              {`${d.country} - ${d.number} (${d.issued ? fmtDate(d.issued) : "—"} – ${d.expires ? fmtDate(d.expires) : "No Expire"})`}
+              {`${d.country} - ${d.number} (${d.issued ? fmtDate(d.issued) : "—"} – ${d.expires ? fmtDate(d.expires) : "No expiry date"})`}
             </MenuItem>
           ))}
         </TextField>
@@ -310,7 +347,9 @@ export function VisaDialog({ own, visa, existing, onClose }: { own: boolean; vis
           onFile={(x, problem) => {
             setFile(x);
             if (problem) setError(problem);
+            else if (x) setErrs((e) => Object.fromEntries(Object.entries(e).filter(([k]) => k !== "image")));
           }}
+          error={errs.image}
           hint="Browse an image of the visa information page (JPG or PNG, 5 MB at most)."
         />
       </Box>
@@ -347,7 +386,10 @@ export function DocumentDialog({
   });
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<unknown>();
-  const [confirm, setConfirm] = useState<string | null>(null);
+  const [errs, setErrs] = useState<FieldErrors>({});
+  const [confirm, setConfirm] = useState<{ text: string; label: string; busy: string; danger?: boolean } | null>(null);
+  // Going back from the confirm step restores the form with its edits, so Cancel keeps asking before it discards them.
+  const [wentBack, setWentBack] = useState(false);
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
   const other = f.type === "Other ID Document";
   const { getToken } = useEngagementBasis();
@@ -356,7 +398,11 @@ export function DocumentDialog({
     return (
       <ConfirmDialog
         title={doc ? "Edit Travel Document" : "Add Travel Document"}
-        text={confirm}
+        text={confirm.text}
+        confirmLabel={confirm.label}
+        busyLabel={confirm.busy}
+        cancelLabel="Go Back"
+        danger={confirm.danger}
         run={() =>
           save.mutateAsync({
             id: doc?.id,
@@ -374,8 +420,14 @@ export function DocumentDialog({
             image: file ?? undefined,
           })
         }
-        onDone={() => notify.showSuccess(doc ? "Travel document updated successfully" : "Travel document added successfully")}
-        onClose={onClose}
+        onDone={() => {
+          notify.showSuccess(doc ? "Travel document updated successfully" : "Travel document added successfully");
+          onClose();
+        }}
+        onClose={() => {
+          setConfirm(null);
+          setWentBack(true);
+        }}
       />
     );
   }
@@ -385,12 +437,21 @@ export function DocumentDialog({
       title={doc ? "Edit Travel Document" : "Add Travel Document"}
       confirmLabel="Continue"
       error={error}
+      edited={wentBack}
       onClose={onClose}
       onConfirm={async () => {
         // On edit the masked number stands unless a new one is typed.
         const number = f.number || (doc ? "unchanged" : "");
-        if (!(own || owner) || !f.country || (!other && !f.expires) || !(file || doc?.hasFile) || !number || !f.type) return setError("Some fields need attention.");
-        if (!other && f.issued && f.expires && f.issued > f.expires) return setError("Please check the dates again");
+        const next: Record<string, string> = {};
+        if (!own && !owner) next.owner = "Select the traveller";
+        if (!f.type) next.type = "Select the document type";
+        if (!number) next.number = "Enter the document number";
+        if (!f.country) next.country = "Select the issued country";
+        if (!other && !f.expires) next.expires = "Enter the expiry date";
+        if (!(file || doc?.hasFile)) next.image = "Add an image of the document details page";
+        if (!other && f.issued && f.expires && f.issued > f.expires) next.expires = "Expiry Date must be on or after Issued Date";
+        setErrs(next);
+        if (Object.keys(next).length) return;
         setError(undefined);
         let pool = existing;
         if (!doc && !own && owner) {
@@ -408,35 +469,39 @@ export function DocumentDialog({
         setConfirm(
           doc
             ? f.status === "Inactive"
-              ? "You are about to Inactivate this Travel Document. This can not be undone. Please make sure the information is correct. Are you sure you want to edit this Document?"
-              : "Please make sure the information is correct. Are you sure you want to edit this Document?"
+              ? { text: "This travel document will be marked as Inactive, and this cannot be undone. Check that the information is correct. Save your changes?", label: "Save Changes", busy: "Saving…", danger: true }
+              : { text: "Check that the information is correct. Save your changes to this travel document?", label: "Save Changes", busy: "Saving…" }
             : clash
-              ? own
-                ? "There is an already existing Travel Document for the same Country with same Document Type. This will override that existing Travel Document and it can not be undone. Please make sure the information is correct. Are you sure you want to override and add this Travel Document?"
-                : "There is an already existing Travel Document for the same User for the same Country with same Document Type. This will override that existing Travel Document and it can not be undone. Please make sure the information is correct. Are you sure you want to override and add this Travel Document?"
-              : "Please make sure the information is correct. Are you sure you want to add this Travel Document?",
+              ? {
+                  text: `${own ? "You already have" : "This traveller already has"} a travel document of the same type for the same country. Adding this one replaces it, and this cannot be undone. Check that the information is correct. Replace it?`,
+                  label: "Replace and Add Document",
+                  busy: "Adding…",
+                  danger: true,
+                }
+              : { text: "Check that the information is correct. Add this travel document?", label: "Add Document", busy: "Adding…" },
         );
       }}
     >
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, pt: 1 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, pt: 1 }}>
         {doc ? (
           !own ? <TextField size="small" label="Traveller's Email" value={doc.owner?.email ?? ""} disabled sx={{ gridColumn: "1 / -1" }} /> : null
         ) : !own ? (
           <Box sx={{ gridColumn: "1 / -1" }}>
-            <PersonPicker label="Traveller's Email" required value={owner} onChange={setOwner} placeholder="Select the traveller" />
+            <PersonPicker label="Traveller's Email" required value={owner} onChange={setOwner} placeholder="Select the traveller" error={errs.owner} />
           </Box>
         ) : null}
-        {select("Document Type", f.type, DOCUMENT_TYPES, set("type"))}
+        {select("Document Type", f.type, DOCUMENT_TYPES, set("type"), true, errs.type)}
         <TextField
           size="small"
           required={!doc}
           label="Document Number"
           value={f.number}
           placeholder={doc ? (full.data?.fullNumber ?? doc.number) : undefined}
-          helperText={doc ? "Leave empty to keep the current number." : undefined}
+          error={Boolean(errs.number)}
+          helperText={errs.number ?? (doc ? "Leave empty to keep the current number." : undefined)}
           onChange={(e) => set("number")(e.target.value)}
         />
-        {select("Issued Country", f.country, ref.data?.countries ?? [], set("country"))}
+        <SearchSelect label="Issued Country" required value={f.country} options={ref.data?.countries ?? []} onChange={set("country")} error={errs.country} />
         {doc ? select("Status", f.status, ["Active", "Inactive"], set("status"), false) : <span />}
         <TextField size="small" type="date" required={!other} label="Issued Date" value={f.issued} onChange={(e) => set("issued")(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
         <TextField
@@ -445,7 +510,8 @@ export function DocumentDialog({
           required={!other}
           label="Expiry Date"
           value={f.expires}
-          helperText="Not required for Other ID Document"
+          error={Boolean(errs.expires)}
+          helperText={errs.expires ?? "Not required for Other ID Document"}
           onChange={(e) => set("expires")(e.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
         />
@@ -455,7 +521,9 @@ export function DocumentDialog({
           onFile={(x, problem) => {
             setFile(x);
             if (problem) setError(problem);
+            else if (x) setErrs((e) => Object.fromEntries(Object.entries(e).filter(([k]) => k !== "image")));
           }}
+          error={errs.image}
           hint="Browse an image of the document details page (JPG or PNG, 5 MB at most)."
         />
       </Box>

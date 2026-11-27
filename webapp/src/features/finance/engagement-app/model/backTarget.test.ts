@@ -15,7 +15,7 @@
 // under the License.
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { backTarget, clearVisits, rememberVisit } from "./backTarget";
+import { backTarget, clearVisits, lastVisitedList, rememberVisit } from "./backTarget";
 
 const A = "/finance/engagement-app";
 
@@ -57,6 +57,18 @@ describe("backTarget", () => {
   it("never takes another section for a list", () => {
     rememberVisit(`${A}/approvals/internal`);
     expect(backTarget(`${A}/engagements`, `${A}/engagements/E1/allocations`)).toBe(`${A}/engagements`);
+  });
+
+  it("names the list a record was opened from, not just the first one", () => {
+    const lists = [`${A}/engagements`, `${A}/approvals`, `${A}/search`].map((to) => ({ to }));
+    rememberVisit(`${A}/engagements/customer`);
+    rememberVisit(`${A}/approvals/internal`);
+    rememberVisit(`${A}/engagements/E1/details`);
+    expect(lastVisitedList(lists)?.to).toBe(`${A}/approvals`);
+    rememberVisit(`${A}/search?q=zurich`);
+    expect(lastVisitedList(lists)?.to).toBe(`${A}/search`);
+    clearVisits();
+    expect(lastVisitedList(lists)).toBeUndefined();
   });
 
   it("falls back to the link's own target when the list was not seen", () => {

@@ -29,13 +29,14 @@ import { engagementCsv, eaError } from "../api/engagementHttp";
 import { useConsultantReport, useEngagementTypes, useInvoiceReport, useOrgStructure, usePaymentReport, useReferenceData } from "../api/useEngagementApi";
 import { useEngagementAccess } from "../api/useEngagementUserInfo";
 import EaPage from "../components/EaPage";
-import EaTable, { type Column } from "../components/EaTable";
+import EaTable, { type Column, tableState } from "../components/EaTable";
 import { Empty, Failed, ListCard } from "../components/ListCard";
 import PersonPicker from "../components/PersonPicker";
 import { Two, Mono } from "../components/StatusChips";
 import { engagementPaths, type ReportsTab } from "../engagementPaths";
 import { fmtRange, yearStart } from "../model/format";
-import { PAGE_SIZE, useListView } from "../model/useListView";
+import { columnAccessors, sortRows } from "../model/sorting";
+import { useListView } from "../model/useListView";
 import { invoiceColumns, paymentColumns } from "../invoices/invoiceColumns";
 import { FilterBar, FilterDateRange, FilterInput, FilterSelect } from "../components/FilterFields";
 import { FILTER_WIDE_SX } from "../components/eaStyles";
@@ -171,7 +172,7 @@ function ResultLine({ count, from, to }: { count: number; from: string; to: stri
 
 function TravelReport({ kind }: { kind: "invoices" | "per-diem-payments" }): JSX.Element {
   const today = localIsoDate();
-  const list = useListView();
+  const list = useListView(kind);
   const from = list.filters.from || yearStart(today);
   const to = list.filters.to || today;
   const params = { from, to };
@@ -179,6 +180,10 @@ function TravelReport({ kind }: { kind: "invoices" | "per-diem-payments" }): JSX
   const payments = usePaymentReport(params, kind === "per-diem-payments");
   const q = kind === "invoices" ? invoices : payments;
   const rows = (q.data ?? []) as readonly (Invoice | PerDiemPayment)[];
+  const invoiceCols = invoiceColumns({ approvals: false, status: true, added: true });
+  const paymentCols = paymentColumns();
+  const sortedInvoices = sortRows(invoices.data ?? [], list.sort, columnAccessors(invoiceCols));
+  const sortedPayments = sortRows(payments.data ?? [], list.sort, columnAccessors(paymentCols));
   const filename = kind === "invoices" ? `${from}_to_${to}_invoices.csv` : `${from}_to_${to}_perdiem.csv`;
   return (
     <>
@@ -196,19 +201,23 @@ function TravelReport({ kind }: { kind: "invoices" | "per-diem-payments" }): JSX
       ) : kind === "invoices" ? (
         <EaTable
           ariaLabel="Invoices report"
-          columns={invoiceColumns({ approvals: false, status: true, added: true })}
-          rows={(invoices.data ?? []) as readonly Invoice[]}
+          columns={invoiceCols}
+          rows={list.pageOf(sortedInvoices)}
+          sorting={list.sorting}
+          pagination={list.pager(sortedInvoices.length)}
           rowKey={(i) => i.id}
-          loading={invoices.isPending || invoices.isPlaceholderData}
+          {...tableState(invoices)}
           empty={<Empty title="No Invoices in This Range" body="Change the dates and search again." />}
         />
       ) : (
         <EaTable
           ariaLabel="Per diem payments report"
-          columns={paymentColumns()}
-          rows={(payments.data ?? []) as readonly PerDiemPayment[]}
+          columns={paymentCols}
+          rows={list.pageOf(sortedPayments)}
+          sorting={list.sorting}
+          pagination={list.pager(sortedPayments.length)}
           rowKey={(x) => x.id}
-          loading={payments.isPending || payments.isPlaceholderData}
+          {...tableState(payments)}
           empty={<Empty title="No Per Diem Payments in This Range" body="Change the dates and search again." />}
         />
       )}
@@ -219,7 +228,7 @@ function TravelReport({ kind }: { kind: "invoices" | "per-diem-payments" }): JSX
 /** Consultant Allocations: days per consultant, allocation type and engagement code for a period, with the GL mapping finance uses. */
 function ConsultantReport(): JSX.Element {
   const today = localIsoDate();
-  const list = useListView();
+  const list = useListView("consultant-report");
   const ref = useReferenceData();
   const org = useOrgStructure();
   const types = useEngagementTypes();
@@ -251,23 +260,28 @@ function ConsultantReport(): JSX.Element {
   const na = (x: string) => (!x || x === "NOT AVAILABLE" || x === "N/A" || x === "NOT_DEFINED" ? "—" : x);
 
   const columns: Column<ConsultantAllocationRow>[] = [
-    { key: "email", label: "Consultant E-mail", render: (r) => <Two main={r.email} sub={[r.department, r.company].filter(Boolean).join("\n")} /> },
-    { key: "code", label: "Engagement Code", render: (r) => <Two main={na(r.engagementCode) === "—" ? "—" : <Mono>{r.engagementCode}</Mono>} sub={[na(r.engagementTypeName) !== "—" ? r.engagementTypeName : "", r.country].filter(Boolean).join("\n")} /> },
-    { key: "type", label: "Allocation Type", render: (r) => <Two main={na(r.allocationTypeName)} sub={r.dailyHourly} /> },
-    { key: "cal", label: "Calendar Days", align: "right", render: (r) => r.calendarDays },
-    { key: "work", label: "Working Days", align: "right", render: (r) => r.workingDays },
+    { key: "email", label: "Email", sortKey: "email", sortValue: (r) => r.email, render: (r) => <Two main={r.email} sub={[r.department, r.company].filter(Boolean).join("\n")} /> },
+    { key: "code", label: "Engagement Code", sortKey: "code", sortValue: (r) => r.engagementCode, render: (r) => <Two main={na(r.engagementCode) === "—" ? "—" : <Mono>{r.engagementCode}</Mono>} sub={[na(r.engagementTypeName) !== "—" ? r.engagementTypeName : "", r.country].filter(Boolean).join("\n")} /> },
+    { key: "type", label: "Allocation Type", sortKey: "type", sortValue: (r) => r.allocationTypeName, render: (r) => <Two main={na(r.allocationTypeName)} sub={r.dailyHourly} /> },
+    { key: "cal", label: "Calendar Days", align: "right", sortKey: "calendarDays", sortValue: (r) => r.calendarDays, render: (r) => r.calendarDays },
+    { key: "work", label: "Working Days", align: "right", sortKey: "workingDays", sortValue: (r) => r.workingDays, render: (r) => r.workingDays },
     ...(hours ? [{ key: "hours", label: "Working Hours", align: "right" as const, render: (r: ConsultantAllocationRow) => r.workingHours ?? "—" }] : []),
     {
       key: "ebu",
       label: "Engagement Business Unit",
+      sortKey: "businessUnit",
+      sortValue: (r) => r.engagementBusinessUnit,
       render: (r) => <Two main={na(r.engagementBusinessUnit)} sub={na(r.engagementSalesPOD) !== "—" ? `Sales POD ${r.engagementSalesPOD}` : undefined} />,
     },
     {
       key: "acct",
       label: "Account Name",
+      sortKey: "account",
+      sortValue: (r) => r.accountName,
       render: (r) => <Two main={na(r.accountName)} sub={[na(r.engagementGroup) !== "—" ? r.engagementGroup : "", na(r.glCode) !== "—" ? `GL ${r.glCode}` : ""].filter(Boolean).join("\n") || undefined} />,
     },
   ];
+  const sortedRows = sortRows(rows, list.sort, columnAccessors(columns));
 
   const filters = (
     <>
@@ -337,10 +351,11 @@ function ConsultantReport(): JSX.Element {
         <EaTable
           ariaLabel="Consultant allocations"
           columns={columns}
-          rows={rows.slice(list.page * PAGE_SIZE, (list.page + 1) * PAGE_SIZE)}
-          pagination={{ page: list.page, pageSize: PAGE_SIZE, total: rows.length, onPage: list.setPage }}
+          rows={list.pageOf(sortedRows)}
+          sorting={list.sorting}
+          pagination={list.pager(rows.length)}
           rowKey={(r) => `${r.email}|${r.engagementCode}|${r.allocationTypeName}|${r.dailyHourly}|${r.engagementTypeName}`}
-          loading={report.isPending || report.isPlaceholderData}
+          {...tableState(report)}
           empty={<Empty title="No Allocations in This Period" body="Change the dates or filters and search again." />}
         />
       )}

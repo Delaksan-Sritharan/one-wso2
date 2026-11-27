@@ -25,7 +25,7 @@ import { engagementSegments, invoiceTabs } from "./landing";
 export const SEARCH_MIN_CHARS = 2;
 
 export const SEARCH_LABEL: Readonly<Record<SearchKind, string>> = {
-  travelRequests: "Travel Requests",
+  travelRequests: "Travels",
   invoices: "Invoices",
   perDiemPayments: "Per Diem Payments",
   engagements: "Engagements",

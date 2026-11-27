@@ -25,14 +25,15 @@ import { useInvoiceBatch, usePaymentBatch } from "../api/useEngagementMutations"
 import { useEngagementAccess, useEngagementUserInfo } from "../api/useEngagementUserInfo";
 import { ConfirmDialog } from "../components/EaDialog";
 import EaPage from "../components/EaPage";
-import EaTable, { type Column } from "../components/EaTable";
+import EaTable, { type Column, tableState } from "../components/EaTable";
 import { Empty, Failed, ListCard } from "../components/ListCard";
 import ListToolbar, { type FilterDef } from "../components/ListToolbar";
 import { NsStatusChip, Two, Mono } from "../components/StatusChips";
 import { engagementPaths, type InvoicesTab } from "../engagementPaths";
 import { invoiceTabs } from "../model/landing";
 import { MONTH_NAMES, money, plural } from "../model/format";
-import { PAGE_SIZE, useListView } from "../model/useListView";
+import { columnAccessors, sortRows } from "../model/sorting";
+import { useListView } from "../model/useListView";
 import { invoiceColumns, paymentColumns } from "./invoiceColumns";
 import JobLink from "./JobLink";
 import { InvoiceDrawer, PaymentDrawer } from "./RecordDrawer";
@@ -43,7 +44,7 @@ const LABEL: Record<InvoicesTab, string> = {
   finance: "Invoices to Approve",
   push: "Invoices to Push",
   "payments-push": "Per Diem Payments to Push",
-  "sync-failures": "NS Sync Failures",
+  "sync-failures": "NetSuite Sync Failures",
   "all-invoices": "All Invoices",
   "all-payments": "All Per Diem Payments",
 };
@@ -88,9 +89,9 @@ export default function InvoicesPage({ tab }: { tab: InvoicesTab }): JSX.Element
     badge: !t.startsWith("all") && counts[t] !== undefined ? { label: String(counts[t]), reason: `${counts[t]} waiting` } : undefined,
   }));
   return (
-    <EaPage title="Invoices & Payments" subtitle="Invoices from the travel agents and per diem payments to travellers, with their approval and NetSuite status.">
+    <EaPage collapsedSearch title="Invoices & Payments" subtitle="Invoices from the travel agents and per diem payments to travellers, with their approval and NetSuite status.">
       <ListCard>
-        {tabs.length > 1 ? <RoutedTabs basePath={engagementPaths.invoices()} tabs={defs} ariaLabel="Invoices and payments" scrollable /> : null}
+        {tabs.length > 1 ? <RoutedTabs basePath={engagementPaths.invoices()} tabs={defs} ariaLabel="Invoices and payments" scrollable keepSearchParams={["q"]} /> : null}
         {tab === "payments-push" ? (
           <PaymentsQueue />
         ) : tab === "all-payments" ? (
@@ -124,12 +125,12 @@ function QueueHint({ labels }: { labels: readonly string[] }): JSX.Element {
 }
 
 function InvoiceQueue({ queue }: { queue: "po" | "finance" | "push" }): JSX.Element {
-  const list = useListView();
+  const list = useListView("invoice-queue");
   const invoices = useInvoices({ tab: queue === "po" ? "approve-po" : queue === "finance" ? "approve" : "push", ...list.paramsFor() });
   const rows = invoices.data?.items ?? [];
   const work = useInvoiceWork(invoices.isPending || invoices.isPlaceholderData ? [] : rows);
   const [open, setOpen] = useState<Invoice | null>(null);
-  const hint = queue === "po" ? ["Reject (PO)", "Approve (PO)"] : queue === "finance" ? ["Reject", "Approve"] : ["Push Invoices to NS"];
+  const hint = queue === "po" ? ["Reject (PO)", "Approve (PO)"] : queue === "finance" ? ["Reject", "Approve"] : ["Push Invoices to NetSuite"];
   return (
     <>
       <ListToolbar search={list.search} placeholder="Search invoices" onSearch={list.setSearch} right={work.bulk ?? <QueueHint labels={hint} />} />
@@ -141,11 +142,12 @@ function InvoiceQueue({ queue }: { queue: "po" | "finance" | "push" }): JSX.Elem
           columns={invoiceColumns({ traveller: true, approvals: false, added: true })}
           rows={rows}
           rowKey={(i) => i.id}
-          loading={invoices.isPending || invoices.isPlaceholderData}
+          {...tableState(invoices)}
           selection={work.selection}
           onRowClick={setOpen}
-          pagination={{ page: list.page, pageSize: PAGE_SIZE, total: invoices.data?.total ?? 0, onPage: list.setPage }}
-          empty={<Empty title="Nothing Waiting Here" body="Invoices at this step appear here as soon as they arrive." />}
+          sorting={list.sorting}
+          pagination={list.pager(invoices.data?.total ?? 0, invoices.isPlaceholderData)}
+          empty={<Empty title="No Invoices Waiting" body="Invoices at this step appear here as soon as they arrive." />}
         />
       )}
       {open ? <InvoiceDrawer invoice={open} actions={work.actionsFor(open)} onClose={() => setOpen(null)} /> : null}
@@ -155,7 +157,7 @@ function InvoiceQueue({ queue }: { queue: "po" | "finance" | "push" }): JSX.Elem
 }
 
 function AllInvoices(): JSX.Element {
-  const list = useListView();
+  const list = useListView("all-invoices");
   const ref = useReferenceData();
   const campaigns = useCampaigns("");
   const [open, setOpen] = useState<Invoice | null>(null);
@@ -163,7 +165,7 @@ function AllInvoices(): JSX.Element {
   const filters: FilterDef[] = [
     { key: "poApproval", label: "PO Approval", type: "multi", options: ["Pending", "Approved", "Rejected"].map(pair) },
     { key: "financeApproval", label: "Finance Approval", type: "multi", options: ["Pending", "Approved", "Rejected"].map(pair) },
-    { key: "netsuiteStatus", label: "NS Status", type: "select", options: ["Pushed", "Pending"].map(pair) },
+    { key: "netsuiteStatus", label: "NetSuite Status", type: "select", options: ["Pushed", "Pending"].map(pair) },
     { key: "costType", label: "Cost Type", type: "multi", options: (ref.data?.costTypes ?? []).map(pair) },
     { key: "agency", label: "Travel Agent", type: "multi", options: (ref.data?.travelAgents ?? []).map(pair) },
     { key: "month", label: "Month", type: "multi", options: MONTH_NAMES.map(pair) },
@@ -194,10 +196,11 @@ function AllInvoices(): JSX.Element {
           columns={invoiceColumns()}
           rows={rows}
           rowKey={(i) => i.id}
-          loading={invoices.isPending || invoices.isPlaceholderData}
+          {...tableState(invoices)}
           selection={work.selection}
           onRowClick={setOpen}
-          pagination={{ page: list.page, pageSize: PAGE_SIZE, total: invoices.data?.total ?? 0, onPage: list.setPage }}
+          sorting={list.sorting}
+          pagination={list.pager(invoices.data?.total ?? 0, invoices.isPlaceholderData)}
           empty={
             Object.keys(list.filters).length || list.search ? (
               <Empty title="No Invoices Match" body="Change the search or the filters to see more." />
@@ -222,12 +225,12 @@ function AllPayments(): JSX.Element {
 }
 
 function PaymentsList({ queue }: { queue: boolean }): JSX.Element {
-  const list = useListView();
+  const list = useListView("payments");
   const ref = useReferenceData();
   const [open, setOpen] = useState<PerDiemPayment | null>(null);
   const pair = (v: string): readonly [string, string] => [v, v];
   const filters: FilterDef[] = [
-    { key: "netsuiteStatus", label: "NS Status", type: "select", options: ["Pushed", "Pending"].map(pair) },
+    { key: "netsuiteStatus", label: "NetSuite Status", type: "select", options: ["Pushed", "Pending"].map(pair) },
     { key: "convertedCurrency", label: "Converted Currency", type: "multi", options: (ref.data?.currencies ?? []).map(pair) },
   ];
   const payments = usePerDiemPayments(queue ? { tab: "push", ...list.paramsFor() } : { tab: "all", ...list.paramsFor(filters) });
@@ -243,7 +246,7 @@ function PaymentsList({ queue }: { queue: boolean }): JSX.Element {
         applied={list.filters}
         onApply={list.setFilters}
         onRemove={list.removeFilter}
-        right={work.bulk ?? (queue && work.can ? <QueueHint labels={["Push Payments to NS"]} /> : null)}
+        right={work.bulk ?? (queue && work.can ? <QueueHint labels={["Push Payments to NetSuite"]} /> : null)}
       />
       {payments.isError ? (
         <Failed what="the per diem payments" error={payments.error} onRetry={() => void payments.refetch()} retrying={payments.isFetching} />
@@ -253,13 +256,14 @@ function PaymentsList({ queue }: { queue: boolean }): JSX.Element {
           columns={paymentColumns({ ns: !queue })}
           rows={rows}
           rowKey={(x) => x.id}
-          loading={payments.isPending || payments.isPlaceholderData}
+          {...tableState(payments)}
           selection={work.selection}
           onRowClick={setOpen}
-          pagination={{ page: list.page, pageSize: PAGE_SIZE, total: payments.data?.total ?? 0, onPage: list.setPage }}
+          sorting={list.sorting}
+          pagination={list.pager(payments.data?.total ?? 0, payments.isPlaceholderData)}
           empty={
             queue ? (
-              <Empty title="Nothing Waiting Here" body="Per diem payments to push appear here once finance adds them." />
+              <Empty title="No Per Diem Payments Waiting" body="Per diem payments to push appear here once finance adds them." />
             ) : (
               Object.keys(list.filters).length || list.search ? (
                 <Empty title="No Per Diem Payments Match" body="Change the search or the filters to see more." />
@@ -276,9 +280,9 @@ function PaymentsList({ queue }: { queue: boolean }): JSX.Element {
   );
 }
 
-/** NS Sync Failures: invoices and per diem payments that reached NetSuite but whose status did not come back. */
+/** NetSuite Sync Failures: invoices and per diem payments that reached NetSuite but whose status did not come back. */
 function SyncFailures(): JSX.Element {
-  const list = useListView();
+  const list = useListView("sync-failures");
   const failures = useSyncFailures({ search: list.search || undefined });
   const invoices = useInvoiceBatch();
   const payments = usePaymentBatch();
@@ -286,49 +290,54 @@ function SyncFailures(): JSX.Element {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [confirm, setConfirm] = useState(false);
   const keyOf = (r: SyncFailure) => `${r.record}:${r.id}`;
-  const rows = failures.data?.items ?? [];
-
   const columns: Column<SyncFailure>[] = [
-    { key: "kind", label: "Record", render: (r) => (r.record === "invoice" ? "Travel Invoice" : "Per Diem Payment") },
+    { key: "kind", label: "Record", sortKey: "record", sortValue: (r) => r.record, render: (r) => (r.record === "invoice" ? "Travel Invoice" : "Per Diem Payment") },
     {
       key: "no",
       label: "Number",
+      sortKey: "number",
+      sortValue: (r) => r.number || r.id,
       render: (r) => (r.record === "invoice" ? <Two main={<Mono bold>{r.number}</Mono>} sub={r.travelAgent} /> : <Mono>{r.number || r.id}</Mono>),
     },
-    { key: "job", label: "Job Number", render: (r) => <Two main={<JobLink job={r.jobNumber} />} sub={r.traveller?.email} /> },
-    { key: "amount", label: "Amount", align: "right", render: (r) => money(r.amount, r.currency) },
-    { key: "ns", label: "NS Status", render: (r) => <NsStatusChip record={r} /> },
+    { key: "job", label: "Job Number", sortKey: "jobNumber", sortValue: (r) => r.jobNumber, render: (r) => <Two main={<JobLink job={r.jobNumber} />} sub={r.traveller?.email} /> },
+    { key: "amount", label: "Amount", align: "right", sortKey: "amount", sortValue: (r) => r.amount, render: (r) => money(r.amount, r.currency) },
+    { key: "ns", label: "NetSuite Status", render: (r) => <NsStatusChip record={r} /> },
   ];
 
-  const chosen = failures.isPending || failures.isPlaceholderData ? [] : rows.filter((r) => selected.has(keyOf(r)));
+  const all = sortRows(failures.data?.items ?? [], list.sort, columnAccessors(columns));
+  const rows = list.pageOf(all);
+  const chosen = failures.isPending || failures.isPlaceholderData ? [] : all.filter((r) => selected.has(keyOf(r)));
   const right: ReactNode = chosen.length ? (
     <>
       <Typography variant="body2" color="text.secondary">
         {chosen.length} selected
       </Typography>
       <Button size="small" variant="contained" startIcon={<RefreshCwIcon size={14} />} onClick={() => setConfirm(true)}>
-        Re-sync with NS
+        Re-sync with NetSuite
       </Button>
     </>
   ) : (
-    <QueueHint labels={["Re-sync with NS"]} />
+    <QueueHint labels={["Re-sync with NetSuite"]} />
   );
 
   return (
     <>
       <ListToolbar search={list.search} placeholder="Search sync failures" onSearch={list.setSearch} right={right} />
       {failures.isError ? (
-        <Failed what="the NS sync failures" error={failures.error} onRetry={() => void failures.refetch()} retrying={failures.isFetching} />
+        <Failed what="the NetSuite sync failures" error={failures.error} onRetry={() => void failures.refetch()} retrying={failures.isFetching} />
       ) : (
         <EaTable
-          ariaLabel="NS Sync Failures"
+          ariaLabel="NetSuite Sync Failures"
           columns={columns}
           rows={rows}
           rowKey={keyOf}
-          loading={failures.isPending || failures.isPlaceholderData}
+          sorting={list.sorting}
+          pagination={list.pager(all.length)}
+          {...tableState(failures)}
           selection={{
             selected,
             canSelect: () => true,
+            rowLabel: (r) => `Select ${r.record === "invoice" ? "invoice" : "per diem payment"} ${r.number || r.id}`,
             onToggle: (id) =>
               setSelected((s) => {
                 const next = new Set(s);
@@ -336,15 +345,26 @@ function SyncFailures(): JSX.Element {
                 else next.add(id);
                 return next;
               }),
-            onToggleAll: (ids) => setSelected((s) => (ids.every((id) => s.has(id)) ? new Set() : new Set(ids))),
+            onToggleAll: (ids) =>
+              setSelected((s) => {
+                const next = new Set(s);
+                const all = ids.every((id) => s.has(id));
+                for (const id of ids) {
+                  if (all) next.delete(id);
+                  else next.add(id);
+                }
+                return next;
+              }),
           }}
-          empty={<Empty title="No NS Sync Failures Yet" body="Every pushed invoice and payment has its NetSuite status." />}
+          empty={<Empty title="No NetSuite Sync Failures" body="Every pushed invoice and payment has its NetSuite status." />}
         />
       )}
       {confirm ? (
         <ConfirmDialog
           title="Re-sync with NetSuite"
-          text={`Look up ${plural(chosen.length, "record")} in NetSuite and update their NS status here. Nothing is pushed again.`}
+          confirmLabel="Re-sync"
+          busyLabel="Re-syncing…"
+          text={`Look up ${plural(chosen.length, "record")} in NetSuite and update their NetSuite status here. Nothing is pushed again.`}
           run={async () => {
             const inv = chosen.filter((r) => r.record === "invoice").map((r) => r.id);
             const pay = chosen.filter((r) => r.record === "payment").map((r) => r.id);

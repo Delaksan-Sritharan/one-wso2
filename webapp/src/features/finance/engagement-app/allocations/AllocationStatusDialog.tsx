@@ -24,11 +24,12 @@ import { FactsGrid } from "../components/Facts";
 import { fmtDate } from "../model/format";
 import { nextAllocationStatuses } from "../model/statuses";
 
-/** The legacy Update Allocation Status popup: the allocation's facts, the Clearance Status choices the legacy list offered from its current status (no pre-selection), and the comment (255). */
+/** The legacy Update Allocation Status popup: the allocation's facts, the Allocation Status choices the legacy list offered from its current status (no pre-selection), and the comment (255). */
 export default function AllocationStatusDialog({ allocation, onClose }: { allocation: Allocation; onClose: () => void }): JSX.Element {
   const [status, setStatus] = useState<AllocationStatus | "">("");
   const [comment, setComment] = useState(allocation.comment ?? "");
   const [error, setError] = useState<unknown>();
+  const [statusError, setStatusError] = useState("");
   const save = useSetAllocationStatus();
   const notify = useNotifications();
   const a = allocation;
@@ -36,11 +37,14 @@ export default function AllocationStatusDialog({ allocation, onClose }: { alloca
     <EaDialog
       title="Update Allocation Status"
       subtitle={`${a.id} is ${a.status}`}
+      confirmLabel="Update Status"
       busy={save.isPending}
       error={error}
       onClose={onClose}
+      dirty={status !== "" || comment !== (a.comment ?? "")}
       onConfirm={() => {
-        if (!status) return setError("Some fields need attention.");
+        setStatusError(status ? "" : "Select the new allocation status");
+        if (!status) return;
         setError(undefined);
         save.mutate(
           { id: a.id, status, comment },
@@ -71,8 +75,10 @@ export default function AllocationStatusDialog({ allocation, onClose }: { alloca
           select
           required
           size="small"
-          label="Clearance Status"
+          label="Allocation Status"
           value={status}
+          error={Boolean(statusError)}
+          helperText={statusError}
           onChange={(e) => setStatus(e.target.value as AllocationStatus)}
         >
           {nextAllocationStatuses(a.status).map((s) => (

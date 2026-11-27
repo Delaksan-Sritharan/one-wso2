@@ -61,8 +61,8 @@ export const Status = ({ label, tone }: { label: string; tone: ChipTone }): JSX.
         // `vars` is absent on a theme without CSS variables.
         const pal = (t.vars ?? t).palette;
         return {
-        height: 20,
-        fontSize: 10.5,
+        height: 22,
+        fontSize: 12,
         fontWeight: 600,
         borderWidth: 1.5,
         bgcolor: themed ? `color-mix(in srgb, ${pal[themed].main} 14%, transparent)` : pal.action.selected,
@@ -177,5 +177,14 @@ export function Two({ main, sub, mono = false }: { main: React.ReactNode; sub?: 
       <Box sx={{ fontSize: 13, overflowWrap: "break-word", ...(mono ? { fontFamily: "monospace", fontSize: 12.5 } : {}) }}>{main}</Box>
       {sub && sub !== main ? <Sub>{sub}</Sub> : null}
     </Box>
+  );
+}
+
+/** The engagement code under an allocation type, labelled. Every marketing event carries the same code, so it is left out there. */
+export function codeSub(kind: string, code: string): React.ReactNode {
+  return kind === "marketing" || !code ? undefined : (
+    <>
+      Code <Mono>{code}</Mono>
+    </>
   );
 }

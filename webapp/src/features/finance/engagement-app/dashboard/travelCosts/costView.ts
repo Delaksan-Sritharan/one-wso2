@@ -36,8 +36,6 @@ const PARAM: Readonly<Record<FilterKey, string>> = {
 };
 
 export const PAGE_SIZE = 25;
-/** The rows-per-page choices the Transactions widget offers. */
-export const PAGE_SIZES: readonly number[] = [5, 10, 15, 25];
 /** Transactions rows per page until the reader picks another size. */
 export const TRANSACTIONS_DEFAULT_PAGE_SIZE = 10;
 export const GROUPS = ["employee", "jobNumber", "country", "customer", "travelAgent", "source", "costType", "month"] as const;
