@@ -16,12 +16,15 @@
 
 import type { ReactNode } from "react";
 import { Navigate, useSearchParams } from "react-router";
-import { Box, Typography } from "@wso2/oxygen-ui";
+import { Box, Button, Typography } from "@wso2/oxygen-ui";
+import { DownloadIcon } from "@wso2/oxygen-ui-icons-react";
+import { saveBlob } from "@utils/saveFile";
 import {
   ClearFiltersButton,
   MultiSelectFilter,
 } from "../../ad-campaigns/campaign-tracker/components/FilterControls";
 import { CALENDAR_CATEGORIES, categoryStyle, parseCategory } from "../calendarCategories";
+import { calendarCsv, csvFileName } from "../calendarCsv";
 import { monthTitle, type CalendarMonth } from "../calendarDates";
 import { MARKETING_CALENDAR_PATH, useCalendarOutlet, type CalendarDisplay } from "../calendarOutlet";
 import { shortDate, type CalendarRange } from "../calendarRange";
@@ -33,7 +36,7 @@ import {
   showParamValue,
   shownCategories,
 } from "../filterItems";
-import type { CalendarCategory } from "../marketingCalendarTypes";
+import type { CalendarCategory, CalendarItem } from "../marketingCalendarTypes";
 import CategoryLegendFilter from "../components/CategoryLegendFilter";
 import ItemList from "../components/ItemList";
 import MonthGrid from "../components/MonthGrid";
@@ -88,7 +91,7 @@ export function AllCalendarView() {
   );
 }
 
-/** One category's tab: its items, narrowed by its own filters. */
+/** One category's tab: its items, narrowed by its own filters. In List, they can be exported as CSV. */
 export function CategoryCalendarView({ category }: { category: CalendarCategory }) {
   const { month, weeks, view, range, items, loaded, updateSearchParams, openItem } = useCalendarOutlet();
   const [searchParams] = useSearchParams();
@@ -112,6 +115,18 @@ export function CategoryCalendarView({ category }: { category: CalendarCategory 
           />
         ))}
         {activeCount > 0 && <ClearFiltersButton activeCount={activeCount} onClear={clearFilters} />}
+        {view === "list" && (
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadIcon size={16} />}
+            disabled={!loaded || shownItems.length === 0}
+            onClick={() => exportCsv(shownItems, category, range)}
+            sx={{ ml: "auto" }}
+          >
+            Export CSV
+          </Button>
+        )}
       </Box>
       {loaded && shownItems.length === 0 && (
         <EmptyNote>
@@ -126,6 +141,11 @@ export function CategoryCalendarView({ category }: { category: CalendarCategory 
       )}
     </>
   );
+}
+
+// Saves what the List shows, with this tab's filters, as a CSV file.
+function exportCsv(items: CalendarItem[], category: CalendarCategory, range: CalendarRange) {
+  saveBlob(new Blob([calendarCsv(items)], { type: "text/csv;charset=utf-8" }), csvFileName(category, range));
 }
 
 // The empty state names the view and says when its filters are what emptied it.

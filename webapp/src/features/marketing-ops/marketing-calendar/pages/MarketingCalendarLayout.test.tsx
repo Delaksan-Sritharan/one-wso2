@@ -31,8 +31,11 @@ const itemsHook = vi.fn<(from: string, to: string) => unknown>(() => ({
 vi.mock("../../api/useMarketingCalendar", () => ({
   useMarketingCalendarItems: (from: string, to: string) => itemsHook(from, to),
 }));
+// The CSV export hands its file here; the test reads it back instead of downloading.
+vi.mock("@utils/saveFile", () => ({ saveBlob: vi.fn() }));
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { saveBlob } from "@utils/saveFile";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { MARKETING_CALENDAR_PATH } from "../calendarOutlet";
@@ -69,6 +72,7 @@ const BLOG = "[Blog] Integrator 5.1 launch recap";
 
 beforeEach(() => {
   itemsHook.mockClear();
+  vi.mocked(saveBlob).mockClear();
 });
 
 describe("tabs", () => {
@@ -276,5 +280,51 @@ describe("the Calendar | List toggle", () => {
         `No content planned between ${shortDate("2026-11-01")} and ${shortDate("2026-11-30")} with these filters.`,
       ),
     ).toBeVisible();
+  });
+});
+
+describe("the List's CSV export", () => {
+  const exportButton = () => screen.queryByRole("button", { name: "Export CSV" });
+  // jsdom's Blob has no text().
+  const blobText = (blob: Blob) =>
+    new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsText(blob);
+    });
+
+  it("is on a type tab in List", () => {
+    renderCalendar(`${MARKETING_CALENDAR_PATH}/content?month=2026-11&view=list`);
+    expect(exportButton()).toBeEnabled();
+  });
+
+  it("is not on the All tab", () => {
+    renderCalendar(`${MARKETING_CALENDAR_PATH}?month=2026-11&view=list`);
+    expect(exportButton()).toBeNull();
+  });
+
+  it("is not in the Calendar view", () => {
+    renderCalendar(`${MARKETING_CALENDAR_PATH}/content?month=2026-11`);
+    expect(exportButton()).toBeNull();
+  });
+
+  it("saves what the List shows, with the tab's filters, named for the tab and range", async () => {
+    const user = renderCalendar(
+      `${MARKETING_CALENDAR_PATH}/content?month=2026-11&view=list&from=2026-11-01&to=2026-11-30&format=Blog`,
+    );
+    await user.click(exportButton()!);
+
+    expect(saveBlob).toHaveBeenCalledTimes(1);
+    const [blob, fileName] = vi.mocked(saveBlob).mock.calls[0];
+    expect(fileName).toBe("marketing-calendar-content-2026-11-01-to-2026-11-30.csv");
+    expect(blob.type).toBe("text/csv;charset=utf-8");
+    const rows = (await blobText(blob)).replace(/^\uFEFF/, "").trimEnd().split("\r\n");
+    expect(rows[0].split(",")[0]).toBe("Title");
+    expect(rows.slice(1).map((row) => row.split(",")[0])).toEqual([BLOG]);
+  });
+
+  it("is disabled when the filters leave nothing", () => {
+    renderCalendar(`${MARKETING_CALENDAR_PATH}/content?month=2026-11&view=list&format=Blog&bu=API`);
+    expect(exportButton()).toBeDisabled();
   });
 });
