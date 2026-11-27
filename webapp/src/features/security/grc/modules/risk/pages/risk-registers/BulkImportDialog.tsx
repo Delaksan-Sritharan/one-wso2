@@ -248,7 +248,9 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
     (warnings === 0 || acknowledged) &&
     !running &&
     lastMode !== "import";
-  const importFinished = lastMode === "import" && result?.mode === "import";
+  const importDone = lastMode === "import" && result?.mode === "import";
+  // A refused import wrote nothing, so the admin can run the dry run again.
+  const importFinished = importDone && (result?.counts.rejects ?? 0) === 0;
   const downloads = DOWNLOADS.filter((d) => !!result?.files?.[d.key]);
 
   return (
@@ -330,7 +332,7 @@ export default function BulkImportDialog({ open, onClose, onImported }: BulkImpo
             <DryRunResult dryRun={dryRun} acknowledged={acknowledged} onAcknowledge={setAcknowledged} />
           )}
 
-          {importFinished && result && <ImportResult result={result} />}
+          {importDone && result && <ImportResult result={result} />}
 
           {!running && downloads.length > 0 && (
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
@@ -412,9 +414,7 @@ function DryRunResult({
   const toWrite = counts.to_write ?? 0;
   const alreadyDone = counts.already_done ?? 0;
   const nothingToImport = rejects === 0 && planKnown && toWrite === 0;
-  const findings = [...(dryRun.findings ?? [])].sort(
-    (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9) || a.csv_row - b.csv_row,
-  );
+  const findings = sortFindings(dryRun.findings);
 
   return (
     <Stack spacing={1.5}>
@@ -457,6 +457,12 @@ function DryRunResult({
   );
 }
 
+function sortFindings(findings: BulkImportFinding[] | undefined): BulkImportFinding[] {
+  return [...(findings ?? [])].sort(
+    (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9) || a.csv_row - b.csv_row,
+  );
+}
+
 function FindingsTable({ findings, truncated }: { findings: BulkImportFinding[]; truncated: boolean }): JSX.Element {
   const shown = findings.slice(0, MAX_FINDINGS_SHOWN);
   return (
@@ -496,10 +502,25 @@ function FindingsTable({ findings, truncated }: { findings: BulkImportFinding[];
 
 function ImportResult({ result }: { result: BulkImportResult }): JSX.Element {
   const c = result.counts;
-  const problems = c.mismatches > 0 || c.rejects > 0;
+  // The import checks the whole file again before it writes. A row rejected by
+  // that check means nothing was written, which is not the same as an import that
+  // finished and then found differences.
+  if (c.rejects > 0) {
+    const findings = sortFindings(result.findings);
+    return (
+      <Stack spacing={1.5}>
+        <Alert severity="error">
+          The import was refused and nothing was written, because the file no longer passes the check (for example, the
+          directory answered differently after the dry run). Fix the rows below, run the dry run again, then import.
+        </Alert>
+        {findings.length > 0 && <FindingsTable findings={findings} truncated={!!result.findings_truncated} />}
+      </Stack>
+    );
+  }
+  const mismatched = c.mismatches > 0;
   return (
-    <Alert severity={problems ? "warning" : "success"}>
-      {problems
+    <Alert severity={mismatched ? "warning" : "success"}>
+      {mismatched
         ? "The import finished, but the check afterwards found differences. Download errors.csv and report.txt."
         : "The import finished and what was written matches the file."}{" "}
       {c.migrated} written, {c.skipped} already there. Download risk_codes.csv for the risk number of every row.

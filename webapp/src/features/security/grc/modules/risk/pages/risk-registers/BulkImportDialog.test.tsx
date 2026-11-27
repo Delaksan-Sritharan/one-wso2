@@ -384,6 +384,25 @@ describe("Bulk import — the import", () => {
     expect(await screen.findByText(/found differences/)).toBeInTheDocument();
   });
 
+  it("says a refused import wrote nothing, lists the rows, and allows a fresh dry run", async () => {
+    finished.import = result({
+      mode: "import",
+      outcome: "completed_with_findings",
+      counts: { ...noProblems, rejects: 1 },
+      findings: [
+        { migration_id: 1, csv_row: 2, risk_title: "T1", severity: "REJECT", failure: "Risk Owner", detail: "no active account" },
+      ],
+    });
+    const { user } = await renderOpen();
+    await runDryRun(user);
+    await user.click(await screen.findByRole("button", { name: "Import 12 rows" }));
+
+    expect(await screen.findByText(/import was refused and nothing was written/)).toBeInTheDocument();
+    expect(screen.queryByText(/The import finished/)).not.toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Findings" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run dry run" })).toBeEnabled();
+  });
+
   it("saves a result file from the result, with the byte order mark Excel needs on a CSV", async () => {
     const downloads = captureDownloads();
     const { user } = await renderOpen();
